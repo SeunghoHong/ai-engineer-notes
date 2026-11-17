@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GPU 장애 자동 복구</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#inevitable">GPU 고장은 피할 수 없다</a></li>
+      <li><a href="#slurm">Slurm의 강점과 한계</a></li>
+      <li><a href="#two-stacks">두 팀, 두 개의 스택</a></li>
+      <li><a href="#on-k8s">Slurm을 Kubernetes 위에</a></li>
+      <li><a href="#flow">고장 나면 벌어지는 일</a></li>
+      <li><a href="#demo">데모: 15분 안에 재개</a></li>
+      <li><a href="#one-click">원클릭 Slurm</a></li>
+      <li><a href="#takeaways">핵심 메시지 세 가지</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-03 · 17분 · 영어 발표 한글 정리</span>
+      <h1>GPU가 죽어도 학습은 이어진다</h1>
+      <p class="lead">GPU 수천 개로 학습하면 고장은 반드시 난다. Crusoe 발표자들은 Slurm을 Kubernetes 위에 올려, 고장 난 GPU 노드를 자동으로 바꾸고 체크포인트에서 학습을 이어 가는 구조를 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=bRGyYaE0lxI" target="_blank" rel="noopener">GPU Died. Training Didn't: Self-Healing Training at Scale</a></span>
+        <span>발표: Connor (Crusoe 개발자 애드버킷), Nikil, Young (모두 Crusoe)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말한 것이고 따로 확인하지는 않았다. 발표자 이름은 자막에 나온 대로 적었다. 자막의 "SCADMD"는 Slurm 개발사 SchedMD로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">세 발표자 모두 Crusoe 소속이고, 발표의 대부분은 자사 제품 소개다. 장점 위주의 설명이라는 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>GPU 수천 개로 학습하면 <strong>고장은 반드시 난다.</strong> 사람이 매번 손으로 고치는 방식은 이 규모에서 버티지 못한다.</li>
+        <li><strong>Slurm은 AI 학습 스케줄링에 강하다.</strong> 하지만 자원 배분이 고정적이고, 고장 노드 관리가 사람 몫이며, 실패 이유를 잘 알려 주지 못한다.</li>
+        <li>Kubernetes 팀과 Slurm 팀이 따로 인프라를 만들면 <strong>스택이 두 벌</strong>이 되어 운영 부담과 비용이 늘어난다.</li>
+        <li>Crusoe는 <strong>Slurm을 Kubernetes 위에 올렸다.</strong> 연구자에게는 평범한 Slurm으로, 플랫폼 팀에게는 서비스 하나로 보인다.</li>
+        <li>GPU 치명적 오류가 나면 작업 취소, 재큐잉, 노드 교체, 학습 재개가 <strong>사람 손 없이</strong> 이어진다.</li>
+        <li>데모에서 노드 교체는 <strong>약 5분</strong>, 학습 재개까지 전체 중단은 <strong>15분 미만</strong>이었다.</li>
+        <li>사용자가 준비할 것은 하나다. <strong>학습 코드가 종료 신호를 받으면 체크포인트를 저장하고, 다시 시작하면 불러오게</strong> 만든다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="inevitable">
+        <header><span class="num">01</span><h2>GPU 고장은 피할 수 없다 <span class="ts">00:20</span></h2></header>
+        <p>Crusoe 고객들은 GPU 수천 개에 걸친 아주 큰 학습을 돌린다. 이 규모에서는 GPU 고장이 반드시 일어난다. 고장 날 때마다 사람이 손으로 고치는 방식은 지속할 수 없다.</p>
+        <p>발표의 목표는 두 가지다. Slurm과 Kubernetes를 함께 써서 <strong>자동으로 복구하는 플랫폼</strong>을 만든다. 그러면서도 학습을 돌리는 ML 엔지니어와 클러스터를 관리하는 플랫폼 팀 모두 <strong>쓰기 쉽게</strong> 한다.</p>
+
+        <h3>Crusoe가 쌓은 층 <span class="ts">01:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>이름</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>클라우드</td><td>Crusoe Cloud</td><td>컴퓨트, 스토리지, 네트워크, NVIDIA와 AMD의 최신 GPU를 빌려준다 (IaaS)</td></tr>
+              <tr><td>컨테이너 운영</td><td>CMK</td><td>Crusoe의 관리형 Kubernetes</td></tr>
+              <tr><td>작업 스케줄링</td><td>Crusoe Managed Slurm</td><td>CMK 위에서 도는 관리형 Slurm. SchedMD의 공식 오픈소스 프로젝트 Slinky를 바탕으로 만들었다</td></tr>
+              <tr><td>자동 복구</td><td>AutoClusters</td><td>GPU 고장을 감지하면 그 노드를 자동으로 새 노드로 바꾼다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>목표는 Slurm의 고성능 작업 스케줄링과 Kubernetes의 장애 대응력·관측 기능을 함께 얻는 것이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="slurm">
+        <header><span class="num">02</span><h2>Slurm의 강점과 한계 <span class="ts">02:10</span></h2></header>
+        <p>Slurm은 대규모 계산 클러스터에서 작업 대기열과 자원 배분을 맡는 스케줄러다. 20여 년 전 대학과 연구소의 연구자들이 연구자를 위해 만들었다. 원래 고성능 계산(HPC) 용도였는데, 지금의 AI 학습에도 잘 맞는다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">잘하는 것 <span class="ts">02:40</span></span>
+            <p>여러 노드에 걸친 학습은 각 프로세스(랭크 <span class="en">rank</span>) 사이에 촘촘한 집합 통신 <span class="en">collective communication</span>이 필요하다. Slurm은 이런 작업을 다루는 기능을 이미 갖고 있다.</p>
+            <ul>
+              <li><strong>갱 스케줄링</strong> <span class="en">gang scheduling</span>: 필요한 노드를 한꺼번에 다 잡아야 시작한다</li>
+              <li><strong>토폴로지 인식</strong> <span class="en">topology awareness</span>: 네트워크상 가까운 노드에 작업을 놓는다</li>
+              <li><strong>프롤로그·에필로그</strong> <span class="en">prolog / epilog</span>: 작업 앞뒤로 스크립트를 돌려 클러스터를 검사한다</li>
+              <li>연구자에게 이미 익숙한 명령과 스크립트로 작업을 돌린다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">부족한 것 <span class="ts">03:30</span></span>
+            <ul>
+              <li><strong>고정된 자원 배분</strong>: 요즘 AI 작업에는 학습, 사후 학습 <span class="en">post-training</span>, 평가, 추론이 섞여 있다. GPU가 모자라니 자원을 유연하게 옮겨야 한다. 그런데 Slurm의 파티션 <span class="en">partition</span>은 대체로 고정돼 있다.</li>
+              <li><strong>노드 상태 관리 부담</strong> <span class="ts">04:20</span>: 작업 재큐잉, 나쁜 노드 감지 기능은 있다. 하지만 나쁜 노드를 찾고, 빼내고(드레인 <span class="en">drain</span>), 우회하는 일은 사람이 하거나 스크립트를 따로 짜야 한다.</li>
+              <li><strong>관측성</strong> <span class="en">observability</span> <span class="ts">05:00</span>: Slurm은 작업이 실패한 건 안다. 왜 실패했는지는 다 알려 주지 못한다. GPU 고장 말고도 네트워크 플랩 <span class="en">network flap</span>, 스위치 문제로 작업이 실패하거나 느려질 수 있다.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="two-stacks">
+        <header><span class="num">03</span><h2>두 팀, 두 개의 스택 <span class="ts">05:50</span></h2></header>
+        <p>Slurm은 학습 팀에게 이점이 크다. 하지만 설치하고 운영하고 안정적으로 유지하기가 어렵다. 반대편에는 Kubernetes가 있다.</p>
+        <h3>Kubernetes가 가진 것 <span class="ts">06:10</span></h3>
+        <ul class="plain">
+          <li>발표자는 "클라우드의 운영체제"라고 부른다. 널리 쓰여서 다룰 줄 아는 사람이 많다.</li>
+          <li>생태계가 성숙했다. 관측, 네트워크, 보안 등 필요한 확장 도구가 다 있다.</li>
+          <li>자체 복구 <span class="en">self-healing</span>, 부하 분산, 오토스케일이 기본으로 들어 있다.</li>
+        </ul>
+        <h3>문제는 두 팀이 만날 때 <span class="ts">06:40</span></h3>
+        <p>고객은 흔히 Kubernetes에서 추론부터 시작하고, 나중에 학습으로 넓힌다. 반대 순서도 있다. 이때 마찰이 생긴다.</p>
+        <ul class="plain">
+          <li>Kubernetes에 익숙한 팀은 Slurm 클러스터를 배포하고 운영하기 어려워한다.</li>
+          <li>새로 들어온 Slurm 중심 학습 팀은 기존 Kubernetes 체계가 낯설다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">각자 익숙한 도구로 가면</span>
+          <span>인프라 스택이 두 벌이 된다. 관측 도구, 온콜 <span class="en">on-call</span> 팀, 런북 <span class="en">runbook</span>도 두 벌이다. 운영 부담과 비용이 그만큼 늘어난다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="on-k8s">
+        <header><span class="num">04</span><h2>Slurm을 Kubernetes 위에 <span class="ts">07:30</span></h2></header>
+        <p>Crusoe의 답은 Slurm을 Kubernetes 위에 올리는 것이다. 중심에는 <strong>Crusoe Slurm 오퍼레이터</strong> <span class="en">operator</span>가 있다. 이 오퍼레이터가 관리형 Kubernetes, 그리고 스토리지·네트워크 같은 Crusoe 클라우드 자원과 맞물려 움직인다.</p>
+        <p>Slurm 사용자, 파티션, 설정, 스토리지는 Crusoe가 관리한다. 하나씩 따로 맞출 필요 없이 명령 하나로 Kubernetes 클러스터 안에 Slurm 클러스터가 생긴다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>누가</th><th>보이는 모습</th><th>이점</th></tr></thead>
+            <tbody>
+              <tr><td>연구자 (Slurm 사용자)</td><td>IP 주소 하나로 SSH 접속하면 평범한 Slurm 클러스터다</td><td>아래에서 Kubernetes가 돈다는 걸 몰라도 된다. 토폴로지 인식 스케줄링도 그대로 쓴다</td></tr>
+              <tr><td>플랫폼·인프라 팀</td><td>Slurm이 기존 인프라에 붙는 서비스 하나다</td><td>새 인프라 스택, 새 관측 도구, 새 온콜 팀, 새 런북이 필요 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>학습과 추론 사이에서 GPU 옮기기 <span class="ts">08:50</span></h3>
+        <p>모든 GPU가 한 클러스터에 있으니 자원을 양쪽으로 옮길 수 있다.</p>
+        <ul class="plain">
+          <li>추론 사용자가 몰리면 학습 클러스터의 GPU 일부를 추론 서비스로 돌린다.</li>
+          <li>사용자가 줄어 GPU가 놀면 학습을 키우거나, 더 많은 GPU로 큰 본 학습(히어로 런 <span class="en">hero run</span>)을 돌린다.</li>
+        </ul>
+        <p>발표자는 이것이 인프라 스택이 하나일 때만 가능하다고 말한다. 그리고 이 구조 덕분에 다음 절의 자동 복구(AutoClusters)를 Slurm에서도 쓸 수 있다.</p>
+        <p class="note">"한 스택일 때만 가능하다"는 자사 제품을 소개하며 한 주장이다. 다른 방식과 비교한 근거는 발표에 없었다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="flow">
+        <header><span class="num">05</span><h2>고장 나면 벌어지는 일 <span class="ts">10:00</span></h2></header>
+        <p>AutoClusters가 치명적인 하드웨어 오류를 감지했을 때의 흐름이다. 발표는 <strong>XID 79</strong> 오류를 예로 든다. GPU 하나를 전혀 쓸 수 없게 된 상황이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>순서</th><th>누가</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>알림</td><td>사용자에게 알린다. 사용자가 할 일은 없다</td></tr>
+              <tr><td>2</td><td>Slurm 오퍼레이터</td><td>해당 노드를 down 상태로 바꾸고, 돌던 작업을 취소한다</td></tr>
+              <tr><td>3</td><td>학습 코드</td><td>SIGTERM 신호를 받는다. <strong>최대 2분</strong> 안에 체크포인트를 저장하거나 로그를 내보낸 뒤 종료된다</td></tr>
+              <tr><td>4</td><td>Slurm</td><td>취소된 작업을 자동으로 대기열에 다시 넣는다 (재큐잉 <span class="en">requeue</span>)</td></tr>
+              <tr><td>5</td><td>AutoClusters</td><td>그 노드의 파드 중 자동 교체를 막는 라벨이 붙은 것이 없는지 확인한다</td></tr>
+              <tr><td>6</td><td>AutoClusters</td><td>교체해도 되면 Kubernetes 노드를 코든 <span class="en">cordon</span>하고 드레인한다</td></tr>
+              <tr><td>7</td><td>AutoClusters</td><td>고장 노드를 노드 풀에서 빼고, 여유 용량 <span class="en">spare capacity</span>에서 정상 노드를 가져와 채운다</td></tr>
+              <tr><td>8</td><td>기록</td><td>알림과 조치 내역을 로그로 남긴다. 사용자가 나중에 참고하는 용도다</td></tr>
+              <tr><td>9</td><td>Slurm + 학습 코드</td><td>정상 노드가 붙으면 작업이 시작된다. 학습 코드가 모델과 체크포인트를 불러와 학습을 이어 간다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">사용자가 할 일은 없다. 학습 코드만 준비돼 있다면</span>
+          <span>발표는 모든 단계에서 사용자가 할 일이 없다고 강조한다. 다만 3번과 9번은 플랫폼이 아니라 <strong>사용자의 학습 코드</strong>가 하는 일이다. 종료 신호를 받으면 2분 안에 체크포인트를 저장하고, 다시 시작하면 그 체크포인트를 불러와야 한다. 이 코드가 있어야 자동 재시작이 "이어서 학습"이 된다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="demo">
+        <header><span class="num">06</span><h2>데모: 15분 안에 재개 <span class="ts">11:30</span></h2></header>
+        <ol class="plain">
+          <li>왼쪽 화면에서 <code>sbatch</code>로 PyTorch 학습 스크립트를 평소처럼 실행한다. 오른쪽은 Crusoe 콘솔이고, A100 노드 2대짜리 GPU 노드 풀이 보인다.</li>
+          <li>스크립트로 Crusoe 내부 모니터링 시스템에 "GPU 하나에서 XID 79 발생"이라고 알린다. 이 신호가 AutoClusters를 깨운다. <span class="ts">11:50</span></li>
+          <li>GPU 사용률이 바로 떨어진다. 노드 교체가 곧바로 시작된다. <span class="ts">12:10</span></li>
+          <li>사용자에게 알림이 간다. 알림마다 "할 일 없음"이라고 적혀 있다. <span class="ts">12:30</span></li>
+          <li>Slurm 작업이 다시 시작되고, 체크포인트를 불러와 멈춘 곳부터 학습한다. GPU 사용률이 정상으로 돌아온다. <span class="ts">12:50</span></li>
+        </ol>
+
+        <figure class="chart" aria-label="고장 하나를 복구하는 데 드는 시간: SIGTERM 처리 여유 최대 2분, 오류 감지부터 정상 노드 복귀까지 약 5분, 데모 전체 중단 15분 미만">
+          <span class="chart-title">고장 하나를 복구하는 데 드는 시간 (분, 발표 수치)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>학습 코드가 종료 신호를 처리할 시간 (최대)</span><span class="val">2</span></div>
+              <div class="track"><div class="fill" style="width:13.3%" title="SIGTERM 처리 여유: 최대 2분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>AutoClusters: 오류 감지부터 정상 노드 복귀까지</span><span class="val">약 5</span></div>
+              <div class="track"><div class="fill key" style="width:33.3%" title="노드 교체: 약 5분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>데모 전체 중단: 오류부터 학습 재개까지</span><span class="val">&lt; 15</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="전체 중단: 15분 미만"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>5</span><span>10</span><span>15분</span></div>
+          <span class="caption">전체 중단 막대는 "15분 미만"이라 15에 맞춰 그렸다. 노드 교체 뒤의 나머지 시간은 주로 학습 코드가 모델과 체크포인트를 불러오는 시간이라고 발표자는 설명했다. 사람이 손으로 고치는 경우는 "몇 시간"이라고만 말해 막대로 그리지 않았다.</span>
+        </figure>
+
+        <p>발표자는 이 결과를 이렇게 비교한다. 엔지니어가 한밤중에 로그인해 몇 시간씩 디버깅하는 것보다 <strong>훨씬 낫다.</strong> 모든 과정이 플랫폼에서 자동으로 처리된다.</p>
+        <p class="note">데모는 A100 노드 2대 규모였고, 오류는 실제 고장이 아니라 스크립트로 흉내 낸 것이다. 5분과 15분은 Crusoe가 자기 제품으로 보여 준 수치다. 수천 GPU 규모에서 잰 결과는 발표에 나오지 않았다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="one-click">
+        <header><span class="num">07</span><h2>원클릭 Slurm <span class="ts">13:10</span></h2></header>
+        <p>Slurm과 Kubernetes를 합친 환경은 그동안 만들기 어려웠다. 발표자는 이 발표에서 <strong>원클릭 Slurm</strong> <span class="en">one-click Slurm</span>을 새로 발표했다. 지금까지 본 환경 전체를 명령 하나로 만든다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>명령</th><th>만들어지는 것</th></tr></thead>
+            <tbody>
+              <tr><td>첫 번째 명령</td><td>바탕이 되는 Kubernetes 클러스터, Slurm 컨트롤러, 로그인 노드, 스토리지</td></tr>
+              <tr><td>명령 하나 더</td><td>GPU 노드 풀</td></tr>
+              <tr><td>그다음</td><td>엔지니어는 SSH로 들어가 바로 작업을 돌린다. AutoClusters는 기본으로 켜져 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="takeaways">
+        <header><span class="num">08</span><h2>핵심 메시지 세 가지 <span class="ts">14:30</span></h2></header>
+        <ol class="plain">
+          <li><strong>두 시스템이 맞물린다.</strong> 전통적으로 Slurm과 그 아래 인프라는 따로 노는 시스템이었다. Kubernetes와 묶으면 둘이 같은 상태를 본다. 고장 난 GPU 노드가 자동으로 코든되고, 그 신호가 Slurm 오퍼레이터까지 바로 전달된다.</li>
+          <li><strong>두 팀 모두 하던 대로 일한다.</strong> <span class="ts">14:50</span> 연구자는 같은 명령으로 Slurm 작업을 돌린다. 파드에 SSH로 들어가거나 컨테이너를 신경 쓸 일이 없다. Kubernetes 팀은 익숙한 텔레메트리와 관측 도구를 그대로 쓴다.</li>
+          <li><strong>GPU 노드는 Kubernetes 노드가 먼저다.</strong> <span class="ts">15:20</span> Slurm은 그 위에서 도는 워크로드 하나일 뿐이다. Slurm 작업이 끝나면 그 GPU는 다음 작업을 기다리며 놀지 않는다. 플랫폼 입장에서는 노드 풀의 노드일 뿐이라 추론 파드를 바로 올릴 수 있다.</li>
+        </ol>
+
+        <div class="shift" aria-label="고장 대응 방식의 변화">
+          <div><span class="tag">전통적인 Slurm</span><b>Slurm과 인프라가 따로 논다</b><span class="muted">나쁜 노드를 사람이나 스크립트가 찾고 빼낸다. 한밤중에 몇 시간 디버깅한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Kubernetes 위의 Slurm</span><b>고장 신호가 Slurm까지 자동으로 간다</b><span class="muted">노드를 자동으로 바꾸고, 체크포인트에서 학습을 이어 간다</span></div>
+        </div>
+
+        <h3>앞에서 본 한계에 대한 답</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Slurm의 한계</th><th>발표가 내놓은 답</th></tr></thead>
+            <tbody>
+              <tr><td>고정된 자원 배분</td><td>GPU 노드를 Kubernetes 노드로 두고, Slurm은 그 위 워크로드로 돌린다. 학습과 추론 사이에서 GPU를 옮긴다</td></tr>
+              <tr><td>노드 상태 관리 부담</td><td>AutoClusters가 감지, 작업 취소, 재큐잉, 노드 교체를 자동으로 한다</td></tr>
+              <tr><td>관측성</td><td>Kubernetes 팀이 쓰던 텔레메트리와 관측 도구를 그대로 쓴다. 실패 원인을 어떻게 더 잘 알려 주는지는 자세히 보여 주지 않았다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <blockquote>고장은 피할 수 없다. 그러니 치명적인 오류가 나면 필요한 조치가 알아서 일어나도록 인프라를 설계해야 한다. 엔지니어는 인프라 걱정 없이 자기 애플리케이션에 집중할 수 있어야 한다.<cite>Connor의 맺음말을 옮김 <span class="ts">15:50</span></cite></blockquote>
+      </section>
+
+      <!-- 9 -->
+      <section id="recap">
+        <header><span class="num">09</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>GPU 수천 개 규모의 학습에서 GPU 고장은 피할 수 없다. 사람이 손으로 고치는 방식은 규모를 따라가지 못한다.</li>
+          <li>Slurm은 갱 스케줄링, 토폴로지 인식, 프롤로그·에필로그 덕분에 AI 학습에 잘 맞는다.</li>
+          <li>Slurm의 한계는 <strong>고정된 자원 배분, 노드 관리 부담, 부족한 관측성</strong>이다.</li>
+          <li>Kubernetes 팀과 Slurm 팀이 따로 가면 인프라 스택, 관측 도구, 온콜, 런북이 모두 두 벌이 된다.</li>
+          <li>Crusoe Managed Slurm은 SchedMD의 Slinky를 바탕으로 Slurm을 Kubernetes 위에서 돌린다.</li>
+          <li>연구자는 SSH로 들어가 평소처럼 Slurm을 쓰고, 플랫폼 팀은 Slurm을 서비스 하나로 다룬다.</li>
+          <li>GPU가 한 클러스터에 있으니 <strong>학습과 추론 사이에서 GPU를 옮겨 쓸 수 있다.</strong></li>
+          <li>XID 79 같은 치명적 오류가 나면 작업 취소, SIGTERM 2분, 재큐잉, 코든·드레인, 노드 교체, 학습 재개가 자동으로 이어진다.</li>
+          <li>데모 기준 노드 교체는 약 5분, 전체 중단은 15분 미만이다. 나머지 시간은 주로 학습 코드가 모델과 체크포인트를 불러오는 시간이다.</li>
+          <li>설계의 핵심은 <strong>GPU 노드가 Kubernetes 노드가 먼저</strong>라는 점이다. 그래서 고장 신호가 Slurm까지 자동으로 전달된다.</li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="quiz">
+        <header><span class="num">10</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자들이 대규모 학습에서 수동 복구로는 안 된다고 본 이유는?</span></summary><div class="answer">GPU가 수천 개면 고장은 반드시 일어난다. 그때마다 사람이 손으로 고치는 방식은 이 규모에서 지속할 수 없다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Slurm이 AI 학습에 잘 맞는 이유로 든 기능 세 가지는?</span></summary><div class="answer">갱 스케줄링, 토폴로지 인식, 클러스터 검사용 프롤로그·에필로그. 연구자에게 익숙한 도구라는 점도 들었다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Slurm의 세 가지 한계는?</span></summary><div class="answer">파티션이 고정적이라 학습·평가·추론이 섞인 동적 워크로드에 유연하지 않다. 나쁜 노드를 찾고 빼는 일이 사람이나 스크립트 몫이다. 작업이 실패한 건 알아도 왜 실패했는지는 잘 알려 주지 못한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Kubernetes 팀과 Slurm 팀이 각자 익숙한 도구로 가면 생기는 문제는?</span></summary><div class="answer">인프라 스택이 두 벌이 된다. 관측 도구, 온콜 팀, 런북도 두 벌이라 운영 부담과 비용이 늘어난다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>Crusoe Managed Slurm은 연구자와 플랫폼 팀에게 각각 어떻게 보이나?</span></summary><div class="answer">연구자에게는 IP 주소로 SSH 접속하는 평범한 Slurm 클러스터다. 플랫폼 팀에게는 기존 인프라에 붙는 서비스 하나다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>모든 GPU를 한 클러스터에 두면 생기는 이점은?</span></summary><div class="answer">추론 사용자가 몰리면 학습 쪽 GPU를 추론으로 돌린다. 사용자가 줄면 놀고 있는 GPU로 학습을 키우거나 큰 히어로 런을 돌린다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>SIGTERM을 받은 학습 코드에게 주어지는 시간과, 그동안 할 일은?</span></summary><div class="answer">최대 2분. 그 안에 체크포인트를 저장하거나 로그를 내보낸다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>AutoClusters가 노드를 교체하기 전에 확인하는 것은?</span></summary><div class="answer">그 노드의 파드 중 자동 교체를 막는 라벨이 붙은 것이 있는지. 없으면 코든·드레인하고 여유 용량의 정상 노드로 바꾼다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>데모에서 노드 교체 시간과 전체 중단 시간은? 나머지 시간은 무엇에 쓰였나?</span></summary><div class="answer">노드 교체 약 5분, 전체 중단 15분 미만. 나머지는 주로 학습 코드가 모델과 체크포인트를 불러오는 시간이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>"사용자가 할 일은 없다"는 말이 성립하려면 미리 갖춰야 할 것은?</span></summary><div class="answer">학습 코드가 종료 신호를 받으면 체크포인트를 저장하고, 다시 시작하면 그 체크포인트를 불러오게 돼 있어야 한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>원클릭 Slurm의 첫 명령 하나로 만들어지는 것은?</span></summary><div class="answer">바탕이 되는 Kubernetes 클러스터, Slurm 컨트롤러, 로그인 노드, 스토리지. GPU 노드 풀은 명령 하나를 더 쓴다. AutoClusters는 기본으로 켜져 있다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>"GPU 노드는 Kubernetes 노드가 먼저"라는 말은 무슨 뜻인가?</span></summary><div class="answer">Slurm은 Kubernetes 위에서 도는 워크로드 하나일 뿐이다. 그래서 고장 신호가 Slurm까지 자동으로 가고, Slurm 작업이 끝난 GPU에 추론 파드를 바로 올릴 수 있다.</div></details>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="apply">
+        <header><span class="num">11</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>학습 코드가 SIGTERM을 받으면 체크포인트를 저장하게 한다<span class="how">확인: 2분 안에 저장이 끝나는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>작업이 다시 시작되면 마지막 체크포인트에서 자동으로 이어 가게 한다<span class="how">확인: 사람이 손대지 않아도 이어서 학습하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>GPU 치명적 오류를 감지하는 모니터링을 둔다<span class="how">발표의 예: XID 79. 확인: 감지부터 노드 교체까지 걸리는 시간을 재고 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>고장 노드를 빼고 바꾸는 흐름을 자동화한다<span class="how">작업 취소와 재큐잉, 코든·드레인, 여유 용량에서 교체, 학습 재개</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>자동 교체를 막아야 하는 작업을 표시해 둔다<span class="how">발표의 예: 파드 라벨로 자동 교체를 끈다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>복구할 때마다 알림과 조치 내역을 기록한다<span class="how">확인: 사용자가 나중에 무슨 일이 있었는지 볼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>학습 팀과 플랫폼 팀이 인프라를 두 벌로 운영하고 있는지 점검한다<span class="how">관측 도구, 온콜, 런북이 중복되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>학습이 끝난 GPU를 추론에 바로 쓸 수 있는지 본다<span class="how">확인: 작업 사이에 GPU가 노는 시간이 얼마나 되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>GPU 고장을 흉내 내어 복구 훈련을 해 본다<span class="how">발표의 데모처럼 오류를 일부러 일으키고, 학습 재개까지 걸린 전체 시간을 잰다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="glossary">
+        <header><span class="num">12</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>Slurm</td><td>대규모 계산 클러스터에서 작업 대기열과 자원 배분을 맡는 스케줄러</td></tr>
+              <tr><td>HPC</td><td>High-Performance Computing. 많은 컴퓨터를 묶어 큰 계산을 하는 분야</td></tr>
+              <tr><td>Kubernetes</td><td>컨테이너로 만든 서비스를 배포하고 운영을 자동화하는 플랫폼</td></tr>
+              <tr><td>Slinky</td><td>Slurm 개발사 SchedMD의 공식 오픈소스 프로젝트. Slurm을 Kubernetes 위에서 돌린다</td></tr>
+              <tr><td>오퍼레이터</td><td>Operator. Kubernetes에서 특정 소프트웨어의 운영을 자동으로 맡는 프로그램</td></tr>
+              <tr><td>랭크</td><td>Rank. 분산 학습에 참여하는 각 프로세스의 번호</td></tr>
+              <tr><td>집합 통신</td><td>Collective communication. 여러 프로세스가 한꺼번에 데이터를 주고받아 맞추는 통신</td></tr>
+              <tr><td>갱 스케줄링</td><td>Gang scheduling. 작업에 필요한 노드를 한꺼번에 모두 잡았을 때만 시작하는 방식</td></tr>
+              <tr><td>토폴로지 인식</td><td>Topology awareness. 네트워크 구조를 보고 서로 가까운 노드에 작업을 놓는 것</td></tr>
+              <tr><td>프롤로그 / 에필로그</td><td>Prolog / Epilog. Slurm 작업 앞뒤에 자동으로 도는 스크립트. 노드 검사에 쓴다</td></tr>
+              <tr><td>파티션</td><td>Partition. Slurm에서 노드를 묶어 나눈 단위</td></tr>
+              <tr><td>노드 풀</td><td>Node pool. 같은 사양의 노드를 묶은 것</td></tr>
+              <tr><td>코든 / 드레인</td><td>Cordon / Drain. 코든은 노드에 새 작업이 못 오게 막는 것이고, 드레인은 돌던 작업까지 빼내는 것이다</td></tr>
+              <tr><td>재큐잉</td><td>Requeue. 취소된 작업을 대기열에 다시 넣는 것</td></tr>
+              <tr><td>XID 79</td><td>NVIDIA GPU 드라이버가 보고하는 오류 번호 중 하나. 발표에서는 GPU를 전혀 쓸 수 없는 치명적 오류로 소개했다</td></tr>
+              <tr><td>SIGTERM</td><td>프로그램에 "곧 끝내라"고 알리는 신호. 받은 프로그램은 정리할 시간을 갖는다</td></tr>
+              <tr><td>체크포인트</td><td>Checkpoint. 학습 중간 상태를 저장한 파일. 여기서부터 학습을 이어 갈 수 있다</td></tr>
+              <tr><td>sbatch</td><td>Slurm에 배치 작업을 제출하는 명령</td></tr>
+              <tr><td>여유 용량</td><td>Spare capacity. 고장 난 노드를 바로 대신할 수 있게 비워 둔 자원</td></tr>
+              <tr><td>히어로 런</td><td>Hero run. GPU를 가장 많이 써서 돌리는 대규모 본 학습</td></tr>
+              <tr><td>관측성</td><td>Observability. 시스템 안에서 무슨 일이 왜 일어났는지 밖에서 알아낼 수 있는 정도</td></tr>
+              <tr><td>네트워크 플랩</td><td>Network flap. 네트워크 연결이 짧게 끊겼다 붙었다를 반복하는 현상</td></tr>
+              <tr><td>온콜 / 런북</td><td>On-call / Runbook. 온콜은 장애 대응 당번, 런북은 장애 때 따라 하는 대응 절차 문서</td></tr>
+              <tr><td>텔레메트리</td><td>시스템 상태를 자동으로 모아 보내는 측정 데이터</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="timeline">
+        <header><span class="num">13</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개: Connor, Nikil, Young</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>대규모 학습에서 GPU 고장은 피할 수 없다</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>Crusoe Cloud 소개</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>CMK, Managed Slurm, Slinky</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>AutoClusters 소개</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>Slurm의 출발: 연구자가 연구자를 위해</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>AI 학습에 맞는 이유: 집합 통신, 갱 스케줄링, 토폴로지 인식</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>Slurm의 한계: 고정된 자원 배분</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>노드 상태 관리 부담</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>관측성</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>Crusoe Managed Slurm 소개 (Nikil)</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>Kubernetes의 강점</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>두 팀, 두 개의 인프라 스택</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>Slurm을 Kubernetes 위에: Slurm 오퍼레이터</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>연구자와 플랫폼 팀에게 보이는 모습</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>학습과 추론 사이에서 GPU 옮기기</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>자동 복구 흐름: XID 79</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>SIGTERM과 2분</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>재큐잉, 교체 금지 라벨 확인, 코든·드레인</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>여유 용량에서 노드 교체, 기록 남기기</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>작업 재시작과 체크포인트 불러오기</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>데모: sbatch와 A100 노드 2대</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>XID 79 오류 흉내 내기</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>GPU 사용률 하락, 노드 교체 시작</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>노드 교체 약 5분, 전체 15분 미만</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>학습 재개, 사람이 고칠 때와 비교</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>원클릭 Slurm 발표</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>정리</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>핵심 1: Slurm과 인프라가 맞물린다</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>핵심 2: 두 팀 모두 하던 대로</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>핵심 3: GPU 노드는 Kubernetes 노드가 먼저</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>맺음말: 고장은 피할 수 없다</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>마무리와 질문 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'bRGyYaE0lxI:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

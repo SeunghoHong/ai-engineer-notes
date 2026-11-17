@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>검증 병목 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#bottleneck">검증이 새 병목이다</a></li>
+      <li><a href="#assertions">단언 테스트로는 다 못 잡는다</a></li>
+      <li><a href="#cost">지금 치르는 세 가지 비용</a></li>
+      <li><a href="#how">녹화하고, 재생하고, 비교한다</a></li>
+      <li><a href="#diff">판정 대신 차이를 보여준다</a></li>
+      <li><a href="#mocking">기술 1: 네트워크 모킹</a></li>
+      <li><a href="#determinism">기술 2: 결정적 브라우저</a></li>
+      <li><a href="#coverage">기술 3: 커버리지로 흐름 고르기</a></li>
+      <li><a href="#layers">세 기술은 서로 기댄다</a></li>
+      <li><a href="#questions">발표가 답하지 않은 질문</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-02 · 11분 · 영어 발표 한글 정리</span>
+      <h1>AI가 출시를 앞당기지 못한 이유</h1>
+      <p class="lead">AI는 사람이 확인하는 속도보다 빨리 코드를 쓴다. 발표자는 그래서 병목이 검증으로 옮겨 갔다고 본다. 해법으로 실제 사용 흐름을 녹화했다가 PR마다 다시 재생하고, 달라진 화면을 빠짐없이 보여주는 방식을 소개한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=HLTa7Vcs4X0" target="_blank" rel="noopener">Why AI Didn't Actually Make You Ship Faster</a></span>
+        <span>발표: Gabriel Spencer-Harper (Meticulous 공동 창업자, CEO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 고객사 이름은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름(Meticulus, cypus, playright 등)은 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">이 발표는 발표자 회사 제품의 데모를 겸한다. 제품이 무엇을 해낸다는 주장은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI는 사람이 리뷰하는 것보다 빨리 코드를 쓴다. 발표자는 이제 <strong>검증이 병목</strong>이라고 본다.</li>
+        <li><strong>단언 기반 테스트만으로는 부족하다.</strong> 코드 변경이 깨뜨릴 수 있는 곳이 너무 많아서 정답을 미리 다 적을 수 없다.</li>
+        <li>검증이 막히면 세 가지 비용이 생긴다. <strong>새는 버그</strong>, <strong>E2E 테스트 유지에 드는 시간</strong>, 그리고 <strong>대규모 변경을 못 하는 것</strong>이다.</li>
+        <li>Meticulous는 사용 흐름을 녹화했다가 PR마다 변경 전과 후로 재생한다. 그리고 <strong>매 순간의 스크린샷을 비교</strong>해 달라진 화면을 보여준다.</li>
+        <li>도구는 버그인지 판정하지 않는다. <strong>차이만 보여주고, 판단은 리뷰할 때 사람이나 에이전트가</strong> 한다.</li>
+        <li>받침 기술은 셋이다. <strong>네트워크 모킹</strong>, <strong>결정적 브라우저</strong>, <strong>커버리지 기반 흐름 선택</strong>.</li>
+        <li>세 기술은 사슬처럼 이어진다. 빠짐없는 검증에는 커버리지 선택이, 그 선택에는 매 순간 스크린샷이, 스크린샷에는 <strong>플레이키 제거</strong>가 필요하다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="bottleneck">
+        <header><span class="num">01</span><h2>검증이 새 병목이다 <span class="ts">00:40</span></h2></header>
+        <p>발표자의 핵심 주장은 한 문장이다. <strong>빠짐없는 검증</strong> <span class="en">exhaustive verification</span>이 있으면, 에이전트가 코드를 쓰는 속도 그대로 출시할 수 있다.</p>
+        <p>그런 검증이 없으면 조직 안의 누군가가 코드를 직접 확인해야 한다. 그 사람이 새 병목이 된다. 그러면 속도와 품질 중 하나를 골라야 한다. 빨리 내보내면 버그가 늘고 사용자 경험이 나빠진다. 꼼꼼히 보면 느려진다.</p>
+
+        <h3>발표자의 회사 <span class="ts">01:10</span></h3>
+        <p>Meticulous는 프런트엔드 코드를 빠짐없이, 또는 거의 빠짐없이 검증해 준다고 소개한다. 개발자가 따로 할 일은 없다고 한다.</p>
+        <p>발표자가 든 고객사는 Discord, Wiz, Dropbox, Notion, ElevenLabs, LaunchDarkly 등이다. 이 회사들에서는 프런트엔드 코드를 만지는 엔지니어가 매일 이 도구를 쓴다고 한다.</p>
+
+        <h3>AI는 사람이 리뷰하는 것보다 빨리 쓴다 <span class="ts">01:50</span></h3>
+        <p>코드를 쓰는 속도는 크게 올랐다. 리뷰하고 검증하는 속도는 그대로다. 그래서 리뷰와 검증이 새 병목이 됐다는 것이 발표자의 진단이다.</p>
+        <p class="note">발표 제목은 "AI가 출시를 빠르게 하지 못한 이유"지만, 출시 속도를 잰 수치는 발표에 나오지 않는다. 병목이 검증이라는 말은 발표자의 판단이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="assertions">
+        <header><span class="num">02</span><h2>단언 테스트로는 다 못 잡는다 <span class="ts">02:00</span></h2></header>
+        <p><strong>단언 기반 테스트</strong> <span class="en">assertion-based testing</span>는 정답을 미리 코드로 적어 두는 테스트다. "이 버튼을 누르면 이 문구가 보여야 한다" 같은 식이다.</p>
+        <p>발표자는 이것만으로는 부족하다고 말한다. 사람이든 에이전트든 올바른 동작을 미리 다 적을 수는 없다. 코드 변경이 원래 되던 기능을 깨뜨리는 일, 즉 <strong>회귀</strong> <span class="en">regression</span>가 생길 수 있는 곳이 너무 많기 때문이다.</p>
+
+        <h3>이 PR을 바로 머지할 수 있나 <span class="ts">02:20</span></h3>
+        <p>발표자는 확인용 질문을 하나 던진다. 팀의 누군가가 AI로 만든 PR을 올렸다. 그대로 머지하고 배포할 수 있겠나?</p>
+        <p>대부분의 조직은 "아니오"라고 답한다고 한다. 대신 사람이 직접 하나씩 켜 보며 확인한다.</p>
+        <ul class="plain">
+          <li>여러 <strong>기능 플래그</strong> <span class="en">feature flag</span> 상태</li>
+          <li>사용자 역할과 권한</li>
+          <li>설정과 구성</li>
+          <li>그 밖의 예외 상황</li>
+        </ul>
+        <p>변경이 어디까지 영향을 주는지 다 보려면 이 조합을 손으로 돌아봐야 한다. 이 수고가 곧 병목이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="cost">
+        <header><span class="num">03</span><h2>지금 치르는 세 가지 비용 <span class="ts">03:00</span></h2></header>
+        <p>발표자는 지금 상태가 세 가지 결과를 낳는다고 정리한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>비용</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>버그</td><td>회귀가 사용자에게 나가고, 사업에 피해를 준다</td></tr>
+              <tr><td>테스트 유지</td><td>엔지니어링 조직은 시간의 두 자릿수 퍼센트를 <strong>E2E 테스트</strong> <span class="en">end-to-end test</span> 관리에 쓴다. 손으로 하는 검증, 리뷰, 플레이키 디버깅, 테스트 수정이 여기에 들어간다</td></tr>
+              <tr><td>놓치는 기회</td><td>빠짐없는 검증이 있으면 일하는 방식이 바뀐다. 의존성을 한꺼번에 올리고, 넓은 리팩터링을 하고, AI가 만든 변경을 자신 있게 머지할 수 있다. 지금은 이걸 못 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">"두 자릿수 퍼센트"는 발표자가 말한 것이다. 구체적인 숫자나 출처는 발표에 없다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="how">
+        <header><span class="num">04</span><h2>녹화하고, 재생하고, 비교한다 <span class="ts">04:30</span></h2></header>
+        <p>그럼 빠짐없는 검증은 어떻게 얻나. 발표자는 데모로 Meticulous의 방식을 보여준다. 핵심은 실제 사용 흐름을 녹화해 두었다가, 코드를 바꿀 때마다 다시 재생해 화면을 비교하는 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>어디서</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1. 녹화</td><td>비프로덕션 환경 (localhost, QA, dev, staging)</td><td>JavaScript 한 줄을 심는다. 이 코드가 브라우저를 <strong>계측</strong> <span class="en">instrument</span>해 사용 흐름을 수천~수만 개 녹화한다. 예: 로그인 버튼 누르기, 설정 패널 열기, 분석 패널 열기</td></tr>
+              <tr><td>2. 재생</td><td>PR이 열린 <strong>CI</strong> <span class="en">continuous integration</span> 러너</td><td>앱을 로컬 서버(예: localhost:3000)로 띄운다. 녹화한 흐름 일부를 골라 이벤트를 하나씩 다시 보낸다</td></tr>
+              <tr><td>3. 촬영</td><td>재생하는 동안</td><td>이벤트 하나가 끝날 때마다 스크린샷을 찍는다. 흐름마다 변경 전 코드와 변경 후 코드에서 한 벌씩 만든다</td></tr>
+              <tr><td>4. 비교</td><td>CI</td><td>두 스크린샷 묶음을 비교해, 이 코드를 머지하면 앱이 어떻게 달라지는지 찾는다</td></tr>
+              <tr><td>5. 알림</td><td>PR</td><td>보통 몇 분 안에 PR에 댓글을 단다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 과정에서 개발자가 테스트를 직접 쓰는 단계는 없다. "개발자의 수고가 0"이라는 소개는 여기서 나온다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="diff">
+        <header><span class="num">05</span><h2>판정 대신 차이를 보여준다 <span class="ts">05:40</span></h2></header>
+        <p>데모 PR에는 변경이 두 개 있었다. 하나는 화면에 보이는 이름을 바꾼 것이다. 다른 하나는 드롭다운에 오류를 넣은 것이다.</p>
+        <p>PR 댓글을 열면 diff 목록이 나온다. diff마다 변경 전 화면과 변경 후 화면이 짝으로 있다. <span class="ts">06:00</span></p>
+        <ul class="plain">
+          <li>이름 변경이 라이트 모드에서 보인 모습</li>
+          <li>같은 변경이 다크 모드에서 보인 모습</li>
+          <li>드롭다운 논리 오류가 화면에 드러난 모습</li>
+        </ul>
+        <p>도구는 이게 버그인지 말해 주지 않는다. 무엇이 달라졌는지만 보여준다. 리뷰하는 사람이 diff를 보고 의도한 변화인지 아닌지 판단한다.</p>
+
+        <div class="shift" aria-label="판단하는 시점의 이동">
+          <div><span class="tag">단언 기반 테스트</span><b>코드를 쓸 때 판단한다</b><span class="muted">업무 맥락과 판단을 써서 올바른 동작을 미리 단언으로 적어 둔다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Meticulous</span><b>리뷰할 때 판단한다</b><span class="muted">달라진 화면을 보고 사람이나 에이전트가 판단한다</span></div>
+        </div>
+        <p>판단 자체는 여전히 필요하다. 바뀌는 것은 판단하는 <strong>시점</strong>이다. 정답을 미리 다 적어 두지 않아도 된다. <span class="ts">06:30</span></p>
+      </section>
+
+      <!-- 6 -->
+      <section id="mocking">
+        <header><span class="num">06</span><h2>기술 1: 네트워크를 녹화본으로 바꿔 끼운다 <span class="ts">07:20</span></h2></header>
+        <p>발표자는 이 도구가 왜 되는지 이해하려면 세 가지 기술을 알아야 한다고 말한다. 첫째는 <strong>모킹</strong> <span class="en">mocking</span>이다.</p>
+        <p>녹화할 때 모든 네트워크 요청과 응답을 함께 기록한다. 재생할 때는 실제 서버에 묻지 않는다. 기록해 둔 응답을 대신 끼워 넣는다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">이유 1 · 늘 같은 결과</span>
+            <p>테스트가 <strong>멱등</strong> <span class="en">idempotent</span>해진다. 1,000번 연달아 돌려도 매번 같은 결과가 나온다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">이유 2 · 서로 독립</span>
+            <p>테스트끼리 영향을 주지 않는다. 그래서 <strong>경쟁 상태</strong> <span class="en">race condition</span>가 생길 위험이 없다.</p>
+            <p class="verdict">덕분에 테스트를 여러 기계에 나눠 동시에 돌릴 수 있다. 결과는 <b>몇 분 안에</b> 나온다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="determinism">
+        <header><span class="num">07</span><h2>기술 2: 브라우저를 결정적으로 만든다 <span class="ts">07:50</span></h2></header>
+        <p>둘째는 <strong>플레이키</strong> <span class="en">flaky</span>를 줄이는 기술이다. 플레이키 테스트는 코드가 그대로인데도 돌릴 때마다 통과와 실패가 바뀌는 테스트다.</p>
+        <p>발표자는 Meticulous의 플레이키가 Cypress나 Playwright를 포함한 어떤 도구보다 자릿수 단위로 적다고 주장한다.</p>
+        <p>그 이유로 브라우저를 스케줄링 엔진 층부터 고쳐 <strong>결정적</strong> <span class="en">deterministic</span>으로 만들었다고 설명한다. 결정적이란 같은 입력이면 늘 같은 결과가 나온다는 뜻이다.</p>
+        <p>브라우저는 처음 설계될 때 결정성을 목표로 하지 않았다. 그래서 무작위성이 끼어드는 곳이 많다. <span class="ts">08:10</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>무작위성의 원인</th><th>발표자가 든 예</th></tr></thead>
+            <tbody>
+              <tr><td>애니메이션</td><td>로딩 스피너가 어느 순간 어디까지 돌았는지는 브라우저를 돌리는 컴퓨터의 CPU 속도에 따라 다르다</td></tr>
+              <tr><td>타이머 순서</td><td><code>setTimeout</code>과 <code>setInterval</code> 콜백이 어떤 순서로 섞여 실행되는지가 매번 다를 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Meticulous는 이런 무작위성을 처리해 브라우저를 결정적이거나 거의 결정적으로 만든다고 한다.</p>
+        <p class="note">"자릿수 단위로 적다"는 비교 수치 없이 나온 주장이다. 경쟁 도구와 견주는 자기 제품 이야기라는 점을 감안하자.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="coverage">
+        <header><span class="num">08</span><h2>기술 3: 커버리지로 재생할 흐름을 고른다 <span class="ts">08:40</span></h2></header>
+        <p>셋째는 발표자가 가장 중요하다고 꼽은 기술이다. 검증이 빠짐없으려면 앱이 갈 수 있는 모든 경우를 덮어야 한다.</p>
+        <ul class="plain">
+          <li>모든 기능 조합</li>
+          <li>모든 권한과 역할</li>
+          <li>모든 설정</li>
+          <li>앱 안에서 갈 수 있는 모든 분기</li>
+        </ul>
+
+        <h3>재생할 흐름 고르기 <span class="ts">09:00</span></h3>
+        <ol class="plain">
+          <li>녹화한 흐름을 하나씩 main 브랜치에서 한 번 재생한다.</li>
+          <li>재생하는 동안 어떤 코드 줄이 실행됐는지 기록한다.</li>
+          <li>"흐름마다 실행된 코드 줄" 색인을 만든다.</li>
+          <li><strong>코드 커버리지</strong> <span class="en">code coverage</span>가 가장 넓어지는 흐름 묶음을 고른다.</li>
+        </ol>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>예시: 녹화한 흐름</th><th>main에서 실행된 코드</th><th>고를까?</th></tr></thead>
+            <tbody>
+              <tr><td>로그인</td><td>auth.ts, header.tsx</td><td>고른다. auth.ts는 이 흐름만 덮는다</td></tr>
+              <tr><td>설정 열기</td><td>header.tsx, settings.tsx</td><td>빼도 된다. 아래 흐름이 같은 코드를 다 덮는다</td></tr>
+              <tr><td>관리자로 설정 열기</td><td>header.tsx, settings.tsx, admin-panel.tsx</td><td>고른다</td></tr>
+              <tr><td>분석 패널 열기</td><td>header.tsx, analytics.tsx</td><td>고른다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">이 표는 이해를 돕기 위한 예시다. 발표에 나온 것이 아니다. 발표자는 파일이 아니라 코드 줄 단위로 기록한다고 말했다.</p>
+
+        <h3>커버리지가 여기서는 의미 있다는 주장 <span class="ts">09:20</span></h3>
+        <p>발표자는 코드 커버리지가 보통은 나쁜 지표라고 말한다. Cypress나 Playwright 테스트로 코드 100%를 실행하면서 단언은 하나만 할 수도 있기 때문이다.</p>
+        <blockquote>커버된 코드가 곧 테스트된 코드는 아니다.<cite>발표자의 표현을 옮김 · 09:40</cite></blockquote>
+        <p>Meticulous에서는 둘이 거의 같다고 주장한다. 흐름의 <strong>모든 순간</strong>에 스크린샷을 찍기 때문이다. 412단계짜리 흐름(추정)에서 픽셀 하나만 달라져도 표시한다고 한다.</p>
+        <p class="note">"Meticulous만 예외"라는 말은 자기 제품에 대한 주장이다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="layers">
+        <header><span class="num">09</span><h2>세 기술은 서로 기댄다 <span class="ts">10:00</span></h2></header>
+        <p>발표자는 세 기술이 따로 노는 게 아니라 사슬처럼 이어져 있다고 정리한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>이걸 하려면</th><th>이게 필요하다</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>빠짐없는 검증</td><td>커버리지 기반 흐름 선택</td><td>앱의 모든 분기를 덮는 흐름을 골라야 한다</td></tr>
+              <tr><td>커버리지 기반 선택</td><td>모든 순간의 스크린샷</td><td>실행된 코드가 실제로 확인돼야 커버리지가 의미 있다</td></tr>
+              <tr><td>모든 순간의 스크린샷</td><td>플레이키를 근본에서 없애기</td><td>스크린샷이 수천만~수억 장이 된다. 작은 흔들림도 쌓이면 결과가 잡음에 묻힌다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>마지막 고리를 푸는 것이 브라우저를 결정적으로 만드는 기술이다. 결국 <strong>플레이키를 브라우저 층에서 없앤 것</strong>이 나머지를 가능하게 한다는 구조다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="questions">
+        <header><span class="num">10</span><h2>발표가 답하지 않은 질문</h2><p class="muted">발표 내용이 아니라 이 노트에서 덧붙인 질문이다. 비슷한 도구를 검토할 때 확인해 볼 거리다.</p></header>
+        <ul class="plain">
+          <li><strong>화면에 드러나지 않는 변화는?</strong> 스크린샷 비교는 화면에 보이는 차이를 본다. 서버로 보내는 값이나 저장되는 데이터가 바뀐 경우는 발표에서 다루지 않았다.</li>
+          <li><strong>서버 쪽이 바뀌면?</strong> 재생할 때 기록해 둔 응답을 쓴다. 그래서 백엔드 응답 형식이 바뀐 경우는 이 재생만으로 드러나지 않을 수 있다.</li>
+          <li><strong>아직 녹화되지 않은 흐름은?</strong> 새로 만든 기능에는 녹화된 사용 흐름이 없을 수 있다.</li>
+          <li><strong>diff는 누가 다 보나?</strong> 도구는 판정하지 않는다. diff가 많이 나오면 그걸 판단하는 사람이나 에이전트가 다시 병목이 될 수 있다.</li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>AI 덕분에 코드는 빨리 나오지만 검증 속도는 그대로다. 발표자는 병목이 <strong>검증</strong>으로 옮겨 갔다고 본다.</li>
+          <li>빠짐없는 검증이 없으면 누군가 손으로 확인해야 한다. 그러면 속도와 품질 중 하나를 포기하게 된다.</li>
+          <li>단언 기반 테스트는 정답을 미리 적는 방식이다. 회귀가 생길 수 있는 넓은 공간을 다 덮지 못한다.</li>
+          <li>비용은 셋이다. 새는 버그, 시간의 두 자릿수 퍼센트를 먹는 E2E 테스트 유지, 하지 못하는 대규모 변경.</li>
+          <li>Meticulous는 비프로덕션에서 사용 흐름을 녹화하고, PR마다 변경 전과 후로 재생해 <strong>매 순간 스크린샷을 비교</strong>한다.</li>
+          <li>도구는 버그를 판정하지 않는다. 판단은 <strong>리뷰 시점</strong>에 사람이나 에이전트가 한다.</li>
+          <li>모킹: 기록한 네트워크 응답을 끼워 넣어 <strong>늘 같은 결과</strong>와 <strong>병렬 실행</strong>을 얻는다.</li>
+          <li>결정적 브라우저: 애니메이션, 타이머 순서 같은 무작위성을 없애 플레이키를 줄인다.</li>
+          <li>커버리지 선택: main에서 흐름마다 실행된 코드를 기록하고, 커버리지가 가장 넓은 흐름 묶음을 고른다.</li>
+          <li>세 기술은 사슬이다. 빠짐없는 검증은 커버리지 선택에, 커버리지는 매 순간 스크린샷에, 스크린샷은 <strong>플레이키 제거</strong>에 기댄다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 새 병목은 무엇이고, 그게 없으면 무엇이 가능해지나?</span></summary><div class="answer">검증이다. 빠짐없는 검증이 있으면 에이전트가 코드를 쓰는 속도 그대로 출시할 수 있다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>단언 기반 테스트만으로 부족한 이유는?</span></summary><div class="answer">올바른 동작을 미리 다 적어야 하는데, 회귀가 생길 수 있는 곳이 너무 많아서 사람도 에이전트도 다 적을 수 없다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>AI가 만든 PR을 바로 머지하지 못할 때, 사람이 대신 손으로 확인하는 것은?</span></summary><div class="answer">기능 플래그 상태, 사용자 역할과 권한, 설정과 구성, 그 밖의 예외 상황. 변경의 영향을 다 보려고 이 조합을 하나씩 돌아본다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>발표자가 꼽은 세 가지 비용은?</span></summary><div class="answer">사용자에게 나가는 버그, E2E 테스트 유지에 드는 시간(엔지니어링 시간의 두 자릿수 퍼센트), 그리고 의존성 업데이트나 대규모 리팩터링을 자신 있게 못 하는 것.</div></details>
+          <details><summary><span class="qn">Q5</span><span>Meticulous는 사용 흐름을 어디서 녹화하나?</span></summary><div class="answer">비프로덕션 환경이다. localhost, QA, dev, staging에 JavaScript 한 줄을 심어 녹화한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>PR이 열리면 CI에서 무슨 일이 일어나나?</span></summary><div class="answer">앱을 로컬에 띄우고, 녹화한 흐름 일부를 이벤트 단위로 재생하며 매 순간 스크린샷을 찍는다. 변경 전과 후 코드에서 한 벌씩 찍어 비교하고, 몇 분 안에 PR에 댓글을 단다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>단언 기반 테스트와 Meticulous는 "판단하는 시점"이 어떻게 다른가?</span></summary><div class="answer">단언 기반 테스트는 코드를 쓸 때 정답을 미리 적으며 판단한다. Meticulous는 차이만 보여주고, 리뷰할 때 사람이나 에이전트가 판단한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>네트워크를 모킹하는 두 가지 이유는?</span></summary><div class="answer">첫째, 테스트가 멱등해져 몇 번을 돌려도 같은 결과가 나온다. 둘째, 테스트끼리 독립이라 경쟁 상태가 없고, 병렬로 돌려 몇 분 안에 결과를 얻는다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>브라우저에 무작위성이 끼어드는 예로 발표자가 든 두 가지는?</span></summary><div class="answer">CPU 속도에 따라 달라지는 로딩 스피너 애니메이션, 그리고 setTimeout과 setInterval 콜백이 섞여 실행되는 순서.</div></details>
+          <details><summary><span class="qn">Q10</span><span>재생할 흐름은 어떻게 고르나?</span></summary><div class="answer">녹화한 흐름을 main 브랜치에서 한 번씩 재생하며 실행된 코드 줄을 기록한다. 그 색인으로 코드 커버리지가 가장 넓어지는 흐름 묶음을 고른다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>보통은 나쁜 지표인 커버리지가 Meticulous에서는 의미 있다고 주장하는 근거는?</span></summary><div class="answer">보통은 코드를 실행만 하고 단언은 거의 안 할 수 있다. Meticulous는 흐름의 모든 순간에 스크린샷을 찍어 비교하므로, 실행된 코드가 곧 확인된 코드에 가깝다고 주장한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>플레이키를 브라우저 층에서 근본적으로 없애야 하는 이유는?</span></summary><div class="answer">모든 순간을 찍으면 스크린샷이 수천만~수억 장이 된다. 작은 흔들림도 쌓이면 결과가 잡음에 묻혀 쓸 수 없게 된다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>"AI가 만든 PR을 지금 바로 머지할 수 있나"를 팀에 묻는다<span class="how">답이 "아니오"라면 머지 전에 손으로 확인하는 항목을 적어 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>E2E 테스트 유지에 드는 시간을 잰다<span class="how">손으로 하는 검증, 리뷰, 플레이키 디버깅, 테스트 수정을 나눠서 기록한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>기능 플래그, 역할, 권한, 설정 조합 목록을 만든다<span class="how">확인: 어느 조합이 테스트되고 어느 조합이 비어 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>플레이키 테스트의 원인을 분류한다<span class="how">네트워크 의존, 테스트끼리 공유하는 상태, 애니메이션, 타이머 순서</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>E2E 테스트의 네트워크 응답을 기록본으로 고정한다<span class="how">확인: 같은 테스트를 여러 번 돌려 결과가 같은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>테스트끼리 상태를 공유하지 않게 해 병렬로 돌린다<span class="how">확인: 전체 결과가 몇 분 안에 나오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>커버리지 숫자를 볼 때 "실행됐다"와 "확인됐다"를 구분한다<span class="how">커버된 코드에 실제 검사가 붙어 있는지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>화면 비교 도구를 쓴다면 diff를 누가 판단할지 정한다<span class="how">사람 리뷰어, 리뷰 에이전트, 또는 둘의 분담</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>검증</td><td>Verification. 코드가 의도대로 동작하는지 확인하는 일</td></tr>
+              <tr><td>빠짐없는 검증</td><td>Exhaustive verification. 앱이 갈 수 있는 경우를 빠짐없이 확인하는 것</td></tr>
+              <tr><td>단언 기반 테스트</td><td>Assertion-based testing. 올바른 결과를 미리 코드로 적어 두고 실제 결과와 비교하는 테스트</td></tr>
+              <tr><td>회귀</td><td>Regression. 새 변경 때문에 원래 잘 되던 기능이 망가지는 것</td></tr>
+              <tr><td>E2E 테스트</td><td>End-to-end test. 사용자처럼 앱을 처음부터 끝까지 조작해 확인하는 테스트</td></tr>
+              <tr><td>기능 플래그</td><td>Feature flag. 코드를 다시 배포하지 않고 기능을 켜고 끄는 스위치</td></tr>
+              <tr><td>비프로덕션 환경</td><td>실제 사용자가 쓰지 않는 환경. localhost, QA, dev, staging 등</td></tr>
+              <tr><td>계측</td><td>Instrument. 동작을 기록하도록 코드나 브라우저에 관찰 장치를 붙이는 것</td></tr>
+              <tr><td>CI</td><td>Continuous integration. PR이 올라올 때마다 빌드와 테스트를 자동으로 돌리는 체계</td></tr>
+              <tr><td>diff</td><td>변경 전과 후의 차이. 이 발표에서는 변경 전후 스크린샷의 차이</td></tr>
+              <tr><td>모킹</td><td>Mocking. 실제 서버 대신 미리 준비한 가짜 응답을 돌려주게 하는 것</td></tr>
+              <tr><td>멱등</td><td>Idempotent. 같은 일을 여러 번 해도 결과가 같은 성질</td></tr>
+              <tr><td>경쟁 상태</td><td>Race condition. 작업 순서에 따라 결과가 달라지는 문제</td></tr>
+              <tr><td>플레이키</td><td>Flaky. 코드가 그대로인데 돌릴 때마다 통과와 실패가 바뀌는 테스트</td></tr>
+              <tr><td>결정적</td><td>Deterministic. 같은 입력이면 늘 같은 결과가 나오는 성질</td></tr>
+              <tr><td>setTimeout / setInterval</td><td>브라우저 JavaScript에서 일정 시간 뒤, 또는 일정 간격마다 함수를 실행하는 타이머</td></tr>
+              <tr><td>코드 커버리지</td><td>Code coverage. 테스트하는 동안 전체 코드 중 실제로 실행된 비율</td></tr>
+              <tr><td>main 브랜치</td><td>팀이 기준으로 삼는 주 브랜치. master라고도 부른다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>인사와 발표 순서</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>핵심 주장: 빠짐없는 검증이 있으면 에이전트 속도로 출시한다</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>Meticulous 소개와 고객사</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>AI는 리뷰보다 빨리 쓴다. 검증이 병목</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>단언 기반 테스트의 한계</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>"AI가 만든 PR을 바로 머지하겠나"</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>세 가지 비용: 버그, 테스트 유지, 놓치는 기회</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>빠짐없는 검증은 어떻게 얻나. 데모 시작</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>JavaScript 한 줄로 사용 흐름 녹화</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>CI에서 재생하며 매 순간 스크린샷</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>변경 전후 스크린샷 비교</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>데모 예: 이름 변경과 드롭다운 오류</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>PR 댓글: 판정 대신 diff</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>단언 테스트와 판단 시점 비교</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>받침 기술 세 가지</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>기술 1: 네트워크 모킹</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>기술 2: 결정적 브라우저</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>브라우저 무작위성의 예: 스피너, 타이머</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>기술 3: 모든 조합을 덮어야 한다</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>커버리지 기반 흐름 선택</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>"커버리지는 나쁜 지표다, 여기서만 빼고"</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>세 기술이 서로 기대는 구조</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>고객 후기와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'HLTa7Vcs4X0:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

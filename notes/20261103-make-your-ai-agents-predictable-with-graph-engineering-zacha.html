@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>그래프 엔지니어링 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#define">그래프 엔지니어링이란</a></li>
+      <li><a href="#three-graphs">그래프 세 종류</a></li>
+      <li><a href="#benefits">그래프가 주는 세 가지</a></li>
+      <li><a href="#knowledge-layer">그래프를 런타임 밖에 두기</a></li>
+      <li><a href="#memory">컨텍스트 그래프: 에이전트의 기억</a></li>
+      <li><a href="#compile-skill">스킬을 그래프로 컴파일하기</a></li>
+      <li><a href="#distill">기억에서 스킬 뽑아내기</a></li>
+      <li><a href="#customers">현장 사례</a></li>
+      <li><a href="#demo-agent">데모 1: 에이전트에게 맡긴 대출 심사</a></li>
+      <li><a href="#demo-compiled">데모 2: 그래프 모양 스킬</a></li>
+      <li><a href="#governance">실행 기록과 감사</a></li>
+      <li><a href="#results">결과: 시간과 비용</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 작업에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-03 · 21분 · 영어 발표 한글 정리</span>
+      <h1>에이전트가 갈 길을 그래프로 정하기</h1>
+      <p class="lead">에이전트에게 매번 스스로 길을 찾게 하면 같은 질문에도 밟는 단계가 달라진다. 발표자는 일의 단계와 분기를 그래프로 적어 데이터 옆에 저장하면, 경로가 고정되고 기록이 남고 더 작은 모델로도 일을 끝낼 수 있다고 주장한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=g_NgCLTibiM" target="_blank" rel="noopener">Make Your AI Agents Predictable With Graph Engineering</a></span>
+        <span>발표: Zachary Blumenfeld (Neo4j)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 사례는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개져 확실하지 않은 이름에는 "(추정)"을 붙였다. 데모 화면에만 나온 내용은 자막으로 알 수 없어 담지 못했다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>그래프 엔지니어링은 에이전트의 일을 <strong>명시적인 그래프</strong>로 설계하는 일이다. 노드가 일을 하고, 엣지가 다음 단계로 상태를 넘긴다.</li>
+        <li>이름은 새롭지만 원리는 오래됐다. 상태 기계, 워크플로 그래프, 지식 그래프에서 왔다.</li>
+        <li>그래프는 <strong>실행 그래프, 컨텍스트 그래프, 절차 그래프</strong> 세 종류로 볼 수 있다. 발표는 뒤의 두 개에 집중한다.</li>
+        <li>그래프가 주는 것은 <strong>예측 가능성, 통제와 감사, 이식성</strong>이다.</li>
+        <li>핵심 제안: 그래프를 런타임 안에 가두지 말고 <strong>데이터 옆 지식 계층에 저장</strong>한다. 그러면 어떤 에이전트든 가져다 쓸 수 있다.</li>
+        <li>스킬 문서나 과거 실행 기록을 <strong>그래프 모양 스킬로 컴파일</strong>하면, 분기 판단을 에이전트 대신 스크립트가 맡는다.</li>
+        <li>대출 심사 데모에서 평균 실행 시간이 <strong>7.5분에서 약 2분</strong>으로 줄었다. 더 작은 모델(Haiku)로 바꿔 비용도 크게 줄었다고 발표자는 말한다. 작은 모델의 정확도는 발표에 나오지 않았다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="define">
+        <header><span class="num">01</span><h2>그래프 엔지니어링이란 <span class="ts">00:00</span></h2></header>
+        <p>발표자는 "그래프 엔지니어링"이라는 말이 올해 여름쯤 Peter Steinberger(OpenClaw 제작자)의 트윗에서 퍼졌다고 기억한다. 프롬프트 엔지니어링, 컨텍스트 엔지니어링 다음에 오는 새 분야처럼 이야기되면서 관심이 몰렸다.</p>
+        <p>발표자는 새로운 건 이름뿐이라고 본다 <span class="ts">01:00</span>. 컴퓨터 과학은 오래전부터 상태 기계 <span class="en">state machine</span>, 워크플로 그래프 <span class="en">workflow graph</span>, 지식 그래프 <span class="en">knowledge graph</span>를 써 왔다. 달라진 것은 이것들을 에이전트와 묶어 생각하는 방식이다.</p>
+        <div class="callout">
+          <span class="title">발표자의 정의 <span class="ts">01:20</span></span>
+          <span>그래프 엔지니어링은 <strong>에이전트의 일을 명시적인 그래프로 설계하는 일</strong>이다. 노드 <span class="en">node</span>는 일을 한다. 엣지 <span class="en">edge</span>는 노드 사이로 상태 <span class="en">state</span>를 넘긴다. 상태는 지금까지의 작업 결과처럼 다음 단계가 알아야 할 값이다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="three-graphs">
+        <header><span class="num">02</span><h2>그래프 세 종류 <span class="ts">01:40</span></h2></header>
+        <p>발표자는 그래프를 세 가지로 나눈다. 셋은 서로 겹치기도 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">실행 그래프 · execution graph</span>
+            <p>라우터와 에이전트가 노드인 워크플로 그래프다. 에이전트 하네스 <span class="en">agent harness</span> 안에서 돈다. 하네스는 모델을 감싸 도구와 실행 순서를 정해 주는 실행 틀이다.</p>
+            <p class="verdict">가장 익숙한 형태다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">컨텍스트 그래프 · context graph <span class="ts">02:00</span></span>
+            <p>결정 흔적 <span class="en">decision trace</span>을 담는다. 실제로 무슨 일이 있었는지, 그 일이 도메인의 다른 데이터와 어떻게 이어지는지를 기록한다.</p>
+            <p class="verdict"><b>발표의 초점</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">절차 그래프 · procedural graph <span class="ts">02:10</span></span>
+            <p>스킬이나 업무 절차를 그래프로 표현한다. 단계가 꼭 에이전트일 필요는 없다. 함수 호출, 결정 모델 호출, 에이전트 호출, 사람에게 넘길지 판단, 검증 단계가 모두 노드가 될 수 있다.</p>
+            <p class="verdict"><b>발표의 초점</b></p>
+          </div>
+        </div>
+        <p>발표자가 뒤의 두 그래프에 집중하는 이유는 이 둘이 덜 이야기되기 때문이다 <span class="ts">02:40</span>. 발표자는 이 둘을 이해하면 실행 그래프가 하려는 일을 <strong>더 옮기기 쉽고 효율적인 방식으로</strong> 할 수 있다고 주장한다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="benefits">
+        <header><span class="num">03</span><h2>그래프가 주는 세 가지 <span class="ts">02:50</span></h2></header>
+        <p>그래프 엔지니어링을 하는 이유는 에이전트가 더 크고 복잡한 일을 맡게 하려는 것이다. 발표자는 그 이점을 셋으로 나눈다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>이점</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>예측 가능성<br><span class="en">predictability</span></td><td>에이전트가 갈 경로를 제한한다. 맡은 일의 답이 정확하게 나오도록 한다. 경로가 그래프로 드러나 있다.</td></tr>
+              <tr><td>통제와 감사<br><span class="en">governance · audit</span></td><td>에이전트가 하는 일을 관리하고 이끈다. 무엇을 했는지 나중에 확인한다. 확인한 것으로 다음번에 고친다.</td></tr>
+              <tr><td>이식성<br><span class="en">portability</span></td><td>그래프를 런타임 안에서만 쓰지 않고 저장한다. 다른 런타임으로 옮길 수 있다. 쓰는 기술 묶음이 단순해진다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>세 번째인 이식성이 발표의 핵심 주장으로 이어진다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="knowledge-layer">
+        <header><span class="num">04</span><h2>그래프를 런타임 밖에 두기 <span class="ts">03:50</span></h2></header>
+        <p>보통 그래프는 런타임 안의 오케스트레이션 <span class="en">orchestration</span>이다. 오케스트레이션은 여러 단계와 에이전트의 실행 순서를 짜고 조율하는 일이다. LangGraph, Google ADK 같은 에이전트 프레임워크가 여기에 속한다. 발표자는 Anthropic의 멀티 에이전트 리서치 시스템도 어느 정도 그래프 엔지니어링이라고 본다.</p>
+        <p>발표자는 그래프를 <strong>데이터 옆에</strong> 두자고 제안한다 <span class="ts">04:10</span>. 앞에서 본 컨텍스트 그래프와 함께 둔다. 그러면 그래프가 특정 런타임에 묶이지 않는다.</p>
+        <div class="shift" aria-label="그래프를 두는 자리의 이동">
+          <div><span class="tag">보통</span><b>그래프는 런타임 안의 코드</b><span class="muted">LangGraph 같은 프레임워크 안에서만 산다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 제안</span><b>그래프는 저장된 지식</b><span class="muted">데이터 옆에 두고, 어떤 런타임이나 에이전트든 꺼내 쓴다</span></div>
+        </div>
+
+        <h3>지식 계층 <span class="ts">04:40</span></h3>
+        <p>Neo4j가 만들려는 것은 지식 계층 <span class="en">knowledge layer</span>이다. 이 계층은 시스템 오브 레코드 <span class="en">system of record</span>와 에이전트 사이에 놓인다. 시스템 오브 레코드는 원본 데이터를 공식적으로 보관하는 곳이다. 발표자는 DataStax, BigQuery, Snowflake를 예로 든다. 문서나 Obsidian 같은 마크다운 파일도 원본이 될 수 있다.</p>
+        <p>지식 계층 안에는 표준 프로토콜과 산출물 <span class="en">artifact</span>을 둔다. 그래서 그래프 엔지니어링의 결과를 어떤 런타임, 어떤 에이전트에게도 내줄 수 있다.</p>
+
+        <h3>Neo4j 제품 구성 <span class="ts">05:10</span></h3>
+        <ul class="plain">
+          <li><strong>핵심 데이터베이스</strong>: 그래프를 저장한다.</li>
+          <li><strong>분석 계층</strong>: 데이터베이스 위의 분석 기능이다.</li>
+          <li><strong>맨 위 계층</strong>: 에이전트용 기억 도구들이다. 발표자는 이 계층에 집중한다.</li>
+        </ul>
+        <p>데모에서는 여러 출처의 데이터를 데이터베이스에 넣는다. 그 데이터가 지식 계층이 된다. 실험적인 도구들은 이 데이터베이스에 데이터를 넣고 빼는 쪽에 붙어 있다.</p>
+        <p class="note">발표자는 그래프 데이터베이스를 파는 Neo4j 소속이다. "지식 계층은 그래프여야 한다"는 주장과 제품 소개는 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="memory">
+        <header><span class="num">05</span><h2>컨텍스트 그래프: 에이전트의 기억 <span class="ts">06:00</span></h2></header>
+        <p>Neo4j는 컨텍스트 그래프에서 출발한다. 컨텍스트 그래프는 여러 종류의 기억을 한 그래프에 담는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기억</th><th>담는 것</th></tr></thead>
+            <tbody>
+              <tr><td>단기 기억 <span class="en">short-term</span></td><td>대화 기록</td></tr>
+              <tr><td>장기 기억 <span class="en">long-term</span></td><td>대화나 데이터에서 뽑아낸 엔티티. 엔티티는 사람, 회사, 상품처럼 따로 가리킬 수 있는 대상이다</td></tr>
+              <tr><td>추론·결정 기록 <span class="en">reasoning</span></td><td>에이전트가 어떤 단계를 밟아 결정했는지</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="compile-skill">
+        <header><span class="num">06</span><h2>스킬을 그래프로 컴파일하기 <span class="ts">06:20</span></h2></header>
+        <p>이 연구는 그래프 전체가 아니라 스킬 하나에서 시작했다. 발표자 팀은 올해 초 이 내용으로 논문을 썼고 한 워크숍에서 발표했다고 말한다.</p>
+        <p>연구 질문은 이것이다. <strong>절차 지식 <span class="en">procedural knowledge</span>을 그래프로 컴파일할 수 있을까?</strong> 절차 지식은 과거의 결정일 수도 있고, 스킬 문서일 수도 있다. 여기서 컴파일 <span class="en">compile</span>은 사람이 읽는 글을 기계가 그대로 실행할 수 있는 구조로 바꾸는 일이다.</p>
+        <div class="shift" aria-label="스킬 컴파일의 입력과 출력">
+          <div><span class="tag">입력</span><b>글로 된 스킬</b><span class="muted">SKILL.md 파일, 스크립트, 참고 자료, 에셋</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">출력</span><b>그래프 구조</b><span class="muted">노드 = 결정 지점, 분기 지점, 실행할 스크립트</span></div>
+        </div>
+        <p>컴파일하면서 글로 쓴 설명을 결정론적 스크립트 <span class="en">deterministic script</span>로 바꾼다 <span class="ts">07:10</span>. 결정론적이라는 말은 같은 입력이면 늘 같은 결과가 나온다는 뜻이다.</p>
+        <h3>결과 <span class="ts">07:20</span></h3>
+        <ul class="plain">
+          <li>에이전트가 이 그래프를 따라 실행하도록 강제했다.</li>
+          <li>과제 보상 <span class="en">task reward</span>과 성능이 올랐다. 과제 보상은 에이전트가 과제를 얼마나 잘 해냈는지 매긴 점수다.</li>
+          <li>더 작은 모델로도 됐다. 당시에는 Sonnet을 썼고, 지금은 Haiku로 시험하고 있다.</li>
+          <li>물리학, 컴퓨터 과학, 보안 등 여러 분야의 어려운 과제에서 같은 경향이 보였다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">단서</span>
+          <span>발표자도 조금 오래된 결과이고 최신 모델로 다시 돌리는 중이라고 했다. 발표에서 구체적인 수치는 나오지 않았다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="distill">
+        <header><span class="num">07</span><h2>기억에서 스킬 뽑아내기 <span class="ts">08:10</span></h2></header>
+        <p>Neo4j Labs 팀의 PM인 Will Lein(추정)이 이 아이디어를 넓혔다. 스킬 문서로 된다면 기억 그래프로도 되지 않을까 하는 생각이다.</p>
+        <ol class="plain">
+          <li>컨텍스트 그래프에서 스킬을 증류 <span class="en">distill</span>한다. 증류는 많은 기록에서 핵심 절차만 뽑아내는 일이다.</li>
+          <li>뽑아낸 스킬은 같은 그래프 안에 남는다. 그래서 과거 결정 기록, 원본 데이터와 계속 이어져 있다.</li>
+          <li>앞에서 본 성능 이점을 그대로 얻는다.</li>
+          <li>여기에 출처 추적 <span class="en">provenance</span>이 더해진다. 스킬의 단계마다 어떤 과거 기록에서 왔는지 거슬러 올라갈 수 있다.</li>
+        </ol>
+        <p>스킬에는 버전이 붙고 변화가 추적된다 <span class="ts">08:40</span>. 그래서 시간이 지나도 통제할 수 있다. 드리프트 <span class="en">drift</span>를 확인할 수 있다. 드리프트는 동작이 원래 의도에서 조금씩 벗어나는 현상이다. 특정 도구 호출이 어디서 왔는지 이력도 볼 수 있다.</p>
+        <p>Neo4j는 이 방식의 참조 아키텍처로 <strong>NAMS</strong>(Neo4j Agent Memory Service)를 공개했다 <span class="ts">08:50</span>. 사람이 직접 들어가 어떻게 돌아가는지 보고 고칠 수 있다.</p>
+        <div class="callout">
+          <span class="title">결과물은 결국 스킬이다 <span class="ts">09:00</span></span>
+          <span>이 과정이 만드는 것은 스킬 파일이다. 스킬을 읽을 수 있는 에이전트 하네스라면 이 그래프와 논리를 그대로 돌릴 수 있다. 3장의 이식성이 이런 뜻이다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="customers">
+        <header><span class="num">08</span><h2>현장 사례 <span class="ts">09:20</span></h2></header>
+        <p>발표자는 그래프 엔지니어링 성격의 일에 Neo4j를 쓰는 고객 사례를 든다. 이 고객들이 Neo4j Labs 프로젝트를 그대로 쓰는 것은 아닐 수 있다고 발표자가 덧붙였다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>사례</th><th>어려운 점</th><th>그래프로 하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>자산운용사와 일하는 컨설팅 회사</td><td>컴플라이언스 감사 보고서를 써야 한다. 데이터가 여러 출처에서 온다. 같은 회사가 데이터베이스마다 다른 티커와 이름으로 적혀 있다</td><td>해야 할 논리를 그래프로 표현해 데이터 옆에 둔다. 엔티티를 맞추는 일까지 통제되고 믿을 수 있게 자동화한다</td></tr>
+              <tr><td>Uber <span class="ts">10:10</span></td><td>운전자가 전국에 있다. 규정이 지역마다 크게 다르다. 규정 데이터가 수많은 마이크로서비스에 흩어져 있다</td><td>설정 그래프 <span class="en">configuration graph</span>로 지역별, 차량 부품별 규칙 논리를 데이터 옆에 표현한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>두 사례의 공통점은 <strong>논리를 데이터 옆에 둔다</strong>는 것이다. 에이전트는 데이터와 그 데이터를 다루는 규칙을 한곳에서 찾는다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="demo-agent">
+        <header><span class="num">09</span><h2>데모 1: 에이전트에게 맡긴 대출 심사 <span class="ts">10:40</span></h2></header>
+        <p>데모의 목표는 통제가 약하고 오래 걸리던 작업을 스킬로 컴파일해서 더 싸고 빠르게 만드는 것이다. 이때 AIP(추정)라는 라이브러리를 쓴다. 발표자는 정식 연구가 아닌 데모이고, 코드는 공개돼 있다고 했다.</p>
+        <p class="note">발표자는 이 데모에서 비용을 "100%쯤" 줄였다고 말했다. 100%를 줄이면 비용이 0이 된다는 뜻이라 문자 그대로는 맞지 않는다. 크게 줄였다는 뜻으로 읽는다. 실제로 제시된 수치는 12장에 있다.</p>
+
+        <h3>상황 <span class="ts">11:10</span></h3>
+        <ul class="plain">
+          <li>대출 승인에는 지켜야 할 정책이 많다.</li>
+          <li>정책 문서가 있고, 정확히 따라야 할 단계가 있다.</li>
+          <li>에이전트는 사람 심사자처럼 각 단계를 분명히 설명하고 답을 맞혀야 한다.</li>
+        </ul>
+
+        <h3>질문: "Rosa's Bakery에 새 대출을 승인해야 하나?" <span class="ts">12:00</span></h3>
+        <p>그래프에는 이런 데이터가 이어져 있다.</p>
+        <ul class="plain">
+          <li>업로드한 사업 계획서 PDF</li>
+          <li>Databricks에서 가져온 과거 거래 기록</li>
+          <li>대출 정책 데이터</li>
+          <li>실제로 내렸던 과거 결정</li>
+        </ul>
+        <p>에이전트는 이 정보를 훑는다. 이 사업자가 전에 대출을 받았거나 과거에 문제가 있었다는 것을 찾아낸다. 감사 기록 <span class="en">audit trail</span>을 남기고 빠르게 답을 낸다. 감사 기록은 무엇을 근거로 결정했는지 나중에 확인할 수 있게 남긴 기록이다.</p>
+        <p>발표자는 이것만으로도 좋은 출발이라고 평가한다. 데이터를 맞추고, 정책을 따르고, 정보가 어떻게 이어지는지 이해하는 데는 충분하다.</p>
+
+        <h3>문제: 실행할 때마다 길이 다르다 <span class="ts">13:00</span></h3>
+        <ul class="plain">
+          <li>그래프에는 대화와 추론 기록이 남는다. 단계마다 시각과 도구 호출이 찍힌다.</li>
+          <li>같은 질문을 두 번 돌린 결정 사슬을 비교하면 <strong>길이가 다르다</strong> <span class="ts">13:20</span>. 한 번은 선례 <span class="en">precedent</span>를 찾아서 길어졌다.</li>
+          <li>반복해서 돌려도 에이전트가 <strong>정확히 같은 경로를 따르게 강제하는 장치가 없다</strong> <span class="ts">13:50</span>. 스킬에 "이것들을 하라"고 적어 둬도 마찬가지다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">보정되지 않은 신뢰도 <span class="ts">14:10</span></span>
+          <span>승인할지 거절할지, 또는 승인할지 사람 검토로 넘길지 정하는 단계에서 모델이 신뢰도 점수를 낸다. 이 점수는 보정 <span class="en">calibration</span>되지 않았다. 모델이 "90% 확신한다"고 해도 실제로 90% 맞는다는 보장이 없다는 뜻이다.</span>
+        </div>
+        <p>발표자는 이런 결정을 타입 안전한 <span class="en">type-safe</span> 결정 모델로 넘기면 좋겠다고 했다. 타입 안전하다는 것은 출력이 정해진 형식과 값 안에서만 나오도록 강제된다는 뜻이다. 자막에서는 이 모델의 이름이 "Jave"처럼 들린다(추정).</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="demo-compiled">
+        <header><span class="num">10</span><h2>데모 2: 그래프 모양 스킬 <span class="ts">14:30</span></h2></header>
+        <p>성공한 실행 기록들을 긁어모아 <strong>그래프 모양 스킬</strong>로 컴파일했다. 실행끼리 조금씩 달랐지만 그 정보를 한데 모았다. 결과는 스킬 안에 그래프 형태의 YAML로 들어간다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">스킬 안에 든 것</span>
+            <ul>
+              <li>실행 스크립트</li>
+              <li>에셋</li>
+              <li>참고 자료 (이 데모에는 없다)</li>
+              <li>대출 정책 원문 문서</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">넣은 이유</span>
+            <ul>
+              <li>추적 가능성 <span class="en">traceability</span>: 각 단계가 어디서 왔는지 따라갈 수 있다</li>
+              <li>에이전트에게 스킬 실행법을 알려 준다</li>
+            </ul>
+          </div>
+        </div>
+        <p>YAML로 만들면 결정론적인 형식이 된다 <span class="ts">15:20</span>. 그래서 여러 도구로 옮길 수 있다. 그래프 데이터베이스에도 그대로 넣을 수 있다.</p>
+
+        <h3>CLI로 감싸기 <span class="ts">15:50</span></h3>
+        <p>발표자는 스킬 둘레에 작은 CLI를 씌웠다. CLI는 명령줄에서 부르는 프로그램이다. 에이전트는 "이 스킬을 실행해"라고만 한다. 정책 내용의 상당 부분은 실행 스크립트 안으로 들어갔다.</p>
+        <div class="shift" aria-label="경로를 정하는 주체의 이동">
+          <div><span class="tag">데모 1</span><b>에이전트가 매번 경로를 고른다</b><span class="muted">데이터를 훑으며 어떤 단계를 밟을지 스스로 판단한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">데모 2</span><b>프로그램이 경로를 정한다</b><span class="muted">에이전트는 CLI를 부르고, 분기는 스크립트가 처리한다</span></div>
+        </div>
+
+        <h3>실행 흐름 <span class="ts">16:00</span></h3>
+        <ol class="plain">
+          <li>정책의 필수 규칙 <span class="en">hard rule</span>을 만족하는지 검사한다. 여기서 자동 승인이나 자동 거절이 나오면 끝난다.</li>
+          <li>결론이 안 나면 결정 모델로 보낸다. 결정 모델은 위험 등급, 위험 노출이 중대한지, 승인·거절 결과를 고른다 <span class="ts">16:30</span>.</li>
+          <li>사람 검토로 넘길지 정하는 라우터를 거친다 <span class="ts">16:50</span>.</li>
+          <li>넘기지 않으면 에이전트가 보고서를 쓴다.</li>
+          <li>보고서를 검사하고 린트 <span class="en">lint</span>하는 반복 단계를 거친다 <span class="ts">17:00</span>. 린트는 형식과 규칙 위반을 자동으로 찾아내는 검사다.</li>
+        </ol>
+        <p>에이전트가 판단하는 곳은 보고서를 쓰는 단계 정도로 줄었다. 발표 중 다시 실행했을 때 한 번 도는 데 약 2분이 걸린다고 했다 <span class="ts">17:20</span>.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="governance">
+        <header><span class="num">11</span><h2>실행 기록과 감사 <span class="ts">17:40</span></h2></header>
+        <p>실행할 때마다 기록을 그래프에 저장한다. 한 번의 실행이 어떤 단계를 밟았는지 하나씩 남는다. 이 기록을 쌓아 두면 스킬이 얼마나 잘 돌아가는지 시간에 걸쳐 볼 수 있다.</p>
+        <p>발표자는 통제를 위해 간단한 인스펙터를 직접 만들었다 <span class="ts">18:00</span>. 이 화면에서 볼 수 있는 것은 다음과 같다.</p>
+        <ul class="plain">
+          <li>각 실행의 상태</li>
+          <li>특정 실행이 어떻게 돌았는지</li>
+          <li>무엇을 승인하고 무엇을 거절했는지</li>
+          <li>어떤 분기를 탔는지</li>
+        </ul>
+        <p>그래프라서 가능한 관측도 있다 <span class="ts">18:20</span>. 어떤 분기는 탔고 어떤 분기는 한 번도 안 탔는지 물을 수 있다. 실패한 적이 있는지도 물을 수 있다. 이 기록은 모두 데이터 옆에 저장된다.</p>
+        <div class="callout">
+          <span class="title">에이전트 안에 루프를 새로 만든 게 아니다 <span class="ts">18:30</span></span>
+          <span>에이전트에게 CLI 하나를 줬을 뿐이다. 그 CLI는 프로그램으로 된 스킬을 실행한다. 이 스킬은 문서에서 컴파일할 수도 있고, 이 데모처럼 기억 그래프에서 컴파일할 수도 있다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="results">
+        <header><span class="num">12</span><h2>결과: 시간과 비용 <span class="ts">19:00</span></h2></header>
+        <p>발표자는 이 데모를 여러 번 돌려 비교했다.</p>
+        <ul class="plain">
+          <li><strong>기준</strong>: Fable이 그래프를 직접 훑는 방식(데모 1)이다. 거의 매번 맞았지만 모델 시간이 2.7분 걸렸다. Fable은 비싼 모델이라 회사에서 돈 많이 쓴다는 소리를 듣는다고 발표자가 농담했다.</li>
+          <li><strong>컴파일한 절차 + Fable</strong>: 모델 시간이 거의 절반으로 줄었다.</li>
+          <li><strong>컴파일한 절차 + Haiku</strong>: 절차가 고정돼 있으니 더 작은 모델로 바꿀 수 있었다. 모델 시간이 더 줄었다.</li>
+        </ul>
+
+        <figure class="chart" aria-label="평균 실행 시간 비교: 컴파일한 절차 없이 약 7.5분, 절차를 쓰면 약 2분">
+          <span class="chart-title">평균 실행 시간, 벽시계 기준 (분)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>절차 없이 (데모 1)</span><span class="val">약 7.5</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="절차 없이: 약 7.5분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>컴파일한 절차 사용</span><span class="val">약 2</span></div>
+              <div class="track"><div class="fill key" style="width:26.7%" title="절차 사용: 약 2분"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>단위: 분</span><span>7.5</span></div>
+          <span class="caption">벽시계 시간은 시작부터 끝까지 실제로 흐른 시간이다. 네트워크 대기도 포함된다. 발표자는 데모 중 느린 시간의 대부분이 인터넷 때문이라고 했다.</span>
+        </figure>
+
+        <figure class="chart" aria-label="모델 시간 비교: Fable 단독 2.7분, Fable과 절차 약 1.35분, Haiku와 절차 약 0.5분">
+          <span class="chart-title">모델 시간 (분)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Fable 단독</span><span class="val">2.7</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="Fable 단독: 2.7분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Fable + 컴파일한 절차</span><span class="val">약 1.35 (거의 절반)</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="Fable + 절차: 약 1.35분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Haiku + 컴파일한 절차</span><span class="val">약 0.5 (추정)</span></div>
+              <div class="track"><div class="fill key" style="width:18.5%" title="Haiku + 절차: 약 0.5분 (추정)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>단위: 분</span><span>2.7</span></div>
+          <span class="caption">발표자는 "Fable + 절차"를 "거의 절반"이라고만 말해서 2.7의 절반으로 그렸다. "Haiku + 절차"의 약 30초는 자막에서 "half a minute"로 나온 값을 모델 시간으로 읽은 것이다(추정).</span>
+        </figure>
+
+        <p class="note">계산: 벽시계 시간 7.5분 → 2분은 약 73% 감소다. 모델 시간 2.7분 → 0.5분이면 약 81% 감소다. 둘 다 크게 줄었지만 100%는 아니다.</p>
+        <p>비용도 크게 줄었다고 발표자는 말한다. 경로를 정하는 부담을 모델에서 빼서 실행 스크립트와 결정 모델로 옮겼기 때문이다. 큰 모델이 하던 판단이 줄어드니 작은 모델로도 충분해진다는 논리다.</p>
+        <div class="callout warn">
+          <span class="title">발표에서 빠진 정보</span>
+          <span>Haiku + 절차 구성의 정확도는 발표에서 따로 말하지 않았다. "거의 매번 맞았다"는 말은 Fable 단독 구성에 대한 것이다. 몇 번 돌렸는지, 비용이 정확히 얼마였는지도 나오지 않았다. 직접 적용할 때는 시간, 비용과 함께 정확도를 잰다.</span>
+        </div>
+        <p>발표 끝에는 자료를 안내했다 <span class="ts">20:00</span>. Neo4j의 클라우드 데이터베이스 Aura(무료 크레딧 100달러), Neo4j의 발표 행사 NODES, 스타트업 프로그램, 데모와 에이전트 기억 관련 코드 링크다.</p>
+        <p class="note">이 결과는 Neo4j 직원이 Neo4j 도구로 만든 데모다. 발표자도 정식 연구가 아니라고 했다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>그래프 엔지니어링은 에이전트의 일을 <strong>명시적인 그래프</strong>로 설계하는 일이다. 노드는 일을 하고 엣지는 상태를 넘긴다.</li>
+          <li>이름은 새롭지만 원리는 상태 기계, 워크플로 그래프, 지식 그래프에서 왔다.</li>
+          <li>그래프는 실행, 컨텍스트, 절차 세 종류다. 발표의 초점은 <strong>컨텍스트 그래프와 절차 그래프</strong>다.</li>
+          <li>그래프가 주는 것은 <strong>예측 가능성, 통제와 감사, 이식성</strong>이다.</li>
+          <li>그래프를 런타임 안에 가두지 않고 <strong>데이터 옆 지식 계층</strong>에 두면 어떤 런타임에서도 쓸 수 있다.</li>
+          <li>컨텍스트 그래프는 단기 기억, 장기 기억, 추론·결정 기록을 함께 담는다.</li>
+          <li>스킬 문서를 그래프로 컴파일해 따르게 하자 성능이 오르고 더 작은 모델로도 됐다고 발표자는 보고했다.</li>
+          <li>기억 그래프에서 뽑은 스킬은 과거 기록과 이어져 있어 <strong>출처 추적과 드리프트 감시</strong>가 된다.</li>
+          <li>에이전트에게 맡긴 대출 심사는 실행마다 경로가 달랐고 신뢰도도 보정되지 않았다. 컴파일한 스킬은 <strong>분기를 스크립트로 처리</strong>한다.</li>
+          <li>데모에서 실행 시간은 약 7.5분에서 약 2분으로 줄었다. 단, <strong>작은 모델의 정확도는 발표에 없다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자는 그래프 엔지니어링을 어떻게 정의하나?</span></summary><div class="answer">에이전트의 일을 명시적인 그래프로 설계하는 일이다. 노드는 일을 하고, 엣지는 노드 사이로 상태를 넘긴다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>그래프 세 종류는 무엇이고 각각 무엇을 담나?</span></summary><div class="answer">실행 그래프는 라우터와 에이전트가 노드인 워크플로다. 컨텍스트 그래프는 실제로 일어난 결정의 흔적과 그것이 이어진 데이터다. 절차 그래프는 스킬이나 업무 절차의 단계와 분기다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>그래프가 에이전트에게 주는 세 가지 이점은?</span></summary><div class="answer">예측 가능성(경로 제한), 통제와 감사(관리하고 나중에 확인), 이식성(그래프를 저장해 다른 런타임으로 옮김).</div></details>
+          <details><summary><span class="qn">Q4</span><span>"그래프를 런타임 밖에 둔다"는 말은 무슨 뜻이고, 무엇을 얻나?</span></summary><div class="answer">그래프를 LangGraph 같은 프레임워크 안의 코드로만 두지 않고, 데이터 옆 지식 계층에 저장한다는 뜻이다. 그러면 특정 런타임에 묶이지 않고 어떤 에이전트든 가져다 쓸 수 있다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>컨텍스트 그래프에 담기는 기억 세 가지는?</span></summary><div class="answer">단기 기억(대화 기록), 장기 기억(대화나 데이터에서 뽑은 엔티티), 추론·결정 기록.</div></details>
+          <details><summary><span class="qn">Q6</span><span>스킬을 그래프로 컴파일할 때 무엇이 입력이고, 그래프의 노드는 무엇이 되나?</span></summary><div class="answer">입력은 SKILL.md 파일, 스크립트, 참고 자료, 에셋이다. 노드는 결정 지점, 분기 지점, 실행할 스크립트가 된다. 글로 된 설명은 결정론적 스크립트로 바뀐다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>기억 그래프에서 뽑아낸 스킬은 무엇이 더 좋은가?</span></summary><div class="answer">스킬이 같은 그래프 안에서 과거 결정 기록과 데이터에 계속 이어져 있다. 그래서 단계마다 출처를 거슬러 올라갈 수 있고, 버전과 드리프트, 도구 호출 이력을 볼 수 있다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>데모 1에서 에이전트에게 대출 심사를 맡겼을 때 드러난 문제 두 가지는?</span></summary><div class="answer">같은 질문을 돌려도 실행마다 경로 길이가 달랐고, 같은 경로를 강제할 장치가 없었다. 결정 단계의 신뢰도 점수도 보정되지 않아 믿기 어려웠다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>데모 2에서 컴파일한 스킬은 어떤 순서로 실행되나?</span></summary><div class="answer">필수 규칙 검사(여기서 자동 승인·거절 가능) → 결정 모델(위험 등급, 노출, 결과) → 사람 검토로 넘길지 판단 → 보고서 작성 → 보고서 검사와 린트 반복.</div></details>
+          <details><summary><span class="qn">Q10</span><span>"에이전트 안에 루프를 새로 만든 게 아니다"는 무슨 뜻인가?</span></summary><div class="answer">에이전트 프레임워크를 고친 게 아니라, 에이전트에게 CLI 하나를 준 것뿐이라는 뜻이다. 분기 처리는 CLI가 실행하는 프로그램 스킬이 맡는다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>데모 결과에서 실행 시간은 얼마나 줄었고, 그 이유는?</span></summary><div class="answer">벽시계 기준 약 7.5분에서 약 2분으로 줄었다(약 73% 감소). 경로를 정하는 부담을 모델에서 빼 스크립트와 결정 모델로 옮겼고, 그 덕에 Haiku 같은 작은 모델로 바꿀 수 있었다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>데모 결과를 그대로 믿기 전에 확인해야 할 빠진 정보는?</span></summary><div class="answer">작은 모델(Haiku) 구성의 정확도, 반복 횟수, 실제 비용 금액이다. 발표자 소속 회사의 도구로 만든 비공식 데모라는 점도 감안한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 작업에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>반복해서 맡기는 에이전트 작업 하나를 골라 단계와 분기를 그래프로 그린다<span class="how">노드는 할 일, 엣지는 다음 단계로 넘어가는 조건</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>같은 작업을 두세 번 돌려 실행 경로를 비교한다<span class="how">확인: 경로가 달라지는 이유를 설명할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>규칙으로 정할 수 있는 분기를 스크립트로 옮긴다<span class="how">확인: 에이전트가 직접 판단하는 라우팅이 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>모델이 낸 신뢰도 점수를 그대로 분기 기준으로 쓰지 않는다<span class="how">필수 규칙 검사나 출력 형식이 정해진 결정 단계를 앞에 둔다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>사람 검토로 넘기는 조건을 명시적인 분기로 만든다<span class="how">확인: 언제 사람에게 가는지 그래프만 보고 알 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>스킬에 근거 문서를 함께 넣는다<span class="how">확인: 각 단계가 어느 정책이나 규정에서 왔는지 따라갈 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>실행마다 거친 단계와 분기를 저장한다<span class="how">확인: 한 번도 안 탄 분기와 실패한 분기를 찾을 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>절차를 고정한 뒤 더 작은 모델로 바꿔 시간, 비용, 정확도를 함께 잰다<span class="how">발표는 작은 모델의 정확도를 말하지 않았다. 직접 확인한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>그래프 엔지니어링</td><td>Graph engineering. 에이전트의 일을 노드와 엣지로 된 명시적인 그래프로 설계하는 일</td></tr>
+              <tr><td>노드 / 엣지</td><td>Node / edge. 노드는 일을 하는 지점, 엣지는 다음 노드로 상태를 넘기는 연결</td></tr>
+              <tr><td>상태</td><td>State. 지금까지의 작업 결과처럼 다음 단계가 알아야 할 값</td></tr>
+              <tr><td>상태 기계</td><td>State machine. 정해진 상태들과 그 사이를 옮겨 가는 규칙으로 동작을 표현하는 모델</td></tr>
+              <tr><td>지식 그래프</td><td>Knowledge graph. 대상과 대상 사이의 관계를 그래프로 저장한 데이터</td></tr>
+              <tr><td>실행 그래프</td><td>Execution graph. 라우터와 에이전트가 노드인 워크플로 그래프</td></tr>
+              <tr><td>컨텍스트 그래프</td><td>Context graph. 실제로 일어난 결정의 흔적과 그것이 이어진 도메인 데이터를 담은 그래프</td></tr>
+              <tr><td>절차 그래프</td><td>Procedural graph. 스킬이나 업무 절차의 단계와 분기를 표현한 그래프</td></tr>
+              <tr><td>에이전트 하네스</td><td>Agent harness. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>런타임</td><td>Runtime. 에이전트가 실제로 돌아가는 실행 환경이나 프레임워크</td></tr>
+              <tr><td>오케스트레이션</td><td>Orchestration. 여러 단계와 에이전트의 실행 순서를 짜고 조율하는 일</td></tr>
+              <tr><td>시스템 오브 레코드</td><td>System of record. 원본 데이터를 공식적으로 보관하는 시스템. 예: Snowflake, BigQuery</td></tr>
+              <tr><td>지식 계층</td><td>Knowledge layer. 원본 시스템과 에이전트 사이에서 데이터와 절차를 이어 두는 층</td></tr>
+              <tr><td>컴파일</td><td>Compile. 이 발표에서는 글로 된 절차를 기계가 그대로 실행할 수 있는 구조로 바꾸는 일</td></tr>
+              <tr><td>결정론적</td><td>Deterministic. 같은 입력이면 늘 같은 결과를 내는 성질</td></tr>
+              <tr><td>증류</td><td>Distill. 많은 기록에서 핵심 절차만 뽑아내는 일</td></tr>
+              <tr><td>출처 추적</td><td>Provenance. 결과나 단계가 어디서 왔는지 거슬러 올라갈 수 있는 기록</td></tr>
+              <tr><td>드리프트</td><td>Drift. 시간이 지나며 동작이 원래 의도에서 조금씩 벗어나는 현상</td></tr>
+              <tr><td>엔티티 맞추기</td><td>Entity resolution. 서로 다른 이름으로 적힌 같은 대상을 하나로 맞추는 일</td></tr>
+              <tr><td>보정</td><td>Calibration. 모델이 말하는 확신 정도가 실제 정답률과 맞는 상태</td></tr>
+              <tr><td>타입 안전</td><td>Type-safe. 출력이 정해진 형식과 값 안에서만 나오도록 강제된 성질</td></tr>
+              <tr><td>감사 기록</td><td>Audit trail. 무엇을 근거로 결정했는지 나중에 확인할 수 있게 남긴 기록</td></tr>
+              <tr><td>린트</td><td>Lint. 형식이나 규칙 위반을 자동으로 찾아내는 검사</td></tr>
+              <tr><td>과제 보상</td><td>Task reward. 에이전트가 과제를 얼마나 잘 해냈는지 매긴 점수</td></tr>
+              <tr><td>벽시계 시간</td><td>Wall clock time. 시작부터 끝까지 실제로 흐른 시간. 네트워크 대기 등을 모두 포함한다</td></tr>
+              <tr><td>SKILL.md</td><td>에이전트에게 특정 일을 하는 법을 알려 주는 스킬 문서 파일</td></tr>
+              <tr><td>CLI</td><td>Command-line interface. 명령줄에서 부르는 프로그램</td></tr>
+              <tr><td>YAML</td><td>사람이 읽기 쉬운 설정·데이터 파일 형식</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>"그래프 엔지니어링"이라는 말의 유래</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>이름은 새것, 원리는 옛것</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>정의: 에이전트의 일을 명시적 그래프로</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>그래프 세 종류: 실행, 컨텍스트, 절차</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>세 가지 이점: 예측 가능성, 통제, 이식성</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>런타임 안의 그래프: LangGraph, ADK</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>Neo4j의 지식 계층</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>Neo4j 제품 구성</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>컨텍스트 그래프의 기억 종류</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>스킬을 그래프로 컴파일한 연구</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>성능 향상과 작은 모델</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>기억 그래프에서 스킬 뽑아내기</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>NAMS 참조 아키텍처</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>고객 사례: 컴플라이언스 감사 보고서</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>고객 사례: Uber 설정 그래프</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>데모 소개</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>대출 심사 시나리오</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>Rosa's Bakery 대출 질문</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>문제: 실행마다 경로가 다르다</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>보정되지 않은 신뢰도</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>그래프 모양 스킬로 컴파일</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>YAML 형식과 이식</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>CLI로 감싸기</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>실행 흐름: 규칙 → 결정 모델 → 사람 검토 → 보고서</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>실행 기록 저장</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>인스펙터와 분기 관측</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>결과: 시간과 비용</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>자료 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'g_NgCLTibiM:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

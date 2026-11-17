@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>로직 버그 사냥 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+/* Example code block: this note shows one short code sample */
+pre {
+  margin: 0; padding: 12px 16px; max-width: 68ch; overflow-x: auto;
+  background: var(--code-bg); border-radius: var(--radius); font-size: var(--step--1); line-height: 1.6;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#intent">패턴 검사기가 못 보는 버그</a></li>
+      <li><a href="#cadence">점검 주기와 공격 속도</a></li>
+      <li><a href="#design">Hunter Agent의 구조</a></li>
+      <li><a href="#layers">프런티어 모델과 이중 검증</a></li>
+      <li><a href="#demo-scan">데모: 스캔 한 번 돌리기</a></li>
+      <li><a href="#results">결과: 이슈 46개, 범주 세 개</a></li>
+      <li><a href="#issue">이슈 하나 열어 보기</a></li>
+      <li><a href="#schedule">정기 스캔과 자동 수정</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-28 · 14분 · 영어 발표 한글 정리</span>
+      <h1>공격자보다 먼저 로직 버그를 찾는 AI</h1>
+      <p class="lead">패턴으로 검사하는 도구는 코드가 맞게 돌아가지만 의도가 틀린 로직 버그를 잡지 못한다. Sonar는 저장소 전체를 읽고 이런 버그를 찾아 검증하는 AI 에이전트를 만들었고, 이 발표는 그 구조와 실제 화면을 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=UW8Qkk7MG8A" target="_blank" rel="noopener">AI That Hunts Logic Bugs Before Attackers Do</a></span>
+        <span>발표: Taylor Luttrell-Williams (Sonar, 개발자 콘텐츠 담당)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말하거나 데모 화면에서 읽어 준 것이고, 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고, 확실하지 않은 것은 들린 대로 적고 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 SonarQube를 만드는 Sonar 소속이고, 이 발표는 자사 신제품 소개다. 제품의 성능과 정확도에 대한 말은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>패턴 기반 정적 분석(SAST)은 "위험한 모양의 코드"를 찾는다. <strong>코드는 맞게 도는데 의도가 틀린 로직 버그</strong>는 설계상 보지 못한다.</li>
+        <li>에이전트가 코드를 빠르고 많이 내보내는 동안 <strong>펜테스트는 1년에 몇 번</strong>뿐이다. 발표자는 이 틈을 메울 검사가 필요하다고 말한다.</li>
+        <li>Hunter Agent는 <strong>저장소 전체 지도</strong>를 먼저 그리고, 범주마다 <strong>전문 에이전트 3개</strong>를 띄운다. 찾은 것은 <strong>적대적 검증</strong>과 <strong>노이즈 게이트</strong>로 한 번 더 거른다.</li>
+        <li>찾는 범주는 셋이다. <strong>접근 제어 깨짐, 비즈니스 로직, 인증·세션.</strong></li>
+        <li>데모에서 간단한 Python 앱을 스캔하는 데 약 1시간이 걸렸고 <strong>이슈 46개</strong>가 나왔다. 예: 사용자가 자기 role 필드를 바꿔 관리자 확인을 통과한다.</li>
+        <li>결과는 기존 SonarQube 이슈 목록에 함께 뜬다. 담당자 지정, 상태 관리, 정기 스캔, <strong>Remediation Agent의 자동 수정</strong>으로 이어진다.</li>
+        <li>발표자의 권장: SAST·SCA와 Hunter Agent를 <strong>겹쳐 쓰는 이중 구조</strong>.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="intent">
+        <header><span class="num">01</span><h2>패턴 검사기가 못 보는 버그 <span class="ts">00:50</span></h2></header>
+        <p>발표자는 지금을 에이전트 시대로 본다. 코드가 에이전트의 속도와 양으로 배포된다. 그 결과 전보다 훨씬 많은 취약점이 실제 서비스 환경까지 간다고 말한다.</p>
+        <p>많은 팀이 쓰는 도구는 <strong>정적 애플리케이션 보안 테스트</strong><span class="en">SAST</span>다. 코드를 실행하지 않고 읽어서 위험한 패턴을 찾는다. 이 도구가 원래 다루지 않는 종류의 문제가 있다.</p>
+        <div class="shift" aria-label="SAST와 Hunter Agent가 묻는 질문의 차이">
+          <div><span class="tag">SAST가 묻는 것</span><b>이 코드가 위험한 모양인가?</b><span class="muted">알려진 패턴과 맞춰 본다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Hunter Agent가 묻는 것</span><b>이 코드가 하는 일이 규칙에 맞나?</b><span class="muted">서비스의 의도와 비교한다</span></div>
+        </div>
+        <p>발표자는 이것을 <strong>의도의 문제</strong>라고 부른다. 코드는 문법도 맞고 기능도 돌아간다. 그런데 그 동작이 비즈니스 규칙과 어긋난다. 이런 것을 <strong>로직 수준 취약점</strong><span class="en">logic-level vulnerability</span>이라 한다.</p>
+
+        <h3>어떤 모양인지 보기 <span class="muted" style="font-size:var(--step--1)">(예시)</span></h3>
+        <pre><code># 예시: 발표에 나온 코드가 아니다
+@app.patch("/me")
+def update_me():
+    user = current_user()
+    user.update(**request.json)   # 요청 본문에 role이 있으면 그것도 저장된다
+    return user
+
+def is_admin(user):
+    return user.role == "admin"</code></pre>
+        <p>요청 본문에 <code>{"role": "admin"}</code>을 넣으면 누구나 관리자가 된다. 각 줄만 보면 이상한 데가 없다. 빠진 것은 "역할은 본인이 바꿀 수 없다"는 규칙이다. 발표 후반의 데모에서 실제로 이런 종류의 이슈가 나온다(<a href="#issue">07</a>).</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="cadence">
+        <header><span class="num">02</span><h2>점검 주기와 공격 속도 <span class="ts">02:00</span></h2></header>
+        <p>발표자에 따르면 많은 회사가 <strong>펜테스트</strong><span class="en">penetration test</span>를 1년에 많아야 두 번, 많으면 분기에 한 번 한다. 펜테스트는 전문가가 공격자처럼 서비스를 뚫어 보는 점검이다.</p>
+        <ul class="plain">
+          <li>공격자는 어느 때보다 좋은 모델을 쓴다.</li>
+          <li>에이전트가 만든 변경은 점점 짧은 간격으로 배포된다.</li>
+          <li>취약점이 발견된 뒤 실제 공격 도구로 만들어지기까지의 시간도 빠르게 줄고 있다. <span class="ts">04:20</span></li>
+        </ul>
+        <p>그래서 사람이 몇 달에 한 번 하는 점검 사이를 메울 <strong>새로운 종류의 에이전트</strong>가 필요하다는 것이 발표자의 주장이다.</p>
+
+        <figure class="chart" aria-label="1년 기준 점검 횟수 비교: 펜테스트 1년 2번은 2회, 분기 1번은 4회, 정기 스캔 매월은 12회, 매주는 52회, 매일은 365회">
+          <span class="chart-title">1년 동안 몇 번 점검하나 (회)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>펜테스트 · 1년에 2번</span><span class="val">2</span></div>
+              <div class="track"><div class="fill" style="width:0.55%" title="펜테스트 1년 2번: 2회"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>펜테스트 · 분기에 1번</span><span class="val">4</span></div>
+              <div class="track"><div class="fill" style="width:1.1%" title="펜테스트 분기 1번: 4회"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>정기 스캔 · 매월</span><span class="val">12</span></div>
+              <div class="track"><div class="fill key" style="width:3.29%" title="정기 스캔 매월: 12회"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>정기 스캔 · 매주</span><span class="val">52</span></div>
+              <div class="track"><div class="fill key" style="width:14.25%" title="정기 스캔 매주: 52회"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>정기 스캔 · 매일</span><span class="val">365</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="정기 스캔 매일: 365회"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>182</span><span>365</span></div>
+          <span class="caption">발표의 펜테스트 주기(02:00)와 Hunter Agent 정기 스캔 선택지(12:40)를 1년 횟수로 바꾼 계산이다. 발표자가 이 둘을 직접 나란히 비교하지는 않았다.</span>
+        </figure>
+        <p class="note">발표자는 펜테스트를 "많아야 1년에 두 번"이라고 한 뒤 "분기에 한 번일 수도 있다"고 덧붙였다. 분기에 한 번은 1년에 네 번이라 "많아야 두 번"과 맞지 않는다. 차트에는 두 값을 다 넣었다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="design">
+        <header><span class="num">03</span><h2>Hunter Agent의 구조 <span class="ts">02:40</span></h2></header>
+        <p>Sonar가 이 틈을 메우려고 만든 것이 <strong>SonarQube Hunter Agent</strong>다. 일은 다섯 단계로 흐른다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th><th>목적</th></tr></thead>
+            <tbody>
+              <tr><td>1. 전역 지도</td><td>에이전트 하나가 저장소 전체를 훑어 지도를 그린다</td><td>구성 요소 사이의 관계를 알아야 "여기서는 무엇이 지켜져야 하나"를 정할 수 있다</td></tr>
+              <tr><td>2. 전문 에이전트 3개</td><td>지도를 바탕으로 범주마다 에이전트를 하나씩 띄운다</td><td>각 에이전트가 자기 범주의 보안 기대치를 정하고 어긋나는 곳을 찾는다</td></tr>
+              <tr><td>3. 적대적 검증</td><td>찾은 이슈가 진짜인지 다시 따진다 <span class="en">adversarial validation</span></td><td>거짓 경보를 걸러 낸다</td></tr>
+              <tr><td>4. 노이즈 게이트</td><td>근거가 약한 이슈와 의도된 설계를 걸러 낸다 <span class="en">noise gate</span></td><td>개발자가 볼 목록을 줄인다</td></tr>
+              <tr><td>5. 결과</td><td>심각도, 코드 전체에 미칠 영향, 고칠 정확한 위치를 붙여 내놓는다</td><td>바로 개발자에게 배정할 수 있게 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 이 과정을 <strong>플레이북</strong><span class="en">playbook</span>이라 부른다. 저장소를 넣으면 에이전트 조율은 플레이북이 알아서 한다. 나오는 것은 개발자에게 넘길 만한 이슈 목록이다.</p>
+        <p>SonarQube를 이미 쓰고 있다면 이 이슈는 기존 SAST 이슈와 <strong>같은 목록</strong>에 함께 나온다. <span class="ts">03:50</span></p>
+      </section>
+
+      <!-- 4 -->
+      <section id="layers">
+        <header><span class="num">04</span><h2>프런티어 모델과 이중 검증 <span class="ts">04:30</span></h2></header>
+        <p>발표자는 Sonar가 OpenAI의 <strong>Daybreak Cyber Partner Program</strong>(이름은 자막에 들린 대로, 추정)에 합류한다고 발표했다. 보안 특화 최신 모델을 통제된 방식으로 SonarQube 안에서 쓰게 하는 프로그램이라고 설명했다.</p>
+        <ul class="plain">
+          <li>이유: 공격자가 좋은 모델을 쓰니 방어하는 보안 팀도 그만한 모델이 필요하다.</li>
+          <li>쓰임: Hunter Agent의 플레이북마다 추론을 더 깊게 하는 데 쓴다.</li>
+          <li>주장: 모든 단서를 조사하고 검증한 뒤에 보여 준다. 결과는 정확하고, 다시 돌려도 같게 나오고, 나중에 따져 볼 수 있다.</li>
+        </ul>
+        <p class="note">"정확하다, 반복 가능하다"는 주장에 대한 수치(거짓 경보 비율 등)는 발표에 나오지 않았다. 자사 제품 설명이라는 점을 감안해 읽자.</p>
+
+        <h3>두 층으로 겹쳐 쓴다 <span class="ts">05:40</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1층 · SAST + SCA</span>
+            <p>위험한 코드 패턴을 찾는다. SCA는 가져다 쓴 오픈소스 라이브러리의 알려진 취약점을 찾는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2층 · Hunter Agent</span>
+            <p>1층이 놓친 것을 맡는다. 의도와 어긋난 로직, 권한, 세션 문제를 찾는다.</p>
+          </div>
+        </div>
+        <p>발표자는 이것을 "설계부터 겹겹인 보안"이라 부른다. 두 층은 서로 독립적이어야 하고, 어느 층도 다른 층을 믿고 넘기지 않는다(<strong>제로 트러스트</strong><span class="en">zero trust</span>). 목표는 아직 알려지지 않은 취약점(<strong>제로데이</strong><span class="en">zero-day</span>)까지 찾는 것이라고 했다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="demo-scan">
+        <header><span class="num">05</span><h2>데모: 스캔 한 번 돌리기 <span class="ts">06:20</span></h2></header>
+        <p>발표자는 자기가 만든 간단한 Python 앱으로 실제 화면을 보여 줬다.</p>
+        <ol class="plain">
+          <li>SonarQube Cloud 대시보드에서 Hunter Agent 메뉴로 간다.</li>
+          <li><strong>Scan now</strong> 버튼을 누르면 스캔에 필요한 사용량 단위<span class="en">units</span> 추정치가 먼저 나온다. 저장소 전체를 깊게 추론하는 데 드는 양이다. <span class="ts">07:00</span></li>
+          <li>스캔을 시작한다. 규모와 복잡도에 따라 한 시간이 넘을 수 있다. 이 앱은 약 1시간 걸렸다.</li>
+        </ol>
+        <p>SonarQube Cloud뿐 아니라 직접 설치해 쓰는 <strong>SonarQube Server</strong>에서도 된다.</p>
+
+        <h3>스캔 안에서 일어나는 일 <span class="ts">07:40</span></h3>
+        <ol class="plain">
+          <li>대상 저장소를 안전하게 복제해 AI 엔진이 소스 코드를 직접 읽게 한다.</li>
+          <li>앱 구조를 분석해 공격받을 수 있는 지점(<strong>공격 표면</strong><span class="en">attack surface</span>)을 찾고 <strong>위협 모델</strong><span class="en">threat model</span>을 만든다.</li>
+          <li>맥락을 깊게 보는 스캔으로 IDOR, 접근 제어 깨짐, 비즈니스 로직 취약점을 찾는다.</li>
+          <li>하위 에이전트들의 결과를 모으고 중복을 없애 목록 하나로 만든다.</li>
+          <li>검증된 취약점을 SonarQube 이슈 목록으로 내보낸다.</li>
+        </ol>
+      </section>
+
+      <!-- 6 -->
+      <section id="results">
+        <header><span class="num">06</span><h2>결과: 이슈 46개, 범주 세 개 <span class="ts">08:30</span></h2></header>
+        <p>스캔 결과에는 열린 이슈가 46개 있었다. 모두 앞에서 말한 세 범주 중 하나에 속한다.</p>
+
+        <figure class="chart" aria-label="데모 스캔 결과 이슈 수: 전체 46개, 접근 제어와 인증·세션 합계 41개, 비즈니스 로직 5개">
+          <span class="chart-title">데모 앱 스캔 결과 (이슈 수)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>전체 열린 이슈</span><span class="val">46</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="전체 열린 이슈: 46개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>접근 제어 + 인증·세션 (계산)</span><span class="val">41</span></div>
+              <div class="track"><div class="fill" style="width:89.1%" title="접근 제어와 인증·세션 합계: 41개 (46 − 5로 계산)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>비즈니스 로직</span><span class="val">5</span></div>
+              <div class="track"><div class="fill key" style="width:10.9%" title="비즈니스 로직: 5개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>23</span><span>46</span></div>
+          <span class="caption">46과 5는 발표에서 나온 숫자다. 41은 46에서 5를 뺀 계산이다. 접근 제어와 인증·세션 각각의 개수는 발표에서 말하지 않았다.</span>
+        </figure>
+
+        <h3>세 범주가 다루는 것 <span class="ts">08:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>범주</th><th>발표에서 든 항목</th><th>쉬운 예 (예시, 발표에 없음)</th></tr></thead>
+            <tbody>
+              <tr><td>접근 제어 깨짐<br><span class="en">Broken access control</span></td><td>IDOR, 권한 확인 누락·오류, 권한 상승, 민감 정보 노출, CSRF</td><td>주소창의 주문 번호만 바꾸면 남의 주문이 보인다</td></tr>
+              <tr><td>비즈니스 로직<br><span class="en">Business logic</span></td><td>필수 단계 건너뛰기, 반복 가능한 동작 악용, 속도 제한 없음</td><td>결제 단계를 건너뛰고 주문 완료 요청을 바로 보낸다. 같은 쿠폰을 요청 반복으로 여러 번 쓴다</td></tr>
+              <tr><td>인증·세션<br><span class="en">Authentication &amp; session</span></td><td>인증 깨짐, 세션 고정, 만료되지 않는 세션, 약한 비밀번호 복구, 다중 인증 누락, 무차별 대입 방어 빈틈</td><td>로그인 시도 횟수에 제한이 없어 비밀번호를 끝없이 넣어 볼 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">발표에서 확인할 수 없는 것</span>
+          <span>46개 중 몇 개가 진짜 문제였는지는 나오지 않았다. 거짓 경보 비율, SAST만 돌렸을 때와의 비교도 없었다. 데모 앱은 발표자 자신의 간단한 앱이다. 도입을 검토한다면 자기 저장소에서 결과 일부를 직접 확인해 봐야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="issue">
+        <header><span class="num">07</span><h2>이슈 하나 열어 보기 <span class="ts">09:40</span></h2></header>
+        <p>Hunter Agent 이슈는 SonarQube의 다른 이슈와 같은 목록에 뜬다. 새 대시보드로 옮겨 갈 필요가 없다. 모든 이슈에 <code>Hunter Agent</code> 태그와 범주 태그가 붙는다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">접근 제어 깨짐 · 심각도 높음 <span class="ts">10:00</span></span>
+            <p>로그인한 사용자라면 누구나 관리자 확인을 통과한다. 자기 계정의 role 필드를 직접 쓸 수 있기 때문이다.</p>
+            <p class="verdict"><a href="#intent">01</a>의 예시 코드와 같은 종류의 문제다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">인증·세션 · 심각도 높음 <span class="ts">12:00</span></span>
+            <p>비밀번호만 입력한 사용자가 <strong>다중 인증</strong><span class="en">MFA</span>을 끝내지 않고도 보호된 경로 전부에 들어간다. 관리자 기능도 포함이다.</p>
+            <p class="verdict">비밀번호 확인과 다중 인증 사이를 건너뛸 수 있다는 뜻이다.</p>
+          </div>
+        </div>
+
+        <h3>이슈 화면에 있는 것 <span class="ts">10:20</span></h3>
+        <ul class="plain">
+          <li>코드의 어느 위치에서 문제가 생기는지</li>
+          <li>왜 문제인지에 대한 설명</li>
+          <li>어떻게 고치면 되는지</li>
+          <li>이 이슈에 대한 활동 기록</li>
+          <li>담당 개발자 지정</li>
+        </ul>
+
+        <h3>이슈 상태 정하기 <span class="ts">11:00</span></h3>
+        <p>모든 이슈는 열림 상태로 시작한다. 사람이 보고 셋 중 하나로 정한다. 기준은 <strong>품질 게이트</strong><span class="en">quality gate</span>에 반영되느냐다. 품질 게이트는 기준을 넘지 못한 코드가 배포되지 못하게 막는 관문이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>상태</th><th>뜻</th><th>품질 게이트</th></tr></thead>
+            <tbody>
+              <tr><td>Accept (수락)</td><td>진짜 문제이고 거짓 경보가 아니다</td><td>반영하지 않는다. 배포를 막지 않는다</td></tr>
+              <tr><td>Confirm (확인)</td><td>진짜 문제다</td><td>반영한다. 배포를 막을 수 있다</td></tr>
+              <tr><td>False positive (거짓 경보)</td><td>문제가 아니라고 판단한다</td><td>발표에서 따로 말하지 않았다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="schedule">
+        <header><span class="num">08</span><h2>정기 스캔과 자동 수정 <span class="ts">12:20</span></h2></header>
+        <p>스캔은 필요할 때 바로 돌릴 수도 있고, 일정을 정해 돌릴 수도 있다.</p>
+        <ul class="plain">
+          <li>주기: 매일, 매주, 매월 중에서 고른다.</li>
+          <li>브랜치: main이 아닌 특정 브랜치를 골라 스캔할 수 있다. 데모는 main을 스캔했다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">찾기에서 고치기까지 <span class="ts">13:10</span></span>
+          <span>지금까지는 고치는 방법을 제안만 했다. 발표자는 발표한 주부터 이 이슈를 <strong>SonarQube Remediation Agent</strong>에 배정할 수 있다고 발표했다. 이 에이전트가 로직 수준 보안 이슈를 대신 고친다. 고치는 일도 일정을 정해 돌릴 수 있다.</span>
+        </div>
+        <blockquote>사냥당하기 전에 먼저 사냥하라.<cite>발표자의 마무리 말을 옮김 <span class="ts">13:50</span></cite></blockquote>
+      </section>
+
+      <!-- 9 -->
+      <section id="recap">
+        <header><span class="num">09</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>SAST는 위험한 코드 패턴을 찾는다. 코드는 맞게 도는데 의도가 틀린 <strong>로직 버그</strong>는 설계상 보지 못한다.</li>
+          <li>로직 버그의 대표 예: 사용자가 자기 role 필드를 바꿔 관리자 확인을 통과한다.</li>
+          <li>에이전트는 코드를 빠르게 많이 내보내는데 펜테스트는 1년에 몇 번뿐이다. 발표자는 이 틈을 문제로 본다.</li>
+          <li>Hunter Agent는 <strong>저장소 전체 지도</strong>를 먼저 그린 뒤 범주별 전문 에이전트 3개를 띄운다.</li>
+          <li>찾은 이슈는 <strong>적대적 검증</strong>과 <strong>노이즈 게이트</strong>로 거짓 경보와 의도된 설계를 걸러 낸다.</li>
+          <li>세 범주: <strong>접근 제어 깨짐, 비즈니스 로직, 인증·세션.</strong></li>
+          <li>데모에서 간단한 Python 앱 스캔에 약 1시간이 걸렸고 이슈 46개가 나왔다. 정확도 수치는 나오지 않았다.</li>
+          <li>이슈는 기존 SonarQube 목록에 함께 뜨고, 위치·이유·고치는 법이 붙는다.</li>
+          <li><strong>Confirm</strong>은 품질 게이트에 반영되고, <strong>Accept</strong>는 진짜 문제로 인정하되 배포를 막지 않는다.</li>
+          <li>발표자는 SAST·SCA와 Hunter Agent를 <strong>겹쳐 쓰라</strong>고 권한다. 정기 스캔과 Remediation Agent로 찾기부터 고치기까지 이어진다.</li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="quiz">
+        <header><span class="num">10</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>SAST가 로직 버그를 잘 못 잡는 이유는?</span></summary><div class="answer">SAST는 알려진 위험 패턴과 코드를 맞춰 본다. 로직 버그는 코드 모양이 정상이고, 문제는 동작이 비즈니스 규칙과 어긋난다는 데 있다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>발표자가 말하는 "의도의 취약점"이란?</span></summary><div class="answer">기술적으로는 맞게 동작하지만, 그 동작이 서비스의 규칙이나 의도와 맞지 않아 악용될 수 있는 결함이다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Hunter Agent가 전문 에이전트를 띄우기 전에 먼저 하는 일은? 왜 필요한가?</span></summary><div class="answer">저장소 전체 지도를 그린다. 구성 요소 사이의 관계를 알아야 각 지점에서 지켜져야 할 보안 기대치를 정할 수 있다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>적대적 검증과 노이즈 게이트는 각각 무엇을 거르나?</span></summary><div class="answer">적대적 검증은 진짜가 아닌 이슈, 즉 거짓 경보를 거른다. 노이즈 게이트는 근거가 약한 이슈와 의도된 설계를 거른다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>Hunter Agent의 세 범주와 각 범주의 항목 하나씩은?</span></summary><div class="answer">접근 제어 깨짐(예: IDOR), 비즈니스 로직(예: 필수 단계 건너뛰기), 인증·세션(예: 만료되지 않는 세션).</div></details>
+          <details><summary><span class="qn">Q6</span><span>데모의 role 필드 이슈는 왜 심각도가 높은가?</span></summary><div class="answer">로그인한 사용자 누구나 자기 role 필드를 써서 관리자 확인을 통과할 수 있다. 일반 사용자가 관리자 권한을 얻는 권한 상승이다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>Accept와 Confirm의 차이는?</span></summary><div class="answer">둘 다 진짜 문제라는 뜻이다. Confirm은 품질 게이트에 반영돼 배포를 막을 수 있고, Accept는 품질 게이트에 반영되지 않아 배포를 막지 않는다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>발표자가 SAST·SCA와 Hunter Agent를 함께 쓰라고 하는 이유는?</span></summary><div class="answer">각 층이 보는 것이 다르기 때문이다. SAST·SCA는 패턴과 알려진 라이브러리 취약점을, Hunter Agent는 그 밖의 로직 문제를 맡는다. 서로 독립된 두 층으로 놓치는 것을 줄인다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>펜테스트만으로 부족하다는 발표자의 근거 세 가지는?</span></summary><div class="answer">펜테스트는 1년에 몇 번뿐이다. 공격자는 더 좋은 모델을 쓴다. 에이전트가 만든 변경은 더 자주 배포되고, 취약점이 발견돼 공격에 쓰이기까지의 시간도 줄고 있다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>찾기부터 고치기까지 사람 손을 덜 거치게 하는 기능 두 가지는?</span></summary><div class="answer">정기 스캔(매일·매주·매월, 브랜치 선택)과 SonarQube Remediation Agent에 이슈를 배정해 자동으로 고치는 기능이다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>이 발표의 주장을 받아들이기 전에 무엇을 따로 확인해야 하나?</span></summary><div class="answer">거짓 경보 비율과 실제로 진짜인 이슈의 비율이다. 발표는 자사 제품 소개였고, 46개 이슈의 정확도나 SAST와의 비교 수치는 보여 주지 않았다.</div></details>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="apply">
+        <header><span class="num">11</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 서비스의 보안 규칙을 글로 적는다<span class="how">누가 무엇을 바꿀 수 있나, 어떤 단계는 꼭 거쳐야 하나. 로직 버그는 이 규칙과 어긋난 곳이다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>사용자 입력으로 role·권한 필드를 바꿀 수 없는지 확인한다<span class="how">확인: 프로필 수정 API가 바꿔도 되는 필드만 골라 받는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>객체를 조회하는 API마다 소유자 확인이 있는지 본다<span class="how">확인: ID만 바꿔서 남의 데이터를 볼 수 있는가 (IDOR)</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>다중 인증이 필요한 경로가 실제로 다중 인증 완료를 검사하는지 본다<span class="how">확인: 비밀번호만 통과한 세션으로 관리자 경로에 들어가지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>여러 단계로 된 흐름에서 건너뛰기, 반복 요청, 속도 제한을 점검한다<span class="how">확인: 앞 단계 없이 마지막 요청만 보내면 어떻게 되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>패턴 검사(SAST·SCA)와 로직 검사를 둘 다 두고 있는지 본다<span class="how">한쪽만 있다면 다른 쪽이 무엇을 놓치고 있는지 적어 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>로직 검사를 펜테스트 주기보다 자주 돌린다<span class="how">매일 또는 매주. 배포 전 브랜치도 대상에 넣는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>AI가 찾은 이슈의 상태를 정하는 기준을 팀에서 합의한다<span class="how">어떤 이슈는 Confirm(배포 차단), 어떤 이슈는 Accept, 언제 거짓 경보로 닫나</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>도입 전에 거짓 경보 비율을 직접 잰다<span class="how">발표에는 정확도 수치가 없었다. 이슈 일부를 골라 진짜인지 사람이 확인한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="glossary">
+        <header><span class="num">12</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>SAST</td><td>Static Application Security Testing. 코드를 실행하지 않고 읽어서 위험한 패턴을 찾는 보안 검사</td></tr>
+              <tr><td>SCA</td><td>Software Composition Analysis. 가져다 쓴 오픈소스 라이브러리의 알려진 취약점을 찾는 검사</td></tr>
+              <tr><td>로직 수준 취약점</td><td>Logic-level vulnerability. 코드는 맞게 돌지만 서비스 규칙과 어긋나 악용될 수 있는 결함</td></tr>
+              <tr><td>펜테스트</td><td>Penetration test. 전문가가 공격자처럼 서비스를 뚫어 보는 점검. 모의 해킹이라고도 한다</td></tr>
+              <tr><td>접근 제어 깨짐</td><td>Broken access control. 해서는 안 되는 사람이 데이터나 기능에 접근할 수 있는 상태</td></tr>
+              <tr><td>IDOR</td><td>Insecure Direct Object Reference. 요청의 ID만 바꾸면 남의 데이터에 닿는 문제</td></tr>
+              <tr><td>권한 상승</td><td>Privilege escalation. 일반 사용자가 관리자 같은 더 높은 권한을 얻는 것</td></tr>
+              <tr><td>CSRF</td><td>Cross-Site Request Forgery. 로그인한 사용자 몰래 다른 사이트가 요청을 보내게 만드는 공격</td></tr>
+              <tr><td>세션 고정</td><td>Session fixation. 공격자가 미리 정한 세션 ID를 피해자가 로그인할 때 그대로 쓰게 만드는 공격</td></tr>
+              <tr><td>다중 인증</td><td>MFA, Multi-Factor Authentication. 비밀번호 말고도 문자 코드 같은 두 번째 확인을 요구하는 것</td></tr>
+              <tr><td>무차별 대입</td><td>Brute force. 비밀번호를 하나씩 계속 넣어 보는 공격</td></tr>
+              <tr><td>속도 제한</td><td>Rate limit. 정해진 시간 안에 보낼 수 있는 요청 수를 제한하는 것</td></tr>
+              <tr><td>공격 표면</td><td>Attack surface. 외부에서 공격이 들어올 수 있는 지점 전체</td></tr>
+              <tr><td>위협 모델</td><td>Threat model. 누가 어디를 어떻게 공격할 수 있는지 정리한 것</td></tr>
+              <tr><td>적대적 검증</td><td>Adversarial validation. 찾은 이슈를 반박하듯 다시 따져, 진짜인 것만 남기는 검증</td></tr>
+              <tr><td>노이즈 게이트</td><td>Noise gate. 근거가 약하거나 의도된 설계인 이슈를 걸러 내는 단계</td></tr>
+              <tr><td>거짓 경보</td><td>False positive. 문제가 아닌 것을 문제라고 잘못 알리는 것</td></tr>
+              <tr><td>플레이북</td><td>Playbook. 이 발표에서는 Hunter Agent가 범주별로 따르는 검사 절차 전체</td></tr>
+              <tr><td>품질 게이트</td><td>Quality gate. SonarQube에서 기준을 넘지 못한 코드가 배포되지 못하게 막는 관문</td></tr>
+              <tr><td>프런티어 모델</td><td>Frontier model. 현재 가장 앞선 성능의 AI 모델</td></tr>
+              <tr><td>무기화</td><td>Weaponize. 발견된 취약점을 실제 공격에 쓸 수 있는 도구로 만드는 것</td></tr>
+              <tr><td>제로데이</td><td>Zero-day. 아직 널리 알려지지 않아 고칠 방법도 없는 취약점</td></tr>
+              <tr><td>제로 트러스트</td><td>Zero trust. 어떤 구성 요소도 기본으로 믿지 않고 매번 확인하는 보안 원칙</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="timeline">
+        <header><span class="num">13</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>인사, Hunter Agent 한 줄 소개</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>에이전트 시대: 코드의 속도와 양, 늘어나는 취약점</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>SAST가 못 보는 의도의 문제</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>펜테스트 주기와 공격자의 모델</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>구조: 전역 지도, 전문 에이전트 3개</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>적대적 검증과 노이즈 게이트</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>결과: 심각도, 영향, 위치</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>기존 SonarQube 이슈와 같은 목록</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>발견에서 공격까지의 시간 단축</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>OpenAI 파트너 프로그램 합류 발표</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>SAST·SCA와 Hunter Agent의 이중 검증</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>데모 시작: SonarQube Cloud에서 Scan now</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>사용량 단위 추정, Cloud와 Server 모두 지원</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>스캔 안에서 일어나는 다섯 단계</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>결과: 열린 이슈 46개</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>세 범주 설명</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>접근 제어 이슈 열기</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>심각도 높음: role 필드로 관리자 확인 통과</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>이슈 상태: Accept, Confirm, False positive</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>비즈니스 로직 5개, 인증·세션 이슈</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>심각도 높음: 다중 인증 없이 보호 경로 접근</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>정기 스캔 설정: 주기와 브랜치</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>Remediation Agent 자동 수정 발표</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'UW8Qkk7MG8A:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>브라우저 에이전트 프로덕션 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#demo">데모와 프로덕션은 다르다</a></li>
+      <li><a href="#interact">에이전트가 웹을 다루는 법</a></li>
+      <li><a href="#kinds">브라우저 작업의 세 종류</a></li>
+      <li><a href="#no-credit">부분 점수는 없다</a></li>
+      <li><a href="#value">이익 = 매출 − 비용</a></li>
+      <li><a href="#performance">성능: 무엇을 성공으로 볼까</a></li>
+      <li><a href="#cost">비용과 유지보수</a></li>
+      <li><a href="#risks">시간이 흐르며 생기는 위험</a></li>
+      <li><a href="#architecture">건강보험 포털 자동화 설계</a></li>
+      <li><a href="#closing">마무리: 이제 당직이다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 작업에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-02 · 17분 · 영어 발표 한글 정리</span>
+      <h1>99%짜리 브라우저 에이전트는 왜 실패하나</h1>
+      <p class="lead">브라우저 에이전트는 단계마다 비용과 실패 위험이 쌓이지만, 가치는 마지막 단계까지 끝내야 생긴다. 발표자는 모델이 판단할 필요 없는 단계를 함수와 도구로 빼고, 에이전트에게는 정말 모호한 부분만 맡기라고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=5xi_S1f9sDU" target="_blank" rel="noopener">Why 99% Accurate Browser Agents Still Fail</a></span>
+        <span>발표: Derek Meegan (Browserbase 소프트웨어 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 99%, 50% 같은 수치는 발표자가 사고 실험으로 든 가정값이고 실제 측정 결과가 아니다. 자막에 "Megan"으로 적힌 발표자 이름은 영상 제목의 표기를 따랐다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>데모는 한 번, 프로덕션은 <strong>사람 없이 수천 번</strong>이다. 그사이 사이트도 바뀌고 모델도 흔들린다.</li>
+        <li>핵심 문제: <strong>비용은 단계마다 쌓이고, 가치는 마지막에 한 번 생긴다.</strong> 브라우저 작업에는 부분 점수가 없다.</li>
+        <li>단계마다 99% 성공해도 100단계면 <strong>전체 성공률은 약 37%</strong>다. 좋은 모델만으로는 이 계산을 피하지 못한다.</li>
+        <li>기준은 <strong>성능, 비용, 유지보수 순</strong>이다. 성능이 잡히면 나머지는 엔지니어링으로 푸는 최적화 문제다.</li>
+        <li>성공은 확인 메일이나 주문 번호 같은 <strong>산출물</strong>로 확인한다. 성공률은 재시도를 포함한 <strong>거래 기준</strong>으로 잰다.</li>
+        <li>해법은 <strong>모델이 밟는 단계를 줄이는 것</strong>이다. 로그인은 함수로, 다운로드와 검증은 결정적 도구로 뺀다.</li>
+        <li>남은 모호한 부분에는 <strong>스킬(에이전트용 작업 절차서)</strong>을 줘서 핵심 경로를 따르게 한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="demo">
+        <header><span class="num">01</span><h2>데모와 프로덕션은 다르다 <span class="ts">00:10</span></h2></header>
+        <p>브라우저 에이전트 데모는 쉽다. 사이트 하나에서, 운이 좋은 날, 사람이 지켜보며 한 번 돌리면 된다.</p>
+        <p>프로덕션은 다르다. 사람 없이 수천 번 돈다. 그사이 사이트가 바뀌기도 하고, 모델이 유난히 못하는 날도 있다.</p>
+        <p>발표는 이 거리를 네 단계로 다룬다. <span class="ts">00:50</span></p>
+        <ol class="plain">
+          <li>에이전트가 웹과 어떻게 상호작용하는지 정리한다.</li>
+          <li>대규모로 돌리기가 왜 어려운지 정의한다.</li>
+          <li>한 걸음 물러나 에이전트가 주는 가치를 따져 본다.</li>
+          <li>실제 설계로 이익을 낸다. 발표자의 표현으로는 "주주 가치를 만든다".</li>
+        </ol>
+      </section>
+
+      <!-- 2 -->
+      <section id="interact">
+        <header><span class="num">02</span><h2>에이전트가 웹을 다루는 법 <span class="ts">01:20</span></h2></header>
+        <p>발표자는 모델의 출력을 확률 분포<span class="en">probability distribution</span>로 본다. 에이전트의 한 단계는 이렇게 돈다.</p>
+        <ol class="plain">
+          <li><strong>입력</strong>: 페이지 상태, 전체 목표, 이미 밟은 단계가 입력 토큰으로 들어간다.</li>
+          <li><strong>선택</strong>: 모델은 할 수 있는 행동들의 분포를 훑고, 가장 그럴듯한 행동 하나를 고른다.</li>
+          <li><strong>변환</strong>: 그 행동을 정해진 형식의 도구 호출<span class="en">tool call</span>로 바꾼다.</li>
+          <li><strong>실행</strong>: 도구 호출이 결정적으로<span class="en">deterministic</span> 실행돼 브라우저를 움직인다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">이 관점을 기억해 둘 이유</span>
+          <span>모델은 매번 가장 그럴듯한 행동을 고를 뿐이다. 발표 끝에서 스킬이 왜 효과가 있는지 설명할 때 이 관점이 다시 나온다.</span>
+        </div>
+
+        <h3>브라우저는 여러 층으로 되어 있다 <span class="ts">01:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>네트워크 요청</td><td>브라우저로 들어오고 나가는 요청</td></tr>
+              <tr><td>DOM</td><td>페이지의 HTML 구조</td></tr>
+              <tr><td>스크린샷</td><td>화면에 보이는 그대로의 이미지</td></tr>
+              <tr><td>접근성 트리</td><td>Accessibility tree. 페이지의 의미를 텍스트로 정리한 구조</td></tr>
+              <tr><td>브라우저 상태</td><td>저장소, 쿠키, 콘솔, URL, 탭</td></tr>
+              <tr><td>코드 실행 런타임</td><td>이 모든 층 아래에 있다. JavaScript나 CDP로 브라우저를 직접 조작한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>모델에게 브라우저를 보여 주는 세 방식 <span class="ts">02:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>모델이 받는 것</th><th>현황</th></tr></thead>
+            <tbody>
+              <tr><td>1. 텍스트 표현</td><td>HTML과 접근성 트리를 섞어 만든 텍스트</td><td>실무의 주력</td></tr>
+              <tr><td>2. 컴퓨터 사용</td><td>Computer use. 페이지를 찍은 스크린샷의 연속</td><td>실무의 주력</td></tr>
+              <tr><td>3. 코드 직접 실행</td><td>전용 도구를 걷어 내고, 에이전트가 브라우저에 대고 코드를 직접 쓴다</td><td>점점 늘고 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>실제 프로덕션 시스템은 대부분 첫째나 둘째 방식, 또는 둘을 섞어 쓴다.</p>
+        <p class="note">셋째 방식을 발표자는 "de-harnessing"(추정)이라고 불렀다. 자막에는 "deharing"으로 적혀 있다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="kinds">
+        <header><span class="num">03</span><h2>브라우저 작업의 세 종류 <span class="ts">03:10</span></h2></header>
+        <p>발표자는 브라우저 작업 경로<span class="en">trajectory</span>를 에이전트가 얼마나 자율적으로 움직이느냐에 따라 셋으로 나눈다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>자율성</th><th>유형</th><th>예</th></tr></thead>
+            <tbody>
+              <tr><td>가장 낮음</td><td>목적 특화 경로. 작업 하나만 하도록 만든 것</td><td>정해진 사이트에서 정해진 일 하나</td></tr>
+              <tr><td>중간</td><td>더 큰 목표를 위한 수단으로 브라우저를 쓴다</td><td>딥 리서치, 경쟁사 분석</td></tr>
+              <tr><td>가장 높음</td><td>즉석 자동화. 무슨 일인지 미리 모르고, 사용자가 아무 작업이나 준다</td><td>범용 브라우저 비서</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">"예" 열의 첫째와 셋째 칸은 이해를 돕기 위해 정리자가 붙인 예시다.</p>
+        <p>발표는 이 중 거래형 워크플로<span class="en">transactional workflow</span>에 집중한다. <span class="ts">04:00</span> 쉬워서가 아니다. 대규모 현장에서 주로 보이는 것이 이 유형이기 때문이다.</p>
+        <ul class="plain">
+          <li>거래형 작업은 한 단위의 일을 처음부터 끝까지 마쳐야 한다.</li>
+          <li>동시에 브라우저 에이전트는 현장의 애매한 상황을 유연하게 처리할 수 있다.</li>
+        </ul>
+        <p>확실하게 끝내야 하는 일과 유연하게 판단해야 하는 일이 한 작업 안에 같이 있다. 뒤에 나오는 설계는 이 둘을 함께 잡으려는 것이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="no-credit">
+        <header><span class="num">04</span><h2>부분 점수는 없다 <span class="ts">04:30</span></h2></header>
+        <blockquote>비용은 계속 쌓이고, 가치는 마지막에 한 번 생긴다.<cite>발표자의 표현을 옮김. 원문: "Cost accumulation is continuous while value realization is terminal."</cite></blockquote>
+        <ul class="plain">
+          <li>경로의 한 단계마다 비용이 조금씩 든다.</li>
+          <li>한 단계마다 실패할 위험도 조금씩 생긴다.</li>
+          <li>그런데 가치는 모든 단계를 끝냈을 때만 생긴다.</li>
+        </ul>
+        <p>그래서 브라우저 에이전트에는 <strong>부분 점수가 없다.</strong> 발표자는 웹 자동화 대부분이 이런 성격이라고 말한다.</p>
+
+        <h3>99%의 함정 <span class="ts">05:20</span></h3>
+        <p>"아주 좋은 모델을 쓰면 되지 않나?" 발표자는 사고 실험으로 답한다. 단계마다 독립적으로 99% 성공하는 에이전트가 100단계짜리 작업을 한다.</p>
+
+        <figure class="chart" aria-label="단계마다 99% 성공하는 에이전트: 한 단계 성공률 99%, 100단계 전체 성공률 36.6%">
+          <span class="chart-title">단계마다 99% 성공하는 에이전트 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>한 단계 성공률</span><span class="val">99</span></div>
+              <div class="track"><div class="fill" style="width:99%" title="한 단계 성공률: 99%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>100단계를 모두 성공할 확률</span><span class="val">36.6</span></div>
+              <div class="track"><div class="fill key" style="width:36.6%" title="100단계 전체 성공률: 36.6%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">0.99를 100번 곱한 값이다. 단계마다 성공이 서로 독립이라고 가정했다. 발표에서는 "36%, 약 3분의 1"이라고 했다.</span>
+        </figure>
+
+        <p>셋 중 둘 가까이 실패한다. 고객에게 믿을 만한 결과를 주는 수준이 아니다.</p>
+        <p class="note">예시 계산: 같은 99%라도 10단계면 약 90%, 50단계면 약 61%다. 단계가 늘수록 전체 성공률이 빠르게 떨어진다.</p>
+        <p>이 계산대로라면 브라우저 에이전트를 아예 쓰지 말아야 한다. 발표자는 이 문제가 진짜라고 인정한다. 다만 <strong>계산이 이야기의 전부는 아니라고</strong> 말한다. <span class="ts">06:00</span></p>
+      </section>
+
+      <!-- 5 -->
+      <section id="value">
+        <header><span class="num">05</span><h2>이익 = 매출 − 비용 <span class="ts">06:30</span></h2></header>
+        <p>발표자는 한 걸음 물러나 아주 단순한 식을 꺼낸다. 이익은 매출에서 비용을 뺀 것이다. 단순하지만 브라우저 에이전트를 이야기할 때 자주 잊힌다.</p>
+        <div class="callout">
+          <span class="title">에이전트는 장부의 한 줄이다</span>
+          <span>에이전트도 비용 항목 하나일 뿐이다. 가져가는 것보다 더 많이 돌려줘야 한다.</span>
+        </div>
+
+        <h3>에이전트가 실제로 주는 것 <span class="ts">06:50</span></h3>
+        <p>발표자는 고객 입장에서 답한다. Browserbase의 고객은 대개 자기 일을 자동화하지 않는다. 자기 고객을 대신해 웹에서 일을 처리한다.</p>
+        <p>그래서 브라우저 에이전트가 주는 것은 <strong>고객을 위해 반복해서 완료된 작업</strong>이다. 적어도 이상적으로는 그렇다.</p>
+        <p>설계 질문은 이렇게 정리된다. 애매한 문제를 헤쳐 나가는 유연함은 살린다. 동시에 환경이 그대로일 때는 매번 같은 일을 끝낸다. 이런 시스템을 어떻게 만들까.</p>
+
+        <h3>세 기준과 우선순위 <span class="ts">07:30</span></h3>
+        <ol class="plain">
+          <li><strong>성능</strong>: 시킨 일을 해내는가. 가장 중요한 성공 척도다.</li>
+          <li><strong>비용</strong>: 실행할 때마다, 그리고 시간이 흐르며 얼마가 드는가.</li>
+          <li><strong>유지보수성</strong>: 오래 고치고 지켜 가기 쉬운가.</li>
+        </ol>
+        <p>순서에 이유가 있다. 성능이 확보되면 비용과 유지보수는 <strong>최적화 문제</strong>가 된다. 발표자는 최적화 문제는 엔지니어링으로 풀 수 있어서 좋다고 말한다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="performance">
+        <header><span class="num">06</span><h2>성능: 무엇을 성공으로 볼까 <span class="ts">08:00</span></h2></header>
+        <p>먼저 성공이 어떤 모습인지 정해야 한다. 거래형 작업에서 성공은 실행이 남기고 간 구체적인 산출물<span class="en">artifact</span>이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>작업</th><th>성공의 증거</th></tr></thead>
+            <tbody>
+              <tr><td>청구서 납부</td><td>납부 확인 이메일</td></tr>
+              <tr><td>주문</td><td>주문 번호나 영수증</td></tr>
+              <tr><td>양식 제출</td><td>시스템에 새로 생긴 레코드. 결정적으로 조회할 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>실행 기준과 거래 기준 <span class="ts">08:40</span></h3>
+        <p>에이전트가 얼마나 자주 맞히는지 재는 방법은 두 가지다.</p>
+        <ul class="plain">
+          <li><strong>실행 기준</strong><span class="en">per run</span>: 한 번 돌릴 때 성공할 확률</li>
+          <li><strong>거래 기준</strong><span class="en">per transaction</span>: 재시도를 허용했을 때 그 거래가 결국 성공할 확률</li>
+        </ul>
+
+        <figure class="chart" aria-label="실행 한 번 성공률이 50%인 에이전트: 실행 기준 50%, 재시도를 허용한 거래 기준 약 94%">
+          <span class="chart-title">실행 한 번 성공률이 50%인 에이전트 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>실행 기준 (한 번 시도)</span><span class="val">50</span></div>
+              <div class="track"><div class="fill" style="width:50%" title="실행 기준: 50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>거래 기준 (모두 4번까지 시도)</span><span class="val">94</span></div>
+              <div class="track"><div class="fill key" style="width:93.75%" title="거래 기준: 93.75%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자의 사고 실험. 같은 에이전트라도 재는 기준을 바꾸면 성공률이 크게 달라진다.</span>
+        </figure>
+        <p class="note">발표에서는 "최대 4번 재시도하면 94%"라고 했다. 1 − 0.5⁴ = 93.75%이므로, 94%는 처음 시도를 포함해 모두 4번 시도한 경우의 값이다. 처음 시도 뒤에 4번을 더 재시도하면(모두 5번) 약 97%가 된다. 차트는 94%에 맞춰 "모두 4번"으로 적었다.</p>
+
+        <p>발표자는 고객을 기준으로 생각하라고 한다. 고객은 몇 번 재시도했는지에 큰 관심이 없다. 일이 확실하게 끝났는지가 중요하다.</p>
+        <div class="callout">
+          <span class="title">발표자의 결론</span>
+          <span>재시도를 허용하고, 성공률은 거래 기준으로 잰다.</span>
+        </div>
+        <p class="note">정리자 덧붙임: 이 계산은 시도끼리 성공이 독립이라는 가정 위에 있다. 사이트 변경처럼 같은 원인으로 매번 실패한다면 재시도해도 이만큼 오르지 않는다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="cost">
+        <header><span class="num">07</span><h2>비용과 유지보수 <span class="ts">09:30</span></h2></header>
+        <p>발표자는 비용을 두 갈래로 나눈다. 실행할 때마다 드는 비용, 그리고 시간이 흐르며 드는 유지보수 비용이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">실행당 비용 <span class="ts">09:30</span></span>
+            <ul>
+              <li><strong>모델 비용</strong>: 지금은 가장 큰 몫이다</li>
+              <li><strong>인프라와 컴퓨팅</strong>: 실행에 실제로 필요한 자원</li>
+              <li><strong>추가 연동과 도구</strong></li>
+            </ul>
+            <p class="verdict"><b>발표자의 전망</b>: 오픈소스 모델이 발전하며 지능의 가격이 크게 내려가고 있다. 모델 비용이 차지하는 몫은 점점 작아질 것이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">유지보수 비용 <span class="ts">10:00</span></span>
+            <ul>
+              <li><strong>관측</strong><span class="en">observability</span>: 에이전트가 어떻게 판단했는지와 브라우저에서 실제로 무슨 일이 있었는지를 둘 다 본다</li>
+              <li><strong>개발자 시간</strong>: 고장 나거나 잘 안 돌면 사람이 하네스를 고치거나 기능을 더한다</li>
+              <li><strong>재평가</strong>: 사이트가 바뀌고 모델이 발전한다. 특정 시점에 만든 해법을 다시 평가해야 오래 간다</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="risks">
+        <header><span class="num">08</span><h2>시간이 흐르며 생기는 위험 <span class="ts">10:50</span></h2></header>
+        <p>성능, 비용, 유지보수를 오래 지키지 못하게 하는 위험은 네 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위험</th><th>뜻</th><th>발표자의 덧붙임</th></tr></thead>
+            <tbody>
+              <tr><td>환경이 맞선다</td><td>봇 차단<span class="en">anti-bot</span> 같은 장치가 있다. 웹은 에이전트에게 친절한 곳이 아니다</td><td>가장 먼저 꼽은 위험</td></tr>
+              <tr><td>작업이 바뀐다 <span class="ts">11:00</span></td><td>맡긴 일 자체가 바뀌어 에이전트가 모호함을 헤쳐 가야 한다</td><td>모델이 좋아질수록 사용자 의도를 잘 읽고, 일이 틀어져도 스스로 바로잡는다</td></tr>
+              <tr><td>더 나은 방법이 나온다 <span class="ts">11:30</span></td><td>오늘 자동화한 사이트가 내일 API를 내놓을 수 있다</td><td>대부분의 사용 사례에서 API는 금방 나오지 않는다</td></tr>
+              <tr><td>모델이 경로를 벗어난다 <span class="ts">11:50</span></td><td>모델은 비결정적이다. 실행마다 핵심 경로를 따르지 않을 수 있다</td><td>마지막 설계 단계인 스킬이 이 위험을 겨냥한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">마지막 칸의 "스킬이 이 위험을 겨냥한다"는 정리자가 9장과 연결한 해석이다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="architecture">
+        <header><span class="num">09</span><h2>건강보험 포털 자동화 설계 <span class="ts">12:00</span></h2></header>
+        <p>이제 발표의 핵심이다. 앞에서 성능만 잡으면 비용과 유지보수는 최적화 문제라고 했다. 발표자는 이걸 실제 작업으로 보여 준다.</p>
+        <p>과제는 건강보험 포털 자동화다. <span class="ts">12:20</span> 로그인해서 급여 내역서<span class="en">Explanation of Benefits, EOB</span>를 내려받는다. 시스템에 무언가를 더할 때마다 성능, 비용, 유지보수 중 하나를 움직여야 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>더한 것</th><th>얻은 것</th></tr></thead>
+            <tbody>
+              <tr><td>1. 기본 에이전트 <span class="ts">12:40</span></td><td>요청이 오면 에이전트가 브라우저에서 바로 작업한다</td><td>일단 뭔가를 하는 최소한의 시스템</td></tr>
+              <tr><td>2. 다운로드 도구 <span class="ts">12:50</span></td><td>페이지를 조작해 파일을 받는 일, 저장소에서 그 파일을 꺼내 에이전트 런타임으로 가져오는 일을 도구 하나로 묶었다</td><td>모델이 즉석에서 여러 번 판단할 일이 도구 호출 한 번으로 줄었다</td></tr>
+              <tr><td>3. 검증 도구 <span class="ts">13:20</span></td><td>OCR로 문서에서 항목을 결정적으로 뽑는다. 그 값을 기준 시스템<span class="en">system of record</span>과 비교한다</td><td>에이전트가 일을 제대로 했는지 스스로 확실히 안다</td></tr>
+              <tr><td>4. 인증 분리 <span class="ts">13:50</span></td><td>절대 바뀌지 않는 로그인 흐름을 모델의 책임에서 빼 함수로 만들었다</td><td>단계 수가 줄어 단위 원가가 낮아지고 성능이 오른다. 같은 포털의 다른 업무에도 재사용한다</td></tr>
+              <tr><td>5. 스킬 <span class="ts">14:30</span></td><td>핵심 경로를 적은 에이전트용 작업 절차서를 준다</td><td>에이전트가 핵심 경로를 더 잘 따른다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>4단계까지 오면 에이전트의 책임은 정말 모호한 영역으로 좁혀진다. 남은 모호함에는 스킬을 준다. 스킬은 예전에 사람에게 주던 표준 작업 절차<span class="en">SOP</span>와 비슷하다. 다만 읽는 쪽이 에이전트다.</p>
+        <div class="callout">
+          <span class="title">확률 분포로 다시 보기 <span class="ts">15:00</span></span>
+          <span>발표 처음에 모델의 출력을 확률 분포로 봤다. 스킬에 핵심 경로가 적혀 있으면, 에이전트는 지금 2단계에 있고 다음은 3단계라는 걸 안다. 그러면 3단계로 가는 행동이 분포에서 가장 그럴듯한 선택이 된다. 판단에서 모호함이 빠진다.</span>
+        </div>
+
+        <h3>최종 구조 <span class="ts">15:20</span></h3>
+        <p>처음의 단순한 에이전트가 꽤 복잡한 시스템이 됐다. 요청이 들어오면 이렇게 흐른다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>순서</th><th>맡는 쪽</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>코드</td><td>서버리스 인증 함수가 브라우저에 로그인해 둔다</td></tr>
+              <tr><td>2</td><td>코드</td><td>로그인된 브라우저를 에이전트 런타임에 넘긴다</td></tr>
+              <tr><td>3</td><td><strong>에이전트</strong></td><td>스킬을 따라 포털을 돌아다닌다</td></tr>
+              <tr><td>4</td><td><strong>에이전트</strong> → 도구</td><td>결정적인 다운로드 함수를 부른다</td></tr>
+              <tr><td>5</td><td><strong>에이전트</strong> → 도구</td><td>받은 파일을 검증 도구에 넘긴다</td></tr>
+              <tr><td>6</td><td>도구</td><td>이번 경로가 성공했는지 실패했는지 확실히 알려 준다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>로그인, 다운로드, 검증 자체는 코드가 한다. 모델은 포털을 돌아다니고 도구를 언제 부를지 정하는 일만 맡는다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="closing">
+        <header><span class="num">10</span><h2>마무리: 이제 당직이다 <span class="ts">15:50</span></h2></header>
+        <p>이 시스템은 에이전트가 맡을 필요가 없는 단계를 모델의 책임에서 뺐다. 원하는 결과는 그대로 얻으면서, 에이전트가 밟는 단계 수는 줄였다.</p>
+        <p>그래서 유지보수가 쉬워지고 성능이 오른다. 발표자는 이렇게 하면 4장의 문제, 곧 비용은 쌓이고 가치는 끝에만 생기는 문제를 넘을 수 있다고 말한다.</p>
+        <div class="shift" aria-label="에이전트 책임 범위의 변화">
+          <div><span class="tag">처음</span><b>모델이 모든 단계를 판단한다</b><span class="muted">단계마다 비용과 실패 위험이 쌓인다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">최종</span><b>모델은 모호한 부분만 판단한다</b><span class="muted">로그인, 다운로드, 검증은 함수와 도구가 결정적으로 처리한다</span></div>
+        </div>
+        <p class="note">예시 계산(발표에 없는 숫자): 단계당 99%를 그대로 두고 모델이 밟는 단계를 100개에서 30개로 줄이면, 전체 성공률은 약 37%에서 약 74%로 오른다.</p>
+        <blockquote>프로덕션에 온 걸 환영한다. 축하한다. 이제 당신이 당직이다.<cite>발표의 마지막 말을 옮김 <span class="ts">16:20</span></cite></blockquote>
+        <p class="note">발표자는 고객의 브라우저 자동화 배포를 돕는 Browserbase 소속이다. 발표에서 자기 제품을 직접 홍보하지는 않았다. 다만 "설계만 잘하면 브라우저 에이전트는 프로덕션에서 쓸 만하다"는 결론은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>데모는 한 번, 프로덕션은 사람 없이 수천 번이다. 사이트도 모델도 흔들린다.</li>
+          <li>에이전트는 매 단계 확률 분포에서 가장 그럴듯한 행동을 고르고, 그 행동이 도구 호출로 실행된다.</li>
+          <li>브라우저를 모델에 보여 주는 방법은 텍스트, 스크린샷, 코드 실행 셋이다. 실무는 앞의 둘을 주로 쓴다.</li>
+          <li>비용과 실패 위험은 단계마다 쌓이지만 가치는 끝까지 가야 생긴다. <strong>부분 점수는 없다.</strong></li>
+          <li>단계당 99%라도 100단계면 전체 성공률은 <strong>약 37%</strong>다.</li>
+          <li>에이전트는 장부의 한 줄이다. 가져가는 것보다 많이 돌려줘야 한다.</li>
+          <li>기준 순서는 <strong>성능 → 비용 → 유지보수</strong>다. 성능만 잡으면 나머지는 최적화 문제다.</li>
+          <li>성공은 산출물로 확인하고, 성공률은 재시도를 포함한 <strong>거래 기준</strong>으로 잰다.</li>
+          <li>위험은 네 가지다. 봇 차단, 작업 변화, API 등장, 모델의 경로 이탈.</li>
+          <li>해법은 <strong>모델이 맡을 필요 없는 단계를 빼는 것</strong>이다. 인증 함수, 다운로드 도구, 검증 도구, 스킬.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말한 브라우저 에이전트의 핵심 긴장은?</span></summary><div class="answer">비용과 실패 위험은 단계마다 계속 쌓이는데, 가치는 모든 단계를 끝냈을 때 한 번 생긴다. 그래서 부분 점수가 없다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>단계마다 99% 성공하는 에이전트가 100단계 작업을 하면 전체 성공률은?</span></summary><div class="answer">0.99를 100번 곱한 약 36.6%, 대략 37%다. 셋 중 둘 가까이 실패한다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>모델에게 브라우저를 보여 주는 세 방식과, 실무에서 주로 쓰는 것은?</span></summary><div class="answer">HTML과 접근성 트리를 섞은 텍스트 표현, 스크린샷을 쓰는 컴퓨터 사용, 에이전트가 코드를 직접 쓰는 방식. 실무는 앞의 둘이나 둘을 섞은 것을 주로 쓴다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>발표가 거래형 워크플로에 집중하는 이유는?</span></summary><div class="answer">대규모 현장에서 주로 보이는 유형이기 때문이다. 한 단위의 일을 끝까지 마쳐야 가치가 생긴다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>성능, 비용, 유지보수 중 성능이 먼저인 이유는?</span></summary><div class="answer">에이전트가 시킨 일을 해낼 수 있다는 게 확인되면, 비용과 유지보수는 엔지니어링으로 풀 수 있는 최적화 문제가 되기 때문이다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>거래형 작업에서 성공을 무엇으로 확인하나? 예를 셋 든다면?</span></summary><div class="answer">실행이 남긴 구체적인 산출물로 확인한다. 청구서 납부의 확인 이메일, 주문의 주문 번호나 영수증, 양식 제출로 생긴 새 레코드.</div></details>
+          <details><summary><span class="qn">Q7</span><span>실행 기준 50%가 거래 기준 94%가 되는 계산은?</span></summary><div class="answer">모두 4번 시도해서 한 번이라도 성공할 확률이다. 1 − 0.5⁴ = 93.75%. 시도끼리 독립이라는 가정이 깔려 있다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>시간이 흐르며 에이전트를 위협하는 위험 네 가지는?</span></summary><div class="answer">봇 차단처럼 환경이 맞서는 것, 작업 자체가 바뀌는 것, API 같은 더 나은 방법이 나오는 것, 모델이 핵심 경로를 벗어나는 것.</div></details>
+          <details><summary><span class="qn">Q9</span><span>보험 포털 예에서 로그인 흐름을 모델 밖으로 뺀 이유와 효과는?</span></summary><div class="answer">로그인 흐름은 절대 바뀌지 않고 같은 포털의 여러 업무에서 재사용된다. 빼면 에이전트가 밟는 단계가 줄어 단위 원가는 내려가고 성능과 유지보수성은 오른다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>검증 도구는 무엇을 하고, 왜 필요한가?</span></summary><div class="answer">OCR로 내려받은 문서에서 항목을 결정적으로 뽑아 기준 시스템의 값과 비교한다. 에이전트가 자기 일이 성공했는지 추측하지 않고 확실히 알게 된다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>스킬이 성공률을 높이는 이유를 확률 분포로 설명하면?</span></summary><div class="answer">스킬에 핵심 경로가 적혀 있으면 에이전트는 지금 몇 단계이고 다음에 무엇을 할지 안다. 그러면 올바른 다음 행동이 분포에서 가장 그럴듯한 선택이 된다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>모델 비용에 대한 발표자의 전망은?</span></summary><div class="answer">오픈소스 모델이 발전하며 지능의 가격이 크게 내려가고 있다. 모델 비용이 차지하는 몫은 점점 작아질 것이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 작업에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>작업마다 "성공의 증거"를 정한다<span class="how">확인 메일, 주문 번호, 조회 가능한 새 레코드처럼 결정적으로 확인할 수 있는 것</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>성공률을 거래 기준으로 잰다<span class="how">재시도를 허용하고, 거래 하나가 결국 끝났는지를 센다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트 경로의 단계 수를 센다<span class="how">확인: 모델이 판단할 필요가 없는 단계가 몇 개인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>바뀌지 않는 흐름을 함수로 뺀다<span class="how">로그인처럼 매번 같은 흐름. 같은 사이트의 다른 업무에서 재사용한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>여러 동작이 묶인 일을 도구 하나로 감싼다<span class="how">예: 파일 다운로드와 저장소에서 꺼내 런타임으로 가져오기</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>결과를 확인하는 결정적 검증 도구를 붙인다<span class="how">예: OCR로 값을 뽑아 기준 시스템과 대조</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>남은 모호한 부분에는 스킬을 쓴다<span class="how">핵심 경로를 단계별로 적은 에이전트용 작업 절차서</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트의 판단과 브라우저에서 실제로 일어난 일을 둘 다 기록한다<span class="how">확인: 실패한 실행을 다시 따라가 볼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>재평가 시점을 정해 둔다<span class="how">사이트가 바뀌거나 새 모델이 나오면 다시 돌려 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>에이전트 비용을 장부의 한 줄로 놓고 가치와 비교한다<span class="how">확인: 작업 한 건의 가치가 실행 비용과 유지보수 비용보다 큰가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>브라우저 에이전트</td><td>웹 브라우저를 직접 조작해 사람 대신 일을 처리하는 AI 에이전트</td></tr>
+              <tr><td>작업 경로</td><td>Trajectory. 에이전트가 작업을 하며 밟은 단계들의 순서</td></tr>
+              <tr><td>도구 호출</td><td>Tool call. 모델이 정해진 형식으로 함수를 부르는 것</td></tr>
+              <tr><td>결정적</td><td>Deterministic. 같은 입력이면 항상 같은 결과를 내는 성질</td></tr>
+              <tr><td>DOM</td><td>Document Object Model. 페이지의 HTML 구조를 트리로 나타낸 것</td></tr>
+              <tr><td>접근성 트리</td><td>Accessibility tree. 페이지 요소의 역할과 이름을 의미 중심의 텍스트로 정리한 구조</td></tr>
+              <tr><td>CDP</td><td>Chrome DevTools Protocol. 크롬 브라우저를 프로그램으로 조작하는 통신 규약</td></tr>
+              <tr><td>컴퓨터 사용</td><td>Computer use. 스크린샷을 보고 클릭과 입력으로 화면을 조작하는 방식</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>거래형 워크플로</td><td>Transactional workflow. 한 단위의 일을 끝까지 마쳐야 의미가 있는 작업</td></tr>
+              <tr><td>부분 점수</td><td>Partial credit. 중간까지만 한 일에도 일부 가치를 쳐 주는 것. 브라우저 작업에는 없다</td></tr>
+              <tr><td>산출물</td><td>Artifact. 실행이 끝나고 남는 구체적인 결과. 확인 메일, 주문 번호 등</td></tr>
+              <tr><td>실행 기준 / 거래 기준</td><td>Per run / per transaction. 한 번 실행의 성공률 / 재시도를 포함해 거래가 결국 성공한 비율</td></tr>
+              <tr><td>관측</td><td>Observability. 시스템 안에서 무슨 일이 일어났는지 밖에서 볼 수 있게 하는 것</td></tr>
+              <tr><td>봇 차단</td><td>Anti-bot. 사람이 아닌 자동화 접근을 막는 사이트의 장치</td></tr>
+              <tr><td>급여 내역서</td><td>Explanation of Benefits, EOB. 미국 건강보험사가 보내는 문서. 진료비 중 보험이 낸 몫과 환자가 낼 몫을 적는다</td></tr>
+              <tr><td>OCR</td><td>Optical Character Recognition. 이미지나 문서에서 글자를 읽어 내는 기술</td></tr>
+              <tr><td>기준 시스템</td><td>System of record. 어떤 데이터의 원본이 있는 공식 시스템</td></tr>
+              <tr><td>서버리스 함수</td><td>서버를 직접 운영하지 않고, 요청이 올 때만 실행되는 함수</td></tr>
+              <tr><td>단위 원가</td><td>Unit COGS. 작업 한 건을 처리하는 데 직접 드는 비용</td></tr>
+              <tr><td>스킬</td><td>Skill. 에이전트가 읽는 작업 절차서. 핵심 경로를 단계별로 적는다</td></tr>
+              <tr><td>핵심 경로</td><td>Critical path. 작업을 끝내는 데 꼭 필요한 단계들의 순서</td></tr>
+              <tr><td>표준 작업 절차</td><td>Standard Operating Procedure, SOP. 사람이 같은 일을 같은 방식으로 하도록 적은 절차서</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>데모와 프로덕션의 차이</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>발표자 소개와 네 부분 구성</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>모델의 출력은 확률 분포</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>브라우저의 여러 층</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>브라우저를 보여 주는 세 방식</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>브라우저 작업의 세 종류</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>거래형 워크플로에 집중</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>비용은 쌓이고 가치는 끝에 생긴다</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>부분 점수는 없다</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>사고 실험: 99% × 100단계</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>계산이 전부는 아니다</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>이익 = 매출 − 비용</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>에이전트가 고객에게 주는 것</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>성능, 비용, 유지보수의 우선순위</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>성공의 증거: 산출물</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>실행 기준과 거래 기준: 50% → 94%</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>실행당 비용</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>유지보수: 관측, 개발자 시간, 재평가</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>위험 요인 네 가지</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>실전 설계: 건강보험 포털</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>1단계: 기본 에이전트</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>2단계: 다운로드 도구</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>3단계: 검증 도구</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>4단계: 인증 분리</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>5단계: 스킬</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>확률 분포로 다시 보기</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>최종 구조</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>정리: 모델이 맡을 단계를 줄였다</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>"이제 당신이 당직이다"</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '5xi_S1f9sDU:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

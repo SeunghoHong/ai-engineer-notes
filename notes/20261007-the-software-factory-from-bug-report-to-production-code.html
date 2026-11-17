@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>소프트웨어 팩토리 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#eras">AI 엔지니어링의 세 시대</a></li>
+      <li><a href="#factory">소프트웨어 팩토리란</a></li>
+      <li><a href="#questions">모두가 묻는 네 가지</a></li>
+      <li><a href="#bottleneck">병목은 코딩 밖에 있다</a></li>
+      <li><a href="#start">좁게 시작해 신뢰 쌓기</a></li>
+      <li><a href="#principles">세 가지 원칙</a></li>
+      <li><a href="#native">AI 네이티브 조직의 모습</a></li>
+      <li><a href="#scale">O(N)에서 O(1)로</a></li>
+      <li><a href="#readiness">에이전트 준비도 8가지</a></li>
+      <li><a href="#govern">거버넌스와 사람의 자리</a></li>
+      <li><a href="#measure">토큰 말고 결과를 잰다</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-07 · 19분 · 영어 발표 한글 정리</span>
+      <h1>버그 리포트에서 프로덕션 코드까지</h1>
+      <p class="lead">에이전트를 하나씩 부리던 단계가 지나고, 에이전트를 묶은 시스템이 버그 리포트를 받아 프로덕션 코드를 내놓는 단계가 오고 있다. 발표자는 이 시스템을 소프트웨어 팩토리라 부르고, 좁은 일부터 자동화해 신뢰를 쌓고 토큰이 아니라 결과를 재라고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=exiwa9QbQXI" target="_blank" rel="noopener">The Software Factory: From Bug Report to Production Code</a></span>
+        <span>발표: Davis Palmie · Factory 기술 스태프 · Lummetric(추정) 공동 창업자</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고, 확실하지 않은 것에는 (추정)을 붙였다. 발표자는 에이전트 제품을 만드는 Factory 소속이고, 발표 곳곳에 자기 회사 제품 이야기가 섞여 있다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI 엔지니어링은 자동완성, 파일 생성, 에이전트 순으로 올라왔다. 다음 단계는 에이전트를 묶은 <strong>시스템, 곧 소프트웨어 팩토리</strong>다.</li>
+        <li>팩토리는 버그 리포트나 사용자 피드백 같은 <strong>입력 신호를 받아 프로덕션 코드를 내놓는다.</strong> 엔지니어는 가드레일을 관리하고 방향을 정한다.</li>
+        <li><strong>코드 작성은 원래 병목이 아니었다.</strong> 리뷰, 버그 재현, 문서 갱신, 테스트 관리, 팀 사이 소통이 더 오래 걸린다.</li>
+        <li>한꺼번에 다 자동화하지 않는다. <strong>인시던트 분류처럼 좁고 확인하기 쉬운 일부터</strong> 시작해 신뢰를 쌓는다.</li>
+        <li>원칙은 세 가지다. <strong>모델에 묶이지 않기, 배포 방식은 우리가 정하기, 개발 전 과정을 잇기.</strong> 발표자는 같은 코드 리뷰 성능을 절반 가격에 낸 사례를 들었다.</li>
+        <li>에이전트가 일하기 좋은 코드베이스는 사람에게도 좋다. <strong>에이전트 준비도 8가지</strong>(린터, 빌드, 테스트, 문서, 개발 환경, 모듈 구조, 관측, 보안)를 점검한다.</li>
+        <li><strong>토큰이 아니라 결과를 잰다.</strong> 신호에서 프로덕션까지 걸린 시간, 사람 개입 횟수, PR당 비용 같은 것이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="eras">
+        <header><span class="num">01</span><h2>AI 엔지니어링의 세 시대 <span class="ts">00:50</span></h2></header>
+        <p>발표자는 AI 엔지니어링이 세 시대를 거쳐 왔다고 본다. 시대가 바뀔 때마다 AI가 맡는 단위가 커졌다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시대</th><th>AI가 하는 일</th><th>엔지니어의 자리</th></tr></thead>
+            <tbody>
+              <tr><td>탭 자동완성</td><td>다음 토큰을 예측해 다음 몇 글자를 채운다</td><td>여전히 운전석에 앉아 직접 쓴다</td></tr>
+              <tr><td>파일 생성</td><td>파일을 통째로 만든다</td><td>결과를 골라 붙여 넣는다. 출력은 여전히 사람이 쥐고 있다</td></tr>
+              <tr><td>에이전트</td><td>스스로 맥락을 모으고, 도구를 부르고, 자기 결과를 디버깅한다</td><td>에이전트를 감독한다</td></tr>
+              <tr><td>다음: 팩토리</td><td>에이전트들을 묶은 시스템이 입력 신호를 프로덕션 코드로 바꾼다</td><td>시스템을 짓고 방향을 정한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>자동완성은 처음에 마법처럼 느껴졌다. 지금은 추억거리다. 발표자는 이 흐름을 추상화 사다리<span class="en">abstraction ladder</span>로 설명한다. AI가 다루는 단위가 토큰에서 파일로, 맥락으로, 이제 시스템 전체로 올라간다.</p>
+        <p>발표자의 주장은 이렇다. 사다리를 한 칸 오를 때마다 엔지니어는 덜 중요해진 게 아니라 <strong>더 중요해졌다.</strong></p>
+      </section>
+
+      <!-- 2 -->
+      <section id="factory">
+        <header><span class="num">02</span><h2>소프트웨어 팩토리란 <span class="ts">02:00</span></h2></header>
+        <p>발표자는 지금을 전환점으로 본다. 엔지니어는 코드를 치는 사람에서 에이전트를 다스리는 사람으로 바뀐다. 결국 그 에이전트들을 하나의 시스템으로 묶게 된다. 그 시스템이 소프트웨어 팩토리<span class="en">software factory</span>다.</p>
+        <div class="shift" aria-label="엔지니어 역할의 이동">
+          <div><span class="tag">지금까지</span><b>코드를 직접 친다</b><span class="muted">AI는 옆에서 거든다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">앞으로</span><b>에이전트 시스템을 다스린다</b><span class="muted">코드는 시스템이 만들고, 사람은 기준과 방향을 맡는다</span></div>
+        </div>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">시스템이 하는 일</span>
+            <ul>
+              <li>버그 리포트, 사용자 피드백 같은 입력 신호<span class="en">input signal</span>를 받는다</li>
+              <li>그 신호를 프로덕션 코드로 바꿔 내놓는다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">엔지니어가 하는 일</span>
+            <ul>
+              <li>가드레일<span class="en">guardrails</span>을 조인다. 에이전트가 벗어나지 않게 정해 둔 규칙과 검사다</li>
+              <li>코드 드리프트<span class="en">code drift</span>를 잡는다. 코드가 의도한 설계에서 조금씩 멀어지는 현상이다</li>
+              <li>큰 우선순위와 방향을 정한다</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="questions">
+        <header><span class="num">03</span><h2>모두가 묻는 네 가지 <span class="ts">02:40</span></h2></header>
+        <p>AI가 사람보다 코드를 더 많이 만들게 되면 누구나 묻는 질문이 있다. 발표자는 네 가지를 꼽고 답했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>발표자의 답</th></tr></thead>
+            <tbody>
+              <tr><td>비용 폭주를 어떻게 막나</td><td>한 모델 회사에 묶이지 않으면 비용과 성능의 모든 조합을 고를 수 있다. 일마다 꼭 필요한 성능만 가장 싸게 쓴다.</td></tr>
+              <tr><td>지금 최고 모델을 어떻게 계속 쓰나</td><td>어느 한 회사에 거는 것부터 잘못된 선택지다. 오픈소스 모델도 계속 좋아진다. 일마다 맞는 모델을 고르거나 자동으로 배정<span class="en">dynamic routing</span>한다.</td></tr>
+              <tr><td>엔지니어는 어떻게 되나</td><td>제품과 엔지니어링의 경계가 흐려진다. 엔지니어는 코드를 만드는 시스템을 짓고 유지한다. 팩토리의 큰 방향도 정한다.</td></tr>
+              <tr><td>조직은 어떻게 바뀌나</td><td>팀 경계도 흐려진다. 맥락이 경계를 넘어 막힘없이 흘러야 한다. 정보가 팀마다 갇혀 있으면 사람보다 에이전트가 더 곤란하다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>아이에게 대수학 과외 선생님이 필요하다면, 아인슈타인보다 싼 사람은 얼마든지 찾을 수 있다.<cite>Factory CEO의 말이라며 발표자가 옮긴 비유 <span class="ts">03:20</span></cite></blockquote>
+        <p>일마다 필요한 만큼의 성능만 쓰라는 뜻이다. 모든 일에 가장 비싼 모델을 쓸 필요는 없다.</p>
+        <p class="note">비용 질문의 배경으로 발표자는 기사 두 건을 들었다. Uber CTO가 4월에 이미 그해 AI 예산을 다 썼다는 기사와, Microsoft가 비용을 줄이려 Claude Code 라이선스를 거둬들였다는 기사다. 발표자가 인용한 것이고 기사 원문은 확인하지 않았다.</p>
+        <p class="note">비용과 모델 선택에 대한 답은 여러 모델을 고를 수 있다는 Factory 제품의 장점과 겹친다. 감안해서 읽자.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="bottleneck">
+        <header><span class="num">04</span><h2>병목은 코딩 밖에 있다 <span class="ts">05:00</span></h2></header>
+        <p>발표자는 코딩이 쉬운 부분이었고 원래 병목이 아니었다고 말한다. 대신 실제 엔지니어링 지표를 보라고 한다.</p>
+        <ul class="plain">
+          <li>PR 하나를 리뷰하는 데 걸리는 시간의 중앙값은 얼마인가?</li>
+          <li>사용자 버그 리포트를 재현하는 데 얼마나 걸리나? 디버깅은?</li>
+          <li>PR마다 문서를 최신으로 고치는 사람은 누구인가? 전략 회의 뒤에는?</li>
+          <li>테스트 스위트는 누가 관리하나?</li>
+        </ul>
+        <p>테스트 팀, 엔지니어링 팀, 제품 팀은 흔히 서로 다른 대륙에 있는 것처럼 떨어져 일한다. 발표자는 DORA 지표<span class="en">DORA metrics</span>로 코드를 쓴 시점부터 프로덕션에 나가기까지의 시간을 재 보라고 한다. 그 시간이 실제로 코드를 고치는 시간보다 훨씬 길 거라고 장담한다. 데이터를 보여 준 것은 아니고 발표자의 예상이다.</p>
+        <div class="callout">
+          <span class="title">정말 필요한 것은 연결</span>
+          <span>지금은 문서가 낡고, 죽은 코드가 남고, 팀 사이에 소통 단계가 겹겹이 있다. 사람에게도 힘든 일이지만 에이전트에게는 더 힘들다. 팩토리를 지으려면 에이전트가 이 모든 곳을 오가며 조직의 미묘한 사정까지 이해해야 한다.</span>
+        </div>
+
+        <h3>팩토리가 맡는 일 <span class="ts">06:20</span></h3>
+        <p>그래서 팩토리는 입력 신호에서 프로덕션 배포까지 이어지는 에이전트 시스템이다. 에이전트는 코딩만 하지 않는다. 고객 지원, 제품 엔지니어링, 배포 운영 같은 역할도 맡는다. 이 기둥들을 따라 에이전트가 하는 일은 이렇다.</p>
+        <ol class="plain">
+          <li>인시던트를 분류한다</li>
+          <li>계획을 세운다</li>
+          <li>문서를 만들고 고친다</li>
+          <li>코드 작업을 실제로 한다</li>
+          <li>리뷰한다</li>
+          <li>테스트한다</li>
+          <li>배포한다</li>
+          <li>배포 뒤 릴리스를 지켜본다</li>
+        </ol>
+      </section>
+
+      <!-- 5 -->
+      <section id="start">
+        <header><span class="num">05</span><h2>좁게 시작해 신뢰 쌓기 <span class="ts">07:00</span></h2></header>
+        <p>이 일을 한꺼번에 자동화하려 들면 안 된다. 이유는 두 가지다.</p>
+        <ul class="plain">
+          <li>일이 너무 크다.</li>
+          <li>팀이 이 시스템을 믿게 될 시간이 없다.</li>
+        </ul>
+        <p>처음에는 좁고 결과를 확인하기 쉬운 일을 고른다. 발표자의 예는 인시던트 분류<span class="en">incident triage</span>다. 들어온 장애 알림의 원인과 심각도를 먼저 가려내는 일이다.</p>
+        <ol class="plain">
+          <li>에이전트가 Sentry 알림을 읽는다.</li>
+          <li>트레이스와 다른 맥락을 모은다.</li>
+          <li>진단 결과를 Slack에 올린다.</li>
+          <li>무엇을 할지는 엔지니어가 검토하고 정한다.</li>
+        </ol>
+        <p>맞는 진단이 하나둘 쌓이면 팀은 이 단계를 믿고 이해하게 된다. 단계마다 책임자와 모니터링을 붙인다. 파이프라인을 루프로 돌리는 건 그다음 일이다.</p>
+        <div class="callout">
+          <span class="title">루프가 닫히면 <span class="ts">08:00</span></span>
+          <span>시스템이 내놓은 결과를 처음 들어온 신호와 이어 볼 수 있게 되면, 그때부터 조직이 스스로 나아질 수 있다고 발표자는 말한다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="principles">
+        <header><span class="num">06</span><h2>세 가지 원칙 <span class="ts">08:10</span></h2></header>
+        <p>발표자는 소프트웨어 팩토리가 지켜야 할 원칙 세 가지를 든다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">원칙 1 · 모델 비종속</span>
+            <p>모델 비종속<span class="en">model agnostic</span>은 한 모델 회사에 묶이지 않는 것이다. 모델마다 잘하는 일이 다르고 비용 효율도 크게 다르다.</p>
+            <ul>
+              <li>코드 리뷰에서 GPT-5.2가 최신 Opus 모델과 같은 성능을 절반 가격에 냈다</li>
+              <li>오픈소스 대안은 비용을 10~30배 낮춘다</li>
+              <li>묶이지 않으면 속도, 성능, 비용의 파레토 프런티어<span class="en">Pareto frontier</span> 전체를 쓸 수 있다</li>
+            </ul>
+            <p class="verdict"><b>요점</b>: 일마다 필요한 만큼의 성능을 가장 싸게 쓴다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">원칙 2 · 배포 주권 <span class="ts">08:50</span></span>
+            <p>배포 주권<span class="en">sovereign deployment</span>은 보안 구조나 정책을 AI 도입에 맞춰 굽히지 않는 것이다.</p>
+            <ul>
+              <li>Factory는 작업 공간과 배포 방식을 고를 수 있게 한다고 했다</li>
+              <li>완전 관리형부터 자기 장비에서 돌리기, 외부망과 완전히 끊긴 환경<span class="en">air-gapped</span>까지 지원한다고 했다</li>
+            </ul>
+            <p class="verdict"><b>요점</b>: AI가 회사 정책에 맞춘다. 반대가 아니다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">원칙 3 · SDLC 통합 <span class="ts">09:20</span></span>
+            <p>소프트웨어 개발 전 과정<span class="en">SDLC</span>의 단계들은 더 이상 따로 노는 문제가 아니다.</p>
+            <ul>
+              <li>문서가 바뀌면 코드에 반영되고, 코드가 바뀌면 문서에 반영된다</li>
+              <li>계획 단계의 목표가 무엇을 테스트할지 정한다</li>
+              <li>전략, 제품, 엔지니어링, 테스트 팀 사이의 여러 소통 단계를 거치지 않는다</li>
+            </ul>
+            <p class="verdict"><b>요점</b>: 기둥 하나가 약하면 시스템 전체가 약하다.</p>
+          </div>
+        </div>
+
+        <figure class="chart" aria-label="모델별 상대 비용, 최신 Opus 모델을 100으로 놓음: GPT-5.2는 50, 오픈소스 대안은 10배 저렴할 때 10, 30배 저렴할 때 약 3.3">
+          <span class="chart-title">모델별 상대 비용 (최신 Opus 모델 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>최신 Opus 모델</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="최신 Opus 모델: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>GPT-5.2 · 코드 리뷰 성능은 같다고 함</span><span class="val">50</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="GPT-5.2: 50 (절반 가격)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>오픈소스 대안 · 10배 저렴할 때</span><span class="val">10</span></div>
+              <div class="track"><div class="fill key" style="width:10%" title="오픈소스 대안, 10배 저렴: 10"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>오픈소스 대안 · 30배 저렴할 때</span><span class="val">3.3</span></div>
+              <div class="track"><div class="fill key" style="width:3.33%" title="오픈소스 대안, 30배 저렴: 약 3.3"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자가 Factory에서 확인했다고 말한 수치다. 오픈소스의 "10~30배"가 무엇과 비교한 배수인지는 발표에서 분명하지 않아, 여기서는 최신 Opus 대비로 놓고 그렸다. 성능이 같다는 말은 GPT-5.2에만 붙어 있다.</span>
+        </figure>
+        <p class="note">GPT-5.2와 Opus 비교는 Factory가 자체적으로 얻은 결과라고 발표자가 말한 것이다. 측정 방법은 발표에 나오지 않는다. 여러 모델을 쓸 수 있다는 점과 배포 방식 선택지는 Factory 제품이 내세우는 장점이기도 하니 감안해서 읽자.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="native">
+        <header><span class="num">07</span><h2>AI 네이티브 조직의 모습 <span class="ts">10:00</span></h2></header>
+        <p>AI를 중심에 두고 일하는 조직<span class="en">AI-native org</span>에서는 여러 하위 팀이 하나의 소프트웨어 팩토리 아래로 합쳐진다. 그리고 조금씩 자동화된다. 발표자가 자주 본다는 패턴은 이렇다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>영역</th><th>에이전트가 하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>신호 분류</td><td>Sentry 알림 같은 신호를 분류한다. 사람이 호출에 응답하기도 전에 진단을 내놓는다</td></tr>
+              <tr><td>보안</td><td>비밀 정보 유출과 취약점을 미리 스캔한다</td></tr>
+              <tr><td>테스트</td><td>테스트를 만들고 유지한다. 깨지기 쉽거나 필요 없어진 테스트를 찾아낸다</td></tr>
+              <tr><td>문서</td><td>문서를 코드와 맞춘다. 여러 회의 채널에서 정한 내용과도 맞춘다</td></tr>
+              <tr><td>리뷰와 배포</td><td>코드를 리뷰하고 PR에 코멘트를 단다. 롤아웃을 하고 릴리스를 지켜본다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>에이전트가 이 일을 맡으면 엔지니어의 일이 바뀐다 <span class="ts">11:00</span>. 엔지니어는 판단을 내리고 AI를 바로잡는다. 바로잡을 때는 AI가 그 실수에서 배울 수 있는 방식으로 한다.</p>
+        <p>개선은 팀을 넘어 전해진다. 한 팀에서 나아진 것이 시스템 전체를 낫게 한다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="scale">
+        <header><span class="num">08</span><h2>O(N)에서 O(1)로 <span class="ts">11:20</span></h2></header>
+        <p>회사가 크고 조각나 있을수록 관리 부담이 팀 수에 비례해 커진다. 발표자는 팩토리가 이 부담을 O(N)에서 O(1)로 바꾼다고 말한다. 여기서 N은 팀 수다.</p>
+        <div class="shift" aria-label="관리 부담의 변화">
+          <div><span class="tag">지금까지 · O(N)</span><b>팀마다 따로 관리한다</b><span class="muted">가드레일, 문서, 테스트 정책이 팀 수만큼 생긴다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">팩토리 · O(1)</span><b>한 번 정의해 전체에 적용한다</b><span class="muted">가드레일, 에이전트, 문서, 테스트 정책, 거버넌스를 하나의 표준으로</span></div>
+        </div>
+        <ul class="plain">
+          <li>표준은 가장 낮은 수준에 맞추지 않는다. <strong>모두를 가장 높은 기준으로 끌어올린다.</strong></li>
+          <li>에이전트가 여러 팀을 오가며 품질 기준을 지킨다. 그래서 관리 시간을 팀 수만큼 늘릴 필요가 없다.</li>
+          <li>맥락이 한곳에 모인다. 경영진은 개발 전 과정이 어떻게 돌아가는지 볼 수 있다.</li>
+        </ul>
+        <p class="note">발표자는 "보수적으로 잡아도" O(1)이라고 했다. 하지만 O(1)은 팀이 아무리 늘어도 관리 부담이 그대로라는 뜻이라 가장 낙관적인 표현이다. 측정 결과가 아니라 방향을 말한 비유로 읽는 편이 맞다.</p>
+
+        <h3>어디서나 같은 에이전트 <span class="ts">12:30</span></h3>
+        <p>모델에 묶이지 않듯, 에이전트는 쓰는 곳에도 묶이지 않아야 한다. 발표자는 이를 surface agnostic이라 부른다. 팀은 AI 공급자에 맞추려고 자기 프로세스나 도구를 바꾸지 않아야 한다.</p>
+        <p>사람과 에이전트가 쓰는 도구는 다를 수 있다. 그래도 그 밑의 하네스<span class="en">harness</span>와 맥락은 같아야 한다. 하네스는 모델을 감싸 도구, 규칙, 검사를 정해 주는 실행 틀이다.</p>
+        <p class="note">발표자는 Factory 에이전트를 원격 머신, CLI, Slack 등 팀이 쓰는 곳 어디서나 쓸 수 있다고 소개했다. 자기 회사 제품 설명이니 감안해서 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="readiness">
+        <header><span class="num">09</span><h2>에이전트 준비도 8가지 <span class="ts">13:10</span></h2></header>
+        <p>팩토리를 짓다 보면 숨어 있던 것이 드러난다. 몇몇 사람 머릿속에만 있는 지식<span class="en">tribal knowledge</span>, 손으로 하는 절차, 낡은 정보다. 이걸 풀면 에이전트도 빨라지고 엔지니어 팀도 빨라진다.</p>
+        <p>Factory는 에이전트 준비도<span class="en">agent readiness</span>라는 기준으로 코드베이스를 8가지 축에서 평가한다 <span class="ts">13:30</span>.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>축</th><th>점검 질문</th></tr></thead>
+            <tbody>
+              <tr><td>1. 검증</td><td>린터, 포매터 같은 가드레일이 있나?</td></tr>
+              <tr><td>2. 빌드 시스템</td><td>빌드 명령과 CI가 문서로 잘 정리돼 있나?</td></tr>
+              <tr><td>3. 피드백 루프</td><td>단위 테스트와 통합 테스트가 촘촘한가?</td></tr>
+              <tr><td>4. 문서</td><td>README, AGENTS.md 같은 문서가 있나?</td></tr>
+              <tr><td>5. 개발 환경</td><td>에이전트가 쓸 수 있을 만큼 깔끔하게 재현되나?</td></tr>
+              <tr><td>6. 코드 구조</td><td>모듈 경계가 분명한가? 코드가 무질서하게 퍼지지 않게 막는 규칙이 있나?</td></tr>
+              <tr><td>7. 관측 가능성</td><td>뭔가 잘못됐을 때 원인을 찾는 데 얼마나 걸리나?</td></tr>
+              <tr><td>8. 보안</td><td>비밀 정보 유출과 취약점을 미리 스캔하나?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>에이전트와 사람 엔지니어가 같은 길을 걷는다면, 그 길을 잘 닦는 일은 두 배로 쓸모 있다.<cite>발표자의 표현을 옮김 <span class="ts">14:30</span></cite></blockquote>
+        <p class="note">8개 축의 이름은 자막에서 들린 대로 나눴다. 3번(테스트)과 4번(문서)은 한 문장에 이어서 나와 경계가 분명하지 않다. 에이전트 준비도는 Factory가 내세우는 평가 방식이라는 점도 감안하자.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="govern">
+        <header><span class="num">10</span><h2>거버넌스와 사람의 자리 <span class="ts">14:40</span></h2></header>
+        <p>보이지 않는 것은 다스릴 수 없다. 에이전트에게도 사람 엔지니어에게도 마찬가지다.</p>
+        <ul class="plain">
+          <li>준비도 점검부터 시작해도 된다. 그래도 엔지니어는 에이전트의 성과를 지켜보고 행동을 통제해야 한다.</li>
+          <li>발표자에 따르면 Factory에서는 모든 행동을 감사<span class="en">audit</span>할 수 있다. 역할 기반 접근 제어<span class="en">RBAC</span>와 최소 권한<span class="en">least privilege</span> 원칙 아래 돌아간다.</li>
+          <li>팩토리를 짓는 팀은 먼저 신뢰와 이해를 쌓아야 한다. 그래서 단계적으로 펼친다. 기둥 하나하나를 먼저 자동화하고, 시스템을 루프로 잇는 건 그 뒤다.</li>
+        </ul>
+
+        <h3>사람이 남는 자리 <span class="ts">15:30</span></h3>
+        <p>정확하게 실행한다고 나쁜 설계가 막아지지는 않는다. 예전에도 그랬다. 그래서 아키텍처, 전략, 방향 설정에는 여전히 사람이 있어야 한다.</p>
+        <div class="callout">
+          <span class="title">엔지니어는 대체되지 않는다. 다만 중요한 능력이 바뀐다</span>
+          <span>판단과 우선순위가 손으로 구현하는 기술보다 중요해진다. 에이전트가 모든 걸 처리하지는 못한다. 조여야 할 가드레일이 생기고, 설계에서 벗어나는 코드가 생긴다. 사람은 이 팩토리의 검증 관문<span class="en">validation gate</span>으로 서야 한다.</span>
+        </div>
+        <p>이제 펀치 카드를 기계에 넣지 않는다. 마찬가지로 코드도 손으로 쓸 필요가 없다. 팀은 전략과 감수할 위험의 범위를 정하고, 실행은 에이전트에게 맡긴다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="measure">
+        <header><span class="num">11</span><h2>토큰 말고 결과를 잰다 <span class="ts">16:20</span></h2></header>
+        <p>에이전트가 일을 잘하는지는 무엇을 재느냐에 달려 있다. 발표자의 답은 토큰이 아니라 결과를 재라는 것이다.</p>
+        <div class="shift" aria-label="재는 대상의 이동">
+          <div><span class="tag">재기 쉬운 것</span><b>토큰 사용량, 코드 줄 수</b><span class="muted">쉽게 부풀릴 수 있고 결과와 이어지지 않는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">재야 할 것</span><b>실제 결과</b><span class="muted">신호에서 프로덕션까지 걸린 시간, 사람 개입 횟수 같은 것</span></div>
+        </div>
+        <p>큰 회사의 토큰 순위표<span class="en">token leaderboard</span>는 돈을 펑펑 쓰게 만들 뿐이다. 발표자는 이를 눈앞에서 벌어지는 굿하트의 법칙<span class="en">Goodhart's law</span>이라 부른다 <span class="ts">16:50</span>. 토큰 사용량을 재기 시작하면 엔지니어는 토큰을 더 쓰는 쪽으로 움직인다. 그 순간 그 숫자는 좋은 지표가 아니게 된다.</p>
+        <p>중요한 건 누가 토큰에 가장 많이 썼느냐가 아니다. <strong>같은 지출로 누가 가장 큰 성과를 냈느냐</strong>다.</p>
+
+        <h3>Factory가 쓰는 지표 5개 <span class="ts">17:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>풀이</th></tr></thead>
+            <tbody>
+              <tr><td>신호에서 프로덕션까지 걸린 시간</td><td><span class="en">signal to production time</span> 버그 리포트 같은 입력이 들어와 프로덕션에 반영되기까지 걸린 시간</td></tr>
+              <tr><td>사람 개입 횟수</td><td><span class="en">human intervention count</span> 일이 끝나기까지 사람이 끼어든 횟수</td></tr>
+              <tr><td>수리 시간 중앙값</td><td><span class="en">median time to repair</span> 문제가 생긴 뒤 고칠 때까지 걸린 시간의 중앙값</td></tr>
+              <tr><td>코드 수명</td><td><span class="en">shelf life of code</span> 작성한 코드가 다시 고쳐지거나 지워지기 전까지 살아남는 기간</td></tr>
+              <tr><td>PR당 비용</td><td><span class="en">cost per PR</span> PR 하나를 만드는 데 든 비용</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표에서는 지표 이름만 나왔다. 풀이는 이름을 바탕으로 정리한 것이다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="conclusion">
+        <header><span class="num">12</span><h2>결론 <span class="ts">17:30</span></h2></header>
+        <ul class="plain">
+          <li>에이전트 준비도는 효과적인 엔지니어링의 전제 조건이다. 그 자리에 에이전트가 오든 사람이 오든 같다.</li>
+          <li>에이전트도 엔지니어와 똑같이 꼼꼼하게 관리한다. 도구, 접근 권한, 리뷰 체계가 모두 필요하다. <strong>코드베이스에 그냥 풀어 놓지 않는다.</strong></li>
+          <li>토큰을 최대한 쓰는 걸 목표로 삼지 않는다<span class="en">token maxing</span>. 정말 중요한 것을 잰다.</li>
+          <li>사용자는 회사가 AI에 얼마를 쓰는지 관심 없다. 팩토리가 가져올 큰 개선을 체감하고 싶어 한다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">발표 내용을 시작 순서로 묶으면</span>
+          <ol class="plain">
+            <li>에이전트 준비도 8가지로 코드베이스를 점검한다.</li>
+            <li>인시던트 분류처럼 좁고 확인하기 쉬운 일 하나를 자동화한다.</li>
+            <li>맞는 결과가 쌓이면 기둥을 하나씩 늘린다. 기둥마다 책임자와 모니터링을 둔다.</li>
+            <li>토큰이 아니라 결과 지표로 잰다.</li>
+            <li>기둥이 다 선 뒤에 결과를 입력 신호와 이어 루프를 닫는다.</li>
+          </ol>
+          <span class="note">발표 곳곳의 조언을 순서대로 묶은 것이다. 발표자가 이 순서를 직접 제시하지는 않았다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>AI 엔지니어링은 토큰, 파일, 맥락, 시스템 순으로 다루는 단위를 키워 왔다. 다음은 에이전트를 묶은 소프트웨어 팩토리다.</li>
+          <li>팩토리는 버그 리포트, 사용자 피드백 같은 <strong>입력 신호를 받아 프로덕션 코드를 내놓는다.</strong></li>
+          <li>엔지니어는 가드레일을 조이고, 코드 드리프트를 잡고, 방향을 정한다.</li>
+          <li><strong>코딩은 원래 병목이 아니었다.</strong> 리뷰, 재현, 문서, 테스트, 팀 사이 소통이 더 오래 걸린다.</li>
+          <li>한꺼번에 하지 않는다. <strong>좁고 확인하기 쉬운 일부터</strong> 자동화해 신뢰를 쌓는다.</li>
+          <li>원칙 세 가지: <strong>모델 비종속, 배포 주권, SDLC 통합.</strong></li>
+          <li>발표자가 인용한 수치: 코드 리뷰에서 GPT-5.2는 최신 Opus와 같은 성능을 절반 가격에 냈다. 오픈소스는 10~30배 싸다.</li>
+          <li>기준과 거버넌스를 한 번 정의해 전체에 적용하면, 팀 수에 비례하던 관리 부담이 줄어든다.</li>
+          <li>에이전트 준비도 8가지를 닦으면 에이전트와 사람이 함께 빨라진다. 에이전트도 권한, 감사, 리뷰 아래 둔다.</li>
+          <li><strong>토큰이 아니라 결과를 잰다.</strong> 토큰 순위표는 굿하트의 법칙에 빠진다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>AI 엔지니어링의 세 시대는 무엇이고, 다음 단계는 무엇인가?</span></summary><div class="answer">탭 자동완성, 파일 생성, 에이전트. 다음은 에이전트들을 하나의 시스템으로 묶은 소프트웨어 팩토리다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>소프트웨어 팩토리의 입력과 출력은?</span></summary><div class="answer">입력은 버그 리포트, 사용자 피드백 같은 신호다. 출력은 프로덕션 코드다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>팩토리에서 엔지니어가 맡는 세 가지 일은?</span></summary><div class="answer">가드레일을 조이고, 코드 드리프트를 잡고, 큰 우선순위와 방향을 정한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>발표자가 "코딩은 병목이 아니었다"며 대신 짚은 것들은?</span></summary><div class="answer">PR 리뷰 시간, 버그 재현과 디버깅, 문서 최신화, 테스트 스위트 관리, 팀 사이 소통. 코드를 쓴 뒤 프로덕션까지 가는 시간이 실제 코드 수정 시간보다 길다고 봤다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>처음부터 전체 파이프라인을 자동화하지 말라는 두 가지 이유는?</span></summary><div class="answer">일이 너무 크다. 그리고 팀이 시스템을 믿게 될 시간이 없다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>첫 자동화 대상으로 든 예와 그 흐름은?</span></summary><div class="answer">인시던트 분류. 에이전트가 Sentry 알림을 읽고, 트레이스와 맥락을 모으고, 진단을 Slack에 올린다. 무엇을 할지는 엔지니어가 정한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>소프트웨어 팩토리의 세 원칙은?</span></summary><div class="answer">모델 비종속, 배포 주권, SDLC 통합.</div></details>
+          <details><summary><span class="qn">Q8</span><span>모델 비종속을 뒷받침하려고 든 비용 수치는?</span></summary><div class="answer">코드 리뷰에서 GPT-5.2가 최신 Opus와 같은 성능을 절반 가격에 냈다. 오픈소스 대안은 10~30배 싸다. 둘 다 발표자가 인용한 수치다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>"O(N)에서 O(1)로"는 무슨 뜻인가? 어떻게 읽어야 하나?</span></summary><div class="answer">팀마다 따로 관리하면 부담이 팀 수만큼 커진다. 기준을 한 번 정의해 전체에 적용하면 팀 수와 거의 무관해진다는 뜻이다. 다만 측정값이 아니라 방향을 말한 비유로 읽는다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>에이전트 준비도 8가지 축은?</span></summary><div class="answer">검증(린터, 포매터), 빌드 시스템, 피드백 루프(테스트), 문서, 개발 환경, 코드 구조, 관측 가능성, 보안.</div></details>
+          <details><summary><span class="qn">Q11</span><span>토큰 사용량을 성과 지표로 삼으면 왜 안 되나?</span></summary><div class="answer">쉽게 부풀릴 수 있고 실제 결과와 이어지지 않는다. 재기 시작하면 사람들이 그 숫자를 늘리는 쪽으로 움직인다. 굿하트의 법칙이다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>대신 재라고 한 지표 5개는?</span></summary><div class="answer">신호에서 프로덕션까지 걸린 시간, 사람 개입 횟수, 수리 시간 중앙값, 코드 수명, PR당 비용.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트 준비도 8가지로 우리 저장소를 점검한다<span class="how">린터·포매터, 빌드와 CI 문서, 테스트, README·AGENTS.md, 개발 환경 재현, 모듈 경계, 관측, 보안 스캔</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>첫 자동화 대상으로 좁고 확인하기 쉬운 일 하나를 고른다<span class="how">예: 장애 알림을 읽고 진단을 Slack에 올리되, 판단은 엔지니어가 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트 진단이 맞았는지 기록한다<span class="how">확인: 맞은 진단이 쌓이고 있는가. 신뢰는 이 기록으로 쌓는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>작업별로 더 싼 모델을 시험해 본다<span class="how">예: 코드 리뷰를 더 싼 모델로 돌려 같은 품질이 나오는지 비교한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>문서와 코드가 함께 바뀌게 만든다<span class="how">확인: PR마다 관련 문서를 고쳤는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>에이전트 권한을 최소로 주고 모든 행동을 기록한다<span class="how">역할 기반 접근 제어, 최소 권한, 감사 로그</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>토큰 사용량 대신 결과 지표를 잰다<span class="how">신호에서 프로덕션까지 걸린 시간, 사람 개입 횟수, 수리 시간 중앙값, 코드 수명, PR당 비용</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>단계 하나가 안정된 뒤에만 다음 단계와 잇는다<span class="how">확인: 단계마다 책임자와 모니터링이 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>소프트웨어 팩토리</td><td>Software factory. 입력 신호를 받아 프로덕션 코드를 내놓는 에이전트 시스템. 발표자의 정의다</td></tr>
+              <tr><td>입력 신호</td><td>Input signal. 버그 리포트, 사용자 피드백, 장애 알림처럼 일을 시작하게 하는 것</td></tr>
+              <tr><td>추상화 사다리</td><td>AI가 다루는 단위가 토큰, 파일, 맥락, 시스템으로 커지는 흐름</td></tr>
+              <tr><td>가드레일</td><td>Guardrails. 에이전트가 벗어나지 않게 정해 둔 규칙과 검사 장치</td></tr>
+              <tr><td>코드 드리프트</td><td>Code drift. 코드가 의도한 설계나 기준에서 조금씩 멀어지는 현상</td></tr>
+              <tr><td>SDLC</td><td>Software Development Life Cycle. 계획, 개발, 테스트, 배포, 운영까지 이어지는 소프트웨어 개발 전 과정</td></tr>
+              <tr><td>DORA 지표</td><td>소프트웨어 배포 성과를 재는 지표 묶음. 발표자가 말한 "코드 작성부터 프로덕션까지의 시간"은 그중 변경 리드 타임에 해당한다</td></tr>
+              <tr><td>인시던트 분류</td><td>Incident triage. 들어온 장애나 알림의 원인과 심각도를 먼저 가려내는 일</td></tr>
+              <tr><td>Sentry</td><td>앱의 오류와 성능 문제를 모아 알림을 보내는 모니터링 도구</td></tr>
+              <tr><td>트레이스</td><td>Trace. 요청 하나가 시스템을 지나며 거친 경로와 시간을 기록한 것</td></tr>
+              <tr><td>모델 비종속</td><td>Model agnostic. 한 모델 회사에 묶이지 않고 일마다 모델을 고를 수 있는 상태</td></tr>
+              <tr><td>파레토 프런티어</td><td>Pareto frontier. 비용을 더 들이지 않고는 성능을 더 올릴 수 없는 선택지들의 경계</td></tr>
+              <tr><td>동적 라우팅</td><td>Dynamic routing. 요청마다 알맞은 모델로 자동 배정하는 것</td></tr>
+              <tr><td>망 분리 환경</td><td>Air-gapped. 외부 네트워크와 완전히 끊긴 환경</td></tr>
+              <tr><td>O(N), O(1)</td><td>빅오 표기. O(N)은 일의 양이 N에 비례해 늘어난다는 뜻이고, O(1)은 N과 상관없이 일정하다는 뜻이다</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 규칙, 검사를 정해 주는 실행 틀</td></tr>
+              <tr><td>에이전트 준비도</td><td>Agent readiness. 코드베이스가 에이전트가 일하기 좋은 상태인지 보는 기준. Factory가 내세우는 개념이다</td></tr>
+              <tr><td>린터 / 포매터</td><td>Linter / formatter. 규칙 위반과 오류 가능성을 잡는 도구 / 코드 모양을 일정하게 맞추는 도구</td></tr>
+              <tr><td>CI</td><td>Continuous Integration. 코드를 올릴 때마다 자동으로 빌드하고 테스트하는 체계</td></tr>
+              <tr><td>AGENTS.md</td><td>에이전트에게 저장소의 규칙과 작업 방법을 알려 주는 문서 파일</td></tr>
+              <tr><td>암묵 지식</td><td>Tribal knowledge. 문서 없이 몇몇 사람 머릿속에만 있는 지식</td></tr>
+              <tr><td>RBAC / 최소 권한</td><td>Role-based access control / least privilege. 역할에 따라 권한을 나누고, 일에 꼭 필요한 권한만 주는 원칙</td></tr>
+              <tr><td>검증 관문</td><td>Validation gate. 다음 단계로 넘어가기 전에 반드시 통과해야 하는 확인 지점</td></tr>
+              <tr><td>굿하트의 법칙</td><td>Goodhart's law. 지표가 목표가 되면 더는 좋은 지표가 아니다</td></tr>
+              <tr><td>토큰 맥싱</td><td>Token maxing. 토큰을 최대한 많이 쓰는 것을 성과처럼 여기는 태도</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개: Lummetric(추정) 공동 창업, Factory에 인수, Slalom 혁신 랩</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>주제: 소프트웨어 팩토리</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>AI 엔지니어링의 세 시대</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>추상화 사다리: 토큰, 파일, 맥락, 시스템</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>코드를 치는 사람에서 에이전트를 다스리는 사람으로</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>네 가지 질문: 비용, 모델, 엔지니어, 조직</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>대수학 과외와 아인슈타인 비유</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>코딩은 병목이 아니었다</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>필요한 것은 팀 사이의 연결</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>팩토리: 입력 신호에서 배포까지의 에이전트 시스템</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>좁게 시작하기: 인시던트 분류</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>결과를 입력과 이으면 조직이 스스로 나아진다</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>원칙 1: 모델 비종속, GPT-5.2와 Opus 비교</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>원칙 2: 배포 주권</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>원칙 3: SDLC 통합</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>AI 네이티브 조직의 흔한 패턴</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>사람의 역할: 판단과 교정</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>O(N)에서 O(1)로</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>어디서나 같은 에이전트</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>숨은 지식과 에이전트 준비도 8가지</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>보이지 않으면 다스릴 수 없다</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>사람이 남는 자리</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>토큰이 아니라 결과를 잰다</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>Factory가 쓰는 지표 5개</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>결론</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'exiwa9QbQXI:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

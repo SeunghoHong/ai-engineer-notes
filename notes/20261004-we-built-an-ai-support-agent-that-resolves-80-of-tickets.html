@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>직접 만든 지원 에이전트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#scale">하루 1,000명, 담당자는 1명</a></li>
+      <li><a href="#bought">기성 봇은 10%에서 멈췄다</a></li>
+      <li><a href="#joey">Joey: 뽑지 않고 만든 팀원</a></li>
+      <li><a href="#architecture">Joey의 구조</a></li>
+      <li><a href="#results">10%에서 80%로</a></li>
+      <li><a href="#escalation">못 하는 일이 다음 할 일</a></li>
+      <li><a href="#voice">Joey에게 목소리를</a></li>
+      <li><a href="#demo">데모: BAA 질문</a></li>
+      <li><a href="#conclusion">고객이 만드는 것을 만들어라</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-04 · 16분 · 영어 발표 한글 정리</span>
+      <h1>지원 봇을 사지 않고 직접 만들었더니</h1>
+      <p class="lead">AssemblyAI에는 하루 약 1,000명이 가입하는데 이들을 맞는 엔지니어는 한 명이었다. 사서 쓴 지원 봇은 문의의 10%만 해결했다. Claude Agent SDK로 직접 만든 지원 에이전트 Joey는 첫 주에 80%를 해결했다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=pyvRID_CZZU" target="_blank" rel="noopener">We Built an AI Support Agent That Resolves 80% of Tickets</a></span>
+        <span>발표: Matt Lawler (추정) · AssemblyAI 포워드 디플로이드 엔지니어</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다. 예를 들어 FTE는 FDE로, cloud agent SDK는 Claude Agent SDK로, cloud MD는 CLAUDE.md로 고쳤다. 발표자 이름은 들린 대로 적었다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AssemblyAI에는 하루 <strong>약 1,000명</strong>이 API에 가입한다. 이들을 맞는 온보딩 엔지니어는 최근까지 <strong>한 명</strong>이었다.</li>
+        <li>사서 쓴 지원 봇은 문의의 <strong>10%만</strong> 끝까지 해결했다. 프롬프트, 도구, 검색 구조를 고칠 수 없어 개선도 못 했다.</li>
+        <li>Claude Agent SDK로 <strong>Joey</strong>를 직접 만들었다. 문서를 Markdown 파일로 넣고, 임베딩 검색과 파일 탐색을 함께 쓴다.</li>
+        <li>고치는 속도가 핵심이다. 지침 파일을 고쳐 PR을 머지하면 <strong>약 30초 뒤</strong> 새 버전이 뜬다.</li>
+        <li>첫 주에 해결률이 <strong>80%</strong>가 됐다. 비용은 <strong>월 약 700달러</strong>다. 모든 문의가 Joey를 거치고 20%만 사람에게 간다.</li>
+        <li>Joey가 사람에게 넘기는 일의 목록이 곧 <strong>다음에 자동화할 일의 목록</strong>이다.</li>
+        <li>오늘 할 일: FDE라면 <strong>자기 일을 자동화하고, 고객이 만드는 제품을 직접 만들어 본다.</strong> Joey의 음성 모드가 그 실천이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="scale">
+        <header><span class="num">01</span><h2>하루 1,000명, 담당자는 1명 <span class="ts">01:10</span></h2></header>
+        <p>AssemblyAI는 음성 AI 인프라 회사다. 음성을 글로 바꾸는 음성 인식 <span class="en">speech-to-text</span> 기반 모델을 직접 학습시킨다.</p>
+        <ul class="plain">
+          <li><strong>나중에 처리하는 용도</strong>: 회의 녹음 같은 것이다. Fireflies 같은 회의 기록 봇이 대표적이다.</li>
+          <li><strong>실시간 용도</strong>: 전화 상담 에이전트나 드라이브스루 주문 같은 음성 에이전트다.</li>
+          <li><strong>음성 에이전트 API</strong>: 음성 인식, LLM, 음성 합성을 한 번에 이어 준다.</li>
+        </ul>
+        <p>발표자에 따르면 지금 음성 AI 수요는 폭발적이다. AssemblyAI에는 하루 약 1,000명이 API에 가입한다. 그런데 발표 이틀 전까지 온보딩 엔지니어는 발표자 한 명뿐이었다.</p>
+
+        <h3>FDE가 하는 일 <span class="ts">02:40</span></h3>
+        <p>발표자의 직함은 FDE <span class="en">Forward Deployed Engineer</span>다. 회사마다 뜻이 다른 넓은 직함이다. 핵심은 고객 곁에 붙어 일하는 것이다.</p>
+        <ul class="plain">
+          <li>고객의 사용 사례를 깊이 이해하고, 고객에게 꼭 필요한 것을 만든다.</li>
+          <li>고객의 저장소에 코드를 직접 커밋하는 일이 많다.</li>
+          <li>고객과 한 달에 여러 번, 많게는 한 주에 여러 번 만난다.</li>
+          <li>기술과 영업 양쪽의 주 연락 창구다. 계약을 따내고 신뢰를 쌓는 책임도 진다.</li>
+        </ul>
+        <p>좋은 서비스 방식이지만 규모를 늘릴 수 없다. 하루 1,000명의 가입자와 일일이 통화할 수는 없다. 고객이 늘 때마다 FDE를 계속 뽑을 수도 없다. 발표자는 사람이 직접 이끌어야 하는 계약에 시간을 쓰고 싶었다.</p>
+        <blockquote>자기 일을 자동화해서 없애라. 그게 FDE가 매일 할 일이다.<cite>발표자의 표현을 옮김 <span class="ts">04:00</span></cite></blockquote>
+        <p>고객 경험을 넓게 좋게 만들려면 <strong>FDE 자신이 병목이 되면 안 된다</strong>는 뜻이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="bought">
+        <header><span class="num">02</span><h2>기성 봇은 10%에서 멈췄다 <span class="ts">04:10</span></h2></header>
+        <p>처음 반응은 많은 팀과 같았다. "대화를 덜 받자." 그래서 기성 지원 봇 <span class="en">off-the-shelf support bot</span>을 사서 문서에 연결했다. 쉬운 문서 질문은 이제 봇이 다 답할 거라고 기대했다.</p>
+        <p>결과는 끝까지 해결률 <span class="en">end-to-end resolution rate</span> 약 10%였다. 하루 1,000건이면 100건은 봇이 끝냈다. 나머지 900건은 여전히 팀이 맡아야 했다.</p>
+        <p class="note">1,000은 하루 API 가입 수다. 대화도 하루 1,000건이라는 것은 발표자가 설명하려고 같은 크기로 가정한 것이다.</p>
+
+        <h3>고칠 수 없는 봇 <span class="ts">05:00</span></h3>
+        <p>더 큰 문제는 개선 속도였다. 시스템 프롬프트 <span class="en">system prompt</span>에 손댈 수 없었다. 도구도, RAG 구조도 마찬가지였다. 바꾸고 싶은 게 생겨 판매사에 물으면 "로드맵에 있습니다"라는 답이 돌아왔다. 그래서 직접 만들기로 했다.</p>
+        <div class="shift" aria-label="사서 쓴 봇에서 직접 만든 봇으로">
+          <div><span class="tag">사서 쓴 봇</span><b>문서에 연결만 한 기성 지원 봇</b><span class="muted">프롬프트, 도구, 검색을 못 고친다. 해결률 약 10%</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">직접 만든 봇</span><b>Claude Agent SDK로 만든 Joey</b><span class="muted">모든 부분을 직접 고치고 30초 만에 배포한다. 해결률 약 80%</span></div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="joey">
+        <header><span class="num">03</span><h2>Joey: 뽑지 않고 만든 팀원 <span class="ts">05:10</span></h2></header>
+        <p>팀원을 한 명 더 뽑는 대신 만들었다. 이름은 Joey다.</p>
+        <ul class="plain">
+          <li>사이트 채팅 창, 영업 문의, 지원 메일 주소 중 어디로 연락하든 먼저 Joey를 만난다.</li>
+          <li>Joey는 AssemblyAI로 들어오는 모든 대화의 첫 창구다.</li>
+          <li>Joey는 지원팀의 일원이라 고객 지원 플랫폼 Pylon을 쓴다. 대화를 관리하고, 고객과 지난 대화를 기억한다.</li>
+          <li>팀은 Joey의 성과 지표도 Pylon에서 본다.</li>
+        </ul>
+        <p>발표자는 Joey를 "끝없이 늘릴 수 있는 FDE"로 만들려 했다고 말한다.</p>
+
+        <h3>Claude Agent SDK 위에 만든 이유 <span class="ts">05:50</span></h3>
+        <p>Joey는 Claude Agent SDK로 만들었다. 그래서 보통 채팅봇보다 FDE에 가깝게 일한다.</p>
+        <ul class="plain">
+          <li>자기 파일 시스템이 있다.</li>
+          <li>고객을 위해 코드를 쓰고 디버깅한다.</li>
+          <li>도구를 부른다.</li>
+          <li>자기 인프라를 다루고, 스스로 새 능력을 붙인다.</li>
+        </ul>
+      </section>
+
+      <!-- 4 -->
+      <section id="architecture">
+        <header><span class="num">04</span><h2>Joey의 구조 <span class="ts">06:10</span></h2></header>
+        <p>발표자는 Claude와 일해 봤다면 알듯 "Markdown이 친구"라고 말한다. 회사에 대한 모든 것을 Markdown 파일로 주면 Claude가 잘 이해한다. Joey의 구조는 네 부분으로 나뉜다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>부분</th><th>하는 일</th><th>얻는 것</th></tr></thead>
+            <tbody>
+              <tr><td>1. Markdown 문서</td><td>문서 사이트를 Markdown 파일로 바꿔 Joey의 파일 시스템에 둔다. 문서를 고치면 파일도 자동으로 바뀐다</td><td>문서 사이트가 내려가도 최신 내용으로 답한다</td></tr>
+              <tr><td>2. 임베딩 검색</td><td>Voyage의 임베딩으로 질문과 가장 관련 있는 문서를 먼저 가져온다</td><td>오래 찾지 않고 빨리 답한다</td></tr>
+              <tr><td>3. 파일 탐색</td><td>헷갈리거나 여러 자료를 엮어야 하면 파일 시스템을 직접 뒤진다</td><td>깊이 생각해야 하는 질문에도 답한다</td></tr>
+              <tr><td>4. Railway 배포</td><td>저장소에 변경을 머지하면 새 버전이 자동으로 뜬다</td><td>서버 사양이나 EC2를 신경 쓰지 않는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>임베딩 검색과 파일 탐색을 함께 쓰는 점이 눈여겨볼 곳이다. 쉬운 질문은 임베딩으로 빨리 답한다. 어려운 질문은 에이전트가 파일을 직접 열어 보며 찾는다. 이것을 에이전트형 검색 <span class="en">agentic search</span>이라고 한다.</p>
+
+        <h3>고치는 속도가 곧 품질 <span class="ts">07:30</span></h3>
+        <ol class="plain">
+          <li>Slack에서 Joey가 고객과 나눈 나쁜 대화를 발견한다.</li>
+          <li>지침이나 코드를 고치는 PR을 쓴다.</li>
+          <li>머지하면 약 30초 뒤 새 버전이 뜬다.</li>
+          <li>그 뒤의 모든 대화에 고친 내용이 적용된다.</li>
+        </ol>
+        <p>실제 대화를 지켜보다 버그를 잡고, 그 대화가 끝나기 전에 고친 버전을 배포한 적도 있다. 고객은 그 사실을 몰랐다. 기성 봇과 가장 크게 다른 점은 <strong>모든 것을 팀이 직접 제어한다</strong>는 것이다.</p>
+
+        <h3>저장소에서 다시 본 구조 <span class="ts">11:00</span></h3>
+        <ul class="plain">
+          <li>문서뿐 아니라 변경 기록 <span class="en">changelog</span>과 가격 페이지도 Markdown으로 바꿔 넣는다. 새 기능을 내면 Joey도 바로 안다.</li>
+          <li>파일마다 원래 URL을 같이 둔다. Joey가 답에 출처 링크를 붙이고, 고객은 그걸로 답을 확인한다.</li>
+          <li>Joey의 행동 지침은 CLAUDE.md 한 파일에 있다. 발표자 기억으로는 약 3만 줄이다. 고객을 대하는 방법과 가드레일 <span class="en">guardrail</span>이 들어 있다.</li>
+          <li>Joey가 틀린 답을 하면 주로 이 CLAUDE.md를 고친다.</li>
+          <li>전체를 Dockerfile로 묶어 컨테이너로 Railway에 올린다. 배포를 사람이 지켜볼 필요가 없다.</li>
+        </ul>
+        <p class="note">Voyage는 발표자가 협력사라고 소개한 곳이다. 발표자는 Railway도 높이 칭찬했다. 다른 서비스와 비교한 내용은 발표에 없다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="results">
+        <header><span class="num">05</span><h2>10%에서 80%로 <span class="ts">08:00</span></h2></header>
+        <p>배포 첫 주에 끝까지 해결률이 10%에서 80%가 됐다. 발표자는 이것이 "꽤 단순한 구현"으로 낸 결과라고 말한다.</p>
+
+        <figure class="chart" aria-label="사람 없이 끝까지 해결한 대화 비율: 기성 지원 봇 10%, Joey 배포 첫 주 80%">
+          <span class="chart-title">사람 없이 끝까지 해결한 대화 비율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>기성 지원 봇</span><span class="val">10</span></div>
+              <div class="track"><div class="fill" style="width:10%" title="기성 지원 봇: 10%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Joey · 배포 첫 주</span><span class="val">80</span></div>
+              <div class="track"><div class="fill key" style="width:80%" title="Joey 배포 첫 주: 80%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자가 말한 수치다. 8배 차이다.</span>
+        </figure>
+
+        <p>비용은 토큰과 인프라를 합쳐 <strong>월 약 700달러</strong>다.</p>
+
+        <h3>골라서 잰 80%가 아니다 <span class="ts">08:20</span></h3>
+        <p>어떤 회사는 특정 유형의 티켓만 골라 해결률을 잰다. 발표자는 여기는 다르다고 강조한다.</p>
+        <ul class="plain">
+          <li>사람에게 바로 연결되는 길이 없다.</li>
+          <li>사람과 이야기하려면 Joey에게 넘겨 달라고 해야 한다.</li>
+          <li>그래서 Joey가 들어오는 문의의 100%를 받는다.</li>
+          <li>그중 20%만 사람에게 넘긴다.</li>
+        </ul>
+
+        <figure class="chart" aria-label="대화 1,000건 중 사람이 맡는 건수: 기성 지원 봇 900건, Joey 200건">
+          <span class="chart-title">대화 1,000건 중 사람이 맡아야 하는 건수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>기성 지원 봇</span><span class="val">900</span></div>
+              <div class="track"><div class="fill" style="width:90%" title="기성 지원 봇: 900건"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Joey</span><span class="val">200</span></div>
+              <div class="track"><div class="fill key" style="width:20%" title="Joey: 200건"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>500</span><span>1,000</span></div>
+          <span class="caption">900은 발표자가 든 예다. 200은 Joey가 넘기는 비율 20%를 같은 가정에 넣어 계산한 값이다. 발표에서 직접 말한 숫자는 아니다.</span>
+        </figure>
+        <p>사람의 일이 900건에서 200건으로 줄면 4.5분의 1이다. 해결률이 8배 오른 것보다, <strong>사람이 맡는 양이 얼마나 줄었는지</strong>가 팀에게는 더 와닿는 숫자다.</p>
+        <p class="note">80%와 월 700달러는 AssemblyAI가 자기 시스템을 직접 잰 값이다. "해결"을 어떻게 판정했는지는 발표에서 자세히 밝히지 않았다. 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="escalation">
+        <header><span class="num">06</span><h2>못 하는 일이 다음 할 일 <span class="ts">08:40</span></h2></header>
+        <p>Joey가 사람에게 넘기는 20%는 "올바른 이유"로 넘긴 것이라고 발표자는 말한다. 지금은 사람이 필요하지만 언젠가 자동화할 수 있는 일들이다.</p>
+        <ul class="plain">
+          <li>요금 조정 <span class="en">rate change</span></li>
+          <li>데이터 사용 거부 <span class="en">data opt-out</span></li>
+          <li>계약서 서명</li>
+          <li>FDE나 법무팀이 꼭 끼어야 하는 요구</li>
+        </ul>
+        <div class="callout">
+          <span class="title">넘긴 목록 = 팀의 확장 계획 <span class="ts">08:50</span></span>
+          <span>Joey가 아직 못 하는 일은 팀이 다음에 무엇을 해야 하는지 분명히 알려 준다. 사람에게 넘긴 문의를 모으면 그대로 자동화 순서표가 된다.</span>
+        </div>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">BAA 요청</span>
+            <p>Joey가 BAA(의료 정보 처리 계약서)를 보내지 못했다.</p>
+            <p class="verdict"><b>해결</b>: BAA 링크를 참고 자료로 Joey에게 준다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">가격 상담 <span class="ts">09:10</span></span>
+            <p>Joey가 가격 이야기를 하지 못했다.</p>
+            <p class="verdict"><b>해결</b>: 이제 필요한 사용 시간을 말하면 Joey가 요율을 제시한다. 고객은 Joey와 가격을 협상할 수 있다.</p>
+          </div>
+        </div>
+        <p>발표자는 자동화할 일이 아직 많이 남았다고 덧붙인다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="voice">
+        <header><span class="num">07</span><h2>Joey에게 목소리를 <span class="ts">09:20</span></h2></header>
+        <p>발표자가 Joey로 정말 시험하고 싶었던 것은 도그푸딩 <span class="en">dogfooding</span>이다. 자기 회사 제품을 직접 써 보는 일이다.</p>
+        <ul class="plain">
+          <li>문의를 덜 받게 해 주는 봇만 만들고 싶지는 않았다.</li>
+          <li>누구나 만들 수 있는 평범한 지원 봇도 원하지 않았다.</li>
+          <li>AssemblyAI의 고객은 음성 에이전트를 만든다. 그래서 발표자도 음성 에이전트를 만들었다.</li>
+        </ul>
+        <p>발표가 있던 주에 Joey에 음성 에이전트 API를 붙였다. 사이트에서 음성 모드로 바꾸면 말로 Joey와 대화한다. 전화번호도 곧 연결할 계획이라고 했다.</p>
+
+        <h3>음성 에이전트 API의 구성 <span class="ts">10:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>발표자의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>연결</td><td>웹소켓 <span class="en">WebSocket</span> 연결 하나로 말이 들어가고 말이 나온다</td></tr>
+              <tr><td>처리 순서</td><td>음성 인식 → LLM → 음성 합성. 모두 음성용으로 맞췄다</td></tr>
+              <tr><td>대화 처리</td><td>말 사이의 멈춤, 말 끊고 들어오기 <span class="en">barge-in</span>를 API가 알아서 처리한다</td></tr>
+              <tr><td>목소리</td><td>자체 목소리를 제공한다. 음성 업체를 따로 찾지 않아도 된다</td></tr>
+              <tr><td>도구</td><td>텍스트로 대화할 때와 같은 도구를 그대로 쓴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">음성 에이전트 API는 발표자 회사의 제품이다. 실시간, 낮은 지연 시간 같은 설명은 제품 소개로 감안해 읽자.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="demo">
+        <header><span class="num">08</span><h2>데모: BAA 질문 <span class="ts">12:10</span></h2></header>
+        <p>데모는 발표자의 컴퓨터에서 시뮬레이션으로 했다. 청중이 발표 뒤 Joey를 시험할 테니, 실제 지원팀 대기열을 늘리지 않으려는 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>누가</th><th>무엇을 말했나 (요약)</th></tr></thead>
+            <tbody>
+              <tr><td>발표자</td><td>앰비언트 의료 기록 <span class="en">ambient medical scribe</span> 앱을 만들려 한다. 시험 전에 BAA에 서명해야 하는데 Joey가 해 줄 수 있나?</td></tr>
+              <tr><td>Joey</td><td>잠깐 확인하겠다고 한 뒤 답한다. 표준 HIPAA BAA는 고객이 바로 직접 진행할 수 있다.</td></tr>
+              <tr><td></td><td>단, 카드가 등록된 유료 계정이 먼저 있어야 한다.</td></tr>
+              <tr><td></td><td>BAA에 서명하면 모델 학습 사용에서 자동으로 빠진다.</td></tr>
+              <tr><td></td><td>관련 문서 링크를 채팅에 붙여 준다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>앞에서 사람에게 넘기는 일로 꼽은 계약 문의를 이 데모에서는 Joey가 혼자 처리했다.</p>
+
+        <h3>2년 전과 비교 <span class="ts">13:40</span></h3>
+        <p>발표자가 2년 전 지원팀에 들어왔을 때 이 질문은 사람이 답해야 했다. 지원 엔지니어가 바로 못 보면 고객은 기다렸다. 답도 정해진 문구였다. 지금은 기본 질문을 24시간 내내 물을 수 있다. 말로도 물을 수 있다.</p>
+        <div class="callout">
+          <span class="title">한 겹 위의 효과 <span class="ts">14:10</span></span>
+          <span>음성 에이전트 만드는 법을 Joey에게 말로 묻는 순간, 고객은 이미 그 API를 쓰고 있다. 자기가 만들 제품이 어떤 경험이 될지 질문하면서 직접 본다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="conclusion">
+        <header><span class="num">09</span><h2>고객이 만드는 것을 만들어라 <span class="ts">14:20</span></h2></header>
+        <p>발표자가 남기고 싶은 말은 "Joey를 만들라"만이 아니다. FDE라면 자기 회사 제품을 늘 직접 써 봐야 한다.</p>
+        <ul class="plain">
+          <li>고객에게 시작하는 법만 가르쳐서는 부족하다.</li>
+          <li>새 기능과 새 제품은 직접 만들어 본 경험으로 가르쳐야 한다.</li>
+        </ul>
+        <p>발표자도 Joey에 음성을 붙이며 고객과 같은 벽에 부딪혔다. 지연 시간, 말할 차례 주고받기 <span class="en">turn-taking</span>, 말 끊기 처리다. 고객이 쓰는 바로 그 API로 실제 서비스를 내보내 봤다. 그래서 고객의 처지를 더 잘 이해하고 더 나은 조언을 줄 수 있게 됐다.</p>
+        <div class="callout">
+          <span class="title">발표자가 제안하는 오늘 할 일 <span class="ts">15:20</span></span>
+          <span>고객이 도움을 청할 때까지 기다리지 않는다. 고객이 만드는 것과 똑같은 제품을 직접 만든다. 그 과정에서 Joey처럼 고객 경험까지 함께 좋아질 수 있다.</span>
+        </div>
+        <p class="note">"음성 에이전트라면 AssemblyAI로 만들라"는 마지막 권유는 회사 홍보다. 도그푸딩이라는 핵심 주장은 어느 회사 제품에도 적용된다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="recap">
+        <header><span class="num">10</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>하루 약 1,000명이 가입하면 사람이 하나하나 맞을 수 없다. FDE 방식은 그대로는 규모를 못 늘린다.</li>
+          <li>발표자는 FDE가 매일 할 일이 <strong>자기 일을 자동화하는 것</strong>이라고 본다.</li>
+          <li>기성 봇은 10%만 해결했고, 내부를 고칠 수 없어 개선도 막혔다.</li>
+          <li>Joey는 Claude Agent SDK 위에 만든 에이전트다. 파일 시스템, 도구, 코드 실행을 쓴다.</li>
+          <li>문서는 Markdown 파일로 자동 동기화하고, URL을 함께 둬 출처를 단다.</li>
+          <li>검색은 <strong>임베딩으로 먼저 찾고, 모자라면 파일을 직접 뒤진다.</strong></li>
+          <li>약 3만 줄의 CLAUDE.md를 고쳐 30초 만에 배포한다. <strong>고치는 속도가 곧 품질이다.</strong></li>
+          <li>첫 주 해결률 80%, 월 약 700달러. 모든 문의가 Joey를 거치고 20%만 사람에게 간다.</li>
+          <li>사람에게 넘긴 문의 목록이 <strong>다음 자동화 목록</strong>이다.</li>
+          <li><strong>고객이 만드는 제품을 직접 만들어 봐야</strong> 고객을 제대로 돕는다. Joey의 음성 모드가 그 실천이다.</li>
+        </ol>
+      </section>
+
+      <!-- 11 -->
+      <section id="quiz">
+        <header><span class="num">11</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>AssemblyAI가 지원 에이전트를 새로 만들어야 했던 배경은?</span></summary><div class="answer">하루 약 1,000명이 API에 가입하는데 온보딩 엔지니어는 발표 이틀 전까지 한 명이었다. FDE가 고객을 하나하나 맡는 방식은 이 규모로 늘릴 수 없다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>기성 지원 봇의 해결률은? 왜 개선하지 못했나?</span></summary><div class="answer">약 10%. 시스템 프롬프트, 도구, RAG 구조에 손댈 수 없었다. 판매사는 "로드맵에 있다"고만 했다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Joey 구조의 네 부분은?</span></summary><div class="answer">Markdown 문서, Voyage 임베딩 검색, 파일 시스템 탐색, Railway 배포.</div></details>
+          <details><summary><span class="qn">Q4</span><span>문서를 로컬 Markdown 파일로 두면 무엇이 좋은가?</span></summary><div class="answer">문서가 바뀌면 자동으로 같이 바뀐다. 문서 사이트가 내려가도 최신 내용으로 답한다. 파일마다 URL을 둬서 답에 출처를 붙일 수 있다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>임베딩 검색이 있는데 파일 탐색을 왜 또 쓰나?</span></summary><div class="answer">임베딩은 관련 문서를 먼저 빨리 가져온다. 헷갈리거나 여러 자료를 엮어야 할 때는 에이전트가 파일을 직접 뒤져서 찾는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Joey가 틀린 답을 하면 팀은 어떻게 고치나?</span></summary><div class="answer">주로 CLAUDE.md(약 3만 줄의 지침)를 고치는 PR을 머지한다. Railway가 약 30초 안에 새 버전을 띄우고, 이후 모든 대화에 적용된다. 진행 중인 대화에 반영한 적도 있다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>80%가 골라서 잰 수치가 아니라고 말한 근거는?</span></summary><div class="answer">사람에게 바로 가는 길이 없다. 모든 문의가 Joey를 거치고, Joey가 넘긴 20%만 사람에게 간다. 일부 유형만 골라 잰 해결률이 아니다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Joey가 지금도 사람에게 넘기는 문의는? 그 목록은 어떻게 쓰나?</span></summary><div class="answer">요금 조정, 데이터 사용 거부, 계약서 서명, FDE나 법무가 필요한 요구. 이 목록을 다음에 자동화할 일의 순서로 쓴다. BAA 링크 제공과 가격 협상이 그 예다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Joey에 음성을 붙인 진짜 이유는?</span></summary><div class="answer">자기 회사 제품을 직접 써 보기 위해서다. 고객이 음성 에이전트를 만드니, 같은 것을 직접 만들어 봐야 고객을 이해할 수 있다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>데모에서 Joey가 알려 준 BAA 조건은?</span></summary><div class="answer">고객이 바로 직접 진행할 수 있다. 카드가 등록된 유료 계정이 먼저 있어야 한다. 서명하면 모델 학습 사용에서 자동으로 빠진다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>발표자가 음성 에이전트를 만들며 부딪힌 벽은?</span></summary><div class="answer">지연 시간, 말할 차례 주고받기, 말 끊기 처리. 고객과 같은 벽을 겪어 봐서 더 나은 조언을 줄 수 있게 됐다.</div></details>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="apply">
+        <header><span class="num">12</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>하루 문의 수와 응대 인원을 적어 본다<span class="how">확인: 지금 인원이 감당할 수 있는 양인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>지금 쓰는 지원 봇의 끝까지 해결률을 전체 문의 기준으로 잰다<span class="how">일부 유형만 골라 재지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>봇의 프롬프트, 도구, 검색을 직접 고칠 수 있는지 확인한다<span class="how">못 고친다면 개선 속도가 판매사 로드맵에 묶인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>문서를 Markdown으로 뽑아 에이전트가 읽게 한다<span class="how">문서가 바뀌면 자동 동기화, 파일마다 원래 URL 포함</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>검색에 임베딩과 파일 탐색을 함께 쓴다<span class="how">쉬운 질문은 임베딩, 여러 자료를 엮는 질문은 파일 탐색</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>나쁜 대화를 보면 지침을 고쳐 바로 배포하는 흐름을 만든다<span class="how">확인: 고친 내용이 몇 분 안에 실제 대화에 반영되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>사람에게 넘긴 문의를 이유별로 모은다<span class="how">그 목록을 다음 자동화 순서로 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>고객이 만드는 제품을 직접 하나 만들어 본다<span class="how">막힌 지점을 고객 안내 문서와 에이전트 지침에 반영한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 13 -->
+      <section id="glossary">
+        <header><span class="num">13</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>FDE</td><td>Forward Deployed Engineer. 고객 곁에 붙어 사용 사례를 이해하고 코드까지 함께 쓰는 엔지니어. 회사마다 범위가 다르다</td></tr>
+              <tr><td>온보딩</td><td>새로 가입한 고객이 제품을 쓰기 시작하도록 돕는 일</td></tr>
+              <tr><td>끝까지 해결률</td><td>End-to-end resolution rate. 사람 손을 거치지 않고 봇이 혼자 끝낸 대화의 비율</td></tr>
+              <tr><td>에스컬레이션</td><td>Escalation. 봇이 처리하지 못한 문의를 사람에게 넘기는 것</td></tr>
+              <tr><td>기성 제품</td><td>Off-the-shelf. 직접 만들지 않고 사서 바로 쓰는 제품</td></tr>
+              <tr><td>시스템 프롬프트</td><td>모델에게 늘 먼저 주는 기본 지시문</td></tr>
+              <tr><td>RAG</td><td>질문과 관련된 문서를 찾아 모델에게 함께 넣어 주는 방식</td></tr>
+              <tr><td>임베딩</td><td>Embedding. 글의 의미를 숫자 목록으로 바꾼 것. 뜻이 비슷한 문서를 찾는 데 쓴다</td></tr>
+              <tr><td>에이전트형 검색</td><td>Agentic search. 에이전트가 스스로 파일을 열어 보며 필요한 자료를 모으는 방식</td></tr>
+              <tr><td>Claude Agent SDK</td><td>Claude로 에이전트를 만드는 Anthropic의 개발 도구. 파일, 도구, 코드 실행을 다룬다</td></tr>
+              <tr><td>CLAUDE.md</td><td>Claude가 일할 때 늘 읽는 지침 파일</td></tr>
+              <tr><td>가드레일</td><td>Guardrail. 에이전트가 넘지 말아야 할 선이나 지켜야 할 규칙</td></tr>
+              <tr><td>Dockerfile</td><td>실행 환경을 통째로 묶는 설정 파일. 묶은 결과물을 컨테이너라 하고, 어디서나 똑같이 돌아간다</td></tr>
+              <tr><td>Railway</td><td>코드를 올리면 서버 설정 없이 배포해 주는 클라우드 서비스</td></tr>
+              <tr><td>Pylon</td><td>고객 지원 대화를 관리하는 서비스. Joey의 대화 기록과 지표가 여기 쌓인다</td></tr>
+              <tr><td>도그푸딩</td><td>Dogfooding. 자기 회사 제품을 직접 써 보는 것</td></tr>
+              <tr><td>음성 에이전트</td><td>Voice agent. 말을 듣고 말로 답하는 AI 에이전트</td></tr>
+              <tr><td>음성 인식 / 음성 합성</td><td>Speech-to-text / Text-to-speech. 말을 글로 바꾸기 / 글을 말로 바꾸기</td></tr>
+              <tr><td>웹소켓</td><td>WebSocket. 연결 하나를 열어 두고 양쪽이 실시간으로 데이터를 주고받는 통신 방식</td></tr>
+              <tr><td>말할 차례 주고받기</td><td>Turn-taking. 대화에서 누가 언제 말할지 정하는 것</td></tr>
+              <tr><td>말 끊고 들어오기</td><td>Barge-in. 에이전트가 말하는 중에 사용자가 끼어드는 것</td></tr>
+              <tr><td>BAA</td><td>Business Associate Agreement. 미국 HIPAA에서 의료 정보를 다루는 협력 업체와 맺는 계약</td></tr>
+              <tr><td>HIPAA</td><td>미국의 의료 정보 보호법</td></tr>
+              <tr><td>앰비언트 의료 기록</td><td>Ambient medical scribe. 진료 대화를 듣고 의무 기록을 자동으로 쓰는 도구</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="timeline">
+        <header><span class="num">14</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:30</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>AssemblyAI 소개: 음성 AI 인프라</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>하루 약 1,000명 가입, 온보딩 엔지니어 1명</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>FDE가 하는 일</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>FDE 방식은 규모를 못 늘린다</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>"자기 일을 자동화하라"</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>기성 지원 봇: 해결률 10%</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>고칠 수 없어서 직접 만들기로</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>Joey 소개: 모든 문의의 첫 창구</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>Claude Agent SDK로 만든 이유</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>구조 1: Markdown 문서</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>구조 2·3: Voyage 임베딩, 파일 탐색</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>구조 4: Railway 배포, 30초 반영</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>결과: 10% → 80%, 월 약 700달러</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>모든 문의가 Joey를 거친다, 20%만 사람에게</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>못 하는 일 = 다음 할 일, 가격 협상</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>도그푸딩: Joey에게 목소리를</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>음성 에이전트 API 구성</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>저장소 살펴보기: Markdown, CLAUDE.md, Dockerfile</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>데모 준비</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>데모: 의료 기록 앱과 BAA 질문</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>2년 전에는 사람이 답해야 했던 질문</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>핵심 메시지: 늘 직접 써 봐라</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>발표자가 부딪힌 벽: 지연, 차례, 말 끊기</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>고객이 만드는 것을 직접 만들어라</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>부스 안내와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'pyvRID_CZZU:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

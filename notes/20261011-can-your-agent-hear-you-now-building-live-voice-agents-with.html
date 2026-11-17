@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gemini 실시간 음성 에이전트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#tts">첫 인사는 Gemini TTS가 했다</a></li>
+      <li><a href="#scope">발표자와 오늘의 범위</a></li>
+      <li><a href="#new-models">그날 아침 나온 두 모델</a></li>
+      <li><a href="#story-canvas">데모 1: 이야기를 그림으로</a></li>
+      <li><a href="#translate">데모 2: 실시간 통역</a></li>
+      <li><a href="#dj">데모 3: 라디오 DJ와 Lyria 3</a></li>
+      <li><a href="#live-api">Live API: 웹소켓 하나로 주고받기</a></li>
+      <li><a href="#native-audio">캐스케이드가 아니라 네이티브 오디오</a></li>
+      <li><a href="#features">핵심 기능과 파트너</a></li>
+      <li><a href="#try">AI Studio에서 직접 써 보기</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 프로젝트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-11 · 20분 · 영어 발표 한글 정리</span>
+      <h1>Gemini로 만드는 실시간 음성 에이전트</h1>
+      <p class="lead">Gemini Live API는 웹소켓 하나로 소리와 영상을 보내고 소리로 바로 답을 받는다. 음성을 글자로 바꾸고 다시 소리로 바꾸는 단계가 없다. 발표는 데모 세 개로 이 구조가 무엇을 가능하게 하는지 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=xfPVBzDYjH4" target="_blank" rel="noopener">Can Your Agent Hear You Now? Building Live Voice Agents with Gemini</a></span>
+        <span>발표: Thor Schaeff (Google DeepMind 개발자 경험 담당)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 모델 이름과 수치는 발표자가 말한 그대로이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고 나머지는 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 Google DeepMind에서 Gemini API와 Google AI Studio를 맡고 있다. 발표에 나오는 모델과 서비스는 모두 발표자 소속 회사의 제품이다. 이 점을 감안해서 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>발표는 <strong>Gemini 3.1 Flash Live</strong>와 그것을 쓰는 <strong>Live API</strong>를 소개한다. Gemini 앱에서 음성으로 대화할 때 쓰는 모델이 바로 이것이다.</li>
+        <li>Live API는 <strong>상태를 유지하는 웹소켓 세션</strong>이다. 글, 소리, 영상 프레임을 실시간으로 보내면 모델이 <strong>소리 조각과 자막</strong>으로 바로 답한다.</li>
+        <li>구조가 다르다. 음성을 글로 바꾸고 다시 소리로 만드는 <strong>캐스케이드 방식이 아니라</strong>, 소리를 그대로 이해하고 소리로 답하는 <strong>네이티브 오디오 모델</strong>이다. 그래서 언어를 바꾸는 것이 자연스럽다.</li>
+        <li>핵심 기능은 네 가지다. <strong>90개 언어</strong>, <strong>말을 끊고 끼어들기</strong>, <strong>도구 호출</strong>, <strong>대화 자막</strong>.</li>
+        <li>데모 세 개는 모두 "실시간 음성 모델 + 도구 호출"이다. 이야기를 그림으로 그리기, 실시간 통역, 노래를 즉석에서 만드는 라디오 DJ.</li>
+        <li>도구 호출이 음악 생성 대신 CRM 조회나 티켓 생성이 되면 그대로 업무용 에이전트가 된다.</li>
+        <li>가장 빨리 써 보는 길은 <strong>ai.studio/live</strong>다. 모델과 목소리를 고르고 Google 검색 기반 응답을 켜서 바로 대화할 수 있다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="tts">
+        <header><span class="num">01</span><h2>첫 인사는 Gemini TTS가 했다 <span class="ts">00:40</span></h2></header>
+        <p>발표는 녹음된 환영 인사로 시작한다. 발표자가 어떤 모델이 만든 소리인지 묻자 청중은 Gemini라고는 맞혔지만 어떤 Gemini인지는 틀렸다. 답은 <strong>Gemini TTS</strong>, 즉 글을 소리로 바꾸는 모델 <span class="en">text to speech</span>이다.</p>
+        <p>발표자가 꼽은 Gemini TTS의 장점은 세 가지다.</p>
+        <ul class="plain">
+          <li><strong>표현력</strong>: 감정과 분위기가 담긴 말투를 낸다.</li>
+          <li><strong>글 안에서 조절</strong>: 읽을 글 사이에 지시를 넣어 말투를 바꿀 수 있다 <span class="en">inline audio text</span>.</li>
+          <li><strong>스트리밍</strong>: 소리를 조각으로 흘려보내서 예전보다 지연이 훨씬 줄었다.</li>
+        </ul>
+      </section>
+
+      <!-- 2 -->
+      <section id="scope">
+        <header><span class="num">02</span><h2>발표자와 오늘의 범위 <span class="ts">02:00</span></h2></header>
+        <p>발표자 Thor Schaeff는 Google DeepMind에서 개발자 경험을 맡고 있다. 주로 Gemini API와 Google AI Studio를 다룬다. 함께 온 동료 Philip은 API 위의 관리형 에이전트 <span class="en">managed agents</span>를 담당한다.</p>
+        <p>이 발표는 다음 날 열리는 워크숍의 미리 보기다. 워크숍 주제는 Gemini API로 만드는 <strong>실시간 멀티모달 대화형 에이전트</strong>다. 멀티모달은 글, 소리, 이미지, 영상을 한 모델이 함께 다룬다는 뜻이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="new-models">
+        <header><span class="num">03</span><h2>그날 아침 나온 두 모델 <span class="ts">03:00</span></h2></header>
+        <p>발표자는 슬라이드가 이미 옛것이 됐다고 말한다. 발표 당일 아침에 모델 두 개가 새로 나왔기 때문이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>하는 일</th><th>발표자가 강조한 점</th></tr></thead>
+            <tbody>
+              <tr><td>Omni Flash (추정)</td><td>영상 생성과 편집</td><td>이름만 언급했다</td></tr>
+              <tr><td>Nano Banana Lite (추정)</td><td>이미지 생성과 편집</td><td>지연 시간을 크게 줄였다. 데모 1에서 실제로 쓴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">두 이름은 자막에서 "Omni Flash", "Nano Banana Light"로 들린다. 공식 표기를 확인하지 못해 "(추정)"을 붙였다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="story-canvas">
+        <header><span class="num">04</span><h2>데모 1: 이야기를 그림으로 <span class="ts">03:40</span></h2></header>
+        <p>발표자가 직접 빠르게 만든 데모다. 이름은 "Gemini Nano Banana 이야기 캔버스". 역할이 둘로 나뉜다.</p>
+        <ul class="plain">
+          <li><strong>Gemini Live</strong>가 청중이 던진 설정으로 이야기를 소리 내어 지어 간다.</li>
+          <li>장면이 바뀔 때마다 <strong>도구 호출</strong> <span class="en">tool call</span>로 Nano Banana Lite를 불러 그 장면을 그린다.</li>
+        </ul>
+        <p>청중이 고른 설정은 "1980년대 타이베이". 모델은 비 갠 야시장의 네온, 스쿠터, 그리고 버블티가 처음 태어나는 장면을 이야기로 만들고 그림으로 그렸다. 이미지 하나를 만드는 데 발표자 기준으로 2~3초가 걸렸다.</p>
+
+        <h3>Interactions API: 앞 결과를 이어받는 호출 <span class="ts">05:20</span></h3>
+        <p>이미지 생성은 <strong>Interactions API</strong>로 한다. 발표자가 강조한 특징은 <strong>상태를 유지한다</strong>는 점이다. 호출마다 결과에 ID가 붙고, 다음 호출에 그 ID를 넘기면 앞 호출의 맥락을 이어받는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>호출</th><th>넘기는 것</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>첫 번째 그림</td><td>장면 설명만. 이전 ID 없음</td><td>특정한 화풍과 등장인물이 정해진다</td></tr>
+              <tr><td>두 번째 이후</td><td>장면 설명 + 이전 호출의 ID <span class="en">previous interaction ID</span></td><td>같은 화풍, 같은 인물로 이어서 그린다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>그래서 그림마다 분위기와 인물이 바뀌지 않고 한 이야기처럼 이어진다. 발표자는 Interactions API가 Google DeepMind의 <strong>모든 모델과 에이전트를 한 방식으로 부르는 통합 API</strong>라고 소개한다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="translate">
+        <header><span class="num">05</span><h2>데모 2: 실시간 통역 <span class="ts">07:00</span></h2></header>
+        <p>두 번째 데모는 소리 쪽이다. 발표자가 통역 세션을 열고 화면에 QR 코드를 띄운다. 청중은 휴대폰으로 접속해 듣고 싶은 언어를 고른다. 발표자의 마이크 소리가 세션으로 들어가고, 각자의 휴대폰에서 고른 언어로 들린다. 실제로 누군가 독일어로 듣고 있었고 소리가 잘 나온다고 답했다.</p>
+        <p>발표자가 설명한 동작 방식은 이렇다.</p>
+        <ul class="plain">
+          <li>말하는 사람의 <strong>언어를 자동으로 알아낸다</strong>. 발표자가 중간에 독일어로 바꿔 말해도 그대로 이어진다.</li>
+          <li>말의 맥락이 잡히는 순간부터 <strong>거의 실시간</strong>으로 통역을 시작한다.</li>
+          <li>Gemini API에서 바로 쓸 수 있다.</li>
+        </ul>
+        <p class="note">자막에는 이 모델이 "Gemini 3.5 live translate"로 들린다. 뒤에 나오는 대화 모델은 "Gemini 3.1 Flash Live"라고 분명히 말하므로, 통역 모델의 버전 번호는 들린 대로 적되 "(추정)"으로 둔다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="dj">
+        <header><span class="num">06</span><h2>데모 3: 라디오 DJ와 Lyria 3 <span class="ts">10:30</span></h2></header>
+        <p>세 번째 데모가 발표 제목에 가장 가깝다. 옛날 라디오에 전화해 노래를 신청하던 경험을 그대로 옮겼다. Google AI Studio 안에서 Gemini가 코드를 만들었다.</p>
+        <ul class="plain">
+          <li><strong>Gemini 3.1 Flash Live</strong>가 라디오 DJ 역할을 맡아 청취자와 대화한다. Gemini 앱에서 음성으로 대화할 때 쓰는 모델과 같은 것이다.</li>
+          <li>DJ에게 <strong>함수 호출 하나</strong>를 준다. 음악 생성 모델 <strong>Lyria 3</strong>를 불러 신청곡을 즉석에서 만드는 함수다.</li>
+        </ul>
+        <p>발표자가 "샌프란시스코 AI Engineer World's Fair를 주제로 신나는 레게톤"을 신청하자 DJ는 장르와 가사 분위기를 되묻고, 세부 내용은 "알아서 해 달라"는 답을 받은 뒤 곡을 만들어 틀었다. 가사에 신경망과 알고리즘이 들어간 레게톤이 나왔고 중간에 다른 언어도 섞였다.</p>
+        <div class="callout">
+          <span class="title">발표자가 가져가라고 한 것 <span class="ts">13:10</span></span>
+          <span>라디오 DJ 자체는 업무에 쓸 일이 없을 것이다. 하지만 부품은 그대로 쓸 수 있다. 여러 언어로 대화하는 실시간 음성 에이전트에 도구 호출을 붙이는 구조다. 음악 생성 함수 자리에 <strong>CRM에서 고객 정보 조회</strong>나 <strong>백엔드에 티켓 생성</strong>을 넣으면 된다. 이 데모는 AI Studio에서 복제해 이어서 만들 수 있다.</span>
+        </div>
+        <p class="note">자막에는 음악 모델이 "LIA 3"로 들린다. Google의 음악 생성 모델 이름이 Lyria인 점을 근거로 Lyria 3로 적었다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="live-api">
+        <header><span class="num">07</span><h2>Live API: 웹소켓 하나로 주고받기 <span class="ts">14:00</span></h2></header>
+        <p>Gemini 3.1 Flash Live를 쓰는 길은 <strong>Live API</strong>다. 발표자는 이를 "지연이 낮은 실시간 음성·영상 API"라고 정의한다. 동작은 다음 순서다.</p>
+        <ol class="plain">
+          <li>클라이언트가 <strong>웹소켓</strong> <span class="en">WebSocket</span>으로 세션을 하나 연다. 세션은 대화 상태를 기억한다.</li>
+          <li>그 연결로 <strong>글, 소리, 영상 프레임</strong>을 실시간으로 보낸다.</li>
+          <li>모델이 <strong>소리 조각</strong> <span class="en">audio chunks</span>으로 실시간 응답한다. 앱은 이 조각을 받는 대로 재생한다.</li>
+          <li>소리와 함께 <strong>무슨 말이 오갔는지 글로 적은 자막</strong> <span class="en">transcript</span>도 받는다.</li>
+        </ol>
+        <p>웹소켓은 한 번 연결하면 양쪽이 계속 주고받을 수 있는 통신 방식이다. 요청 한 번에 응답 한 번인 보통의 HTTP와 달리, 말하는 도중에도 소리를 흘려보내고 답을 받을 수 있다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="native-audio">
+        <header><span class="num">08</span><h2>캐스케이드가 아니라 네이티브 오디오 <span class="ts">14:50</span></h2></header>
+        <p>음성 에이전트를 만들어 본 사람이라면 구조가 낯설 수 있다. 발표자는 기존 방식과의 차이를 이렇게 설명한다.</p>
+        <div class="shift" aria-label="음성 에이전트 구조의 차이">
+          <div><span class="tag">기존 · 캐스케이드 파이프라인</span><b>소리 → 글 → 모델 → 글 → 소리</b><span class="muted">음성 인식, 언어 모델, 음성 합성이 따로 있고 글을 사이에 두고 이어진다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Live API · 네이티브 오디오</span><b>소리 → 모델 → 소리</b><span class="muted">모델이 소리를 그대로 이해하고 소리로 답한다. 지능이 오디오 모델 안에 들어 있다</span></div>
+        </div>
+        <p>중간에 글로 바꾸는 단계가 없으니 말투와 억양 같은 정보가 사라지지 않는다. 발표자가 가장 강조한 효과는 <strong>언어 전환이 매끄럽다</strong>는 점이다. 모델이 어떤 언어로 들었든 90개 지원 언어 중 어느 것으로든 바로 답할 수 있어서, 대화 중에 언어가 바뀌어도 끊기지 않는다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="features">
+        <header><span class="num">09</span><h2>핵심 기능과 파트너 <span class="ts">15:30</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기능</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>다국어</td><td>프리뷰 기준 90개 언어. 발표자가 인용한 수치다</td></tr>
+              <tr><td>끼어들기 <span class="en">barge-in</span></td><td>모델이 말하는 중에 사용자가 말을 시작하면 모델이 멈추고 듣는다. DJ가 말이 길면 끊을 수 있다</td></tr>
+              <tr><td>도구 호출</td><td>세션에 함수를 등록해 모델이 필요할 때 부른다. 데모에서는 이미지 생성, 음악 생성이었다</td></tr>
+              <tr><td>대화 자막</td><td>소리와 별도로 오간 말을 글로 받는다. 기록과 화면 표시에 쓴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">실시간 미디어는 규모를 키우기 어렵다 <span class="ts">16:00</span></span>
+          <span>소리와 영상을 끊김 없이 많은 사용자에게 보내는 일은 그 자체로 어려운 인프라 문제다. 발표자는 이 부분을 맡아 주는 파트너로 <strong>LiveKit</strong>과 <strong>Pipecat</strong>을 소개한다. 둘 다 Gemini Live API와 바로 연결되어 빠르게 시작할 수 있다고 한다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="try">
+        <header><span class="num">10</span><h2>AI Studio에서 직접 써 보기 <span class="ts">16:20</span></h2></header>
+        <p>코드를 쓰기 전에 모델을 체험하는 가장 쉬운 길은 Google AI Studio다. 주소는 <code>ai.studio/live</code>와 <code>ai.dev/live</code> 두 가지다. 발표자는 두 도메인에 돈을 많이 썼으니 꼭 써 달라고 농담한다.</p>
+        <p>발표자가 화면에서 고른 설정은 세 가지다.</p>
+        <ul class="plain">
+          <li><strong>모델</strong>: Gemini 3.1 Flash Live. 같은 화면에서 통역 모델도 고를 수 있다.</li>
+          <li><strong>목소리</strong>: 여러 목소리 중 "Puck".</li>
+          <li><strong>Google 검색 기반 응답</strong> <span class="en">grounding with Google Search</span>: 모델은 학습 시점 이후의 정보를 모른다. 이 옵션을 켜면 내장 함수 호출처럼 Google 검색으로 오늘 날씨나 최근 경기 결과 같은 실시간 정보를 찾아 답한다.</li>
+        </ul>
+        <h3>실제 대화 <span class="ts">17:50</span></h3>
+        <ul class="plain">
+          <li>"들리나요?" 하고 묻자 잘 들린다고 답했다.</li>
+          <li>"보이나요?" 하고 묻자 검은 셔츠와 검은 모자, 파란 배경을 설명했다. 카메라 영상 프레임이 세션으로 들어가고 있다는 뜻이다.</li>
+          <li>"내 옷에 뭐라고 쓰여 있나요?" 하고 묻자 노란 글자로 쓰인 "Gemini"를 읽었다.</li>
+          <li>중국어로 묻자 중국어로 답했다. 발표자가 "무엇을 먹었느냐"고 물었고 모델은 자기는 모델이라 먹지 않는다고 답했다.</li>
+        </ul>
+        <p class="note">발표자의 첫 중국어 질문은 모델이 알아듣지 못했다. 발표자는 발음 문제로 보고 다시 물었다.</p>
+        <p>발표는 다음 날 아침 워크숍 안내로 끝난다. 장소는 2009호로 안내했지만 일정이 바뀔 수 있으니 확인하라고 했다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>Gemini TTS는 글 안에 지시를 넣어 말투를 조절하고 스트리밍으로 지연을 줄인 음성 합성 모델이다.</li>
+          <li>발표 당일 아침 영상 모델과 저지연 이미지 모델이 새로 나왔다. 이미지 모델은 데모에 바로 쓰였다.</li>
+          <li><strong>Interactions API</strong>는 이전 호출의 ID를 넘겨 맥락을 이어받는다. 그래서 여러 장의 그림이 같은 화풍과 인물을 유지한다.</li>
+          <li>실시간 통역 모델은 말하는 언어를 자동으로 알아내고 거의 실시간으로 다른 언어로 바꾼다.</li>
+          <li><strong>Gemini 3.1 Flash Live</strong>는 Gemini 앱의 음성 대화에 쓰이는 모델이고, <strong>Live API</strong>로 쓴다.</li>
+          <li>Live API는 <strong>상태를 유지하는 웹소켓 세션</strong>이다. 글, 소리, 영상 프레임을 보내고 소리 조각과 자막을 받는다.</li>
+          <li>음성을 글로 바꾸는 <strong>캐스케이드가 아니라 네이티브 오디오</strong> 모델이다. 그래서 언어 전환이 매끄럽다.</li>
+          <li>핵심 기능은 <strong>90개 언어, 끼어들기, 도구 호출, 대화 자막</strong>이다.</li>
+          <li>데모의 공통 구조는 "실시간 음성 모델 + 도구 호출"이다. 도구만 바꾸면 CRM 조회나 티켓 생성 같은 업무용 에이전트가 된다.</li>
+          <li>실시간 미디어 인프라는 LiveKit, Pipecat 같은 파트너에 맡길 수 있다. 체험은 <strong>ai.studio/live</strong>에서 시작한다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표 첫머리의 환영 인사는 어떤 모델이 만들었고, 발표자가 꼽은 장점 세 가지는?</span></summary><div class="answer">Gemini TTS. 표현력 있는 말투, 글 안에 지시를 넣어 조절하기, 스트리밍으로 낮아진 지연.</div></details>
+          <details><summary><span class="qn">Q2</span><span>이야기 캔버스 데모에서 Gemini Live와 Nano Banana Lite는 각각 무엇을 했나?</span></summary><div class="answer">Gemini Live가 이야기를 소리로 지어 가고, 장면마다 도구 호출로 Nano Banana Lite를 불러 그림을 그렸다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Interactions API에서 이전 호출의 ID를 넘기면 무엇이 좋아지나?</span></summary><div class="answer">앞 호출의 맥락을 이어받는다. 그림의 화풍과 등장인물이 바뀌지 않고 한 이야기처럼 이어진다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>실시간 통역 데모에서 청중은 어떻게 참여했나?</span></summary><div class="answer">QR 코드로 접속해 듣고 싶은 언어를 골랐다. 발표자의 마이크 소리가 세션으로 들어가 각자의 언어로 들렸다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>라디오 DJ 데모에서 DJ 역할 모델과 음악 생성 모델은 무엇인가?</span></summary><div class="answer">DJ는 Gemini 3.1 Flash Live. 음악은 함수 호출로 부른 Lyria 3.</div></details>
+          <details><summary><span class="qn">Q6</span><span>발표자가 DJ 데모에서 "가져가라"고 한 부품은?</span></summary><div class="answer">여러 언어로 대화하는 실시간 음성 에이전트에 도구 호출을 붙이는 구조. 음악 생성 대신 CRM 조회나 티켓 생성을 넣으면 된다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>Live API 세션으로 보낼 수 있는 것과 받는 것은?</span></summary><div class="answer">보내는 것은 글, 소리, 영상 프레임. 받는 것은 소리 조각과 대화 자막.</div></details>
+          <details><summary><span class="qn">Q8</span><span>캐스케이드 파이프라인과 네이티브 오디오 모델의 차이는?</span></summary><div class="answer">캐스케이드는 소리를 글로 바꾸고 모델을 거쳐 다시 소리로 만든다. 네이티브 오디오는 모델이 소리를 그대로 이해하고 소리로 답한다. 중간에 글이 없다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Live API의 핵심 기능 네 가지는?</span></summary><div class="answer">90개 언어 지원, 끼어들기, 도구 호출, 대화 자막.</div></details>
+          <details><summary><span class="qn">Q10</span><span>AI Studio 데모에서 "Google 검색 기반 응답"을 켜는 이유는?</span></summary><div class="answer">모델은 학습 이후의 실시간 정보를 모른다. 이 옵션을 켜면 내장 함수 호출처럼 검색으로 오늘 날씨 같은 정보를 찾아 답한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>실시간 미디어 규모 확장을 도와주는 파트너로 발표자가 든 둘은?</span></summary><div class="answer">LiveKit과 Pipecat.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 프로젝트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>ai.studio/live에서 Gemini 3.1 Flash Live와 10분 대화해 본다<span class="how">확인: 끼어들기, 언어 전환, 카메라 인식이 실제로 어떻게 느껴지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>우리 서비스에서 음성으로 처리하면 좋은 업무 하나를 고른다<span class="how">DJ 데모의 함수 호출 자리에 들어갈 것: 조회, 생성, 예약 같은 단일 동작</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>그 업무를 도구 호출 함수 하나로 정의한다<span class="how">입력과 출력을 짧게 적는다. 처음은 함수 하나로 시작한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>캐스케이드 방식과 네이티브 오디오 방식 중 무엇이 맞는지 적는다<span class="how">판단 기준: 여러 언어가 섞이는가, 지연에 민감한가, 중간 글이 필요한가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>대화 자막을 어디에 저장하고 보여 줄지 정한다<span class="how">Live API는 소리와 별도로 자막을 준다. 기록, 감사, 화면 표시 용도를 나눈다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>실시간 정보가 필요한지 확인하고 검색 기반 응답을 켤지 정한다<span class="how">날씨, 재고, 일정처럼 학습 데이터에 없는 정보가 대화에 나오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>동시 접속 규모를 추정하고 LiveKit 또는 Pipecat 도입을 검토한다<span class="how">확인: 웹소켓과 미디어 스트림을 직접 운영할 여력이 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>여러 장의 이미지를 만들 일이 있으면 Interactions API의 이전 ID 전달을 시험한다<span class="how">확인: 두 번째 결과가 첫 번째의 화풍과 인물을 유지하는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>TTS</td><td>Text to speech. 글을 소리로 바꾸는 모델</td></tr>
+              <tr><td>멀티모달</td><td>Multimodal. 글, 소리, 이미지, 영상을 한 모델이 함께 다루는 것</td></tr>
+              <tr><td>도구 호출</td><td>Tool call, function call. 모델이 필요할 때 미리 등록된 함수를 부르는 것</td></tr>
+              <tr><td>Interactions API</td><td>Google DeepMind 모델과 에이전트를 한 방식으로 부르는 API. 이전 호출 ID로 맥락을 이어받는다</td></tr>
+              <tr><td>상태 유지</td><td>Stateful. 호출이나 세션 사이에 앞 내용을 기억하는 것</td></tr>
+              <tr><td>Live API</td><td>Gemini의 저지연 실시간 음성·영상 API. 웹소켓 세션으로 동작한다</td></tr>
+              <tr><td>웹소켓</td><td>WebSocket. 한 번 연결하면 양쪽이 계속 주고받는 통신 방식</td></tr>
+              <tr><td>소리 조각</td><td>Audio chunk. 응답 음성을 작은 단위로 나눠 보내는 것. 받는 대로 재생한다</td></tr>
+              <tr><td>대화 자막</td><td>Transcript. 오간 말을 글로 적은 것</td></tr>
+              <tr><td>캐스케이드 파이프라인</td><td>Cascading pipeline. 음성 인식, 언어 모델, 음성 합성을 순서대로 이어 붙인 구조</td></tr>
+              <tr><td>네이티브 오디오 모델</td><td>Native audio model. 소리를 글로 바꾸지 않고 그대로 이해하고 소리로 답하는 모델</td></tr>
+              <tr><td>끼어들기</td><td>Barge-in. 모델이 말하는 중에 사용자가 말하면 모델이 멈추는 기능</td></tr>
+              <tr><td>검색 기반 응답</td><td>Grounding with Google Search. 모델이 검색 결과를 근거로 답하게 하는 옵션</td></tr>
+              <tr><td>프리뷰</td><td>Preview. 정식 출시 전 공개 단계</td></tr>
+              <tr><td>LiveKit, Pipecat</td><td>실시간 음성·영상 에이전트의 미디어 전송과 운영을 맡아 주는 도구</td></tr>
+              <tr><td>Lyria 3</td><td>Google의 음악 생성 모델</td></tr>
+              <tr><td>Nano Banana Lite (추정)</td><td>지연을 줄인 Google의 이미지 생성·편집 모델</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:40</span></td><td>Gemini TTS로 만든 환영 인사와 퀴즈</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>Gemini TTS의 장점: 표현력, 글 안 조절, 스트리밍</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>발표자 소개, 다음 날 워크숍 안내</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>당일 아침 출시: 영상 모델, Nano Banana Lite</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>데모 1: 이야기 캔버스, 1980년대 타이베이</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>Interactions API와 이전 호출 ID</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>데모 2: 실시간 통역, QR 코드로 참여</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>독일어로 전환, 언어 자동 인식</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>Gemini 3.1 Flash Live 소개</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>데모 3: 라디오 DJ, Lyria 3 함수 호출</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>레게톡 신청과 즉석 생성</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>부품을 가져가라: 도구 호출을 CRM, 티켓으로</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>Live API: 웹소켓 세션, 보내고 받는 것</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>캐스케이드 vs 네이티브 오디오</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>핵심 기능: 90개 언어, 끼어들기, 도구, 자막</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>파트너: LiveKit, Pipecat</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>ai.studio/live, ai.dev/live</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>모델, 목소리, 검색 기반 응답 설정</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>실제 대화: 들리나요, 보이나요, 옷의 글자</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>중국어 대화</td></tr>
+              <tr><td><span class="ts">19:30</span></td><td>워크숍 안내와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'xfPVBzDYjH4:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

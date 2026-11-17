@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>예약 에이전트와 드리밍</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#multisession">세션을 나눠 띄우는 데모</a></li>
+      <li><a href="#deployments">배포: 일정대로 다시 돌리기</a></li>
+      <li><a href="#dreaming">드리밍: 지난 기록에서 배우기</a></li>
+      <li><a href="#observability">관측: 이벤트는 전부 준다</a></li>
+      <li><a href="#long-running">얼마나 오래 돌리나</a></li>
+      <li><a href="#orchestration">구조는 Claude에게 맡긴다</a></li>
+      <li><a href="#workspaces">권한과 고객 나누기</a></li>
+      <li><a href="#evals">결국은 eval</a></li>
+      <li><a href="#claude-code">Claude Code와의 차이</a></li>
+      <li><a href="#platform">확장, 모델, 운영 환경</a></li>
+      <li><a href="#shipping">제품으로 내보내기</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · Claude Managed Agents 워크숍 3/4 · 2026-10-12 · 26분 · 영어 발표 한글 정리</span>
+      <h1>에이전트를 예약하고, 지난 세션에서 배우게 하기</h1>
+      <p class="lead">Claude Managed Agents 워크숍의 세 번째 영상이다. 앞부분에서는 에이전트를 정해진 일정에 돌리는 배포와, 지난 세션 기록을 읽고 메모리를 고치는 드리밍을 보여 준다. 나머지는 질의응답이다. 관측, 장기 실행, 권한, 확장에 대한 답은 대부분 한 방향으로 모인다. "API로 다 열어 뒀으니 직접 조립하고, 좋아졌는지는 eval로 확인하라."</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=qJtcEDc_WJU" target="_blank" rel="noopener">Scheduled Agents, Dreaming and Q&amp;A: Claude Managed Agents (Part 3 of 4)</a></span>
+        <span>발표: Anthropic의 Claude Managed Agents 팀 (자막에 이름이 나오는 발표자는 Gabe)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 고객 사례는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지 않았다. 자막에서 "cloud"로 들린 곳은 문맥상 Claude로, "Android"는 Anthropic으로, "our back"은 RBAC로 바로잡았다. 발표자들은 Anthropic 팀원이고, 자기 회사 제품을 설명하는 자리다. 4부작 워크숍의 3부라 앞 영상의 데모를 이어 간다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>Managed Agents에서 <strong>작업 단위는 세션 하나</strong>다. 데모의 메인 에이전트는 커스텀 도구로 종목마다 세션을 따로 띄워 분석을 나눴다.</li>
+        <li><strong>배포</strong>는 에이전트 하나를 일정에 맞춰 돌리는 규칙이다. 실행할 때마다 <strong>새 세션</strong>이 생긴다. 스냅샷이 아니다.</li>
+        <li><strong>메모리 스토어</strong>는 세션과 따로 존재한다. 필요한 세션에 붙여서 실행 사이의 기억을 이어 간다.</li>
+        <li><strong>드리밍</strong>은 지난 30일 같은 기간의 세션 기록을 서브에이전트들이 나눠 읽고, 메모리 스토어의 빈틈을 채운다. 아직 연구 미리보기다.</li>
+        <li>관측은 <strong>모든 이벤트를 API로 준다.</strong> 볼 지표를 고르고 기존 도구로 보내는 일은 사용자 몫이다.</li>
+        <li>여러 에이전트의 구조는 사람이 정하지 말고 <strong>Claude에게 맡기라</strong>고 권한다. 권한과 고객 분리의 단위는 지금 <strong>워크스페이스</strong>뿐이다.</li>
+        <li>하네스를 바꿀 때도, 스킬을 고를 때도, 드리밍 결과를 믿을지 정할 때도 답은 같았다. <strong>내 eval로 확인한다.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="multisession">
+        <header><span class="num">01</span><h2>세션을 나눠 띄우는 데모 <span class="ts">00:00</span></h2></header>
+        <p>영상은 앞 영상의 데모가 끝나 가는 지점에서 시작한다. 발표자는 메인 에이전트에게 Google과 Microsoft를 분석해 달라고 요청한다.</p>
+        <ol class="plain">
+          <li>메인 에이전트가 이미 가진 정보로 충분한지 먼저 따진다.</li>
+          <li>앞서 만든 커스텀 도구를 부른다. 화면에는 "dispatch analysis"라는 이름으로 보인다.</li>
+          <li>이 도구를 두 종목의 티커로 한 번씩 부른다.</li>
+          <li>종목마다 세션이 하나씩 따로 뜬다.</li>
+        </ol>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>각 세션 안에 있는 것</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>멀티에이전트</td><td>세션 안에서 여러 에이전트가 함께 일한다</td></tr>
+              <tr><td>outcome 정의</td><td>원하는 결과의 기준을 정해 두고, 에이전트가 스스로 점검한다</td></tr>
+              <tr><td>메모리 스토어</td><td>세션끼리 배운 것을 나눈다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 이것을 여러 세션을 엮는 하네스라고 부른다. 세션 하나가 부품이고, 그 위에서 세션 여러 개를 조립한다. 이 생각은 <a href="#orchestration">하네스의 정의를 묻는 질문</a>에서 다시 나온다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="deployments">
+        <header><span class="num">02</span><h2>배포: 일정대로 다시 돌리기 <span class="ts">01:00</span></h2></header>
+        <p>다음 주제는 반복 작업이다. 관심 있는 회사 목록이 있다고 하자. 매일 오전 9시나 매월 1일마다 그 회사들을 모두 분석하고 싶다. 이 일을 맡는 기능이 배포<span class="en">deployment</span>다.</p>
+        <p>발표자는 모든 기능이 API로 열려 있다고 강조한다. 콘솔로도 다룰 수 있다. 하지만 주로 쓰라고 만든 길은 API와 SDK다. 각 기능은 조립용 부품이고, 사용자는 이걸로 자기만의 UI와 워크플로를 만든다.</p>
+
+        <h3>배포에 넣는 것 <span class="ts">01:40</span></h3>
+        <p>데모에서는 Claude가 배포를 미리 하나 만들어 두었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>데모에서 넣은 것</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트 정의</td><td>리서치 데스크의 주간 메모를 쓰는 에이전트</td></tr>
+              <tr><td>일정</td><td>매월 1일 오후 1시쯤. 발표자가 기억나는 대로 말한 값이다</td></tr>
+              <tr><td>첫 메시지</td><td>세션을 시작할 때 에이전트에게 줄 메시지 묶음</td></tr>
+              <tr><td>자원 (선택)</td><td>메모리 스토어, GitHub 저장소, 파일</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>일정을 기다리지 않고 콘솔에서 바로 한 번 돌릴 수도 있다. 발표자 팀은 배포 목록을 보고, 검색하고, 아무 때나 실행하는 UI도 직접 만들어 보여 줬다. 화면의 몇몇 실행은 실패 상태였다. 발표자는 원인을 나중에 Claude에게 물어보겠다며 넘어갔다.</p>
+
+        <h3>배포는 스냅샷이 아니다 <span class="ts">08:50</span></h3>
+        <p>Q&amp;A에서 한 참석자가 배포를 "모든 에이전트를 특정 시점에 찍어 둔 스냅샷"으로 이해했다. 발표자는 아니라고 답했다.</p>
+        <div class="shift" aria-label="배포에 대한 오해와 실제">
+          <div><span class="tag">오해</span><b>한 시점의 에이전트들을 얼려 둔 것</b><span class="muted">버전 고정이나 스냅샷처럼 생각한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">실제</span><b>에이전트 하나를 일정마다 새 세션으로 돌리는 규칙</b><span class="muted">"리서치 데스크 에이전트가 분기마다 NVIDIA를 조사"라고 정하면 분기마다 세션이 하나 생기고 보고서가 나온다</span></div>
+        </div>
+        <p>그러면 기억은 어디에 남을까. 메모리 스토어는 세션과 따로 존재한다. 어떤 세션에 어떤 메모리 스토어를 붙일지는 사용자가 정한다. 그래서 배포가 매번 새 세션을 만들어도, 같은 메모리 스토어를 붙이면 앞 실행에서 배운 것을 이어 쓸 수 있다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="dreaming">
+        <header><span class="num">03</span><h2>드리밍: 지난 기록에서 배우기 <span class="ts">02:50</span></h2></header>
+        <p>자기 개선<span class="en">self-improvement</span>에 대한 질문이 앞서 여러 번 나왔다고 한다. 발표자는 Q&amp;A 전에 드리밍<span class="en">dreaming</span>의 미리보기를 보여 준다. 드리밍은 지난 세션 기록을 다시 읽고, 거기서 배운 것을 메모리에 반영하는 기능이다.</p>
+
+        <h3>설정과 실행 <span class="ts">03:00</span></h3>
+        <ol class="plain">
+          <li>메모리 스토어를 고른다. 데모에서는 지금까지 쓰던 것을 골랐다.</li>
+          <li>모델을 고른다.</li>
+          <li>지시문을 정한다. 직접 써도 되고, 데모처럼 기본 프롬프트를 써도 된다.</li>
+          <li>분석할 기간을 정한다. 데모에서는 지난 30일이었다.</li>
+          <li>시작하면 Managed Agents 세션이 하나 뜬다. 그 세션이 서브에이전트<span class="en">sub-agent</span>를 여러 개 띄운다.</li>
+          <li>서브에이전트들이 이 메모리 스토어를 쓴 세션들의 기록을 나눠 읽는다.</li>
+        </ol>
+        <p>드리밍 자체도 Managed Agents 세션으로 돈다는 점이 재미있다. 제품의 부품으로 제품의 기능을 만든 셈이다.</p>
+
+        <h3>기록을 읽으며 묻는 것 <span class="ts">03:40</span></h3>
+        <ul class="plain">
+          <li>메모리 스토어가 필요한 정보를 다 담고 있었나</li>
+          <li>어떤 세션이 문제를 겪었나</li>
+          <li>거기서 배울 점이 있나</li>
+          <li>같은 일이 여러 번 일어났나</li>
+          <li>지시문을 고칠 수 있나</li>
+        </ul>
+
+        <h3>데모 결과 <span class="ts">04:00</span></h3>
+        <p>드리밍은 앞에서 만든 스킬<span class="en">skill</span>에 빈틈이 있다는 걸 찾았다. 스킬을 쓴 방식에 몇 군데 구멍이 있었다. 드리밍은 스킬 파일을 직접 고치지 않았다. 대신 메모리 스토어에 이런 취지의 내용을 보탰다. "이 스킬이 있더라도, 실제로 겪으며 배운 이 내용으로 보완하라."</p>
+        <div class="callout">
+          <span class="title">앞으로의 계획</span>
+          <span>지금은 메모리 스토어를 고친다. 발표자는 이를 넓혀 스킬, 에이전트 프롬프트, 서브에이전트 프롬프트까지 직접 고치게 할 생각이라고 했다.</span>
+        </div>
+
+        <h3>드리밍 결과는 믿을 만한가 <span class="ts">12:50</span></h3>
+        <p>한 질문자가 걱정을 꺼냈다. 드리밍을 여러 번 돌리면 결과가 서로 다른 방향으로 갈 수 있다. 세션 아홉 개는 "이건 틀렸다"고 하고, 하나만 "이건 좋다"고 할 수도 있다. 다수만 따르면 그 하나에 담긴 통찰을 놓친다. 그래서 eval을 드리밍에 연결해 여러 방향 중 나은 쪽을 고르는 자동 방식이 있는지 물었다.</p>
+        <ul class="plain">
+          <li>드리밍은 정한 기간의 기록을 보고 사용자가 무엇을 하려 했는지 분석한다. 그 목적에 더 맞춘 메모리 스토어를 만든다.</li>
+          <li>Anthropic은 자기 쪽 eval로 드리밍이 결과를 좋게 만드는지 확인한다고 했다.</li>
+          <li>일부 고객은 드리밍으로 만든 메모리 스토어를 쓰고 eval 점수가 크게 올랐다고 했다.</li>
+          <li>드리밍은 연구 미리보기<span class="en">research preview</span>다. 아직 초기 실험 단계라고 했다.</li>
+          <li>자기만의 eval 세트를 갖추라고 권했다.</li>
+        </ul>
+        <p>eval로 드리밍 방향을 자동으로 고르는 기능이 있는지에는 직접 답하지 않았다. 발표자는 "그냥 저를 믿으라고 하면 되겠냐"고 농담하며, 질문의 뜻은 알아들었다고 했다.</p>
+        <p class="note">데모에서는 기존 메모리 스토어에 내용을 보탰다. 이 답에서는 "새 메모리 스토어를 만든다"고 설명했다. 자막만으로는 어느 쪽이 기본 동작인지 알 수 없다.</p>
+        <p class="note">고객의 eval 개선은 Anthropic 발표자가 자기 제품에 대해 한 말이다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="observability">
+        <header><span class="num">04</span><h2>관측: 이벤트는 전부 준다 <span class="ts">04:40</span></h2></header>
+        <p>첫 질문은 텔레메트리<span class="en">telemetry</span>였다. 데모 에이전트에 따로 계측 코드를 넣지 않던데, 기본으로 들어 있느냐는 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>답</th></tr></thead>
+            <tbody>
+              <tr><td>텔레메트리가 기본인가</td><td>세션에서 일어난 모든 이벤트를 볼 수 있다. 콘솔에서 실시간으로 보거나 API로 가져온다</td></tr>
+              <tr><td>어떤 화면이 있나</td><td>트랜스크립트 화면은 읽기 좋게 정리한 것이다. 디버그 화면은 세션의 모든 이벤트를 그대로 보여 준다</td></tr>
+              <tr><td>지연 시간을 잴 수 있나</td><td>모델 호출을 시작한 시점과 끝난 시점이 이벤트로 남는다. 그 차이로 지연 시간을 구한다</td></tr>
+              <tr><td>볼 항목은 누가 고르나</td><td>지금은 모든 이벤트를 주고 사용자가 거른다. 빠진 이벤트가 있으면 알려 달라고 했다</td></tr>
+              <tr><td>기존 관측 도구로 보낼 수 있나</td><td>OTEL로 내보내는 기능은 따로 없다. 모두 API 호출이라 연결 코드를 쉽게 만들 수 있다. 요구가 다 달라서 한 방식을 정해 두지 않았다고 했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">정리</span>
+          <span>원재료는 다 준다. 무엇을 지표로 삼고 어떤 대시보드로 볼지는 여전히 사용자가 정하고 만든다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="long-running">
+        <header><span class="num">05</span><h2>얼마나 오래 돌리나 <span class="ts">05:50</span></h2></header>
+        <p>질문은 이랬다. 에이전트를 끝없이 돌릴 수 있나. 저장된 상태가 계속 커지면 언젠가 따로 압축해야 하나.</p>
+        <ul class="plain">
+          <li>Anthropic이 컴팩션<span class="en">compaction</span>을 대신 돌린다. 컴팩션은 길어진 맥락을 요약해 줄이는 처리다. 덕분에 세션을 며칠씩 돌릴 수 있다고 했다.</li>
+          <li>일부 사용자는 10시간짜리 세션을 프로덕션에서 돌린다고 했다.</li>
+          <li>발표자는 "에이전트를 1년 쓰는 것"과 "세션 하나를 1년 이어 가는 것"이 다르다며 되물었다.</li>
+          <li>질문자가 "매일 하는 일을 6개월 맡겨도 상태가 넘치지 않느냐"고 다시 묻자, 발표자는 괜찮다는 취지로 짧게 답했다.</li>
+        </ul>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시간의 단위</th><th>맡는 기능</th><th>근거</th></tr></thead>
+            <tbody>
+              <tr><td>세션 하나</td><td>컴팩션이 맥락을 줄여 며칠까지 간다</td><td><span class="ts">06:10</span></td></tr>
+              <tr><td>반복 작업</td><td>배포가 일정마다 새 세션을 만든다</td><td><span class="ts">09:00</span></td></tr>
+              <tr><td>세션 사이의 기억</td><td>메모리 스토어를 붙여 이어 간다</td><td><span class="ts">09:20</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">이 표는 Q&amp;A 여러 곳의 답을 이 노트에서 한데 묶은 것이다. 발표자가 이 표 형태로 설명하지는 않았다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="orchestration">
+        <header><span class="num">06</span><h2>구조는 Claude에게 맡긴다 <span class="ts">06:40</span></h2></header>
+        <p>질문: 에이전트 A가 일을 받아 B와 C에게 나눠 주는 식의 오케스트레이션<span class="en">orchestration</span>을 지원하나.</p>
+        <p>답: 지금은 서브에이전트를 쓰고, 원하는 것을 Claude에게 말하면 된다.</p>
+        <blockquote>사람은 Claude가 일하는 방식을 묶어 두고 싶어 한다. 하지만 Claude가 똑똑해질수록 우리는 그 가드레일을 계속 걷어 냈다.<cite>발표자의 말을 옮김 <span class="ts">06:50</span></cite></blockquote>
+        <p>예를 들어 사람은 서브에이전트 세 개가 가장 좋은 구조라고 생각할 수 있다. 발표자에 따르면 그 구조를 Claude가 정하게 두면 결과가 오히려 더 낫다. 그래프로 워크플로를 그리는 UI는 "아직 없다, 곧 생길 수도 있다"고 했다.</p>
+        <p class="note">"Claude에게 맡기면 더 낫다"는 Anthropic 발표자의 주장이다. 내 작업에서는 고정 구조와 맡긴 구조를 eval로 직접 비교해 보자.</p>
+
+        <h3>하네스란 무엇인가 <span class="ts">09:40</span></h3>
+        <p>하네스<span class="en">harness</span>는 사람마다 뜻이 다르다. 발표자도 그 점을 인정하고 두 가지 뜻을 나눴다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Managed Agents가 말하는 하네스</span>
+            <p>도구 호출 루프를 돌리는 실행부다.</p>
+            <ul>
+              <li>맥락을 관리한다</li>
+              <li>세션 상태를 관리한다</li>
+              <li>에이전트가 하려는 일을 해낼 수 있게 받친다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">많은 개발자가 말하는 하네스</span>
+            <p>여러 에이전트와 세션을 하나의 작업 단위로 엮는 것이다.</p>
+            <ul>
+              <li>더 큰 일을 하려고 여러 세션을 조율한다</li>
+              <li>일정한 연결 구조(토폴로지)로 배치한다</li>
+            </ul>
+          </div>
+        </div>
+        <p>Managed Agents는 <strong>세션 하나를 작업 단위로</strong> 준다. 개발자는 그 세션을 부품 삼아 자기 하네스를 짓는다. <a href="#multisession">첫 데모</a>에서 종목마다 세션을 띄운 구조가 그 예다.</p>
+
+        <h3>스킬이냐 에이전트냐 <span class="ts">11:10</span></h3>
+        <p>질문자는 모델이 나올 때마다 새 하네스와 도구에 투자하는 게 지친다고 했다. 스킬과 에이전트 사이에 근본적인 차이가 있는지, 그게 앞으로 바뀔지 물었다.</p>
+        <p>발표자의 첫 답은 "예, 그리고 아니요"였다. 하네스를 두껍게 할지 얇게 할지, 스킬을 두껍게 쓸지는 계속 바뀌는 문제라는 것이다.</p>
+        <div class="shift" aria-label="스킬의 역할 변화에 대한 발표자의 예상">
+          <div><span class="tag">지금</span><b>스킬은 좋은 추상화다</b><span class="muted">모델이 일을 하는 데 필요한 정보를 충분히 준다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 예상</span><b>스킬은 점점 얇아진다</b><span class="muted">모델이 특별한 지시 없이 스스로 해내게 된다</span></div>
+        </div>
+        <ul class="plain">
+          <li>Claude가 똑똑해질수록 사람이 주던 경계와 도움은 녹아 사라진다.</li>
+          <li>그래서 오늘 필요한 것이 내일은 필요 없을 수 있다.</li>
+          <li>따분한 답이지만 eval을 돌려 확인하는 수밖에 없다.</li>
+          <li>발표자 개인 의견으로는 멀티에이전트가 더 쓸모 있어 보인다. 일마다 다를 수 있다고 덧붙였다.</li>
+        </ul>
+      </section>
+
+      <!-- 7 -->
+      <section id="workspaces">
+        <header><span class="num">07</span><h2>권한과 고객 나누기 <span class="ts">07:40</span></h2></header>
+        <p>에이전트를 여러 개 운영하는 큰 조직은 팀별 분리와 역할 기반 접근 제어<span class="en">RBAC</span>를 원한다. 지금 쓸 수 있는 단위는 워크스페이스<span class="en">workspace</span>다.</p>
+        <ul class="plain">
+          <li>워크스페이스마다 다른 사람들을 넣고, 접근 수준을 다르게 줄 수 있다.</li>
+          <li>워크스페이스 A에 들어간 사람은 그 안의 에이전트에 모두 접근한다.</li>
+          <li>더 세밀한 RBAC는 로드맵에 있다. 발표자도 지금은 빈틈이 있다고 인정했다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">워크스페이스 안은 모두에게 열려 있다</span>
+          <span>워크스페이스 안의 모든 것은 그 워크스페이스의 모든 사람이 볼 수 있다. 그래서 워크스페이스 위에 자체 권한 계층을 두는 것이 지금은 좋은 방법이라고 발표자가 답했다. <span class="ts">19:30</span></span>
+        </div>
+
+        <h3>SaaS에서 고객을 나누는 법 <span class="ts">18:10</span></h3>
+        <p>여러 고객사를 섬기는 SaaS라면 고객별 공간을 어떻게 나눌까. 발표자는 먼저 고객 키를 받는 방식<span class="en">BYOK, bring your own key</span>을 권하지 않았다. 고객의 API 키로 에이전트가 돌면, 그 실행을 내 쪽에서 관측할 수 없기 때문이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>어떻게</th><th>주의점</th></tr></thead>
+            <tbody>
+              <tr><td>워크스페이스 하나</td><td>모든 고객을 한 워크스페이스에 둔다. 어느 에이전트가 어느 고객 것인지 내 쪽에서 기록한다</td><td>매핑을 직접 관리한다. 워크스페이스 안은 서로 다 보인다</td></tr>
+              <tr><td>고객마다 워크스페이스</td><td>고객별로 워크스페이스를 만든다</td><td>고객마다 에이전트를 다시 만들어야 해서 복잡해진다</td></tr>
+              <tr><td>고객 키 (BYOK)</td><td>고객의 API 키로 돌린다</td><td>관측을 잃는다. 권하지 않음</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 워크스페이스를 고객 분리의 기본 단위로 쓰라고 했다. 멀티테넌트 앱을 더 쉽게 만들 수 있게 개선하는 중이라고도 했다.</p>
+
+        <h3>최종 사용자에게 계정이 필요한가 <span class="ts">17:50</span></h3>
+        <p>콘솔은 API 키를 만드는 곳이다. 가입은 무료이고, 비용은 토큰 사용량만큼 낸다. 최종 사용자는 내가 만든 UI를 쓰고, 그 뒤에서 내 API 키로 Managed Agents를 부르는 구조가 된다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="evals">
+        <header><span class="num">08</span><h2>결국은 eval <span class="ts">10:40</span></h2></header>
+        <p>"무언가를 바꿨을 때 그게 잘 돌아간다는 확신은 어떻게 얻나." 이 질문에 발표자는 eval을 권했다. eval은 결과 품질을 재는 테스트 묶음이다. 에이전트에게 시킬 여러 종류의 과제로 세트를 만들고, 에이전트가 각 과제를 얼마나 잘하는지 본다.</p>
+
+        <h3>outcome: 기준을 주고 끝까지 시키기 <span class="ts">10:50</span></h3>
+        <p>outcome<span class="en">outcomes</span> 기능은 원하는 결과를 루브릭<span class="en">rubric</span>으로 적는다. 루브릭은 채점 기준표다. 최대 반복 횟수도 함께 정한다. 에이전트는 그 결과에 닿을 때까지 계속 고친다. 앞 영상에서 Gabe가 설명한 검증 에이전트<span class="en">verifier agent</span>가 이 일을 맡는다.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>위치</th><th>돌아온 답</th></tr></thead>
+            <tbody>
+              <tr><td>하네스를 바꾸면 괜찮은지 어떻게 아나</td><td><span class="ts">10:40</span></td><td>과제 유형별 eval을 돌린다. outcome 루브릭으로 결과를 끌어낸다</td></tr>
+              <tr><td>스킬과 에이전트 중 무엇을 쓰나</td><td><span class="ts">12:10</span></td><td>모델마다 달라지니 eval로 확인한다</td></tr>
+              <tr><td>드리밍 결과를 믿어도 되나</td><td><span class="ts">14:00</span></td><td>Anthropic도 eval로 확인한다. 자기 eval 세트를 갖춰라</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">이 Q&amp;A의 공통 결론</span>
+          <span>제품이 무엇을 대신 고쳐 주든, 실제로 좋아졌는지 판단하는 기준은 내 eval이다. 발표자도 모델이 나올 때마다 다시 재야 하는 게 지치는 일이라고 인정했다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="claude-code">
+        <header><span class="num">09</span><h2>Claude Code와의 차이 <span class="ts">15:00</span></h2></header>
+        <p>한 질문자는 Claude Code를 1년 넘게 써 온 사람들이 비슷한 걸 이미 만들고 있다고 했다. 세션 JSON 파일을 모아 메모리 풀을 만들고, hepo(추정) 같은 도구로 메모리 관리를 시험한다는 것이다. 그러면서 두 가지를 물었다. 이게 Claude Code 위에 그냥 지은 것인가. 그리고 앞으로도 열어 두어 달라.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Claude Code</span>
+            <ul>
+              <li>터미널 도구다</li>
+              <li>바로 쓰는 완성 제품이다</li>
+              <li>하네스가 코딩 작업에 잘 맞춰져 있다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">Claude Managed Agents</span>
+            <ul>
+              <li>API 제품이자 인프라다</li>
+              <li>사용자가 자기 맥락, 정보, 기능을 가져와 그 위에 짓는다</li>
+              <li>규모와 안정성을 갖추는 데 공을 들였다</li>
+            </ul>
+          </div>
+        </div>
+        <p>발표자는 Claude Code의 하네스에서 영감을 받았다고 했다. 다만 Claude Code는 코딩에 잘 맞춰져 있고, 다른 일에서는 유연성이 달랐다. 그래서 "Claude Code를 상자에 담은 것"은 아니라고 했다. 목표는 여러 종류의 일에서 Claude Code만큼, 가능하면 더 잘하는 것이다. 안정적인 인프라를 만들며 겪은 과제는 워크숍 앞부분에서 설명했다고 했다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="platform">
+        <header><span class="num">10</span><h2>확장, 모델, 운영 환경 <span class="ts">17:10</span></h2></header>
+        <p>운영 조건을 묻는 짧은 질문이 여럿 나왔다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>답</th><th>위치</th></tr></thead>
+            <tbody>
+              <tr><td>Bedrock에도 이런 콘솔이 있나</td><td>Bedrock에는 없다. AWS용 콘솔에서는 쓸 수 있다. 자막에는 "cloud platform for AWS"로 들린다(추정: Claude Platform for AWS)</td><td><span class="ts">17:10</span></td></tr>
+              <tr><td>Anthropic 외 모델도 쓰나</td><td>지금은 Claude 모델만 쓴다</td><td><span class="ts">17:40</span></td></tr>
+              <tr><td>새로 나온 Sonnet 5도 되나</td><td>지원한다. 오늘 바로 써 보라고 했다</td><td><span class="ts">23:20</span></td></tr>
+              <tr><td>파드 수 같은 확장 설정이 있나</td><td>없다. 세션은 원하는 만큼 만든다. 레이트 리밋<span class="en">rate limit</span>은 있다. Kubernetes의 HPA 같은 설정은 필요 없다. Anthropic이 관리한다</td><td><span class="ts">20:00</span></td></tr>
+              <tr><td>사내 서버에서 돌릴 수 있나</td><td>여러 엔터프라이즈 고객이 요청했다. 진지하게 검토 중이지만 지금 공유할 것은 없다</td><td><span class="ts">25:10</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>확장 질문에 대한 답의 요지는 이렇다. 사용자는 API만 부르고, 인프라 걱정은 Anthropic이 맡는다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="shipping">
+        <header><span class="num">11</span><h2>제품으로 내보내기 <span class="ts">21:00</span></h2></header>
+        <p>한 질문자는 고객에게 내놓을 서비스를 어떻게 배포하느냐고 물었다. 직접 만들지는 않지만 좋은 예라며 점성술 앱을 들었다.</p>
+        <ul class="plain">
+          <li>사용자가 민감한 개인 정보를 넣는다.</li>
+          <li>서브에이전트가 90초쯤 걸려 별자리 해석을 한다.</li>
+          <li>이미지 같은 결과물을 만든다.</li>
+          <li>outcome을 만족하면 세션이 끝난다.</li>
+          <li>앱이 직접 맡을 일은 인증뿐이다.</li>
+        </ul>
+        <p>발표자는 이미 프로덕션에서 대규모로 쓰이고 있다고 답했다. Notion의 외부 에이전트<span class="en">external agents</span>가 이 위에 만들어졌다고 했다. Atlassian의 Jira 연동도 예로 들었다. 보통은 내 제품과 UI를 직접 만들고, 에이전트 부분만 Managed Agents API를 부른다. 관리도 모두 API로 한다.</p>
+        <p class="note">고객 사례는 Anthropic 발표자가 자기 제품을 설명하며 든 것이다. 따로 확인하지 않았다.</p>
+
+        <h3>Cowork에서 넘어오려면 <span class="ts">23:40</span></h3>
+        <p>비즈니스 파트너들이 Claude Cowork나 Claude Code로 업무용 도구를 만들고 있다면, 언제 Managed Agents로 넘어가야 할까.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>Claude Cowork</th><th>Claude Managed Agents</th></tr></thead>
+            <tbody>
+              <tr><td>누구를 위한 에이전트</td><td>나 한 사람</td><td>팀, 사내 조직, 또는 내 고객</td></tr>
+              <tr><td>난이도</td><td>바로 쓴다</td><td>API 제품이라 비개발자에게는 부담스러울 수 있다</td></tr>
+              <tr><td>시작하는 법</td><td></td><td>콘솔 빠른 시작에서 만들려는 에이전트를 Claude에게 설명한다. Claude Code에 익숙하면 Managed Agents 스킬이 말로 첫 에이전트 만들기를 안내한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Cowork에서 만든 것을 옮기는 전용 스킬은 없다. 대신 API를 부르는 스킬이 있다. "Cowork에서는 이렇게 했다"는 설명과 그 스킬을 Claude에게 주고 옮겨 달라고 하면 된다고 했다. 개인용 에이전트라면 Cowork가 여전히 좋은 도구라고 덧붙였다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>작업 단위는 <strong>세션 하나</strong>다. 메인 에이전트가 커스텀 도구로 세션 여러 개를 띄워 일을 나눌 수 있다.</li>
+          <li><strong>배포</strong>는 에이전트 하나를 일정마다 새 세션으로 돌리는 규칙이다. 스냅샷이 아니다.</li>
+          <li><strong>메모리 스토어</strong>는 세션과 따로 있다. 세션에 붙여 실행 사이의 기억을 잇는다.</li>
+          <li><strong>드리밍</strong>은 지난 세션 기록을 서브에이전트들이 읽고 메모리 스토어의 빈틈을 채운다. 연구 미리보기다.</li>
+          <li>관측은 <strong>모든 이벤트</strong>를 API로 준다. 지표 고르기와 OTEL 연결은 사용자 몫이다.</li>
+          <li>컴팩션 덕분에 세션은 며칠도 간다. 프로덕션에서 10시간 세션 사례가 있다고 했다.</li>
+          <li>오케스트레이션은 서브에이전트로 하고, <strong>구조는 Claude가 정하게</strong> 하라고 권한다. 그래프 UI는 아직 없다.</li>
+          <li>권한과 고객 분리의 단위는 지금 <strong>워크스페이스</strong>뿐이다. RBAC는 로드맵에 있고, BYOK는 관측을 잃어 권하지 않는다.</li>
+          <li>확장 설정은 없다. API만 부르면 된다. 모델은 Claude만 쓰고, 사내 설치는 검토 중이다.</li>
+          <li>하네스, 스킬, 드리밍 모두 좋아졌는지는 <strong>내 eval</strong>로 판단한다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>첫 데모에서 메인 에이전트는 두 종목 분석을 어떻게 나눴나?</span></summary><div class="answer">먼저 가진 정보로 충분한지 따진 뒤, 커스텀 도구를 종목마다 불러 세션을 하나씩 따로 띄웠다. 각 세션 안에는 멀티에이전트, outcome 정의, 메모리 스토어가 있다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>배포를 만들 때 넣는 네 가지는?</span></summary><div class="answer">에이전트 정의, 일정, 첫 메시지 묶음, 그리고 선택으로 붙이는 자원(메모리 스토어, GitHub 저장소, 파일).</div></details>
+          <details><summary><span class="qn">Q3</span><span>배포는 에이전트의 스냅샷인가?</span></summary><div class="answer">아니다. 에이전트 하나를 일정마다 새 세션으로 실행하는 규칙이다. 분기마다 돌게 하면 분기마다 세션이 하나 생긴다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>매번 새 세션이 생기는데 기억은 어떻게 이어지나?</span></summary><div class="answer">메모리 스토어는 세션과 따로 존재하는 자원이다. 사용자가 어떤 세션에 어떤 스토어를 붙일지 정한다. 같은 스토어를 붙이면 앞 실행에서 배운 것을 이어 쓴다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>드리밍은 무엇을 읽고, 데모에서는 무엇을 바꿨나?</span></summary><div class="answer">정한 기간(데모는 지난 30일) 동안 그 메모리 스토어를 쓴 세션 기록을 서브에이전트들이 나눠 읽는다. 데모에서는 스킬의 빈틈을 찾아, 메모리 스토어에 "스킬이 있어도 배운 내용으로 보완하라"는 내용을 보탰다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>드리밍 결과를 믿어도 되는지 발표자는 어떻게 판단하라고 했나?</span></summary><div class="answer">자기 eval 세트로 확인하라고 했다. Anthropic도 자기 쪽 eval로 확인하고, 드리밍은 아직 연구 미리보기라고 했다. eval로 방향을 자동으로 고르는 기능에는 직접 답하지 않았다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>텔레메트리 질문에서 Managed Agents가 주는 것과 사용자 몫은?</span></summary><div class="answer">세션의 모든 이벤트를 콘솔과 API로 준다. 모델 호출의 시작과 끝도 이벤트라 지연 시간을 구할 수 있다. 볼 지표를 거르고, OTEL 같은 기존 도구로 보내는 연결을 만드는 일은 사용자 몫이다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>세션이 오래 가도 상태가 넘치지 않는 이유와, 발표자가 말한 실제 길이는?</span></summary><div class="answer">Anthropic이 컴팩션을 대신 돌려 맥락을 줄인다. 그래서 며칠도 갈 수 있고, 프로덕션에서 10시간 세션을 돌리는 사용자가 있다고 했다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>A가 B와 C에게 일을 나눠 주는 구조를 원하면 어떻게 하라고 했나? 그 이유는?</span></summary><div class="answer">서브에이전트를 쓰고 원하는 것을 Claude에게 말하라고 했다. 사람이 구조를 정하는 것보다 Claude가 정하게 둘 때 결과가 낫다는 것이 발표자의 주장이다. 그래프형 워크플로 UI는 아직 없다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>Managed Agents가 말하는 하네스와 많은 개발자가 말하는 하네스는 어떻게 다른가?</span></summary><div class="answer">Managed Agents의 하네스는 도구 호출 루프, 맥락, 세션 상태를 관리하는 실행부다. 개발자들이 흔히 말하는 하네스는 여러 에이전트와 세션을 엮어 큰 일을 하는 구조다. Managed Agents는 세션을 부품으로 주고, 개발자가 그걸로 하네스를 짓는다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>멀티테넌트 SaaS에서 BYOK를 권하지 않는 이유와, 대신 고를 수 있는 두 방식은?</span></summary><div class="answer">고객의 API 키로 돌면 내 쪽에서 관측을 잃는다. 대신 모든 고객을 한 워크스페이스에 두고 매핑을 직접 관리하거나, 고객마다 워크스페이스를 만든다. 뒤쪽은 고객마다 에이전트를 다시 만들어야 해서 복잡하다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>Claude Cowork와 Managed Agents는 언제 나눠 쓰나?</span></summary><div class="answer">나 한 사람을 위한 에이전트는 Cowork로 충분하다. 팀, 사내 조직, 또는 내 고객이 쓸 에이전트라면 Managed Agents를 쓴다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>정기적으로 사람이 돌리는 분석 작업 하나를 골라 배포로 옮긴다<span class="how">확인: 에이전트 정의, 일정, 첫 메시지, 붙일 자원이 다 정해졌는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>메모리 스토어를 세션과 분리된 자원으로 설계한다<span class="how">어떤 작업의 세션에 어떤 스토어를 붙일지 표로 정리한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>세션 이벤트에서 내가 볼 지표를 고른다<span class="how">예: 모델 호출 시작과 끝 이벤트로 지연 시간 계산</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>필요하면 이벤트를 기존 관측 도구로 보내는 연결을 만든다<span class="how">OTEL 내보내기는 기본 제공이 아니므로 직접 만든다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>작업 유형별 eval 세트를 만든다<span class="how">하네스, 스킬, 모델을 바꿀 때마다 같은 세트로 다시 돌린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>고정한 에이전트 구조와 Claude에게 맡긴 구조를 eval로 비교한다<span class="how">확인: "맡기면 더 낫다"는 주장이 내 작업에서도 맞는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>결과 기준이 분명한 일에는 outcome 루브릭과 최대 반복 횟수를 정한다</span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>드리밍을 쓴다면 적용 전과 후를 내 eval로 비교한다<span class="how">연구 미리보기이므로 결과를 바로 믿지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>고객을 나누는 방식을 고른다<span class="how">워크스페이스 하나와 자체 매핑, 또는 고객별 워크스페이스. BYOK는 피한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>워크스페이스 위에 자체 권한 계층을 둔다<span class="how">워크스페이스 안은 모두에게 열려 있다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>Claude Managed Agents</td><td>Anthropic이 에이전트 실행 환경을 대신 운영해 주는 API 제품</td></tr>
+              <tr><td>세션</td><td>Session. 에이전트가 일을 한 번 하는 실행 단위. 대화 기록과 상태를 가진다</td></tr>
+              <tr><td>배포</td><td>Deployment. 에이전트 하나를 일정에 따라 새 세션으로 반복 실행하는 설정</td></tr>
+              <tr><td>메모리 스토어</td><td>Memory store. 세션과 따로 존재하는 기억 저장소. 필요한 세션에 붙여 쓴다</td></tr>
+              <tr><td>드리밍</td><td>Dreaming. 지난 세션 기록을 분석해 메모리를 고치는 기능. 연구 미리보기 단계</td></tr>
+              <tr><td>서브에이전트</td><td>Sub-agent. 메인 에이전트가 일을 나눠 맡기는 하위 에이전트</td></tr>
+              <tr><td>outcome</td><td>원하는 결과를 루브릭과 최대 반복 횟수로 정해 두면, 에이전트가 그 기준을 만족할 때까지 계속하는 기능</td></tr>
+              <tr><td>루브릭</td><td>Rubric. 결과를 채점하는 기준표</td></tr>
+              <tr><td>스킬</td><td>Skill. 특정 작업 방법을 적어 둔 지시와 자료 묶음. 모델이 필요할 때 읽는다</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구 호출 루프, 맥락, 상태를 관리하는 실행 틀</td></tr>
+              <tr><td>컴팩션</td><td>Compaction. 길어진 맥락을 요약해 줄이는 처리</td></tr>
+              <tr><td>오케스트레이션</td><td>Orchestration. 여러 에이전트에게 일을 나누고 순서를 조율하는 것</td></tr>
+              <tr><td>텔레메트리</td><td>Telemetry. 시스템이 돌며 남기는 기록을 자동으로 모은 데이터</td></tr>
+              <tr><td>OTEL</td><td>OpenTelemetry. 로그, 지표, 추적 데이터를 내보내는 표준</td></tr>
+              <tr><td>eval</td><td>결과 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>워크스페이스</td><td>Workspace. 에이전트와 사용자를 묶어 나누는 단위. 안에 있는 사람은 그 안의 에이전트에 모두 접근한다</td></tr>
+              <tr><td>RBAC</td><td>Role-based access control. 역할에 따라 접근 권한을 나누는 방식</td></tr>
+              <tr><td>멀티테넌시</td><td>Multi-tenancy. 한 서비스가 여러 고객사를 나눠 섬기는 구조</td></tr>
+              <tr><td>BYOK</td><td>Bring your own key. 고객이 자기 API 키를 가져와 쓰는 방식</td></tr>
+              <tr><td>레이트 리밋</td><td>Rate limit. 일정 시간에 보낼 수 있는 요청 수의 상한</td></tr>
+              <tr><td>HPA</td><td>Horizontal Pod Autoscaler. Kubernetes에서 부하에 따라 파드 수를 자동으로 늘리고 줄이는 기능</td></tr>
+              <tr><td>연구 미리보기</td><td>Research preview. 정식 출시 전에 실험 단계로 먼저 공개한 기능</td></tr>
+              <tr><td>Claude Cowork</td><td>개인 작업용 Claude 에이전트 제품. 발표에서는 "개인용 에이전트"로 구분했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>데모 이어서: 메인 에이전트가 종목마다 세션을 띄운다</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>반복 작업과 배포, 모든 기능은 API</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>배포 구성: 에이전트, 일정, 첫 메시지, 자원</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>콘솔에서 바로 실행, 직접 만든 배포 UI</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>드리밍 미리보기: 메모리 스토어, 모델, 기간 고르기</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>서브에이전트들이 세션 기록을 나눠 분석</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>결과: 스킬의 빈틈을 메모리에 보완</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>Q: 텔레메트리와 관측</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>Q: 얼마나 오래 돌릴 수 있나</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>Q: 여러 에이전트 오케스트레이션</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>Q: 큰 조직의 권한 관리, 워크스페이스</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>Q: 배포는 스냅샷인가, 메모리는 어디에</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>Q: 하네스의 정의</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>Q: 변경이 괜찮은지 어떻게 아나 (eval, outcome)</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>Q: 스킬과 에이전트의 차이</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>Q: 드리밍과 eval</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>Q: Claude Code 위에 지은 것인가</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>Q: Bedrock 콘솔</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>Q: 다른 회사 모델, 최종 사용자 계정</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>Q: SaaS 멀티테넌시</td></tr>
+              <tr><td><span class="ts">19:30</span></td><td>Q: 워크스페이스 위 권한 계층</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>Q: 확장 설정</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>Q: 고객용 제품으로 내보내기, Notion과 Atlassian 사례</td></tr>
+              <tr><td><span class="ts">23:10</span></td><td>Q: Sonnet 5 지원</td></tr>
+              <tr><td><span class="ts">23:40</span></td><td>Q: Cowork에서 Managed Agents로</td></tr>
+              <tr><td><span class="ts">25:10</span></td><td>Q: 사내 설치(온프레미스)</td></tr>
+              <tr><td><span class="ts">26:00</span></td><td>워크숍 저장소 QR 코드 요청</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'qJtcEDc_WJU:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

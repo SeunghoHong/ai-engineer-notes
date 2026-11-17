@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트가 읽는 문서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#unseen">에이전트는 화면을 보지 않는다</a></li>
+      <li><a href="#inflection">에이전트와 스테이블코인이 함께 왔다</a></li>
+      <li><a href="#payments">왜 크립토인가: x402와 소액 결제</a></li>
+      <li><a href="#api">바닥은 API다</a></li>
+      <li><a href="#autonomy">돈을 가진 에이전트</a></li>
+      <li><a href="#readers">문서 독자의 80%가 에이전트</a></li>
+      <li><a href="#writing">사람이 쓸 글, 자동화할 글</a></li>
+      <li><a href="#pitfall">흔한 함정: 만들까, 살까</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-01 · 19분 · 영어 대담 한글 정리</span>
+      <h1>문서의 첫 독자가 에이전트가 됐다</h1>
+      <p class="lead">문서 플랫폼 Mintlify와 Coinbase가 나눈 대담이다. 에이전트는 문서의 디자인을 보지 않고, 크기와 정확성만 본다. 그래서 두 회사 모두 화면보다 API에 힘을 싣는다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=YX4Z4XqZ9Vo" target="_blank" rel="noopener">Most of Your Docs Readers Are Now AI Agents</a></span>
+        <span>발표: Hahnbee Lee (Mintlify 공동 창업자·CTO), Lincoln Murr (Coinbase AI 제품 총괄)</span>
+      </div>
+      <p class="note">영어 대담의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막의 "Hamby"는 Hahnbee로, "Menthafy"는 Mintlify로, "open claw"는 OpenClaw로 고쳤다. 10%→80% 통계를 말하는 대목에서 자막은 "Netlify"로 들리지만, 발표자가 자기 회사 집계라고 말하므로 Mintlify로 고쳤다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>Mintlify가 호스팅하는 문서 사이트에서 <strong>에이전트 조회 비율이 올해 초 약 10%에서 지금 약 80%</strong>로 올랐다.</li>
+        <li>에이전트는 디자인을 보지 않는다. 중요한 것은 <strong>페이지 크기, 내용의 정확성, 최신 상태</strong>다.</li>
+        <li>에이전트는 문서대로 하다가 막히면 <strong>멈추거나 다른 제품으로 떠난다.</strong></li>
+        <li>Coinbase는 사람이 화면에서 하던 기능을 <strong>모두 API로 열어</strong> 에이전트가 쓰게 하려 한다. MCP와 CLI는 그 위에 씌우는 포장이다.</li>
+        <li>Coinbase의 결제 표준 <strong>x402</strong>로 에이전트가 API 사용료를 건별로 낸다. 지난 1년 동안 약 1억 건이 오갔다.</li>
+        <li>기술 문서에서 <strong>자료를 모으고 정리해 넣는 과정은 자동화할 수 있다.</strong> 서사가 있는 글은 사람이 쓰는 게 낫다.</li>
+        <li>가장 흔한 함정은 직접 만든 도구의 <strong>유지보수 비용을 잊는 것</strong>이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="unseen">
+        <header><span class="num">01</span><h2>에이전트는 화면을 보지 않는다 <span class="ts">01:10</span></h2></header>
+        <p>Lincoln이 첫 질문을 던진다. 사람들은 이제 에이전트에게 "Coinbase 연동을 설정해 줘"라고 시킨다. 에이전트가 문서를 찾아 읽고 끝까지 해낸다. 그렇다면 문서를 만들 때 무엇이 중요해지는가.</p>
+        <p>Mintlify는 2022년에 세워졌다. ChatGPT가 나오기 전이다. 그때는 디자인과 프런트엔드가 가장 중요했다. Hahnbee는 Mintlify가 지금도 디자인을 중시하는 회사라고 말한다. 그래서 에이전트가 웹사이트의 생김새나 브랜딩을 전혀 신경 쓰지 않는다는 사실이 조금 슬프다고 한다.</p>
+
+        <div class="shift" aria-label="문서에서 중요한 것의 이동">
+          <div><span class="tag">사람이 읽던 때</span><b>디자인과 프런트엔드</b><span class="muted">보기 좋은 화면, 브랜드에 맞는 모양</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">에이전트가 읽는 지금</span><b>크기, 정확성, 최신 상태</b><span class="muted">컨텍스트 창을 얼마나 차지하는지, 내용이 맞는지, 낡지 않았는지</span></div>
+        </div>
+
+        <ul class="plain">
+          <li><strong>페이지 크기</strong>: 문서 한 페이지가 에이전트의 컨텍스트 창<span class="en">context window</span>을 많이 차지하면 안 된다. 컨텍스트 창은 모델이 한 번에 읽고 기억하는 분량이다.</li>
+          <li><strong>정확성</strong>: 에이전트는 문서대로 설정하다가 작은 걸림돌만 만나도 멈춘다. 끈질기게 원인을 찾지 않는다.</li>
+          <li><strong>이탈</strong><span class="en">churn</span>: 억지로 몇 번 더 시도해 볼 수도 있다. 하지만 그만큼 쉽게 다른 제품으로 옮겨 간다.</li>
+        </ul>
+
+        <h3>문서가 낡지 않게 하는 자동화 <span class="ts">02:30</span></h3>
+        <p>코딩 에이전트 덕분에 엔지니어링·제품·디자인 조직<span class="en">EPD</span>은 생산성이 크게 올랐다. Hahnbee는 회사의 나머지 조직이 이 속도를 따라잡아야 한다고 본다. 따라잡는 방법도 AI를 쓰는 것뿐이라고 말한다.</p>
+        <p>AI가 쓴 문서가 좋은지는 판단이 갈린다. Hahnbee도 아직 답을 찾는 중이라고 한다. 다만 <strong>문서가 낡지 않도록 자동화를 걸어 두는 일</strong>은 아주 중요하다고 강조한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="inflection">
+        <header><span class="num">02</span><h2>에이전트와 스테이블코인이 함께 왔다 <span class="ts">03:20</span></h2></header>
+        <p>Hahnbee가 묻는다. 에이전트가 인터넷에서 직접 거래를 한다면, Coinbase는 거래를 어떻게 다시 보는가.</p>
+        <p>Lincoln은 두 흐름이 동시에 왔다고 답한다. 하나는 AI 에이전트다. 다른 하나는 결제 수단<span class="en">payment rail</span>으로서의 스테이블코인<span class="en">stablecoin</span>이다. 스테이블코인은 달러 같은 법정 화폐에 가치를 묶어 둔 암호화폐다. 이전 시대에도 스마트폰과 4G LTE처럼 두 전환점이 겹친 적이 있다.</p>
+        <p>이런 때에는 새 기회가 열린다. 동시에 신생 회사가 기존 회사를 건너뛰고 고객과 직접 만나는 탈중개<span class="en">disintermediation</span>의 위험도 생긴다. 그래서 Coinbase는 두 방향을 함께 본다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">공격: 새 제품</span>
+            <p>에이전트를 위한 제품을 만든다. 이전 인터넷에서는 불가능했던 경험을 에이전트에게 준다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">방어: 핵심 사업</span>
+            <p>거래와 자산 관리 같은 본업을 에이전트가 쓸 수 있게 연다. 사람들이 에이전트를 통해서도 계속 Coinbase를 쓰게 한다.</p>
+          </div>
+        </div>
+
+        <h3>답은 API다 <span class="ts">04:20</span></h3>
+        <p>두 방향 모두 같은 일로 이어진다. 사람이 화면에서 쓰는 모든 기능을 API로 옮기는 일이다. 에이전트가 브라우저를 직접 조작하는 방식<span class="en">browser use</span>도 가능하다. 하지만 돈을 다룰 때는 인증과 보안 문제가 크다. 에이전트에게 계좌 전체를 마음대로 쓰게 둘 수는 없다. 알맞은 가드레일<span class="en">guardrail</span>과 한도가 필요하다.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시기</th><th>사람들의 반응</th><th>그 뒤</th></tr></thead>
+            <tbody>
+              <tr><td>웹 → 모바일 (약 10년 전)</td><td>"폰으로 은행 일을 본다고? 말도 안 된다"</td><td>지금은 웹보다 폰으로 더 많이 한다</td></tr>
+              <tr><td>모바일 → 에이전트 (지금)</td><td>"AI에게 내 돈 관리를 맡긴다고?"</td><td>Lincoln의 예상: 10년 뒤에는 계좌를 직접 들여다보지도 않는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Lincoln은 이 작업을 회사가 AI 시대에 살아남기 위한 방어책<span class="en">defensive hedge</span>이라고 부른다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="payments">
+        <header><span class="num">03</span><h2>왜 크립토인가: x402와 소액 결제 <span class="ts">05:30</span></h2></header>
+        <p>Hahnbee가 크립토가 특별히 유리한 점이 있는지 묻는다. Lincoln은 결제 쪽에서는 분명히 그렇다고 답한다.</p>
+        <ul class="plain">
+          <li><strong>x402</strong>: Coinbase가 만든 인터넷 기본 결제 표준이다. 지금은 별도 재단으로 분리됐다. Lincoln에 따르면 Cloudflare, Stripe, Amex, Mastercard, Visa 등이 함께 운영한다.</li>
+          <li><strong>디지털 달러</strong>: 싸고 빠르게, 허가 없이<span class="en">permissionless</span> 세계 어디로든 보낼 수 있다. 사업자라면 누구든 자기 에이전트로 결제를 받을 수 있다.</li>
+          <li><strong>소액 결제</strong><span class="en">micropayment</span>: 카드나 기존 결제 서비스로는 어려운 영역이다. 에이전트가 1/1000센트, 심지어 1/100만센트를 내고 API나 유료 웹사이트를 쓸 수 있다.</li>
+        </ul>
+
+        <h3>이미 일어나고 있다 <span class="ts">06:30</span></h3>
+        <p>Lincoln은 에이전트 거래가 기하급수적으로 늘고 있다고 말한다. 지난 1년 동안 약 <strong>1억 건</strong>의 에이전트 거래가 있었다. 모두 블록체인 위에서<span class="en">on-chain</span> 일어나서 누구나 확인할 수 있다고 한다. 대부분은 에이전트가 API를 쓰고 값을 치르는 용도다.</p>
+
+        <div class="shift" aria-label="에이전트가 API를 쓰는 방식의 변화">
+          <div><span class="tag">지금까지</span><b>사람이 먼저 길을 뚫는다</b><span class="muted">사이트 가입 → 계정에 돈 충전 → API 키 발급 → 에이전트에게 키 전달</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">지갑을 가진 에이전트</span><b>필요할 때 한 번씩 낸다</b><span class="muted">에이전트가 처음 보는 API도 그 자리에서 결제하고 쓴다</span></div>
+        </div>
+
+        <div class="callout">
+          <span class="title">Lincoln의 비유: 마트 상품권 <span class="ts">07:30</span></span>
+          <span>지금 인터넷은 마트에 갈 때마다 그 마트 전용 상품권을 사고, 회원 가입까지 해야 물건을 살 수 있는 구조다. 사람이 막고 있는 이 단계를 없애야 에이전트가 스스로 움직인다. 예를 들어 "이미지 하나 만들어 줘"라고 하면, 연결된 서비스가 없어도 에이전트가 25센트쯤 내고 알아서 써야 한다.</span>
+        </div>
+        <p class="note">x402는 Lincoln이 일하는 Coinbase가 만든 표준이다. 크립토 결제의 장점에 대한 주장은 그 점을 감안해 읽자. 1억 건이라는 숫자도 발표자가 인용한 것이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="api">
+        <header><span class="num">04</span><h2>바닥은 API다 <span class="ts">08:20</span></h2></header>
+        <p>Hahnbee가 Coinbase가 API에 힘을 싣는 것인지 묻는다. Lincoln은 "API가 핵심"이라고 답한다. MCP로 감싸는 것도 좋지만, 그건 나중에 바뀔 수 있는 겉면이라는 입장이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>Lincoln의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>API</td><td>모든 것의 바탕에 있는 층. 앞으로도 그대로 남는다</td></tr>
+              <tr><td>MCP</td><td>자연어로 쓸 때 필요한 맥락과 세부 설명을 덧붙이기 좋다</td></tr>
+              <tr><td>CLI</td><td>MCP와 비슷하지만 터미널이 있어야 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Lincoln은 셋 다 갖춰야 한다고 본다. AI 보조 개발이 쉬워져서, 같은 API를 에이전트가 쓰기 좋은 모양으로 감싸는 일은 금방 끝난다. 각 방식에 장단점은 있지만, 이 도구들이 어디로 갈지는 아직 한참 남았다고 말한다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="autonomy">
+        <header><span class="num">05</span><h2>돈을 가진 에이전트 <span class="ts">09:20</span></h2></header>
+        <p>Lincoln의 핵심 믿음은 이렇다. <strong>에이전트에게 돈을 쓸 권한을 주면 에이전트의 자율성이 커진다.</strong> 오래 혼자 일하는 에이전트<span class="en">long-running agent</span>가 가능해지고, 결과도 좋아진다.</p>
+        <ul class="plain">
+          <li><strong>깊은 조사</strong>: 유료 장벽<span class="en">paywall</span> 뒤의 정보에 돈을 내고 들어가면, 에이전트가 밤새 더 깊이 조사할 수 있다. 공개 인터넷만 볼 때보다 낫다.</li>
+          <li><strong>회사 설립</strong>: "LLC를 세워 줘"라고 하면 에이전트가 혼자 다 하지는 못한다. 대신 Fiverr 같은 곳에서 변호사와 회계사를 고용해 일을 맡길 수 있다.</li>
+        </ul>
+
+        <h3>DAO의 원래 꿈 <span class="ts">10:20</span></h3>
+        <p>크립토에는 DAO<span class="en">Decentralized Autonomous Organization</span>, 곧 탈중앙 자율 조직이라는 개념이 있다. 몇 년 전부터 있었지만, 실제로는 소수가 결정을 내리는 또 하나의 관료 조직이 됐다. 원래 꿈은 이루지 못하고 무너졌다.</p>
+        <blockquote>자동화를 중심에, 사람을 가장자리에.<cite>Lincoln Murr가 DAO의 원래 비전을 설명한 말 ("automation at the core and humans at the edges", 10:30)</cite></blockquote>
+        <p>Lincoln은 돈을 가진 에이전트가 이 비전을 마침내 실현할 것이라고 본다. AI에게 은행 계좌를 그냥 줄 수는 없다. 크립토 지갑은 AI에게 돈에 대한 접근과 소유를 증명할 수 있는 형태로 줄 수 있다는 것이 Lincoln의 설명이다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="readers">
+        <header><span class="num">06</span><h2>문서 독자의 80%가 에이전트 <span class="ts">11:10</span></h2></header>
+        <p>Lincoln이 묻는다. 에이전트가 문서의 주요 독자가 되면 Mintlify의 전략은 어떻게 바뀌는가.</p>
+        <p>Hahnbee는 API를 강조한 Lincoln의 말에 동의한다. 소프트웨어 회사들은 점점 개발자 중심이 되고 있다. 지금 가장 먼저 이 기술을 쓰는 사람은 개발자다. 에이전트도 개발자의 언어를 쓴다. 모든 게 코드이고, 에이전트는 bash와 CLI 명령에 아주 능숙하다.</p>
+        <p>그래서 Hahnbee는 소프트웨어 회사라면 API처럼 조금 전통적으로 보이는 것에 투자해야 한다고 말한다. 프런트엔드의 중요도는 그만큼 떨어진다.</p>
+
+        <figure class="chart" aria-label="Mintlify 문서 사이트 조회 중 에이전트 비율: 올해 초 약 10%, 지금 약 80%">
+          <span class="chart-title">Mintlify 문서 사이트 전체 조회 중 에이전트 비율 (%) <span class="ts">12:20</span></span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>올해 초</span><span class="val">약 10</span></div>
+              <div class="track"><div class="fill" style="width:10%" title="올해 초: 약 10%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>지금 (발표 시점)</span><span class="val">약 80</span></div>
+              <div class="track"><div class="fill key" style="width:80%" title="지금: 약 80%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">Hahnbee가 인용한 Mintlify 내부 집계. 무엇을 에이전트로 셌는지는 발표에서 밝히지 않았다.</span>
+        </figure>
+
+        <ul class="plain">
+          <li>Mintlify 안에는 이 비율을 추적하는 내부 지표가 있다. 직원들이 어디까지 오를지 내기를 할 정도다.</li>
+          <li>비율은 직원들의 예상보다 빨리 올랐다.</li>
+          <li>사람의 조회가 줄어든 게 아니다. <strong>에이전트의 조회가 훨씬 더 빨리 늘었다.</strong></li>
+        </ul>
+        <p class="note">예시 계산: 사람의 조회 수가 그대로라고 가정하자. 에이전트 조회는 사람의 1/9(10%)에서 사람의 4배(80%)가 된다. 에이전트 조회가 약 36배 늘었다는 뜻이다. 사람의 조회도 늘었다면 에이전트 쪽 증가는 그보다 더 크다. 이 계산은 발표에 나오지 않는다.</p>
+        <p class="note">이 통계는 Hahnbee 회사의 자체 집계이고, 문서 플랫폼을 파는 회사에 유리한 메시지다. 측정 방법이 공개되지 않았다는 점도 함께 기억하자.</p>
+
+        <h3>사람의 컨텍스트 창은 작다 <span class="ts">13:00</span></h3>
+        <p>Hahnbee는 에이전트에게 쓰는 말을 사람에게 써 보곤 한다. 사람은 에이전트보다 컨텍스트 창이 아주 작다. 에이전트는 훨씬 많은 내용을 읽고 소화할 시간이 있다. Hahnbee는 이것이 지금 에이전트가 비즈니스에 몰려오는 이유의 핵심이라고 본다. 올해 나온 OpenClaw조차 벌써 아주 오래전 일처럼 느껴진다고 덧붙인다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="writing">
+        <header><span class="num">07</span><h2>사람이 쓸 글, 자동화할 글 <span class="ts">13:40</span></h2></header>
+        <p>Lincoln이 묻는다. 문서에는 늘 사람의 손길이 필요할까, 아니면 자동화될까.</p>
+        <p>Hahnbee는 개발자들 사이의 묘한 흐름을 짚는다. 코드는 AI로 다 쓰면서, 글은 꼭 손으로 쓰는 사람이 많다. 팀원에게 문서를 넘길 때 AI로 만들지 직접 쓸지 고민하는 일도 흔해졌다. 문서 사이에 일종의 계급이 생기고 있다는 것이다.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>글의 종류</th><th>Hahnbee의 판단</th></tr></thead>
+            <tbody>
+              <tr><td>창작 산문, 서사가 있는 글</td><td>사람의 손길이 중요하다</td></tr>
+              <tr><td>기술 문서: 자료 모으기</td><td>관련 PR, 관련 맥락, Slack에서 내린 결정을 찾는 일. 지루하고 자동화할 수 있다</td></tr>
+              <tr><td>기술 문서: 정리해 넣기</td><td>모은 내용을 짧게 줄이고, 기존 문서 묶음 어디에 넣을지 정하는 일. 이것도 자동화할 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>그래도 사람과 이야기해야 한다 <span class="ts">15:20</span></h3>
+        <p>Hahnbee는 한때 "AI 정신병"<span class="en">AI psychosis</span> 같은 상태를 겪었다고 털어놓는다. 사람과 말할 필요 없이 MCP와만 대화해도 모든 통찰을 얻을 것 같은 느낌이었다. 지금은 제품을 만드는 사람이라면 여전히 사람을 만나 진짜 고충과 쓰임새를 들어야 한다고 본다.</p>
+        <p>Lincoln도 같은 경험을 말한다. 에이전트와 대화해서는 제품에 대한 통찰을 얻기 어렵다. 오히려 에이전트가 지어낸 말<span class="en">hallucination</span> 때문에 엉뚱한 일에 우선순위를 두게 된다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="pitfall">
+        <header><span class="num">08</span><h2>흔한 함정: 만들까, 살까 <span class="ts">16:40</span></h2></header>
+        <p>마지막 질문이다. 에이전트용 문서를 만드는 팀이 가장 자주 빠지는 함정은 무엇인가.</p>
+        <p>Hahnbee는 "자기 홍보처럼 들리겠지만"이라고 먼저 밝힌다. 답은 직접 만들지, 사서 쓸지<span class="en">build vs buy</span>의 문제다.</p>
+        <ul class="plain">
+          <li>본업이 아닌 도구를 직접 만들면, 그걸 계속 직접 유지해야 한다.</li>
+          <li>사서 쓰면, 그 문제만 하루 종일 고민하는 다른 팀에 맡기는 셈이다.</li>
+          <li>AI로 경쟁이 치열해지고 속도도 빨라졌다. 회사는 가장 중요한 가치 하나에 집중해야 한다.</li>
+          <li>유지보수 비용은 잊기 쉽다. 기업 영업 현장에서 "해커톤 때 만들었는데 아무도 관리하려 하지 않는다"는 말을 자주 듣는다고 한다.</li>
+        </ul>
+        <blockquote>만들 수는 있다. 그런데 계속 관리하고 싶은가?<cite>Hahnbee Lee의 말을 옮김 (18:10)</cite></blockquote>
+        <p>Hahnbee는 이 질문이 늘 있었지만 AI가 더 도드라지게 만들었다고 본다. Mintlify도 제품을 만들 때 스스로 같은 질문을 한다.</p>
+        <p>Lincoln도 동의한다. 에이전트 분야는 변화가 빠르고, 에이전트가 사이트를 읽어 가는 방식에 대한 표준도 셀 수 없이 많다. 최신 흐름을 계속 따라가 주는 곳에 맡기면 그 유지보수를 떠안지 않아도 된다. Lincoln도 해커톤 프로젝트에서 이 문제를 직접 겪었다고 말한다.</p>
+        <p class="note">Hahnbee는 문서 플랫폼을 파는 Mintlify의 공동 창업자이고, 이 대목이 자기 회사 홍보임을 스스로 밝혔다. Coinbase는 Mintlify의 고객사로 소개됐다. 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="recap">
+        <header><span class="num">09</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>Mintlify 문서 사이트의 에이전트 조회 비율이 올해 약 10%에서 약 80%로 올랐다. 사람 조회가 준 게 아니라 에이전트 조회가 폭증했다.</li>
+          <li>에이전트는 디자인을 보지 않는다. <strong>페이지 크기, 정확성, 최신 상태</strong>가 중요하다.</li>
+          <li>문서에 작은 걸림돌만 있어도 에이전트는 멈추거나 <strong>다른 제품으로 떠난다.</strong></li>
+          <li>문서가 낡지 않게 <strong>자동화를 걸어 두는 일</strong>이 중요하다.</li>
+          <li>Coinbase는 사람이 쓰던 기능을 <strong>모두 API로 열어</strong> 에이전트에게 준다. 공격(새 제품)이자 방어(본업 지키기)다.</li>
+          <li><strong>API가 바닥</strong>이고, MCP와 CLI는 그 위의 포장이다. 셋 다 갖춘다.</li>
+          <li>x402로 에이전트가 API 사용료를 건별로, 아주 작은 금액까지 낸다. 지난 1년 약 1억 건(발표자 인용).</li>
+          <li>Lincoln의 주장: 에이전트에게 <strong>돈을 쓸 권한을 주면 자율성이 커진다.</strong></li>
+          <li>기술 문서의 <strong>자료 수집과 정리는 자동화</strong>할 수 있다. 서사가 있는 글과 사용자 인터뷰는 사람의 몫이다.</li>
+          <li>직접 만든 도구는 <strong>유지보수 비용</strong>을 함께 따진다. 단, 이 주장은 도구를 파는 쪽에서 나왔다.</li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="quiz">
+        <header><span class="num">10</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>Mintlify 문서 사이트에서 에이전트 조회 비율은 어떻게 바뀌었나?</span></summary><div class="answer">올해 초 약 10%에서 발표 시점 약 80%로 올랐다. 사람 조회가 줄어서가 아니라 에이전트 조회가 훨씬 더 빨리 늘어서다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>에이전트가 문서를 읽을 때 중요한 세 가지는?</span></summary><div class="answer">페이지 크기(컨텍스트 창을 얼마나 차지하나), 내용의 정확성, 최신 상태. 디자인과 브랜딩은 보지 않는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>문서에 작은 걸림돌이 있을 때 에이전트는 어떻게 행동하나?</span></summary><div class="answer">멈추거나, 억지로 몇 번 더 시도하다가, 쉽게 다른 제품으로 옮겨 간다. 사람처럼 끈질기게 원인을 찾지 않는다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Coinbase가 에이전트 시대를 보는 두 방향은?</span></summary><div class="answer">에이전트를 위한 새 제품을 만드는 것(공격)과, 거래·자산 관리 같은 본업을 에이전트가 쓸 수 있게 여는 것(방어). 둘 다 기능을 API로 여는 일로 이어진다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>Coinbase가 브라우저 조작 대신 API를 택한 이유는?</span></summary><div class="answer">돈을 다룰 때는 인증과 보안 문제가 크다. 에이전트에게 계좌 전체를 맡길 수 없고, 가드레일과 한도를 정할 수 있어야 한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Lincoln이 크립토가 특히 유리하다고 본 결제 영역은?</span></summary><div class="answer">소액 결제. 1/1000센트, 1/100만센트처럼 아주 작은 금액을 내고 API나 유료 사이트를 쓰는 일이다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>"마트 상품권" 비유가 가리키는 문제는?</span></summary><div class="answer">지금은 서비스마다 가입, 충전, API 키 발급을 사람이 먼저 해야 에이전트가 쓸 수 있다. 지갑을 가진 에이전트는 필요할 때 한 번씩 결제하고 바로 쓴다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Lincoln이 본 API, MCP, CLI의 관계는?</span></summary><div class="answer">API가 바탕이고, MCP는 자연어용 맥락을 더하는 포장, CLI는 터미널이 필요한 비슷한 포장이다. 셋 다 갖춰야 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>DAO의 원래 비전은 무엇이었고, Lincoln은 무엇이 그걸 실현한다고 보나?</span></summary><div class="answer">"자동화를 중심에, 사람을 가장자리에." 돈을 가진 에이전트가 이 비전을 실현할 것으로 본다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>Hahnbee가 기술 문서에서 자동화할 수 있다고 본 부분은?</span></summary><div class="answer">관련 PR, 맥락, Slack 결정을 모으는 일과, 그걸 짧게 정리해 기존 문서 어디에 넣을지 정하는 일.</div></details>
+          <details><summary><span class="qn">Q11</span><span>두 발표자가 에이전트와 대화만으로 제품 통찰을 얻는 데 회의적인 이유는?</span></summary><div class="answer">진짜 고충과 쓰임새는 사람을 만나야 알 수 있다. 에이전트는 지어낸 말로 엉뚱한 우선순위를 잡게 만들 수 있다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>Hahnbee가 꼽은 가장 흔한 함정과, 이 주장을 읽을 때 감안할 점은?</span></summary><div class="answer">직접 만든 도구의 유지보수 비용을 잊는 것. Hahnbee는 문서 플랫폼을 파는 회사의 창업자이고, 홍보성 답변임을 스스로 밝혔다.</div></details>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="apply">
+        <header><span class="num">11</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>문서 조회 중 에이전트 비율을 잰다<span class="how">확인: 사람과 에이전트 조회를 나눠 볼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트에게 우리 문서만 보고 설정을 시켜 본다<span class="how">예시 방법: 멈추거나 헤맨 단계를 기록해 그 문서부터 고친다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>너무 큰 문서 페이지를 나눈다<span class="how">확인: 한 페이지가 에이전트 컨텍스트 창을 과하게 차지하지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>문서가 낡지 않게 자동화를 건다<span class="how">코드 변경이 생기면 관련 문서를 찾아 갱신 후보로 올린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>사람이 화면에서 하는 핵심 기능을 API로 연다<span class="how">확인: 에이전트가 브라우저를 조작하지 않고도 같은 일을 할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>API 위에 MCP나 CLI를 얹는다<span class="how">바탕은 API로 두고, 포장은 바뀌어도 되게 만든다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>에이전트에게 권한을 줄 때 가드레일을 정한다<span class="how">쓸 수 있는 범위, 금액 한도, 승인이 필요한 지점</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>기술 문서의 자료 수집을 자동화한다<span class="how">관련 PR, Slack 결정, 맥락을 모아 초안까지 만들게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>직접 만든 내부 도구의 유지보수 담당자를 확인한다<span class="how">확인: 해커톤 이후 아무도 관리하지 않는 도구가 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="glossary">
+        <header><span class="num">12</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>컨텍스트 창</td><td>Context window. 모델이 한 번에 읽고 기억할 수 있는 분량</td></tr>
+              <tr><td>이탈</td><td>Churn. 쓰던 제품을 그만두고 떠나는 것</td></tr>
+              <tr><td>EPD</td><td>Engineering, Product, Design. 엔지니어링·제품·디자인 조직</td></tr>
+              <tr><td>스테이블코인</td><td>Stablecoin. 달러 같은 법정 화폐에 가치를 묶어 둔 암호화폐</td></tr>
+              <tr><td>결제 레일</td><td>Payment rail. 돈이 오가는 길, 곧 결제 기반 시스템</td></tr>
+              <tr><td>탈중개</td><td>Disintermediation. 중간에 있던 회사를 건너뛰고 고객과 직접 연결되는 것</td></tr>
+              <tr><td>브라우저 사용</td><td>Browser use. 에이전트가 웹 브라우저를 사람처럼 직접 조작하는 방식</td></tr>
+              <tr><td>가드레일</td><td>Guardrail. 에이전트가 할 수 있는 일의 범위와 한도를 정한 안전장치</td></tr>
+              <tr><td>x402</td><td>Coinbase가 만든 인터넷 결제 표준. 지금은 별도 재단이 운영한다(발표자 설명)</td></tr>
+              <tr><td>소액 결제</td><td>Micropayment. 1센트보다 훨씬 작은 금액까지 건별로 내는 결제</td></tr>
+              <tr><td>온체인</td><td>On-chain. 블록체인에 기록되어 누구나 확인할 수 있는 상태</td></tr>
+              <tr><td>API 키</td><td>서비스가 API를 쓰는 사람을 알아보려고 발급하는 비밀 문자열</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. AI 모델이 외부 도구와 데이터에 연결하는 표준 방식</td></tr>
+              <tr><td>CLI</td><td>Command-line interface. 터미널에서 명령어로 쓰는 프로그램</td></tr>
+              <tr><td>유료 장벽</td><td>Paywall. 돈을 내야 볼 수 있게 막아 둔 웹 콘텐츠</td></tr>
+              <tr><td>DAO</td><td>Decentralized Autonomous Organization. 규칙을 코드로 정해 자동으로 운영하려는 탈중앙 조직</td></tr>
+              <tr><td>장기 실행 에이전트</td><td>Long-running agent. 사람 개입 없이 오랜 시간 혼자 일하는 에이전트</td></tr>
+              <tr><td>환각</td><td>Hallucination. 모델이 사실이 아닌 내용을 그럴듯하게 지어내는 것</td></tr>
+              <tr><td>AI 정신병</td><td>AI psychosis. AI와의 대화만으로 모든 걸 알 수 있다고 믿게 되는 상태를 가리키는 인터넷 표현</td></tr>
+              <tr><td>만들까, 살까</td><td>Build vs buy. 필요한 도구를 직접 만들지 외부 제품을 살지 정하는 문제</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="timeline">
+        <header><span class="num">13</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개: Mintlify, Coinbase</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>대담 형식 안내</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>질문: 에이전트가 문서를 읽으면 무엇이 중요해지나</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>Mintlify의 시작과 디자인 중심 시절</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>에이전트는 화면을 보지 않는다: 페이지 크기, 정확성</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>걸림돌을 만나면 멈추거나 떠난다</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>EPD의 생산성과 나머지 조직, 문서 자동화</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>질문: 에이전트 거래와 Coinbase</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>AI 에이전트와 스테이블코인, 두 전환점</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>공격과 방어, 모든 기능을 API로</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>브라우저 조작의 보안 문제와 가드레일</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>웹 → 모바일 → 에이전트</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>왜 크립토인가: x402</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>소액 결제</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>지난 1년 에이전트 거래 약 1억 건</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>마트 상품권 비유</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>API가 핵심이다</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>MCP, CLI, API 비교</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>돈을 가진 에이전트와 자율성</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>LLC 설립 예시</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>DAO의 원래 비전</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>질문: 에이전트가 문서의 주요 독자가 되면</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>개발자 중심으로 가는 소프트웨어 회사</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>에이전트 조회 비율 10% → 80%</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>사람의 작은 컨텍스트 창</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>질문: 사람이 쓴 문서 vs AI가 쓴 문서</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>창작 글과 문서 사이의 계급</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>AI 정신병과 사람과의 대화</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>기술 문서에서 자동화할 수 있는 부분</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>에이전트만으로는 제품 통찰을 얻기 어렵다</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>질문: 가장 흔한 함정</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>만들까, 살까와 유지보수 비용</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>빠르게 바뀌는 에이전트 표준</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'YX4Z4XqZ9Vo:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

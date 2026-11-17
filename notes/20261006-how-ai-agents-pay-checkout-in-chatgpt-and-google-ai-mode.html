@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 에이전트 결제 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#who">누가, 무엇을 말하나</a></li>
+      <li><a href="#paths">세 가지 길</a></li>
+      <li><a href="#mcp-app">MCP 앱이란</a></li>
+      <li><a href="#chatgpt">ChatGPT 인스턴트 체크아웃</a></li>
+      <li><a href="#token">토큰화와 통합 지점</a></li>
+      <li><a href="#google">Google AI 모드</a></li>
+      <li><a href="#external">MCP 앱 + 외부 결제 페이지</a></li>
+      <li><a href="#compare">세 길 비교</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 서비스에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-06 · 15분 · 영어 발표 한글 정리</span>
+      <h1>AI 에이전트는 어떻게 결제하나</h1>
+      <p class="lead">사용자가 ChatGPT나 Google AI 모드 안에서 물건을 고르면, 결제는 누가 어떻게 처리할까. PayPal의 Sam Parsons가 판매자 입장에서 쓸 수 있는 세 가지 길을 보여 준다. 공통점은 하나다. 판매자는 어느 길로 오든 결국 <strong>평소 쓰던 결제 토큰 하나</strong>를 받는다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=c5U-XbbEN-g" target="_blank" rel="noopener">How AI Agents Pay: Checkout in ChatGPT and Google AI Mode</a></span>
+        <span>발표: Sam Parsons (PayPal 시니어 스태프 엔지니어, 에이전트 커머스 담당)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 발표 내용은 모두 발표자의 설명이고 원 문서를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 것만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 PayPal 소속이고, 발표 내용은 PayPal 엔터프라이즈 결제 제품을 전제로 한다. 제품 소개의 성격이 강하니 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>PayPal 엔터프라이즈 결제는 <strong>Braintree</strong>의 새 이름이다. 큰 기업의 결제를 대신 처리하는 사업이다.</li>
+        <li>에이전트에서 결제를 받는 길은 세 가지다. <strong>ChatGPT 인스턴트 체크아웃</strong>, <strong>Google AI 모드</strong>, 그리고 <strong>MCP 앱에서 외부 결제 페이지로 넘기기</strong>.</li>
+        <li>ChatGPT는 OpenAI의 <strong>에이전트 커머스 프로토콜</strong>, Google은 <strong>유니버설 커머스 프로토콜</strong>을 쓴다. 발표자에 따르면 두 규격은 거의 같다.</li>
+        <li>어느 길이든 사용자의 카드 번호는 <strong>토큰</strong>으로 바뀐 뒤 판매자에게 간다. 판매자는 카드 번호를 만지지 않는다.</li>
+        <li>토큰은 <strong>특정 판매자, 최대 금액, 통화, 만료 시간</strong>으로 제한된다. 거래에는 어느 에이전트에서 왔는지 출처가 붙는다.</li>
+        <li>ChatGPT 길은 판매자가 <strong>MCP 앱으로 UI를 직접 만든다</strong>. Google 길은 UI 없이 <strong>상품 목록과 결제 엔드포인트</strong>만 세운다.</li>
+        <li>세 번째 길은 어느 에이전트에서나 쓸 수 있고 판매자가 모든 것을 통제하지만, 채팅 밖으로 나갔다 와야 해서 <strong>마찰이 조금 더 크다</strong>.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="who">
+        <header><span class="num">01</span><h2>누가, 무엇을 말하나 <span class="ts">00:10</span></h2></header>
+        <p>발표자 Sam Parsons는 PayPal에서 에이전트 커머스 <span class="en">agentic commerce</span> 영역을 맡고 있다. 에이전트 커머스란 사람 대신, 또는 사람과 함께 AI 에이전트가 물건을 고르고 사는 것을 말한다.</p>
+        <p>발표의 주제는 "에이전트가 산 물건의 돈을 판매자가 어떻게 받느냐"다. 사람이 중간에 확인하는 경우도 있고 아닌 경우도 있다.</p>
+        <div class="callout">
+          <span class="title">Braintree가 곧 PayPal 엔터프라이즈 결제</span>
+          <span>Braintree는 PayPal이 운영하던 대기업용 결제 처리 사업이다. 지금은 <strong>PayPal 엔터프라이즈 결제</strong> <span class="en">PayPal Enterprise Payments</span>로 이름이 바뀌었다. 발표자는 "아주 큰 회사들의 엄청난 거래량을 처리한다"고 설명한다. 이 노트에서는 줄여서 "PayPal 결제"라고 쓴다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="paths">
+        <header><span class="num">02</span><h2>세 가지 길 <span class="ts">01:00</span></h2></header>
+        <p>발표자가 가장 전하고 싶은 메시지는 이것이다. PayPal 결제는 판매자가 <strong>여러 곳에서 오는 결제를 받을 수 있게 다리를 놓고 있다</strong>. 이 영역은 빠르게 바뀌고 있어서 앞으로 몇 달, 1년 사이에 훨씬 많은 길이 생길 것이라고 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>길</th><th>어디서</th><th>규격</th><th>만든 곳</th></tr></thead>
+            <tbody>
+              <tr><td>인스턴트 체크아웃</td><td>ChatGPT 안</td><td>에이전트 커머스 프로토콜 <span class="en">ACP</span></td><td>OpenAI</td></tr>
+              <tr><td>AI 모드 결제</td><td>Google AI 모드 안</td><td>유니버설 커머스 프로토콜 <span class="en">UCP</span></td><td>Google과 파트너들</td></tr>
+              <tr><td>외부 결제 페이지</td><td>MCP 앱을 지원하는 모든 에이전트</td><td>MCP 앱 + 판매자 자체 결제</td><td>판매자</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 두 프로토콜의 규격 문서를 보면 <strong>거의 똑같다</strong>고 말한다. 아직 초기 단계라 앞으로 어떻게 될지는 두고 봐야 한다는 단서도 붙인다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="mcp-app">
+        <header><span class="num">03</span><h2>MCP 앱이란 <span class="ts">02:10</span></h2></header>
+        <p>MCP는 AI 에이전트가 외부 도구를 부르는 표준 규약이다 <span class="en">Model Context Protocol</span>. MCP 서버는 그 규약으로 도구를 내놓는 프로그램이다.</p>
+        <p><strong>MCP 앱</strong> <span class="en">MCP app</span>은 MCP 서버에 <strong>화면을 함께 담은 것</strong>이다. HTML과 JavaScript로 만든 UI가 서버 안에 들어 있고, 에이전트가 그 UI를 채팅창 안에 그대로 띄운다.</p>
+        <ul class="plain">
+          <li>ChatGPT에서는 "앱"으로 추가해 띄운다.</li>
+          <li>Claude에서는 같은 것을 "커넥터" <span class="en">connector</span>라고 부른다.</li>
+          <li>Goose 등 다른 에이전트들도 지원한다. 발표자는 이를 범용 표준이라고 본다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">왜 중요한가</span>
+          <span>채팅창은 ChatGPT의 것이지만, 그 안에 뜨는 상품 화면은 <strong>판매자가 설계한다</strong>. 어떤 상품을 어떻게 보여 줄지, 모양과 느낌을 판매자가 정한다. 뒤에 나오는 세 길 가운데 두 길이 이 MCP 앱 위에서 돌아간다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="chatgpt">
+        <header><span class="num">04</span><h2>ChatGPT 인스턴트 체크아웃 <span class="ts">03:00</span></h2></header>
+        <p>인스턴트 체크아웃 <span class="en">Instant Checkout</span>은 ChatGPT 대화 중에 바로 구매까지 끝내는 기능이다. 발표에서 설명한 흐름은 다섯 단계다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>누가</th><th>무엇을</th></tr></thead>
+            <tbody>
+              <tr><td>1. 의도</td><td>사용자</td><td>ChatGPT에서 사고 싶은 것을 찾는다</td></tr>
+              <tr><td>2. 탐색</td><td>판매자의 MCP 앱</td><td>살 만한 상품을 판매자가 설계한 화면으로 보여 준다</td></tr>
+              <tr><td>3. 결제 시작</td><td>MCP 앱 → ChatGPT</td><td>"이 상품을 사겠다"고 호스트에 알린다. 여기서 에이전트 커머스 프로토콜이 쓰인다</td></tr>
+              <tr><td>4. 토큰화</td><td>ChatGPT → PayPal 결제</td><td>사용자가 카드 번호를 넣거나 저장된 카드를 고르면, 그 정보가 토큰으로 바뀐다</td></tr>
+              <tr><td>5. 완료와 청구</td><td>ChatGPT → 판매자</td><td>토큰이 판매자에게 전달되고, 판매자가 그 토큰으로 돈을 청구한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>데모에서 본 것 <span class="ts">04:50</span></h3>
+        <p>데모는 여행 앱이었다. 사용자가 ChatGPT에서 호텔을 찾자, 판매자가 만든 호텔 목록 화면이 채팅 안에 떴다. 발표자는 "이 화면은 ChatGPT UI가 아니라 판매자가 통제하는 UI"라고 강조한다.</p>
+        <p>"결제로 진행"을 누르자 이번에는 ChatGPT가 제공하는 <strong>인스턴트 체크아웃 화면</strong>이 열렸다. 이 화면은 판매자가 만든 것이 아니다. 사용자는 여기서 테스트 카드 번호를 넣었다. 결제가 끝나자 다시 판매자의 MCP 앱으로 돌아왔고, 예약 확정 상태로 화면이 바뀌어 있었다.</p>
+
+        <h3>판매자 입장에서 달라지는 것 <span class="ts">04:10</span></h3>
+        <p>판매자가 할 일은 두 가지다. MCP 앱으로 사용자 경험을 제공하는 것, 그리고 PayPal 결제에서 오는 토큰을 받는 것이다. 이 토큰은 <strong>판매자가 평소 처리하던 토큰과 똑같이 생겼다</strong>. 정산, 환불, 지불 거절 <span class="en">chargeback</span>, 규정 준수는 모두 기존과 같은 방식으로 PayPal 결제가 지원한다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="token">
+        <header><span class="num">05</span><h2>토큰화와 통합 지점 <span class="ts">06:00</span></h2></header>
+        <p><strong>토큰화</strong> <span class="en">tokenization</span>는 실제로 결제할 수 있는 카드 번호를, 대신 돌려 써도 안전한 <strong>토큰</strong>으로 바꾸는 것이다. 토큰은 여기저기 전달해도 카드 정보 보안 규정인 PCI 범위를 넓히지 않는다.</p>
+        <p>인스턴트 체크아웃에서는 <strong>호스트인 ChatGPT가 토큰화를 맡는다</strong>. ChatGPT가 카드 정보를 PayPal 결제에 보내고, PayPal 결제가 토큰을 돌려준다. 판매자는 이 과정에 손대지 않는다. 판매자는 토큰만 받아 안전하게 결제한다.</p>
+
+        <h3>판매자가 코드를 붙이는 두 곳 <span class="ts">07:00</span></h3>
+        <ol class="plain">
+          <li><strong>MCP 앱 위젯 안의 JavaScript.</strong> 결제 화면을 띄우라고 ChatGPT에 요청하는 코드다. OpenAI가 정한 방식대로 쓴다.</li>
+          <li><strong>MCP 서버의 결제 완료 도구.</strong> 발표에서는 "complete checkout" 도구라고 불렀다. ChatGPT가 이 도구를 호출하면서 토큰을 넘겨준다. 판매자는 그 토큰으로 평소처럼 결제를 처리한다.</li>
+        </ol>
+        <p>발표자는 이 두 곳만 붙이면 된다며 "꽤 단순하다"고 말한다. 다만 MCP 앱 자체를 만드는 일은 따로 남는다.</p>
+
+        <h3>토큰에 걸린 제한 <span class="ts">07:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>제한</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>판매자</td><td>정해진 판매자에게서만 결제할 수 있다</td></tr>
+              <tr><td>최대 금액</td><td>정해진 금액까지만 청구할 수 있다</td></tr>
+              <tr><td>통화</td><td>정해진 통화로만 쓸 수 있다</td></tr>
+              <tr><td>만료</td><td>시간이 지나면 쓸 수 없다. 영원히 쓸 수 있는 토큰이 아니다</td></tr>
+              <tr><td>출처 표시</td><td>거래마다 어디서 왔는지 붙는다. PayPal 결제 대시보드에서 "ChatGPT 거래"로 보인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="google">
+        <header><span class="num">06</span><h2>Google AI 모드 <span class="ts">08:30</span></h2></header>
+        <p>Google AI 모드에서는 흐름이 조금 다르다. 사용자가 AI 모드에서 운동화를 산다고 하자.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>누가</th><th>무엇을</th></tr></thead>
+            <tbody>
+              <tr><td>1. 쇼핑</td><td>사용자</td><td>AI 모드에서 상품을 찾는다</td></tr>
+              <tr><td>2. 세션 생성</td><td>Google 에이전트 → 판매자</td><td>유니버설 커머스 프로토콜로 그 판매자에 사용자 몫의 세션을 만든다. 세션은 판매자에 속한 개체다</td></tr>
+              <tr><td>3. 토큰화</td><td>Google Pay → PayPal 결제</td><td>사용자가 결제하겠다고 하면 <strong>Google Pay</strong>가 PayPal 결제와 토큰화를 진행한다</td></tr>
+              <tr><td>4. 완료</td><td>Google → 판매자</td><td>토큰을 판매자에게 전달한다</td></tr>
+              <tr><td>5. 청구</td><td>판매자 → PayPal 결제</td><td>"이 토큰으로 이 거래를 처리해 달라"고 요청한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 "사실 ChatGPT와 아주 비슷한 모델"이라고 말한다. 정산, 환불, 지불 거절, 위험 관리, 규정 준수는 판매자 입장에서 평소와 같다. 다만 토큰이 <strong>다른 길로 들어왔을 뿐</strong>이다.</p>
+
+        <h3>UI를 만들지 않는다 <span class="ts">09:50</span></h3>
+        <p>Google 길의 가장 큰 차이는 <strong>판매자가 MCP 앱을 만들지 않는다</strong>는 점이다. 화면을 설계할 일이 없다. 대신 "내 상품은 이것들이고, 결제는 이 주소로 보내라"는 정보만 제공한다. 즉 <strong>엔드포인트를 세우는 일</strong>이 통합의 전부다.</p>
+        <ol class="plain">
+          <li><strong>well-known JSON 파일.</strong> 유니버설 커머스 프로토콜용 공개 설정 파일이다. "이 가게의 결제는 Braintree, 곧 PayPal 결제로 처리한다"는 표시와 판매자 ID, 클라이언트 키를 적는다. 발표자에 따르면 이 값들은 공개돼도 안전하다.</li>
+          <li><strong>결제 완료 엔드포인트.</strong> Google이 체크아웃 세션 ID와 함께 "완료" 호출을 보낸다. 그 안에 Google Pay 결제 뒤의 카드를 나타내는 토큰이 들어 있다. 판매자는 그걸로 결제를 처리한다.</li>
+        </ol>
+        <p class="note">자막에는 "brainree or PayPal and price payments"로 들린다. 문맥상 "Braintree, 곧 PayPal 엔터프라이즈 결제"를 뜻하는 것으로 정리했다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="external">
+        <header><span class="num">07</span><h2>MCP 앱 + 외부 결제 페이지 <span class="ts">11:10</span></h2></header>
+        <p>세 번째 길은 ChatGPT나 Google에 묶이지 않는다. MCP 앱을 지원하는 어느 에이전트에서나 쓸 수 있다. 판매자가 <strong>전체 경험을 완전히 통제</strong>하는 방식이다.</p>
+        <ol class="plain">
+          <li><strong>MCP 앱 위젯</strong>이 채팅 안에 상품 카드와 결제 버튼을 보여 준다.</li>
+          <li>결제 버튼을 누르면 <strong>외부 결제 페이지</strong>가 새로 열린다. 판매자는 세션으로 두 화면을 묶어 둔다.</li>
+          <li>사용자는 외부 페이지에서 원하는 어떤 결제 수단으로든 결제를 끝낸다.</li>
+          <li>결제가 끝나면 <strong>채팅 안의 MCP 앱이 자동으로 갱신</strong>된다. 뒤에서 통신이 오가며 주문 상태를 전달하기 때문이다.</li>
+        </ol>
+
+        <h3>데모에서 본 것 <span class="ts">12:10</span></h3>
+        <p>이번 데모는 Claude에서 돌렸다. 판매자의 MCP 앱이 커넥터로 뜨고, 사용자가 상품을 골라 결제를 누르자 외부 링크가 열렸다. 거기서 결제를 마치자 Claude 안의 앱 화면이 스스로 바뀌었다.</p>
+
+        <div class="shift" aria-label="통제와 마찰의 교환">
+          <div><span class="tag">얻는 것</span><b>완전한 통제</b><span class="muted">화면, 결제 수단, 흐름을 판매자가 모두 정한다. 특정 에이전트에 묶이지 않는다.</span></div>
+          <span class="arrow" aria-hidden="true">↔</span>
+          <div class="to"><span class="tag">치르는 것</span><b>조금 더 큰 마찰</b><span class="muted">결제가 채팅 안에서 끝나지 않는다. 사용자가 외부 페이지로 나갔다 돌아와야 한다.</span></div>
+        </div>
+
+        <div class="callout">
+          <span class="title">앞으로 올 것: 엘리시테이션 <span class="ts">13:10</span></span>
+          <span>MCP 앱에 <strong>엘리시테이션</strong> <span class="en">elicitation</span>이라는 새 기능이 생겼다. 서버가 사용자에게 추가 입력이나 확인을 요청하는 방식이다. 이를 쓰면 외부 검증을 iframe 같은 곳에서 더 매끄럽게 할 수 있다. 다만 발표 시점에는 주요 에이전트 대부분이 아직 지원하지 않는다. 발표자는 "오늘 당장 되는 것"을 보여 주고 싶어 외부 페이지 방식으로 데모했다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="compare">
+        <header><span class="num">08</span><h2>세 길 비교 <span class="ts">13:40</span></h2></header>
+        <p>발표 마지막에 세 길의 장단점을 한 장으로 정리했다. 아래 표는 발표에서 설명한 내용을 노트 작성자가 표로 다시 묶은 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>ChatGPT 인스턴트 체크아웃</th><th>Google AI 모드</th><th>MCP 앱 + 외부 페이지</th></tr></thead>
+            <tbody>
+              <tr><td>규격</td><td>에이전트 커머스 프로토콜</td><td>유니버설 커머스 프로토콜</td><td>MCP 앱 표준 + 판매자 자체</td></tr>
+              <tr><td>판매자가 만드는 것</td><td>MCP 앱 UI + 결제 완료 도구</td><td>상품 목록 + well-known JSON + 결제 완료 엔드포인트</td><td>MCP 앱 UI + 외부 결제 페이지 + 세션 연결</td></tr>
+              <tr><td>UI 통제</td><td>상품 화면은 판매자, 결제 화면은 ChatGPT</td><td>없음. UI를 만들지 않는다</td><td>전부 판매자</td></tr>
+              <tr><td>토큰화 주체</td><td>ChatGPT가 PayPal 결제와</td><td>Google Pay가 PayPal 결제와</td><td>판매자가 정한 방식</td></tr>
+              <tr><td>결제 위치</td><td>채팅 안</td><td>AI 모드 안</td><td>채팅 밖 외부 페이지</td></tr>
+              <tr><td>쓸 수 있는 곳</td><td>ChatGPT</td><td>Google AI 모드</td><td>MCP 앱을 지원하는 모든 에이전트</td></tr>
+              <tr><td>마찰</td><td>낮음</td><td>낮음</td><td>조금 높음</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자의 요약은 간단하다. <strong>ChatGPT나 Google에 들어가고 싶으면 앞의 두 길이 있고, 경험 전체를 통제하고 싶으면 세 번째 길이 있다.</strong> 어느 길이든 판매자는 마지막에 익숙한 토큰 하나를 받는다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="recap">
+        <header><span class="num">09</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>PayPal 엔터프라이즈 결제는 Braintree의 새 이름이다. 대기업 결제를 처리한다.</li>
+          <li>에이전트 결제를 받는 길은 셋이다. <strong>ChatGPT 인스턴트 체크아웃, Google AI 모드, MCP 앱 + 외부 결제 페이지.</strong></li>
+          <li>ChatGPT는 에이전트 커머스 프로토콜, Google은 유니버설 커머스 프로토콜을 쓴다. 발표자가 보기에 두 규격은 거의 같다.</li>
+          <li><strong>MCP 앱</strong>은 MCP 서버에 UI를 담은 것이다. ChatGPT에서는 앱, Claude에서는 커넥터라 부른다.</li>
+          <li>ChatGPT 길의 흐름은 <strong>의도 → 탐색 → 결제 시작 → 토큰화 → 완료와 청구</strong>다.</li>
+          <li><strong>토큰화</strong>는 카드 번호를 돌려 써도 안전한 토큰으로 바꾸는 것이다. 호스트가 맡고, 판매자는 토큰만 받는다.</li>
+          <li>토큰은 <strong>판매자, 최대 금액, 통화, 만료</strong>로 제한되고 거래에 출처가 붙는다.</li>
+          <li>Google 길은 <strong>UI가 없다</strong>. well-known JSON과 결제 완료 엔드포인트만 세운다. 토큰화는 Google Pay가 한다.</li>
+          <li>세 번째 길은 <strong>통제를 얻고 마찰을 치른다</strong>. 엘리시테이션이 퍼지면 마찰이 줄 수 있다.</li>
+          <li>어느 길이든 판매자가 받는 토큰은 <strong>평소 쓰던 것과 같다</strong>. 정산, 환불, 지불 거절은 기존 그대로다.</li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="quiz">
+        <header><span class="num">10</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>Braintree와 PayPal 엔터프라이즈 결제의 관계는?</span></summary><div class="answer">같은 것이다. Braintree가 PayPal 엔터프라이즈 결제로 이름을 바꿨다. 대기업의 결제 처리를 맡는다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>발표에서 말한 세 가지 길은?</span></summary><div class="answer">ChatGPT 인스턴트 체크아웃, Google AI 모드 결제, MCP 앱에서 외부 결제 페이지로 넘기기.</div></details>
+          <details><summary><span class="qn">Q3</span><span>에이전트 커머스 프로토콜과 유니버설 커머스 프로토콜은 각각 누가 만들었고, 서로 얼마나 다른가?</span></summary><div class="answer">에이전트 커머스 프로토콜은 OpenAI, 유니버설 커머스 프로토콜은 Google과 파트너들이 만들었다. 발표자에 따르면 규격이 거의 똑같다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>MCP 앱은 MCP 서버와 무엇이 다른가?</span></summary><div class="answer">MCP 서버에 HTML과 JavaScript로 만든 UI가 함께 들어 있다. 에이전트가 그 UI를 채팅 안에 띄운다. ChatGPT에서는 앱, Claude에서는 커넥터라고 부른다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>ChatGPT 인스턴트 체크아웃에서 토큰화는 누가 하나?</span></summary><div class="answer">호스트인 ChatGPT가 한다. 카드 정보를 PayPal 결제에 보내고 토큰을 돌려받는다. 판매자는 이 과정에 관여하지 않고 토큰만 받는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>토큰화가 왜 필요한가?</span></summary><div class="answer">실제 카드 번호 대신 토큰을 돌려 쓰면, 토큰이 여러 곳을 거쳐도 카드 정보 보안 규정인 PCI 범위가 넓어지지 않는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>인스턴트 체크아웃을 붙이려면 판매자가 코드를 넣는 두 곳은?</span></summary><div class="answer">MCP 앱 위젯 안에서 결제 화면을 띄우는 JavaScript, 그리고 MCP 서버에서 토큰을 받는 결제 완료 도구.</div></details>
+          <details><summary><span class="qn">Q8</span><span>토큰에 걸린 네 가지 제한은?</span></summary><div class="answer">특정 판매자에게서만, 최대 금액까지만, 정해진 통화로만, 만료 전까지만 쓸 수 있다. 거래에는 출처도 붙는다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Google AI 모드 길이 ChatGPT 길과 가장 다른 점은?</span></summary><div class="answer">판매자가 UI를 만들지 않는다. well-known JSON과 결제 완료 엔드포인트만 세운다. 토큰화는 Google Pay가 맡는다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>세 번째 길의 장점과 단점은?</span></summary><div class="answer">장점은 어떤 에이전트에서나 쓸 수 있고 화면과 결제 수단을 판매자가 모두 통제한다는 것. 단점은 결제가 채팅 밖 외부 페이지에서 이뤄져 마찰이 조금 더 크다는 것.</div></details>
+          <details><summary><span class="qn">Q11</span><span>엘리시테이션은 무엇이고 지금 왜 쓰지 못하나?</span></summary><div class="answer">MCP 앱에서 서버가 사용자에게 추가 입력이나 확인을 요청하는 새 기능이다. 외부 검증을 더 매끄럽게 할 수 있지만, 발표 시점에는 주요 에이전트 대부분이 아직 지원하지 않는다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>어느 길로 오든 판매자 입장에서 같은 것은?</span></summary><div class="answer">마지막에 받는 토큰이 평소 처리하던 토큰과 같다. 정산, 환불, 지불 거절, 규정 준수도 기존 방식 그대로다.</div></details>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="apply">
+        <header><span class="num">11</span><h2>내 서비스에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 서비스가 들어가고 싶은 에이전트를 정한다<span class="how">ChatGPT, Google AI 모드, 그 외 MCP 앱 지원 에이전트. 답에 따라 길이 갈린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>UI를 직접 만들 것인지 결정한다<span class="how">ChatGPT와 세 번째 길은 MCP 앱 UI가 필요하다. Google 길은 엔드포인트만 세운다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>지금 쓰는 결제 처리사가 어느 길을 지원하는지 확인한다<span class="how">발표는 PayPal 결제 기준이다. 다른 처리사라면 같은 역할을 하는지 따로 봐야 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>토큰을 받아 결제하는 엔드포인트 하나를 설계한다<span class="how">ChatGPT는 MCP 서버 도구, Google은 체크아웃 세션 완료 엔드포인트. 둘 다 "토큰 받고 청구"가 핵심이다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>토큰 제한을 우리 쪽 검증에 반영한다<span class="how">판매자, 최대 금액, 통화, 만료가 주문 내용과 맞는지 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>거래 출처별로 매출을 볼 수 있게 한다<span class="how">"ChatGPT에서 온 거래"처럼 에이전트 경로별 숫자를 따로 집계한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>외부 결제 페이지 방식이면 채팅 화면 갱신 통신을 설계한다<span class="how">세션으로 두 화면을 묶고, 결제 완료가 MCP 앱에 자동 반영되게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>엘리시테이션 지원 현황을 주기적으로 확인한다<span class="how">주요 에이전트가 지원하기 시작하면 외부 페이지 마찰을 줄일 수 있다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="glossary">
+        <header><span class="num">12</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트 커머스</td><td>Agentic commerce. AI 에이전트가 사람 대신, 또는 사람과 함께 물건을 고르고 사는 것</td></tr>
+              <tr><td>PayPal 엔터프라이즈 결제</td><td>PayPal Enterprise Payments. Braintree의 새 이름. 대기업 결제 처리 사업</td></tr>
+              <tr><td>에이전트 커머스 프로토콜</td><td>Agentic Commerce Protocol, ACP. OpenAI가 만든 규격. ChatGPT 인스턴트 체크아웃에 쓰인다</td></tr>
+              <tr><td>유니버설 커머스 프로토콜</td><td>Universal Commerce Protocol, UCP. Google과 파트너들이 만든 규격. Google AI 모드에 쓰인다</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. AI 에이전트가 외부 도구를 부르는 표준 규약</td></tr>
+              <tr><td>MCP 앱</td><td>MCP 서버에 HTML과 JavaScript로 만든 UI를 함께 담은 것. 에이전트가 채팅 안에 띄운다</td></tr>
+              <tr><td>커넥터</td><td>Connector. Claude에서 MCP 앱을 부르는 이름</td></tr>
+              <tr><td>인스턴트 체크아웃</td><td>Instant Checkout. ChatGPT 대화 안에서 바로 구매를 끝내는 기능</td></tr>
+              <tr><td>호스트</td><td>Host. MCP 앱을 띄우는 에이전트 쪽. 여기서는 ChatGPT나 Claude</td></tr>
+              <tr><td>토큰화</td><td>Tokenization. 실제 카드 번호를 돌려 써도 안전한 토큰으로 바꾸는 것</td></tr>
+              <tr><td>PCI 범위</td><td>카드 정보를 다루는 시스템에 적용되는 보안 규정의 적용 범위. 카드 번호를 만지는 곳이 늘수록 넓어진다</td></tr>
+              <tr><td>정산</td><td>Settlement. 결제된 돈이 실제로 판매자 계좌로 들어오는 과정</td></tr>
+              <tr><td>지불 거절</td><td>Chargeback. 카드 소유자가 거래에 이의를 제기해 결제가 취소되는 것</td></tr>
+              <tr><td>체크아웃 세션</td><td>Checkout session. 한 번의 구매 과정을 나타내는 개체. Google 길에서는 판매자에 속한다</td></tr>
+              <tr><td>well-known JSON</td><td>정해진 주소에 두는 공개 설정 파일. 여기서는 결제 처리사와 판매자 ID 등을 적는다</td></tr>
+              <tr><td>엔드포인트</td><td>Endpoint. 외부에서 호출할 수 있는 서버 주소</td></tr>
+              <tr><td>엘리시테이션</td><td>Elicitation. MCP에서 서버가 사용자에게 추가 입력이나 확인을 요청하는 기능</td></tr>
+              <tr><td>iframe</td><td>웹 페이지 안에 다른 페이지를 끼워 넣는 HTML 요소</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="timeline">
+        <header><span class="num">13</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, 주제: 에이전트에서 결제 받기</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>Braintree가 곧 PayPal 엔터프라이즈 결제</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>세 가지 길과 핵심 메시지</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>에이전트 커머스 프로토콜과 유니버설 커머스 프로토콜은 거의 같다</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>MCP 앱이란: 서버 + UI, 앱과 커넥터</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>인스턴트 체크아웃 다섯 단계</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>판매자 입장: 토큰은 평소와 같다</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>데모: ChatGPT에서 호텔 예약</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>토큰화 설명, 호스트가 맡는다</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>통합 지점 두 곳: 위젯 JavaScript, 결제 완료 도구</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>토큰 제한: 판매자, 금액, 통화, 만료, 출처</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>Google AI 모드 흐름, Google Pay가 토큰화</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>Google 길은 UI 없이 엔드포인트만</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>well-known JSON과 결제 완료 엔드포인트</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>MCP 앱 + 외부 결제 페이지 방식</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>데모: Claude 커넥터에서 외부 결제 후 자동 갱신</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>앞으로 올 엘리시테이션</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>세 길의 장단점 정리</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>마무리, 문서 QR 코드와 부스 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'c5U-XbbEN-g:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

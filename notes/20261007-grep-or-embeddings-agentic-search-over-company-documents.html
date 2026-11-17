@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 문서 검색</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#two-ways">grep이냐 임베딩이냐</a></li>
+      <li><a href="#claude-code">Claude Code가 벡터 검색을 뺀 이유</a></li>
+      <li><a href="#company-docs">회사 문서는 코드와 다르다</a></li>
+      <li><a href="#scale">파일 수가 길을 정한다</a></li>
+      <li><a href="#cost">컨텍스트가 커져도 비용은 남는다</a></li>
+      <li><a href="#harness">고르는 일은 하네스에</a></li>
+      <li><a href="#five-tools">다섯 가지 도구</a></li>
+      <li><a href="#hybrid">하이브리드 검색과 재순위</a></li>
+      <li><a href="#traverse">넓혔다가 좁히기</a></li>
+      <li><a href="#parsing">복잡한 문서는 미리 파싱</a></li>
+      <li><a href="#production">실서비스의 세 가지 숙제</a></li>
+      <li><a href="#demo">데모: Alphabet 재무 보고서</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-07 · 23분 · 영어 발표 한글 정리</span>
+      <h1>grep이냐 임베딩이냐</h1>
+      <p class="lead">코드처럼 작고 잘 정리된 데이터는 grep만으로 충분하다. 회사 문서처럼 크고 뒤섞인 데이터는 미리 인덱싱한 검색으로 방향을 잡고, grep과 read로 파고들어 근거를 확인해야 한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=X4w2Pkz5tDY" target="_blank" rel="noopener">Grep or Embeddings? Agentic Search Over Company Documents</a></span>
+        <span>발표: George He (LlamaIndex 엔지니어링 총괄)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다. 예를 들어 cloud code는 Claude Code로, GP는 grep으로, CloudMD는 CLAUDE.md로 고쳤다. 확실하지 않은 이름에는 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>Claude Code는 벡터 DB를 시험했지만 쓰지 않았다. <strong>코드가 계속 바뀌어 인덱스를 최신으로 유지하기 어려웠다.</strong> 코드는 작고 구조가 있어서 grep·glob·read로 충분하다.</li>
+        <li><strong>회사 문서는 다르다.</strong> PDF, PPT, 이미지, 도면이 섞여 있고, 양이 많고, 권한 관리가 필요하다. grep할 폴더 구조가 없다.</li>
+        <li>기준은 규모다. 파일 <strong>100~1,000개면 로컬 파일 검색</strong>으로 된다. <strong>수천~수백만 개면</strong> 어디를 볼지 알려 줄 <strong>나침반</strong>이 필요하다.</li>
+        <li>컨텍스트 창이 100만 토큰으로 커져도 문서를 매번 모델에 넣는 건 비싸다. 서브에이전트로 나눠도 토큰과 지연이 크다.</li>
+        <li>답은 하네스다. 에이전트에게 <strong>의미 검색과 목록·메타데이터·grep·read를 모두 주고</strong> 스스로 고르게 한다.</li>
+        <li>검색은 <strong>키워드와 벡터를 섞고 재순위를 붙인다.</strong> 복잡한 문서는 미리 파싱하고 <strong>페이지 스크린샷도 함께 저장</strong>한다.</li>
+        <li>실서비스에서는 멀티테넌시, 권한, 최신성이 늘 문제다. 권한은 수집할 때 벡터 저장소의 메타데이터로 넣는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="two-ways">
+        <header><span class="num">01</span><h2>grep이냐 임베딩이냐 <span class="ts">01:10</span></h2></header>
+        <p>발표자는 먼저 묻는다. 에이전트에게 벡터 검색용 맥락이 언제, 왜 필요한가.</p>
+        <p>지난 몇 년 동안 모델은 여러 단계를 스스로 조율하는 일<span class="en">orchestration</span>이 크게 늘었다. 지시를 따르는 능력도 좋아졌다. 로컬 파일 시스템을 돌아다니고, 스킬과 MCP로 정보를 가져오는 솜씨도 예전보다 낫다.</p>
+        <p>그래도 검색 문제는 남는다. 큰 문서 묶음<span class="en">corpus</span>이나 복잡한 문서를 다룰 때 특히 그렇다. 발표자는 이 문제를 푸는 두 갈래를 나란히 놓는다. <span class="ts">01:50</span></p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">grep 방식</span>
+            <p>질문이 올 때마다 파일을 직접 찾고 읽는다. 발표자는 "로컬 파일 검색과 실행"이라고 부른다.</p>
+            <ul>
+              <li>미리 만들어 둘 것이 없다</li>
+              <li>파일 이름, 키워드, 정규식으로 찾는다</li>
+              <li>인덱스가 없으니 동기화 걱정도 없다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">임베딩 방식</span>
+            <p>문서를 미리 쪼개고, 뜻을 숫자 벡터로 바꿔<span class="en">embedding</span> 인덱스를 만들어 둔다. 발표자는 "사전 인덱싱, 사전 검색"이라고 부른다.</p>
+            <ul>
+              <li>질문과 뜻이 가까운 조각을 빨리 찾는다</li>
+              <li>문서를 매번 다시 읽지 않는다</li>
+              <li>원본이 바뀌면 인덱스도 맞춰 줘야 한다</li>
+            </ul>
+          </div>
+        </div>
+        <p>발표의 질문은 둘 중 무엇이 이기느냐가 아니다. <strong>언제 어느 쪽이 맞는지, 언제 둘을 섞어야 하는지</strong>다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="claude-code">
+        <header><span class="num">02</span><h2>Claude Code가 벡터 검색을 뺀 이유 <span class="ts">02:10</span></h2></header>
+        <p>이 논쟁은 Claude Code가 나오면서 커졌다. Claude Code가 안에서 코드를 어떻게 찾는지 많은 사람이 궁금해했다.</p>
+        <p>Anthropic은 로컬 파일 시스템을 그대로 쓰는 쪽을 골랐다. grep으로 내용을 찾고, glob으로 파일 이름을 찾고, read로 읽는다. 코드는 로컬에서 다루기 쉽다. 간결하고, 이미 텍스트이기 때문이다.</p>
+
+        <h3>벡터 DB를 시험하고 뺐다 <span class="ts">02:50</span></h3>
+        <p>발표자는 Claude Code 제작자 Boris의 트윗을 소개한다. Claude Code 팀은 벡터 데이터베이스를 시험했지만 결국 쓰지 않았다.</p>
+        <p>이유는 성능만이 아니었다. 규모를 키우고 유지보수하기가 현실적으로 어려웠다. 코드는 계속 바뀐다. 미리 만든 벡터 인덱스를 그 변화에 맞춰 최신으로 유지하기 힘들다.</p>
+
+        <h3>코드라서 통했다 <span class="ts">03:20</span></h3>
+        <p>사전 인덱싱도, RAG도, 벡터 검색도 없이 잘 되는 건 코드의 성질 덕분이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>코드의 성질</th><th>grep에 유리한 이유</th></tr></thead>
+            <tbody>
+              <tr><td>작다</td><td>저장소 하나는 보통 크지 않다. 훑어도 부담이 적다</td></tr>
+              <tr><td>반쯤 구조화돼 있다</td><td>파일과 함수가 정해진 모양을 따른다</td></tr>
+              <tr><td>단서를 남긴다</td><td>import와 테스트가 다음에 볼 파일을 알려 준다</td></tr>
+              <tr><td>계층이 있다</td><td>폴더 구조를 따라 에이전트가 움직일 수 있다</td></tr>
+              <tr><td>이미 로컬에 있다</td><td>디스크에서 바로 읽으면 된다. 검색 시스템을 따로 둘 이유가 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="company-docs">
+        <header><span class="num">03</span><h2>회사 문서는 코드와 다르다 <span class="ts">04:00</span></h2></header>
+        <p>회사 데이터로 넘어가면 이야기가 달라진다. 이미지, PDF, 파워포인트가 섞여 있다. 코드처럼 정리돼 있지 않아서 grep할 폴더 구조가 없다.</p>
+        <p>코드는 사람이 공들여 다듬은 데이터다. 문법이 맞아야 하고, 참조도 정확해야 한다. 회사 데이터베이스나 데이터 레이크<span class="en">data lake</span>에 쌓인 자료는 그렇지 않다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>코드 저장소</th><th>회사 문서</th></tr></thead>
+            <tbody>
+              <tr><td>정리 상태</td><td>문법과 참조가 맞게 다듬어져 있다</td><td>쌓인 그대로다. 따라갈 폴더 구조가 없다</td></tr>
+              <tr><td>형식</td><td>이미 텍스트다</td><td>복잡한 PDF, 회로도, 제조 도면이 섞여 있다</td></tr>
+              <tr><td>규모</td><td>보통 작다</td><td>규모가 전혀 다르다. 로컬에서 돌릴 수 없다</td></tr>
+              <tr><td>보안</td><td>발표에서 문제로 꼽지 않았다</td><td>누가 어떤 정보에 접근할 수 있는지가 중요하다</td></tr>
+              <tr><td>동기화</td><td>디스크에 있는 것이 곧 최신이다</td><td>여러 곳의 변화를 맞춰 두기가 아주 어렵다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>업계가 써 본 방법들 <span class="ts">04:50</span></h3>
+        <p>데이터 덩어리를 어딘가에 두고, 에이전트에게 "이렇게 훑으면 된다"고 알려 주는 방법이 여럿 나왔다. 모두 데이터의 계층을 기록해 두는 방법이다.</p>
+        <ul class="plain">
+          <li>MCP 서버</li>
+          <li>CLAUDE.md 같은 프로젝트 안내 파일</li>
+          <li>스킬</li>
+          <li>에이전트 파일, 지시 파일</li>
+        </ul>
+        <div class="callout">
+          <span class="title">결국 규모와 정리 노력의 문제 <span class="ts">05:10</span></span>
+          <span>발표자의 핵심 메시지다. 데이터가 얼마나 큰지가 첫째다. 검색 시스템을 유지하는 데 정리 노력을 얼마나 들일지가 둘째다. 사람들은 컨텍스트 엔지니어링과 하네스를 말한다. 결국 필요한 건 알맞은 기본 도구<span class="en">primitives</span>를 갖춰 두는 일이다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="scale">
+        <header><span class="num">04</span><h2>파일 수가 길을 정한다 <span class="ts">05:40</span></h2></header>
+        <p>알맞은 도구를 고르려면 먼저 데이터의 규모를 알아야 한다. 발표자는 파일 수로 선을 긋는다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">파일 100~1,000개</span>
+            <p>로컬 파일 검색으로 충분하다. 에이전트가 컨텍스트 안에서 다룰 수 있는 양이다.</p>
+            <ul>
+              <li>파일을 하나씩 훑어도 토큰이 많이 들지 않는다</li>
+              <li>파일 이름을 다루며 돌아다녀도 부담이 적다</li>
+            </ul>
+            <p class="verdict"><b>grep과 read로 시작한다</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">파일 수천~수백만 개 <span class="ts">06:00</span></span>
+            <p>파일을 매번 읽을 수 없다. 그만큼 토큰을 태우고 싶지도 않다.</p>
+            <ul>
+              <li>대략 어디를 봐야 하는지 알려 줄 장치가 필요하다</li>
+              <li>바늘을 바로 못 찾아도, 방향은 알려 줘야 한다</li>
+            </ul>
+            <p class="verdict"><b>미리 인덱싱한 검색으로 방향부터 잡는다</b></p>
+          </div>
+        </div>
+        <p>발표자는 이 장치를 <strong>나침반</strong>이라고 부른다. 정확한 답을 주지 않아도, 어느 쪽으로 가야 하는지 알려 주면 된다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="cost">
+        <header><span class="num">05</span><h2>컨텍스트가 커져도 비용은 남는다 <span class="ts">06:30</span></h2></header>
+        <p>모델이 한 번에 받아 보는 양<span class="en">context window</span>은 계속 커졌다.</p>
+
+        <figure class="chart" aria-label="발표자가 말한 컨텍스트 창 크기 변화: 예전 10만 토큰, 그다음 20만 토큰, 지금 100만 토큰">
+          <span class="chart-title">발표자가 말한 컨텍스트 창 크기 (토큰)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>예전</span><span class="val">100K</span></div>
+              <div class="track"><div class="fill" style="width:10%" title="예전: 10만 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>그다음</span><span class="val">200K</span></div>
+              <div class="track"><div class="fill" style="width:20%" title="그다음: 20만 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>지금</span><span class="val">1M</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="지금: 100만 토큰"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>500K</span><span>1M</span></div>
+          <span class="caption">발표자는 모델 이름이나 시점은 말하지 않았다. 창은 10배 커졌지만, 그만큼 넣을지는 비용의 문제다.</span>
+        </figure>
+
+        <p>중요한 건 창의 크기가 아니다. <strong>얼마를 낼 생각이냐</strong>다.</p>
+        <ul class="plain">
+          <li>문서를 통째로 모델에 밀어 넣으면 그만큼 토큰값이 든다.</li>
+          <li>PDF 같은 바이너리를 보내 모델이 직접 그려 보고 내용을 뽑게 하면 더 비싸다.</li>
+          <li>모델의 컨텍스트를 문서 수집과 검색에 쓰는 건 아주 비싼 방법이다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">서브에이전트로 나누면? <span class="ts">07:10</span></span>
+          <span>큰 에이전트가 작은 에이전트에게 일을 나눠 맡기는 방법이 있다. 작은 에이전트가 무거운 맥락을 처리하고 답만 돌려준다. Claude Code도 메인 세션이 더 약한 모델의 하위 세션에 일을 맡기곤 한다. 하지만 하위 에이전트도 일을 하려면 전체 맥락이 필요하다. 그래서 싼 모델을 써도 토큰과 지연이 크다.</span>
+        </div>
+        <p>같은 문서를 매번 다시 처리하지 않으려면 <strong>사전 인덱싱 시스템</strong>을 만들 만하다. 발표자는 여기서 하네스 이야기로 넘어간다. <span class="ts">07:50</span></p>
+      </section>
+
+      <!-- 6 -->
+      <section id="harness">
+        <header><span class="num">06</span><h2>고르는 일은 하네스에 맡긴다 <span class="ts">08:00</span></h2></header>
+        <p>규모가 커질 시스템이라면 방식을 사람이 미리 정해 두면 안 된다. "하이브리드 RAG를 쓸까, 파일을 하나씩 뒤질까"를 정해 두지 않는다.</p>
+        <p>발표자가 찾은 가장 깔끔한 방법은 하네스다. 에이전트에게 두 방식의 도구를 모두 주고, 상황에 맞게 고르게 한다.</p>
+        <ul class="plain">
+          <li><strong>옛날식 도구</strong>: grep, cat, 파일 이름 필터, 메타데이터 필터</li>
+          <li><strong>의미 기반 필터</strong>: 뜻이 가까운 문서를 찾는 검색</li>
+        </ul>
+        <div class="shift" aria-label="하이브리드 탐색의 두 단계">
+          <div><span class="tag">1단계 · 나침반</span><b>의미 검색으로 범위를 좁힌다</b><span class="muted">어떤 파일들을 볼지 대략의 방향을 잡는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">2단계 · 근거</span><b>파일 도구로 파고든다</b><span class="muted">에이전트가 원래 가진 파일 탐색 능력으로 세부 내용을 읽는다</span></div>
+        </div>
+        <p>이렇게 두 장점을 다 얻는다. 검색은 방향을 준다. 파일 탐색은 답을 실제 문서에 묶어 둔다<span class="en">grounding</span>. 그래야 답을 지어내지<span class="en">hallucination</span> 않는다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="five-tools">
+        <header><span class="num">07</span><h2>다섯 가지 도구 <span class="ts">09:00</span></h2></header>
+        <p>보험, 금융, 의료 같은 곳을 생각해 보자. 분류가 안 됐거나 라벨이 반쯤만 붙은 문서가 아주 많다. 발표자는 이런 곳의 문서 검색을 다섯 도구로 나눈다. 도구들은 세 가지 질문에 답한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>번호</th><th>도구</th><th>답하는 질문</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>검색 (나침반)</td><td>어디를 봐야 하나?</td></tr>
+              <tr><td>2</td><td>파일 목록 보기</td><td rowspan="3">나침반이 가리킨 문서 묶음 안에 실제로 무엇이 있나?</td></tr>
+              <tr><td>3</td><td>메타데이터로 파일 훑기</td></tr>
+              <tr><td>4</td><td>grep: 원하는 키워드가 여러 개 함께 나오는 파일 찾기</td></tr>
+              <tr><td>5</td><td>읽기: 파싱한 텍스트와 페이지 스크린샷</td><td>문서에 실제로 뭐라고 쓰여 있나?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>2~4번은 사전 인덱싱 파이프라인에서 미리 돌려도 되고, 질문이 올 때 바로 돌려도 된다.</p>
+        <p class="note">발표자는 뒤에서 2~4번을 "목록, grep, read"로 묶어 부르기도 한다. 도구 번호보다 세 질문(어디를, 무엇이, 실제로 뭐라고)으로 기억하면 쉽다.</p>
+
+        <h3>렌더링도 미리 잘라 둔다 <span class="ts">09:50</span></h3>
+        <p>5번에서 여러 형식이 섞인 멀티모달 문서는 미리 그려 둬야 한다.</p>
+        <p>사전 인덱싱에서 가장 중요한 일 하나는 문서를 소화하기 좋은 크기로 나누는 것<span class="en">chunking</span>이다. 발표자는 이 원칙이 텍스트에만이 아니라 렌더링에도 적용된다고 본다.</p>
+        <p>자유 형식 문서에서 가장 어려운 일은 문서를 사람이 보는 모습 그대로 이미지로 그리는 것<span class="en">rasterize</span>이다. 도면, PDF, 파워포인트는 기계가 아니라 사람이 보려고 만든 것이다. 원래 사람이 하던 일이기도 하다. 그래서 <strong>미리 만든 페이지 스크린샷 인덱스</strong>를 주면 에이전트의 검색에 큰 도움이 된다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="hybrid">
+        <header><span class="num">08</span><h2>1번 도구: 하이브리드 검색과 재순위 <span class="ts">10:50</span></h2></header>
+        <p>나침반 역할을 하는 검색에는 방법이 많다. Graph RAG, 전통적인 RAG, 오래된 키워드 검색 방식인 BM25가 있다. 발표자는 기업용으로는 <strong>하이브리드</strong>를 권한다. <span class="ts">11:00</span></p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">키워드 검색 (BM25)</span>
+            <p>정확한 단어를 찾는다.</p>
+            <ul>
+              <li>개발자에게 쓸모가 있다</li>
+              <li>문서 묶음 안의 특정 단어를 찾는 AI 에이전트에게도 쓸모가 있다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">벡터 검색</span>
+            <p>뜻이 비슷한 것을 찾는다.</p>
+            <ul>
+              <li>단어가 달라도 의미가 같으면 찾는다</li>
+              <li>의미와 유사도는 검색에서 아주 중요하다</li>
+            </ul>
+          </div>
+        </div>
+        <ol class="plain">
+          <li>키워드 검색과 벡터 검색을 함께 돌린다.</li>
+          <li>두 결과에 가중치를 주어 합친다<span class="en">fusion</span>. 한 방식의 약점에 눈이 가리지 않는다.</li>
+          <li>상위 결과를 더 깊은 방법으로 다시 줄 세운다<span class="en">re-ranking</span>. 예를 들어 상위 100개를 LLM으로 다시 평가한다. <span class="ts">11:40</span></li>
+        </ol>
+        <p>발표자는 여러 벤치마크 데이터셋에서 같은 경향이 보인다고 말한다. 키워드나 벡터 하나만 쓰면 기본 수준에 머문다. 둘을 합치고 재순위를 붙이면 훨씬 좋아진다.</p>
+        <p class="note">발표에서는 벤치마크 이름이나 수치를 말하지 않았다.</p>
+        <p>다만 검색은 파이프라인의 한 부분일 뿐이다. 우리가 원하는 건 검색 결과가 아니라 답이다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="traverse">
+        <header><span class="num">09</span><h2>2~4번 도구: 넓혔다가 좁히기 <span class="ts">11:50</span></h2></header>
+        <p>검색으로 대략의 방향을 잡았다. 어느 파일 묶음이 관련 있는지 알게 됐다. 질문과 가장 가까운 메타데이터가 무엇인지도 알게 됐다.</p>
+        <p>그런데 에이전트는 처음부터 전체 메타데이터나 문서 내용을 알지 못한다. 그래서 다음 순서로 움직인다.</p>
+        <ol class="plain">
+          <li>파일 계층을 따라 둘러본다.</li>
+          <li>첫 검색에 나오지 않은 비슷한 파일까지 찾아 범위를 넓힌다.</li>
+          <li>넓힌 범위 안에서 다시 좁혀 결과를 추린다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">원격에서 쓰는 목록·grep·read</span>
+          <span>공유 파일 시스템이나 분산 파일 시스템에서는 이 세 기본 도구가 특히 중요하다. 파일을 매번 에이전트 쪽으로 내려받으면 비싸기 때문이다. 도구를 원격에서 바로 쓸 수 있으면 필요한 부분만 가져온다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="parsing">
+        <header><span class="num">10</span><h2>5번 도구: 복잡한 문서는 미리 파싱한다 <span class="ts">12:40</span></h2></header>
+        <p>차트가 들어간 문서, 스캔한 문서, 도면에서는 전통적인 인덱싱과 청킹이 무너진다. 사람이 줄 단위로 읽는 텍스트가 아니기 때문이다. 내용이 다른 방식으로 표현돼 있다.</p>
+        <p>에이전트가 문서를 볼 때마다 처음부터 다시 읽게 하면 안 된다. 바이너리로 인코딩된 토큰을 매번 태우게 된다. 그래서 발표자는 <strong>구조화 파싱으로 미리 파싱해 두라</strong>고 권한다. <span class="ts">13:20</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>할 일</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>구조 뽑기</td><td>표, 차트, 구획으로 나뉜 정보를 마크다운처럼 바꾼다. 에이전트가 공간 배치를 이해할 수 있는 형식이어야 한다</td></tr>
+              <tr><td>스크린샷 저장 <span class="ts">13:50</span></td><td>파싱하면서 페이지를 렌더링할 때 나온 스크린샷을 같이 저장해 둔다</td></tr>
+              <tr><td>둘 다 쓰기</td><td>어떤 부분이 텍스트인지, 메타데이터가 붙은 요소인지 늘 분명하지는 않다. 텍스트와 이미지를 함께 쓴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>도구로는 LlamaIndex의 제품 LlamaParse를 소개했다. LlamaIndex가 오픈소스로 공개한 Light Parse(추정)도 소개했다. 멀티모달 데이터에서는 공간 추론<span class="en">spatial reasoning</span>이 중요하다는 게 발표자의 설명이다.</p>
+
+        <h3>파서 품질을 재는 법 <span class="ts">14:10</span></h3>
+        <p>파싱은 중요하지만 파이프라인의 전부는 아니다. 발표자는 파싱을 분산해 규모를 키우라고 권한다. 그리고 다음 두 기준으로 품질을 점검하라고 한다.</p>
+        <ul class="plain">
+          <li>표를 표로 잡아내는가?</li>
+          <li>원래 레이아웃을 얼마나 충실하게 담는가?</li>
+        </ul>
+        <p>Textract 같은 OCR 파이프라인이나 Tesseract 같은 OCR 엔진에 넣어 보고 이 두 가지를 확인한다. 여기서 틀리면 나중에 LLM이 의미를 읽을 때 대가를 치른다. 처음엔 괜찮아 보여도, LLM이 위치와 배치를 이해하지 못하면 어느 순간 무너진다.</p>
+        <p class="note">발표자는 문서 파싱 제품 LlamaParse를 파는 LlamaIndex 소속이다. 미리 파싱하고 인덱싱하라는 권고는 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="production">
+        <header><span class="num">11</span><h2>실서비스의 세 가지 숙제 <span class="ts">15:00</span></h2></header>
+        <p>실제 고객이 쓰고 규모를 키우는 서비스라면 늘 나오는 질문이 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>숙제</th><th>질문</th></tr></thead>
+            <tbody>
+              <tr><td>멀티테넌시 <span class="ts">15:20</span></td><td>한 사람이 다른 사람의 데이터를 볼 수 있나?</td></tr>
+              <tr><td>권한 메타데이터</td><td>Google Drive나 SharePoint의 권한 정보를 어떻게 가져오나? 시스템을 멈추지 않아야 한다. 매번 다시 인덱싱하고 파싱하지도 않아야 한다</td></tr>
+              <tr><td>최신성 <span class="ts">15:30</span></td><td>복잡한 데이터와 그 메타데이터를 어떻게 늘 최신으로 유지하나?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 최신성 문제 때문에 Anthropic을 비롯한 여러 회사가 사전 인덱싱을 포기했다고 말한다. 데이터가 복잡하고 메타데이터까지 최신이어야 하면, 최신 상태를 지키기가 정말 어렵다.</p>
+
+        <h3>동기화는 세 단계로 <span class="ts">15:50</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 수집</span>
+            <p>모든 문서를 동기화되는 시스템 안으로 들인다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 파싱</span>
+            <p>문서를 표준 형식으로 바꾼다. 이 발표에서는 마크다운이나 텍스트로 바꾼다. 멀티모달 표현만 필요하면 다른 형식도 쓸 수 있다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 분할과 내보내기</span>
+            <p>데이터를 조각으로 나누고, 사전 인덱싱 상태로 내보낸다. 그래야 앞에서 본 도구들이 모두 쓸 수 있다.</p>
+          </div>
+        </div>
+
+        <h3>저장은 디스크 위에 메모리를 얹어 <span class="ts">16:40</span></h3>
+        <p>발표자는 시간 때문에 일부 슬라이드를 건너뛰고 저장 이야기를 짚었다. 데이터를 나눠 서비스하려면 층을 나눈 저장 구조가 필요하다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">전부 메모리에</span>
+            <p>많은 벡터 저장 서비스가 모든 데이터를 메모리에 둔다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">디스크 + 메모리 층</span>
+            <p>데이터는 디스크에 영구 저장한다. 그 위에 빠르게 꺼내 쓰는 메모리 층을 둔다.</p>
+            <p class="verdict"><b>발표자의 권장</b></p>
+          </div>
+        </div>
+        <p>LlamaIndex는 이 문제를 멀티테넌트 환경에서 문서 수백만~수천만 개 규모로 다뤄 봤다고 한다.</p>
+        <p>오늘 데모는 turbopuffer를 쓴다. <span class="ts">17:20</span> turbopuffer를 비롯한 대부분의 벡터 저장소는 권한 처리도 맡는다. 문서가 너무 많으면 메타데이터로 거를 수밖에 없다. 그래서 <strong>권한 같은 메타데이터를 벡터 저장소 층에 넣는다.</strong> 데이터가 들어올 때 바로 태그를 붙인다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="demo">
+        <header><span class="num">12</span><h2>데모: Alphabet 재무 보고서 <span class="ts">17:40</span></h2></header>
+        <p>데모가 보여 주려는 건 하나다. 에이전트가 이 도구들로 여러 문서를 오가며 근거 있는 답을 내는가.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>화면에서 한 일</th><th>보여 준 점</th></tr></thead>
+            <tbody>
+              <tr><td>데이터 <span class="ts">18:20</span></td><td>Alphabet 재무 보고서에서 나온 파일 135개를 미리 인덱싱했다. HTM 파일과 PDF가 섞여 있다. 각 정보가 어디에 있는지 메타데이터를 붙였다</td><td>연도나 회사로 태그를 붙이면 에이전트가 범위를 좁힐 수 있다</td></tr>
+              <tr><td>하이브리드 검색 <span class="ts">19:00</span></td><td>키워드와 의미의 비중을 반반으로 두고 "cash flow statements"를 검색했다</td><td>청크와 그 청크가 나온 페이지 스크린샷이 함께 나온다. 특정 청크 주변의 맥락을 더 달라고 하기가 쉽다</td></tr>
+              <tr><td>grep + read <span class="ts">19:50</span></td><td>"cash flow" 패턴으로 grep했다. 찾은 위치에서 시작점<span class="en">offset</span>과 최대 길이를 정해 읽었다. 예: 500자 뒤부터 1,000자</td><td>파일을 로컬로 내려받지 않는다. 원격 저장소에서 필요한 부분만 읽는다</td></tr>
+              <tr><td>채팅 <span class="ts">20:50</span></td><td>2021~2025년 현금흐름을 표로 달라고 요청했다</td><td>여러 파일에서 모은 현금흐름 요약이 나왔다 <span class="ts">22:10</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">실시간 실행은 발표 시간 안에 끝나지 않았다. 발표자는 미리 돌려 둔 결과를 보여 줬다. 요청 문장은 자막이 뭉개져 정확히 알 수 없다. 결과 표의 숫자도 자막에 나오지 않는다.</p>
+
+        <h3>에이전트가 움직인 순서 <span class="ts">21:30</span></h3>
+        <ol class="plain">
+          <li>검색 명령을 내린다.</li>
+          <li>돌아온 스크린샷과 맥락을 살펴 무엇이 관련 있는지 판단한다.</li>
+          <li>특정 파일을 읽는다.</li>
+          <li>다시 검색하며 질문 범위를 고친다.</li>
+        </ol>
+        <p>답을 특정 파일에 묶어 둘 수 있다는 점이 중요하다. 그래야 에이전트가 맞는 조각을 찾았다고 믿을 수 있다. 발표자는 이것이 에이전트 기반 검색이 결국 노리는 것이라고 말한다.</p>
+
+        <h3>도구 호출 모양 (예시)</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>도구</th><th>호출 모양</th><th>돌려주는 것</th></tr></thead>
+            <tbody>
+              <tr><td>검색</td><td><code>search("cash flow statements", keyword_weight=0.5)</code></td><td>관련 청크와 페이지 스크린샷</td></tr>
+              <tr><td>grep</td><td><code>grep("cash flow", file)</code></td><td>패턴이 나온 위치</td></tr>
+              <tr><td>read</td><td><code>read(file, offset=500, length=1000)</code></td><td>500자 뒤부터 1,000자</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">이해를 돕기 위해 만든 예시다. 함수 이름과 인자는 발표 화면의 실제 API가 아니다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="conclusion">
+        <header><span class="num">13</span><h2>결론 <span class="ts">22:50</span></h2></header>
+        <blockquote>검색은 정보를 찾게 해 주고, 하네스는 믿을 수 있는 결과를 준다.<cite>발표자의 마지막 말을 옮김</cite></blockquote>
+        <p>발표 내용을 상황별로 묶으면 다음과 같다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>상황</th><th>권하는 방식</th></tr></thead>
+            <tbody>
+              <tr><td>파일 수백~천 개, 코드처럼 텍스트에 구조가 있다</td><td>grep·glob·read로 충분하다. 인덱스를 둘 이유가 적다</td></tr>
+              <tr><td>파일 수천~수백만 개, PDF·PPT·도면이 섞였다</td><td>미리 파싱하고 인덱싱한 하이브리드 검색으로 방향을 잡는다. 그다음 파일 도구로 파고든다</td></tr>
+              <tr><td>데이터가 자주 바뀌고 권한이 복잡하다</td><td>인덱스를 최신으로 유지하는 비용과 권한 메타데이터 동기화부터 따진다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>어느 경우든 <strong>방식을 미리 하나로 고정하지 않는다.</strong> 두 방식의 도구를 하네스에 넣고 에이전트가 고르게 한다.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트 검색에는 두 길이 있다. 그때그때 파일을 찾는 grep 방식과, 미리 인덱싱해 뜻으로 찾는 임베딩 방식이다.</li>
+          <li>Claude Code는 벡터 DB를 시험했지만 뺐다. 코드가 계속 바뀌어 <strong>인덱스를 최신으로 유지하기 어려웠다.</strong></li>
+          <li>코드는 작고, 구조가 있고, import·테스트 같은 단서가 있고, 이미 로컬에 있다. 그래서 grep·glob·read로 충분하다.</li>
+          <li>회사 문서는 형식이 제각각이고, 규모가 크고, 권한 관리가 필요하다. grep할 폴더 구조가 없다.</li>
+          <li>파일 100~1,000개면 로컬 파일 검색, <strong>수천~수백만 개면 나침반 역할의 검색</strong>부터 둔다.</li>
+          <li>컨텍스트 창이 100만 토큰이어도 문서를 매번 넣는 건 비싸다. 서브에이전트도 토큰과 지연이 크다.</li>
+          <li>하네스에 의미 검색과 목록·메타데이터·grep·read를 모두 넣는다. <strong>검색은 방향, 파일 도구는 근거</strong>다.</li>
+          <li>검색은 키워드와 벡터를 가중치로 합치고, 상위 결과를 LLM으로 재순위한다.</li>
+          <li>복잡한 문서는 한 번 구조화 파싱해 마크다운과 <strong>페이지 스크린샷</strong>으로 저장한다. 파서는 표와 레이아웃을 제대로 담는지로 고른다.</li>
+          <li>실서비스 숙제는 멀티테넌시, 권한, 최신성이다. 권한은 수집할 때 벡터 저장소의 메타데이터로 넣는다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>grep 방식과 임베딩 방식은 각각 무엇인가?</span></summary><div class="answer">grep 방식은 질문이 올 때마다 파일을 직접 찾고 읽는다. 임베딩 방식은 문서를 미리 쪼개 벡터 인덱스로 만들어 두고, 뜻이 가까운 조각을 찾는다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Claude Code가 벡터 DB를 쓰지 않은 이유는?</span></summary><div class="answer">성능만이 아니라 확장과 유지보수 문제였다. 코드가 계속 바뀌어서 미리 만든 인덱스를 최신으로 유지하기 어렵다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>코드가 grep만으로 잘 찾아지는 성질을 세 가지 이상 들면?</span></summary><div class="answer">저장소가 작다. 반쯤 구조화돼 있다. import와 테스트가 다음에 볼 파일의 단서를 남긴다. 폴더 계층이 있다. 이미 로컬 디스크에 있다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>회사 문서에서 grep만으로는 어려운 이유는?</span></summary><div class="answer">코드처럼 다듬어져 있지 않아 따라갈 폴더 구조가 없다. PDF, PPT, 도면처럼 형식이 제각각이다. 규모가 커서 로컬에서 돌릴 수 없다. 누가 무엇을 볼 수 있는지 권한도 관리해야 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>발표자가 제시한 규모 기준은?</span></summary><div class="answer">파일 100~1,000개면 로컬 파일 검색으로 충분하다. 수천~수백만 개면 매번 읽을 수 없으니, 어디를 볼지 알려 줄 나침반 역할의 검색이 필요하다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>컨텍스트 창이 100만 토큰인데 왜 사전 인덱싱이 필요한가?</span></summary><div class="answer">비용 때문이다. 문서를 매번 모델에 넣고, 바이너리를 모델이 직접 렌더링하게 하면 아주 비싸다. 서브에이전트로 나눠도 하위 에이전트마다 전체 맥락이 필요해 토큰과 지연이 크다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>하네스 방식에서 의미 검색과 파일 도구는 각각 무슨 역할을 하나?</span></summary><div class="answer">의미 검색은 나침반이다. 볼 파일의 범위를 좁힌다. 파일 도구는 그 안으로 파고들어 세부 내용을 읽고, 답을 실제 문서에 묶어 둔다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>발표자가 권하는 검색 순서는?</span></summary><div class="answer">키워드 검색과 벡터 검색을 함께 돌린다. 두 결과를 가중치로 합친다. 상위 결과(예: 100개)를 LLM 같은 더 깊은 방법으로 재순위한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>복잡한 문서를 미리 파싱하고 스크린샷까지 저장하는 이유는?</span></summary><div class="answer">에이전트가 문서를 볼 때마다 바이너리 토큰을 태우지 않게 하려는 것이다. 표와 차트의 공간 구조를 마크다운으로 살려 둔다. 텍스트인지 아닌지 애매한 부분이 있어서 페이지 이미지도 함께 쓴다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>파서를 평가할 때 볼 두 가지는?</span></summary><div class="answer">표를 표로 잡아내는가, 그리고 원래 레이아웃을 얼마나 충실하게 담는가. 여기서 틀리면 나중에 LLM이 의미를 읽을 때 무너진다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>실서비스에서 늘 나오는 세 가지 숙제는?</span></summary><div class="answer">멀티테넌시, 권한 메타데이터, 최신성. 발표자는 최신성 때문에 여러 회사가 사전 인덱싱을 포기했다고 말한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>데모에서 grep과 read를 함께 쓰면 무엇이 좋은가?</span></summary><div class="answer">파일을 로컬로 내려받지 않아도 된다. grep으로 위치를 찾고, 시작점과 길이를 정해 원격 저장소에서 필요한 부분만 읽는다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>검색할 데이터의 파일 수와 형식을 센다<span class="how">수백~천 개의 텍스트 위주면 grep부터. 수천 개 이상이거나 PDF·도면이 섞였으면 사전 인덱싱을 검토</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>데이터가 얼마나 자주 바뀌는지 확인한다<span class="how">확인: 인덱스를 최신으로 유지하는 비용을 감당할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트에게 검색과 파일 도구를 함께 준다<span class="how">의미 검색, 파일 목록, 메타데이터 필터, grep, 시작점과 길이를 정하는 read</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>키워드 검색과 벡터 검색을 섞고 재순위를 붙인다<span class="how">확인: 한 방식만 쓸 때보다 결과가 좋아졌는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>복잡한 문서는 한 번 파싱해 마크다운으로 저장한다<span class="how">확인: 표와 차트의 구조가 살아 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>파싱할 때 페이지 스크린샷도 함께 저장한다<span class="how">확인: 검색 결과 청크와 그 페이지 이미지를 같이 돌려줄 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>쓰는 파서나 OCR을 표와 레이아웃 기준으로 점검한다<span class="how">표가 표로 나오는가, 원래 배치가 지켜지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>권한·연도·출처 메타데이터를 수집 단계에서 벡터 저장소에 태그한다<span class="how">확인: 다른 사람의 문서가 검색 결과에 섞이지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>답이 어느 파일의 어느 부분에서 왔는지 보이게 한다<span class="how">확인: 답의 근거 파일을 열어 볼 수 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>grep</td><td>파일 안에서 문자열이나 정규식 패턴을 찾는 명령</td></tr>
+              <tr><td>glob</td><td><code>*.md</code> 같은 패턴으로 파일 이름을 찾는 방식</td></tr>
+              <tr><td>임베딩</td><td>Embedding. 글의 뜻을 숫자 벡터로 바꾼 것. 뜻이 비슷하면 벡터도 가깝다</td></tr>
+              <tr><td>벡터 저장소</td><td>임베딩을 저장하고 가까운 것을 빠르게 찾아 주는 데이터베이스</td></tr>
+              <tr><td>사전 인덱싱</td><td>Pre-indexing. 질문이 오기 전에 문서를 파싱하고 나누고 임베딩해 두는 일</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 관련 문서를 찾아 모델에 넣고 답하게 하는 방식</td></tr>
+              <tr><td>Graph RAG</td><td>문서 속 대상과 관계를 그래프로 만들어 검색에 쓰는 RAG</td></tr>
+              <tr><td>BM25</td><td>단어가 얼마나 자주, 얼마나 드물게 나오는지로 점수를 매기는 키워드 검색 방식</td></tr>
+              <tr><td>하이브리드 검색</td><td>키워드 검색과 벡터 검색의 결과를 합치는 방식</td></tr>
+              <tr><td>융합</td><td>Fusion. 두 검색 결과의 순위나 점수를 가중치를 두고 합치는 단계</td></tr>
+              <tr><td>재순위</td><td>Re-ranking. 1차 검색의 상위 결과를 LLM 같은 정밀한 방법으로 다시 줄 세우는 단계</td></tr>
+              <tr><td>청크</td><td>Chunk. 검색하기 좋게 문서를 잘게 나눈 조각</td></tr>
+              <tr><td>파싱</td><td>Parsing. 문서를 마크다운이나 텍스트 같은 표준 형식으로 바꾸는 일</td></tr>
+              <tr><td>래스터화</td><td>Rasterize. 문서를 사람이 보는 모습 그대로 이미지로 그리는 일</td></tr>
+              <tr><td>OCR</td><td>이미지 속 글자를 텍스트로 읽어 내는 기술</td></tr>
+              <tr><td>멀티모달</td><td>텍스트, 이미지, 표, 도면처럼 여러 형식이 섞인 데이터</td></tr>
+              <tr><td>컨텍스트 창</td><td>Context window. 모델이 한 번에 받아 볼 수 있는 토큰의 양</td></tr>
+              <tr><td>서브에이전트</td><td>큰 에이전트가 일을 나눠 맡기는 하위 에이전트</td></tr>
+              <tr><td>하네스</td><td>모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>그라운딩</td><td>Grounding. 답을 실제 문서 내용에 묶어 지어내지 않게 하는 것</td></tr>
+              <tr><td>환각</td><td>Hallucination. 모델이 사실이 아닌 내용을 그럴듯하게 지어내는 것</td></tr>
+              <tr><td>메타데이터</td><td>파일에 대한 정보. 예: 연도, 회사, 출처, 접근 권한</td></tr>
+              <tr><td>멀티테넌시</td><td>여러 고객이 한 시스템을 함께 쓰되 서로의 데이터는 볼 수 없게 나누는 구조</td></tr>
+              <tr><td>최신성</td><td>Freshness. 인덱스가 원본 데이터의 지금 상태를 얼마나 반영하는가</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 에이전트가 외부 도구와 데이터에 접속하는 표준 방식</td></tr>
+              <tr><td>CLAUDE.md</td><td>Claude Code가 읽는 프로젝트 안내 파일</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개: George He, LlamaIndex</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>발표 순서</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>에이전트에게 벡터 검색이 언제, 왜 필요한가</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>두 갈래: grep 방식과 임베딩 방식</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>Claude Code의 grep·glob·read</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>Boris의 트윗: 벡터 DB를 시험하고 뺐다</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>코드라서 통한 이유</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>회사 문서는 코드와 다르다</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>업계의 방법: MCP, CLAUDE.md, 스킬</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>핵심: 규모와 정리 노력</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>파일 100~1,000개 대 수천~수백만 개</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>컨텍스트 100만 토큰과 비용</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>서브에이전트의 한계</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>하네스에 도구를 모두 준다</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>다섯 가지 도구</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>멀티모달 문서는 미리 렌더링한다</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>1번 도구: 하이브리드 검색</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>재순위</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>2~4번 도구: 목록, grep, read</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>5번 도구: 복잡한 문서 파싱</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>LlamaParse와 Light Parse(추정)</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>페이지 스크린샷 저장</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>파서 품질 기준: 표와 레이아웃</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>실서비스 숙제: 멀티테넌시, 권한</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>최신성</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>동기화 세 단계</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>저장 구조: 디스크와 메모리 층</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>turbopuffer와 권한 메타데이터</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>데모 시작</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>Alphabet 재무 보고서 135개</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>하이브리드 검색 데모</td></tr>
+              <tr><td><span class="ts">19:50</span></td><td>grep과 read 데모</td></tr>
+              <tr><td><span class="ts">20:50</span></td><td>채팅 데모: 현금흐름 표 요청</td></tr>
+              <tr><td><span class="ts">21:30</span></td><td>에이전트가 검색하고 다시 좁히는 과정</td></tr>
+              <tr><td><span class="ts">22:10</span></td><td>여러 파일에서 모은 결과</td></tr>
+              <tr><td><span class="ts">22:50</span></td><td>결론: 검색은 찾고, 하네스는 믿게 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'X4w2Pkz5tDY:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

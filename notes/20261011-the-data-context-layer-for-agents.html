@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>데이터 컨텍스트 층 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#bet">모델이 아니라 맥락이 병목</a></li>
+      <li><a href="#fail">에이전트가 데이터에서 넘어지는 세 곳</a></li>
+      <li><a href="#grain">그레인: 행 하나가 뜻하는 것</a></li>
+      <li><a href="#obvious">뻔한 해법 두 가지가 안 되는 이유</a></li>
+      <li><a href="#facts">어디에도 적혀 있지 않은 네 가지 사실</a></li>
+      <li><a href="#deterministic">결정론 먼저, LLM은 마지막</a></li>
+      <li><a href="#graph">왜 문서 더미가 아니라 그래프인가</a></li>
+      <li><a href="#usecases">그래프가 있으면 풀리는 세 가지 일</a></li>
+      <li><a href="#patterns">평가 결과와 다섯 가지 패턴</a></li>
+      <li><a href="#code">2부: 코드에도 똑같은 문제가 있다</a></li>
+      <li><a href="#notebook1">노트북 1: 코드 그래프와 블래스트 반경 도구</a></li>
+      <li><a href="#qa1">1차 질의응답</a></li>
+      <li><a href="#grep">에이전트는 어차피 grep을 돌린다</a></li>
+      <li><a href="#notebook2">노트북 2: 평가로 증명하기</a></li>
+      <li><a href="#qa2">2차 질의응답</a></li>
+      <li><a href="#scoreboard">스코어보드를 믿지 마라</a></li>
+      <li><a href="#beyond">파이썬, 의미의 층, 그다음</a></li>
+      <li><a href="#qa3">마지막 질의응답</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-11 · 1시간 46분 · 영어 발표 한글 정리</span>
+      <h1>에이전트에게 데이터의 뜻을 어떻게 넘겨주나</h1>
+      <p class="lead">에이전트는 SQL을 못 써서 실패하는 게 아니다. 행 하나가 무엇을 뜻하는지, 조인이 안전한지, 무엇을 바꾸면 무엇이 깨지는지 몰라서 실패한다. Typedef의 두 발표자는 이 지식을 미리 계산해 그래프로 저장하는 "데이터 컨텍스트 층"을 설명하고, 같은 방법을 코드베이스에 적용하는 실습을 진행한다. 실습의 결론은 뜻밖이다. 좋은 도구를 만들어도 에이전트는 어차피 grep을 돌린다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=KhRjivBSwiw" target="_blank" rel="noopener">The Data Context Layer for Agents</a></span>
+        <span>발표: Yoni Michael (Typedef 공동 창업자), Brandon Callender (Typedef 창립 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 알려진 이름으로 바로잡았고, 확실하지 않은 것은 "(추정)"을 붙였다. 두 발표자 모두 Typedef 소속이라 자사 제품과 라이브러리에 관한 주장은 그 점을 감안해 읽는다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>모델은 병목이 아니다.</strong> 데이터 에이전트가 틀리는 이유는 그레인, 조인 안전성, 지표의 뜻, 의존 관계라는 네 가지 사실이 어디에도 적혀 있지 않기 때문이다.</li>
+        <li>코드를 통째로 주면 세션마다 처음부터 다시 추론하고, 데이터베이스 접근을 주면 숫자는 보여도 뜻은 모른다. <strong>둘 다 시스템이 어떻게 움직이는지에 대한 지속적인 모델이 없다.</strong></li>
+        <li>해법은 <strong>결정론적으로 계산할 수 있는 것은 먼저 계산하고</strong>(SQL 파싱, 테이블 프로파일링), LLM은 이름 붙이기와 요약처럼 모호함을 푸는 데만 쓰는 것이다.</li>
+        <li>결과는 <strong>그래프</strong>에 담는다. 커밋마다 증분으로 갱신하고, 에이전트는 필요한 부분 그래프만 한 번의 순회로 꺼낸다. 발표자가 인용한 내부 평가에서는 같은 모델이 이 층을 가지면 과제 성공률이 약 35점 올랐다.</li>
+        <li>2부 실습은 같은 방법을 Qdrant 코드베이스에 적용한다. tree-sitter와 rustdoc으로 심볼과 관계를 뽑아 Neo4j에 넣고, "이걸 바꾸면 뭐가 깨지나"를 한 번에 답하는 도구를 만든다.</li>
+        <li>그런데 <strong>에이전트는 그 도구 대신 grep을 돌렸다.</strong> 사후 학습으로 굳은 반사 신경 때문이다. 도구 이름을 <code>search</code>로 바꾸고 결과를 ripgrep 형식으로 돌려주는 식으로 결에 맞춰야 한다.</li>
+        <li>한 번 맞히는 비율은 grep과 비슷했지만, <strong>다섯 번 모두 맞히는 비율은 그래프 쪽이 두 배</strong>였고 토큰은 3.1배 적게 썼다. 프롬프트를 바꾸자 도구 사용률은 34%에서 72%로 올랐다.</li>
+        <li>교훈: 도구를 만드는 건 하루면 된다. 어려운 건 <strong>에이전트가 실제로 쓰게 만들고, 그걸 평가로 증명하고, 트레이스를 직접 읽는 일</strong>이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="bet">
+        <header><span class="num">01</span><h2>모델이 아니라 맥락이 병목 <span class="ts">01:50</span></h2></header>
+        <p>Yoni Michael은 Typedef를 "데이터 에이전트를 위한 신뢰 층"을 만드는 회사로 소개한다. 지난 2년 동안 업계는 코딩 에이전트의 맥락 공학<span class="en">context engineering</span>에 집중했다. 저장소를 어떻게 지도화하고, 무엇을 꺼내 보여 주고, 어떤 도구를 쥐여 줄지를 다듬었다.</p>
+        <p>발표자는 같은 일이 데이터를 만지는 에이전트에게도 필요하다고 본다. 차이는 틀렸을 때의 비용이다. 데이터 에이전트가 자신 있게 틀리면 그 숫자는 이사회 자료에 올라가거나, 모델의 특성값이 되거나, 조용히 실패하는 파이프라인이 된다.</p>
+        <div class="callout">
+          <span class="title">Typedef가 거는 내기</span>
+          <span>에이전트는 데이터 시스템의 핵심 운영자가 된다. 그러려면 읽기와 쓰기를 안전하고 정확하게 하고, 그 결과를 대규모로 믿을 수 있어야 한다. 그것은 에이전트에게 <strong>시스템을 끝에서 끝까지 이해하는 추론 층</strong>을 줄 때만 가능하다. 시스템을 직접 만든 데이터 팀이 추론하듯이 말이다.</span>
+        </div>
+        <p class="note">발표자는 Typedef 공동 창업자다. "모델이 아니라 맥락이 병목"이라는 주장은 회사의 제품 방향과 같은 말이므로 그 점을 감안해 읽는다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="fail">
+        <header><span class="num">02</span><h2>에이전트가 데이터에서 넘어지는 세 곳 <span class="ts">03:50</span></h2></header>
+        <p>발표자가 1년 반 동안 관찰한 바로는, 오늘의 코딩 에이전트는 데이터 작업에서 세 가지를 못 한다. 모두 데이터 팀의 일상 업무다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>과제</th><th>질문</th></tr></thead>
+            <tbody>
+              <tr><td>영향 분석 <span class="en">impact analysis</span></td><td>이걸 바꾸면 무엇이 깨지나?</td></tr>
+              <tr><td>조인 추천 <span class="en">join recommendation</span></td><td>이 조인은 우리 데이터에서 안전한가?</td></tr>
+              <tr><td>안전한 코드 변경</td><td>이 수정 뒤에도 지표의 뜻이 그대로인가?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>에이전트가 이 셋을 믿을 만하게 못 하면 쓰기 권한은커녕 읽기 권한을 주기도 어렵다. 그러면 질문에 답만 하는 에이전트에 머문다.</p>
+        <h3>맥락은 흩어져 있다 <span class="ts">05:00</span></h3>
+        <ul class="plain">
+          <li><strong>웨어하우스</strong>: 실제 행과 값</li>
+          <li><strong>변환 코드</strong>: 비즈니스 로직</li>
+          <li><strong>BI 도구</strong>: 지표, 차원, 일부 비즈니스 정의</li>
+          <li><strong>문서, Slack 스레드, 사람 머릿속</strong>: 암묵지</li>
+        </ul>
+        <p>에이전트에게 필요한 것은 이 모든 것의 사이에 있다. 모델이 무엇을 뜻하는지, 다른 모델과 어떻게 이어지는지, 바꾸면 무엇이 깨지는지, 어떤 작업이 안전한지다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="grain">
+        <header><span class="num">03</span><h2>그레인: 행 하나가 뜻하는 것 <span class="ts">06:00</span></h2></header>
+        <p>그레인<span class="en">grain</span>은 테이블의 행 하나가 무엇을 나타내는지다. 그레인이 "고객 × 월"인데 실수로 "고객 × 주"가 되면, SQL은 멀쩡히 컴파일되고 실행도 잘 되지만 그 아래의 모든 합계가 틀어진다.</p>
+        <div class="callout warn">
+          <span class="title">예: 하룻밤 사이 행 수가 40% 뛰었다 <span class="ts">06:40</span></span>
+          <span>에이전트는 유효한 SQL을 쓰고, 실행하고, 예쁜 차트까지 그린다. 그리고 "데이터가 더 들어온 것 같다"고 보고한다. 실제 원인은 상류의 어떤 컬럼이 일대일 조인을 일대다 조인으로 바꿔 놓은 것이다. 그레인이 바뀐 것이다. 에이전트는 진짜 데이터 급증과 그레인 변화를 구분할 수 없다. <strong>그레인은 데이터 자체에 들어 있지 않기 때문이다.</strong></span>
+        </div>
+        <p>에이전트는 쿼리를 돌리고, 샘플 행을 보고, SQL을 아주 잘 읽을 수 있다. 하지만 행 하나가 원래 무엇을 뜻했어야 하는지, 그리고 지금은 그 뜻이 완전히 달라졌다는 것을 모른다. 유효한 SQL만으로는 부족하다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="obvious">
+        <header><span class="num">04</span><h2>뻔한 해법 두 가지가 안 되는 이유 <span class="ts">07:50</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">해법 A · 코드를 준다</span>
+            <p>dbt 프로젝트나 Airflow 프로젝트를 통째로 에이전트에게 준다.</p>
+            <ul>
+              <li>프롬프트마다 맥락을 처음부터 다시 추론한다</li>
+              <li>결과가 확률적이다</li>
+              <li>컨텍스트 창 크기에 묶인다</li>
+              <li>새 세션마다 쌓아 둔 이해가 사라진다</li>
+            </ul>
+            <p class="verdict"><b>코드는 읽지만</b> 기억이 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">해법 B · 데이터베이스 접근을 준다</span>
+            <p>Snowflake나 Databricks MCP를 연결한다.</p>
+            <ul>
+              <li>행을 보고 샘플링할 수 있다</li>
+              <li>하지만 행 하나가 무엇을 뜻하는지는 모른다</li>
+              <li>숫자는 읽어도 설명은 못 한다</li>
+            </ul>
+            <p class="verdict"><b>데이터는 보지만</b> 뜻을 모른다.</p>
+          </div>
+        </div>
+        <p>둘 다 <strong>시스템이 실제로 어떻게 움직이는지에 대한 지속적인 모델</strong>이 없다. 그 모델을 만드는 것이 Typedef가 잡은 과제다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="facts">
+        <header><span class="num">05</span><h2>어디에도 적혀 있지 않은 네 가지 사실 <span class="ts">09:10</span></h2></header>
+        <p>답이 맞는지를 결정하는 사실이 네 가지 있다. 에이전트가 읽거나 추론할 수 있는 곳에는 아무것도 적혀 있지 않다.</p>
+        <ol class="plain">
+          <li><strong>행 하나가 무엇을 나타내나</strong> (그레인)</li>
+          <li><strong>이 조인은 안전한가</strong></li>
+          <li><strong>이 지표는 실제로 무슨 뜻인가</strong></li>
+          <li><strong>무엇이 무엇과 이어지나</strong> (의존 관계)</li>
+        </ol>
+        <p>목표는 이 넷을 <strong>계산 가능하고 질의 가능하게</strong> 만드는 것이다. 그러면 에이전트는 필요한 때에 필요한 맥락만 꺼내 쓰고, 세션마다 다시 만들 필요가 없다.</p>
+
+        <h3>사실 2: 같은 조인 문법, 네 가지 결과 <span class="ts">10:10</span></h3>
+        <p>문법만 봐서는 안 되는 가장 깨끗한 예다. 똑같이 생긴 등가 조인<span class="en">equi-join</span> 하나가 아래 데이터에 따라 전혀 다른 결과를 낸다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>문법</th><th>가능한 결과</th></tr></thead>
+            <tbody>
+              <tr><td>등가 조인</td><td>행을 그대로 보존 / 차원 값을 찾아 붙임 / 일대다 관계라서 모든 행을 조용히 복제</td></tr>
+              <tr><td>BETWEEN 조인</td><td>안전한 시점 기준 조회<span class="en">as-of lookup</span> / 그레인을 폭발시키는 날짜 축<span class="en">date spine</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>에이전트는 문법은 보지만 어느 경우인지는 알 수 없다. 발표자는 이것을 모델의 능력 문제가 아니라 <strong>맥락 문제</strong>라고 못 박는다.</p>
+
+        <h3>사실 4: 어떤 모델이 어느 도메인에 속하나 <span class="ts">11:10</span></h3>
+        <p>어떤 모델이 매출 도메인이고 어떤 모델이 제품 도메인인지는 대개 폴더 이름과 암묵지로 관리된다. 하지만 데이터의 구조에서 찾아낼 수 있다. 테이블 수준과 컬럼 수준의 계보<span class="en">lineage</span>, 공유 키, 비슷한 이름을 보면 시스템이 모델을 도메인으로 자동 묶는다. 그러면 "RevOps 팀의 매출 도메인에 어떤 모델이 있나"가 사람에게 되묻는 질문이 아니라 <strong>에이전트가 실행하는 쿼리</strong>가 된다.</p>
+        <blockquote>맥락 공학의 원리는 늘 같다. 누군가의 머릿속이나 어딘가의 문서에 있는 암묵지를 가져다 계산하고, 에이전트가 질의할 수 있게 만든다.<cite>Yoni Michael의 말을 옮김, 12:20</cite></blockquote>
+      </section>
+
+      <!-- 6 -->
+      <section id="deterministic">
+        <header><span class="num">06</span><h2>결정론 먼저, LLM은 마지막 <span class="ts">12:40</span></h2></header>
+        <p>이 사실들을 어떻게 만들어 내나. 핵심 원칙은 <strong>가능한 한 결정론적으로 먼저 하고, LLM은 모호함을 풀거나 모델이 정말 잘하는 일에만 쓴다</strong>는 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>방법</th><th>얻는 것</th></tr></thead>
+            <tbody>
+              <tr><td>1. 코드에서 계산</td><td>모든 변환 로직을 추상 구문 트리<span class="en">AST</span>까지 파싱한다. 그레인은 관계 대수로 단계마다 계산한다</td><td>그레인, 계보. 구현에서 직접 뽑았으니 에이전트가 구현과 어긋날 수 없다</td></tr>
+              <tr><td>2. 데이터로 검증</td><td>웨어하우스의 테이블을 프로파일링한다</td><td>조인 키가 정말 고유한가. 에이전트가 카디널리티를 추측하지 않아도 된다</td></tr>
+              <tr><td>3. LLM</td><td>사람이 읽는 부분을 맡긴다</td><td>비즈니스 이름, 모델의 용도 요약, 앞 두 층에서 남은 모호함 해결</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 분리가 중요한 이유는 핵심 사실이 실제 구현과 실제 데이터에 묶여 있게 하기 때문이다. LLM은 이미 계산되고 검증된 자산에 이름을 붙이는 역할만 한다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="graph">
+        <header><span class="num">07</span><h2>왜 문서 더미가 아니라 그래프인가 <span class="ts">14:20</span></h2></header>
+        <p>이 모든 것이 사는 곳이 데이터 컨텍스트 층이다. 실체는 그래프다. 한 번 계산하고, 커밋마다 원자적으로 갱신한다. 데이터 팀이 커밋을 쌓을수록 그래프도 증분으로 바뀌어 늘 운영 데이터의 최신 상태를 나타낸다.</p>
+        <p>마크다운 파일 묶음이 아니라 그래프인 이유는 <strong>접근 방식</strong> 때문이다. 에이전트는 필요한 부분 그래프를 한 번의 순회로 꺼낸다. 프롬프트에 모든 것을 밀어 넣는 일을 피할 수 있고, 모델이 500개를 넘어도 프로젝트 전체를 다시 읽지 않는다.</p>
+        <p>발표자는 AI 이전에는 그래프 데이터베이스의 쓸모를 의심했다고 털어놓는다. 그런데 모델은 Cypher 같은 그래프 쿼리를 쓰고 순회하는 데 아주 능하고, 데이터 자산은 본질적으로 의존 관계로 엮여 있어 노드와 간선으로 만들기 좋았다.</p>
+        <div class="callout">
+          <span class="title">부분 그래프의 모양 <span class="ts">16:40</span></span>
+          <span>노드는 데이터 자산의 종류별로 있다. 예를 들어 시맨틱 뷰 노드와, 그 논리 코드가 실제로 만들어 낸 물리 테이블 노드가 따로 있다. 간선은 출처<span class="en">provenance</span>를 담는다. "~로 구체화된다", "~라는 시맨틱 정의를 가진다" 같은 관계 종류가 붙는다.</span>
+        </div>
+        <p class="note">이 대목에서 슬라이드가 어두워 청중이 그림을 보지 못했다. 발표자는 자료를 나중에 공유하겠다고 했다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="usecases">
+        <header><span class="num">08</span><h2>그래프가 있으면 풀리는 세 가지 일 <span class="ts">17:30</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">영향 분석 <span class="ts">17:30</span></span>
+            <p>에이전트가 어떤 모델의 그레인을 바꾸자고 제안한다. SQL을 한 줄 쓰기 전에 그래프를 하류로 걸어 내려가며 각 의존 노드에게 묻는다. "이 변경이 네 그레인을 깨뜨리나?"</p>
+            <ul>
+              <li>월 단위 ARR 측정값이 주 단위 행마다 반복되어 약 4배로 부풀 것을 잡아낸다</li>
+              <li>그래프가 소스 시스템부터 BI 대시보드까지 포함하므로 이사회 대시보드까지 영향을 추적한다</li>
+            </ul>
+            <p class="verdict"><b>사전 점검</b>이다. 빌드 때도, 장애 때도 아니라 행동하기 전에 피해 범위<span class="en">blast radius</span>를 안다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">조인 추천 <span class="ts">19:00</span></span>
+            <p>ARR을 마케팅 채널별로 나누고 싶다. 에이전트는 컬럼 이름이 비슷하다고 경로를 고르지 않는다. 각 조인 키가 정말 고유한지 프로파일링 결과로 확인한다.</p>
+            <ul>
+              <li>안전한 조인 경로를 추천한다</li>
+              <li>행이 7배로 불어나는 경로, 하류 행의 12%를 조용히 떨어뜨리는 경로는 경고한다</li>
+            </ul>
+            <p class="verdict">추천에 <b>근거와 증거</b>가 붙고, 그 근거는 데이터 자체에 있다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">안전한 코드 변경 <span class="ts">19:50</span></span>
+            <p>비즈니스 정의는 대개 SQL 안에 숨어 있다. 지표를 "정리"해 달라고 하면 에이전트가 조건절 하나를 지운다. 문법상 멀쩡하고 컴파일도 된다.</p>
+            <ul>
+              <li>그 조건절이 "유료"의 정의였다</li>
+              <li>지표가 체험 고객 이탈까지 포함하도록 조용히 재정의되고, 대시보드 세 개에 번진다</li>
+            </ul>
+            <p class="verdict">정의를 YAML 주석이 아니라 <b>1급 제약</b>으로 다뤄야 문법적 리팩터링과 사람이 믿을 수 있는 변경을 가를 수 있다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="patterns">
+        <header><span class="num">09</span><h2>평가 결과와 다섯 가지 패턴 <span class="ts">21:00</span></h2></header>
+        <h3>정말 되나? 평가 주도 개발</h3>
+        <p>에이전트를 만들면 반드시 측정해야 한다. Typedef는 실제 운영에서 나올 법한 데이터 엔지니어링 과제를 쉬운 것부터 아주 어려운 것까지 모아 두고, 각 과제를 여러 번, 격리된 데이터 환경 복제본에서 돌린다. 환경 사이에 정보가 새지 않게 하기 위해서다. 채점은 출력에 대한 통과/실패와, 영향 분석 같은 항목에 대한 LLM 심판으로 한다.</p>
+        <div class="callout">
+          <span class="title">발표자가 인용한 결과</span>
+          <span>같은 모델, 같은 과제에서 바뀌는 변수는 데이터 컨텍스트 층에 접근할 수 있는지뿐이다. 접근할 수 있을 때 과제 성공률이 <strong>약 35점</strong> 높았다. 발표자는 모델을 바꾸거나 범용 MCP 도구를 더하는 것보다 풍부한 맥락이 결과를 훨씬 크게 바꾼다고 말한다.</span>
+        </div>
+        <p class="note">기준선 수치는 말하지 않았다. 자사 벤치마크이고 계속 바뀌는 중이라고 발표자 스스로 밝혔다. 비교할 절대값이 없어 차트는 그리지 않았다.</p>
+
+        <h3>다섯 가지 패턴 <span class="ts">22:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>패턴</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>1. 가능하면 결정론</td><td>dbt 프로젝트나 Airflow 로직을 통째로 모델에 던지지 않는다. AST까지 파싱해 구조와 의존 관계를 파악하고 그레인을 계산한다. 모델은 요약과 분류에 쓴다</td></tr>
+              <tr><td>2. 결론이 아니라 증거를 저장</td><td>신호만 저장하고 추론은 에이전트에게 맡긴다. 모델은 질의 시점에 충분히 잘 추론한다</td></tr>
+              <tr><td>3. 순회가 밀어 넣기를 이긴다</td><td>저장소 전체를 실행 시점에 덤프하지 않는다. 필요한 부분 그래프만 꺼내게 하면 맥락이 작아져 더 효율적이다</td></tr>
+              <tr><td>4. 도구 표면을 직접 소유</td><td>엄선된 타입 있는 도구 세트가 기성 MCP 뷔페를 이긴다. Snowflake, Databricks MCP도 상당 부분 다시 썼다</td></tr>
+              <tr><td>5. 평가는 일찍, 자주</td><td>측정할 수 없으면 배울 수 없다. 평가 기반은 계속 살아 움직이는 소프트웨어다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>에이전트는 SQL을 읽고 쓸 줄 몰라서 실패하지 않는다. 데이터가 무엇을 뜻하는지, 어떻게 흐르는지, 바꾸면 무엇이 깨지는지 몰라서 실패한다.<cite>Yoni Michael의 말을 옮김, 25:20</cite></blockquote>
+      </section>
+
+      <!-- 10 -->
+      <section id="code">
+        <header><span class="num">10</span><h2>2부: 코드에도 똑같은 문제가 있다 <span class="ts">27:00</span></h2></header>
+        <p>Brandon Callender가 실습을 이어받는다. 90분 동안 실제 코드베이스인 Qdrant 위에 코딩 에이전트용 컨텍스트 층을 만든다. 그리고 마지막에 보여 줄 것은, 멋진 도구를 만들어도 도와주지 않으면 <strong>에이전트가 대부분 무시한다</strong>는 사실이다.</p>
+        <p class="note">실습 자료는 발표자의 GitHub 저장소에 Jupyter 노트북으로 있다. Neo4j는 Docker로 띄우고, LLM 부분은 OpenRouter 키가 있으면 라이브로, 없으면 오프라인 결과로 따라갈 수 있다.</p>
+
+        <h3>모든 코딩 에이전트의 출발점: 텍스트 검색 <span class="ts">29:00</span></h3>
+        <p>Qdrant에 실제로 있는 <code>PostingList</code> 구조체를 묻는다. 에이전트는 ripgrep을 돌린다. 정확히 일치하는 결과가 둘이고, <code>PostingListView</code>, <code>PostingListIterator</code> 같은 비슷한 이름이 열 개 넘게 더 나온다. 에이전트는 그중 하나를 고른다. 맞을 수도 틀릴 수도 있다. 틀리면 되돌아와 다음 것을 읽는다.</p>
+        <p>텍스트에는 정체성이 없다. 어떤 메서드가 쓰는지, 어디서 쓰이는지, 어느 크레이트에 있는지는 글자가 아니라 <strong>코드의 구조</strong>에 있다.</p>
+        <div class="callout">
+          <span class="title">실행마다 다시 뒤지는 것의 문제 <span class="ts">30:10</span></span>
+          <span>비싸다. 같은 질문을 다섯 번 하면 같은 파일을 다섯 번 읽는다. 더 중요하게는 <strong>깨지기 쉽다</strong>. 다음에는 파일을 다른 순서로 읽을 수 있고, 엉뚱한 파일을 먼저 읽어 헛걸음할 수 있다. 발표자가 말하는 진짜 목표는 더 맞히거나 더 빠른 것이 아니라 <strong>더 결정론적인 것</strong>이다. 비결정적인 시스템에 결정론을 최대한 심는 일이다.</span>
+        </div>
+
+        <h3>맥락의 세 수준 <span class="ts">32:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>수준</th><th>무엇</th><th>한계</th></tr></thead>
+            <tbody>
+              <tr><td>1단계</td><td>grep, glob. 구조 없는 원시 문자열</td><td>정체성이 없다</td></tr>
+              <tr><td>2단계</td><td>코드 RAG. 임베딩과 어휘 검색으로 순위를 매긴 결과</td><td>더 관련 있는 결과를 주지만 여전히 평평한 목록이다. 관계를 보여 주지 않는다</td></tr>
+              <tr><td>3단계</td><td>순회할 수 있는 그래프. 실제 정체성을 가진 심볼과 타입 있는 간선</td><td>이번 실습의 목표</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 "맥락의 세 수준" 슬라이드를 만들었는데 다음 날 다른 발표자가 "네 수준"을 발표한다며 웃었다.</p>
+
+        <h3>올라갈 디딤돌 <span class="ts">34:10</span></h3>
+        <ul class="plain">
+          <li><strong>디딤돌 0 · 구문</strong>: 언어에 상관없이 쓰는 tree-sitter로 AST를 얻는다. 하지만 이름 충돌을 못 다룬다. 두 파일의 <code>PostingList</code>는 여기서 여전히 겹친다.</li>
+          <li><strong>디딤돌 1 · 해석<span class="en">resolution</span></strong>: grep이 못 하는 유일한 것이다. 모호한 두 이름을 구별되는 두 타입으로 바꾼다. Rust에서는 컴파일러가 이 일을 해 주고, rustdoc JSON에서 그대로 꺼낼 수 있다. 발표자는 이것을 "반칙"이라 인정하고, 그래서 일부러 Rust를 골랐다고 말한다.</li>
+          <li><strong>디딤돌 2 · 의미</strong>: 앞 둘은 완전히 결정론적이다. 이 층에서 LLM이 분류하고 요약한다.</li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section id="notebook1">
+        <header><span class="num">11</span><h2>노트북 1: 코드 그래프와 블래스트 반경 도구 <span class="ts">37:20</span></h2></header>
+        <p>Qdrant 전체는 너무 커서 크레이트 다섯 개만 색인한다. tree-sitter로 심볼을 뽑는 함수와 rustdoc에서 해석된 심볼을 뽑는 함수가 준비되어 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>한 일</th><th>확인한 것</th></tr></thead>
+            <tbody>
+              <tr><td>디딤돌 0 vs 1 <span class="ts">39:40</span></td><td><code>PostingList</code>를 두 방식으로 조회</td><td>디딤돌 0은 재수출된 심볼의 원래 위치를 모른다. 디딤돌 1은 정식 경로와 파일, 줄 번호를 준다. 크레이트 밖으로 재수출된 이름을 원래 크레이트로 되짚을 수 있다</td></tr>
+              <tr><td>2단계 색인 <span class="ts">40:20</span></td><td>모든 심볼에 전문 검색을 건다</td><td>재수출인지 구조체인지는 보이지만 그 사이의 연결은 안 보인다. 에이전트가 매번 추론으로 메워야 하고, 한 번 틀리면 엉뚱한 길로 간다</td></tr>
+              <tr><td>그래프 적재 <span class="ts">41:20</span></td><td>심볼과 관계를 노드와 간선으로 바꿔 Neo4j에 넣는다</td><td>Neo4j 화면에서 코드베이스의 참조 관계가 그래프로 보인다</td></tr>
+              <tr><td>블래스트 반경 도구 <span class="ts">42:00</span></td><td>정식 이름을 받아 간선을 따라 내려가며 의존하는 것을 모은다</td><td>여러 파일을 여러 번 grep해야 알 수 있는 답을 한 번에 낸다. 첫 시연은 실패했다가 다시 돌려 성공했다</td></tr>
+              <tr><td>충돌 해결 <span class="ts">43:30</span></td><td>두 <code>PostingList</code>에 각각 블래스트 반경을 묻는다</td><td>결과가 다르다. 이름이 같아도 정식 해석이 다르니 무엇이 깨질지 더 분명히 말할 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>작은 에이전트 붙이기 <span class="ts">44:10</span></h3>
+        <p>Pydantic AI로 만든 단순한 에이전트에 블래스트 반경, 구현체, 메서드 조회 도구를 준다. 도구 안은 간단한 Cypher 쿼리다. 발표자는 여기서 기준 하나를 말한다. <strong>하고 싶은 일을 말로 표현할 수 있을 때 그것이 바로 Cypher로 써진다면, 올바른 스키마를 만든 것이다.</strong></p>
+        <p>"PostingList를 바꾸면 뭐가 깨지나, 의존 심볼마다 파일과 줄을 알려 달라"고 묻자 에이전트는 검색을 두어 번 하고 블래스트 반경을 두 번 불러 답했다. 도구 사용에 능한 에이전트라면 새 도구로 이해를 쌓아 간다.</p>
+        <p>이어서 임의의 Cypher를 실행하는 도구를 보여 준다. 시스템 프롬프트에 그래프 스키마를 넣으면 "트레이트를 구현하는 모든 구조체를 그 트레이트와 함께 보여 줘" 같은 자연어 요청에서 에이전트가 직접 Cypher를 만들어 실행한다. 새 도구를 만들 때 Cypher를 몰라도 된다는 뜻이다.</p>
+
+        <h3>디딤돌 2 맛보기: fenic <span class="ts">47:10</span></h3>
+        <p>Typedef의 오픈소스 라이브러리 fenic은 데이터프레임 연산과 LLM 호출을 합친 것이다. 심볼의 종류, 정식 이름, 문서 문자열을 넣고 "이 Rust 항목은 무엇을 위한 것인가, 한 문장으로"를 묻는다. 결과를 그래프에 넣어 두면 에이전트가 쓸 수 있다.</p>
+        <div class="callout">
+          <span class="title">왜 미리 만들어 두나</span>
+          <span><strong>감사할 수 있기 때문이다.</strong> 미리 만든 설명이 틀리면 보고 고칠 수 있다. 에이전트가 실행 중에 함수의 역할을 즉석에서 추론하고 그게 틀리면, 한참 뒤 동작하지 않는 코드가 나올 때까지 아무도 모른다.</span>
+        </div>
+        <p class="note">fenic은 발표자들의 회사 Typedef가 만든 라이브러리다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="qa1">
+        <header><span class="num">12</span><h2>1차 질의응답 <span class="ts">48:50</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>Brandon Callender의 답</th></tr></thead>
+            <tbody>
+              <tr><td>그래프는 PR이나 CI 때마다 다시 만드나? <span class="ts">49:10</span></td><td>이상적으로는 main 기준의 정본을 캐시해 두고, 로컬에서 고치는 동안은 로컬 사본을 증분으로 갱신한다. 매번 처음부터 만들지 않는다.</td></tr>
+              <tr><td>구조를 최신으로 유지하는 비용이 성능 이득보다 클 수 있지 않나? <span class="ts">49:50</span></td><td>바뀌지 않은 것은 다시 색인할 필요가 없다. 큰 변경이라도 안 바뀐 파일이 더 많다. 증분 재색인을 잘하면 이득이 비용보다 크고, 색인할 맥락이 커질수록 매번 라이브로 뒤지는 비용이 더 커져 그래프가 더 유리해진다.</td></tr>
+              <tr><td>동적 디스패치가 있는 지저분한 언어에서는? <span class="ts">51:20</span></td><td>세 번째 노트북이 Python을 다룬다. tree-sitter에 griffe로 정적 해석을 더하고, 타입 검사기 ty(추정)로 타입 정보를 얻는다. 언어가 바뀌면 기하급수적으로 어려워진다. 그래서 오늘은 일부러 쉬운 문제를 골랐다.</td></tr>
+              <tr><td>이걸 직접 만들어야 하나? <span class="ts">52:50</span></td><td>"만들지 마라." 교육용 예제다. 코드 그래프를 제품으로 만드는 곳은 이미 많다. 에이전트와 도구와 컨텍스트 그래프를 배우는 목적이라면 만들 가치가 있다.</td></tr>
+              <tr><td>데이터 컨텍스트 층의 벤치마크는? <span class="ts">53:50</span></td><td>작은 예제에서 100%를 맞혀 봐야 의미가 없다. 그래서 Mattermost가 공개한 dbt 프로젝트(모델 300~350개)를 가져다 데이터를 시뮬레이션하고, 무언가를 깨뜨린 뒤 고치게 하거나 새것을 만들게 하는 시나리오로 정확성, 완전성, 효율성을 평가했다. 맥락이 있을 때 Claude Code 단독보다 나았다.</td></tr>
+              <tr><td>추론 시점에도 도움이 되나? <span class="ts">56:00</span></td><td>그때가 가장 가치가 크다. 에이전트가 실행 중에 도구로 그래프를 질의하면 모든 것을 다시 추론하지 않아도 된다.</td></tr>
+              <tr><td>BIRD, Spider 같은 자연어-SQL 벤치마크는? <span class="ts">56:20</span></td><td>해 보긴 했다. 하지만 제품의 목표는 분석 SQL을 더 잘 쓰는 것이 아니라 데이터 엔지니어링이다. 텍스트-SQL을 만드는 것보다 <strong>텍스트-SQL을 믿을 수 있게 만드는 도구</strong>가 더 중요하다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="grep">
+        <header><span class="num">13</span><h2>에이전트는 어차피 grep을 돌린다 <span class="ts">57:40</span></h2></header>
+        <p>그래프 덕분에 두 <code>PostingList</code>를 구별하고, 어떤 심볼의 의존 관계를 한 번의 홉으로 다시 grep하지 않고 얻는다. 완벽한 grep 한 번으로는 할 수 없는 일이다. 발표자는 농담한다. "끝났습니다, 좋은 워크숍이었어요." 물론 끝이 아니다.</p>
+        <div class="callout warn">
+          <span class="title">실제로 벌어진 일 <span class="ts">58:30</span></span>
+          <span>이 도구를 에이전트가 이미 가진 도구들 옆에 놓아 주었다. 미리 계산된, 순회할 수 있는 코드베이스 모델이다. 에이전트는 <strong>그냥 grep을 돌렸다.</strong> glob하고, 파일을 읽고, grep했다. 가끔 그래프를 찔러 보고 혼란스러워하다가 다시 grep으로 돌아갔다.</span>
+        </div>
+        <p>아무도 이 부분을 말해 주지 않는다. 멋진 도구를 만들었다는 이야기는 많지만, 에이전트가 실제로 써야 한다. 그래프 컨텍스트는 오후 한나절이면 만든다. 어려운 것은 <strong>에이전트가 쓰게 만드는 일</strong>이고, 그 뒤의 프롬프트 공학과 평가가 진짜 일이다.</p>
+
+        <h3>왜 그러나 <span class="ts">59:30</span></h3>
+        <p>사후 학습<span class="en">post-training</span> 때문이다. 모델은 이런 도구를 부르도록 훈련되었고, 훈련 데이터에는 "grep하고 읽어라"가 정답인 상황이 무수히 많다. 더 좋은 도구를 만든다고 이길 수 없다. 에이전트의 근육 기억이 쓰게 두지 않는다. 사람도 똑같다. 더 좋은 도구를 억지로 쓰게 하면 싫어한다. 도구의 장점으로 경쟁하는 게 아니라 <strong>모델 자신의 반사 신경과 싸우는 것</strong>이다.</p>
+
+        <h3>어떻게 하나: 싸우지 말고 결에 맞춘다 <span class="ts">1:00:30</span></h3>
+        <div class="shift" aria-label="도구 설계의 이동">
+          <div><span class="tag">하던 방식</span><b>더 좋은 도구를 만들고 쓰라고 지시한다</b><span class="muted">query_graph 같은 이름, 그래프 고유의 응답 형식</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 방식</span><b>그래프가 grep처럼 느껴지게 만든다</b><span class="muted">이름은 search, 응답은 ripgrep 형식, 첫 호출부터 쓸모 있는 결과</span></div>
+        </div>
+        <ul class="plain">
+          <li><strong>이름을 <code>search</code>로 짓는다.</strong> 그러면 에이전트는 훈련 없이도 거의 항상 여러 키워드로 검색한다. 그 쿼리 방식에 맞춰 도구를 조정한다.</li>
+          <li><strong>결과를 ripgrep과 같은 구조로 돌려준다.</strong> 모델이 훈련받은 형식이라 다룰 줄 안다. 프롬프트만으로 모델 자체를 바꿀 수는 없다.</li>
+          <li><strong>첫 호출에서 반드시 보상을 준다.</strong> 검색 결과가 비면 에이전트는 "search가 고장났나" 하고 다른 도구로 가 버리고 다시 오지 않는다.</li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="notebook2">
+        <header><span class="num">14</span><h2>노트북 2: 평가로 증명하기 <span class="ts">1:02:10</span></h2></header>
+        <p>두 번째 노트북은 평가<span class="en">eval</span>에 집중한다. 에이전트가 의도대로 하는지, 새 도구가 기존 도구보다 나은지를 어떻게 보이나. 결과는 미리 계산해 두었다. 발표자가 밤새 질문 30개를 다섯 번씩 돌린 것이다.</p>
+
+        <h3>실험 설계 <span class="ts">1:03:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>그래프 에이전트</td><td>같은 모델 + 그래프 도구</td></tr>
+              <tr><td>대조 에이전트</td><td>같은 모델 + Pydantic이 관리하는 파일 시스템 탐색 도구</td></tr>
+              <tr><td>질문</td><td>실제 과제. "PostingList를 바꾸면 어떤 공개 타입이 깨지나", "PostingList가 둘인데 어느 것을 쓰나". 그래프에 유리한 것, grep에 유리한 것, 둘 다 되는 대조 질문을 섞었다</td></tr>
+              <tr><td>정답 데이터</td><td>그래프에서 뽑되 소스 코드와 교차 확인했다. 그래프 출력으로 정답을 오염시켜 "정답이 반칙"하지 않게 하기 위해서다</td></tr>
+              <tr><td>채점</td><td>기대하는 근거를 모두 인용했는지 결정론적으로 확인한다. Pydantic Evals로 데이터셋, 케이스, 평가기를 구성했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">좋은 평가 질문 <span class="ts">1:04:20</span></span>
+          <span>결정론적으로 채점할 수 있어야 한다. LLM 심판은 유용하지만 남용된다. 결정론적 채점은 실행 간 분산을 줄이고 비용을 줄인다. 에이전트의 의견을 받아 다른 에이전트의 의견으로 반박하는 식의 질문은 평가로 잘 되지 않는다.</span>
+        </div>
+
+        <h3>결과: 한 번이 아니라 매번 <span class="ts">1:06:30</span></h3>
+        <p>처음에 과제마다 한 번씩 돌렸을 때 그래프 에이전트는 아주 조금 앞섰지만 일관되지 않았다. 발표자는 여기서 목표를 다시 말한다. grep보다 더 맞히는 것이 목표였던 적은 없다. grep은 원래 잘한다. 중요한 것은 <strong>5번, 10번, 20번 연속으로 매번 맞히는가</strong>다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>뜻</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>pass@k</td><td>다섯 번 중 한 번이라도 맞혔나</td><td>둘이 비슷하다. 그래프가 조금 앞선다. 그래프는 공개 심볼만 색인해 대조 질문 일부는 늘 유리하다</td></tr>
+              <tr><td>pass^k</td><td>다섯 번 모두 맞혔나</td><td>숫자가 뒤집힌다. 그래프 에이전트가 <strong>두 배</strong> 더 자주 다섯 번 모두 맞혔다</td></tr>
+              <tr><td>토큰</td><td>실행 전체 평균</td><td>그래프 쪽이 <strong>3.1배</strong> 적게 썼다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <figure class="chart" aria-label="같은 과제에 쓴 토큰 비율: grep 에이전트 3.1, 그래프 에이전트 1">
+          <span class="chart-title">같은 과제에 쓴 토큰 (그래프 에이전트 = 1)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>grep 에이전트</span><span class="val">3.1</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="grep 에이전트: 3.1배"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>그래프 에이전트</span><span class="val">1.0</span></div>
+              <div class="track"><div class="fill key" style="width:32.3%" title="그래프 에이전트: 1"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>3.1</span></div>
+          <span class="caption">발표자가 말한 "평균 3.1배 적게"를 비율로 그렸다. 절대 토큰 수는 공개하지 않았다.</span>
+        </figure>
+
+        <h3>채택률을 재야 끝난다 <span class="ts">1:08:30</span></h3>
+        <p>마지막 질문은 "어떻게 에이전트가 그래프를 쓰게 하나"다. 답은 평가다. 트레이스의 도구 호출을 전부 보고 원하는 도구를 얼마나 자주 쓰는지 세는 평가를 쓴다. 그래야 "도구 사용 지시가 없는 프롬프트는 34%, 프롬프트를 바꾸니 72%"라고 말할 수 있다.</p>
+        <figure class="chart" aria-label="그래프 도구 사용률: 지시 없는 프롬프트 34%, 바꾼 프롬프트 72%">
+          <span class="chart-title">그래프 도구 사용률 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>도구 지시가 없는 프롬프트</span><span class="val">34</span></div>
+              <div class="track"><div class="fill" style="width:34%" title="지시 없음: 34%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>바꾼 프롬프트</span><span class="val">72</span></div>
+              <div class="track"><div class="fill key" style="width:72%" title="바꾼 프롬프트: 72%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자가 예로 든 수치다. 같은 도구, 같은 질문에서 프롬프트만 바꿨다.</span>
+        </figure>
+        <p>같은 질문, 같은 도구에 프롬프트 두 개를 비교하는 시연도 있다. 순진한 프롬프트는 그냥 grep한다. 살짝 밀어 주면 search를 돌리고 심볼 조회로 답을 찾는다.</p>
+
+        <h3>정직한 평가의 레시피 <span class="ts">1:09:30</span></h3>
+        <ol class="plain">
+          <li>실제 코퍼스에서 과제 후보를 캔다</li>
+          <li>최대한 결정론적이고 근거에 묶인 채점기를 만든다</li>
+          <li><strong>채점기부터 단위 테스트한다</strong></li>
+          <li>여러 번 돌려 pass@k와 pass^k를 모두 보고한다</li>
+          <li>에이전트가 못할 법한 예를 넣는다. 100% 통과하는 평가는 너무 쉬운 평가다. <strong>에이전트는 평가를 간신히 통과하거나 떨어질 듯해야 한다</strong></li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="qa2">
+        <header><span class="num">15</span><h2>2차 질의응답 <span class="ts">1:10:50</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>Brandon Callender의 답</th></tr></thead>
+            <tbody>
+              <tr><td>그래프를 파일 구조로 풀어 두면 grep이 자연스럽게 찾지 않나? <span class="ts">1:10:50</span></td><td>시간이 없어 안 해 봤지만 합리적이다. "LLM 위키"식 마크다운 코퍼스로 많은 이득을 얻을 수 있다. 다만 관계 이해가 핵심인 과제라면 결국 실제 간선과 출처가 필요하다. 그런 도구들도 마크다운 위에 그래프를 얹는다.</td></tr>
+              <tr><td>비기술자가 이걸 길잡이 삼아 PR을 열게 하려면? <span class="ts">1:12:30</span></td><td>이미 쓰는 도구에 MCP로 붙이고, 여기서 말한 프롬프트 공학을 스킬로 승격해 코딩 에이전트에 준다. 결정론적 분석은 바뀐 부분만 diff로 빠르게 결론을 내 주므로, 엔지니어에게 도착하는 PR의 첫 시도가 꽤 쓸 만해진다.</td></tr>
+              <tr><td>심볼보다 높은 단위의 해상도도 생각했나? <span class="ts">1:14:10</span></td><td>그렇다. 실제로 만든다면 SCIP로 호출 그래프를 추적해 무엇이 무엇을 부르는지 본다. 결정론적 파싱의 디딤돌이 하나 더 필요하다. Rust, TypeScript, Python용 SCIP 출력이 있다. 시간이 없어 못 했다.</td></tr>
+              <tr><td>데이터 카탈로그와 겹치지 않나? <span class="ts">1:16:00</span></td><td>다른 질문에 답한다. 카탈로그는 웨어하우스에 무엇이 있는지의 고정된 목록이고, 컨텍스트 그래프는 카탈로그를 읽어서 만든다. dbt 모델을 파싱해 연결한 뒤, 그 모델이 만드는 물리 테이블의 컬럼과 프로파일을 카탈로그에서 가져와 그래프에 넣는다. 대체가 아니라 공존이다.</td></tr>
+              <tr><td>데이터 엔지니어링 평가도 같은 식인가? <span class="ts">1:17:50</span></td><td>그렇다. 버그를 넣는 diff를 주입하고 고치게 한다. 쉬운 버전은 "모델 XYZ에 문제가 있는 것 같다", 어려운 버전은 "대시보드 Y의 숫자가 두 배다, 이유를 모르겠다"다. 하류에서 상류로 거슬러 올라가 진짜 원인을 고쳤는지, 반창고만 붙이지 않았는지 확인한다.</td></tr>
+              <tr><td>기존 프레임워크는? <span class="ts">1:20:00</span></td><td>ADE-bench(추정)가 데이터 엔지니어링 벤치마크의 사실상 표준이다. 어려운 것은 비계다. 코드는 저장소만 있으면 되지만 데이터는 돌아가는 DB와 내부적으로 일관된 버그 데이터가 필요하다. 충분히 큰 데이터셋으로 남이 쓸 수 있는 벤치마크는 아직 만족스러운 것이 없다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          <span class="title">에이전트는 늘 반칙한다 <span class="ts">1:19:20</span></span>
+          <span>"브랜치를 체크아웃해서 문제를 고쳐라"라고 하면 에이전트는 기꺼이 git으로 main에 돌아가 어떻게 문제를 넣었는지 찾아낸다. 브랜치 이름에 "test"가 있으면 "아, 테스트구나, 반칙해도 되겠네" 한다. 하네스를 단단히 굳혀 실제 과제를 대표하게 해야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="scoreboard">
+        <header><span class="num">16</span><h2>스코어보드를 믿지 마라 <span class="ts">1:21:20</span></h2></header>
+        <blockquote>3분의 1만 손이 가는 우아한 도구는 3분의 1짜리 도구다.<cite>Brandon Callender의 말을 옮김, 1:22:10</cite></blockquote>
+        <p>더 좋은 도구에서 얻을 수 있는 모든 능력 향상은 채택률이라는 숫자에 막힌다. 그래서 평가를 만든 이유는 도구가 좋다는 것을 증명하기 위해서가 아니라 <strong>도구가 안 쓰이고 있지 않다는 것</strong>을 증명하기 위해서다.</p>
+
+        <h3>어려웠던 고백: grep은 정말 잘한다 <span class="ts">1:22:30</span></h3>
+        <p>그래프를 다 만들고 평가를 돌렸더니 무승부였다. 답답하고, 더 만들고 더 최적화하고 싶어진다. 발표자는 그것이 함정이라고 말한다. 매몰 비용이다. "더 엄격한 테스트만 있으면 에이전트가 내 도구를 쓸 거야"라는 잘못된 느낌이 생긴다. 물어야 할 질문은 "왜 내 도구를 안 쓰지"가 아니라 <strong>"왜 grep이 이렇게 잘 되지"</strong>다. 답은 grep이 이미 잘 된다는 것이다. 이기려면 싸우지 말고 결에 맞춰 설계해야 한다.</p>
+
+        <h3>평가를 다시 돌리고 발표를 다시 쓴 이야기 <span class="ts">1:23:50</span></h3>
+        <p>발표자는 결론을 다 써 놓고 "평가 한 번만 더 돌려 보자" 했다가 발표를 통째로 다시 쓴 적이 여러 번이다. 하네스를 잘못 만들었는데 결과는 방향이 맞게 나왔다. 그래프가 grep을 이긴다고 말이다. 더 파 보니 search 도구가 파일 경로를 돌려주긴 하는데 <strong>틀린 경로</strong>를 돌려줄 때가 있었다. 그러면 에이전트는 엉뚱한 파일을 읽으러 갔다.</p>
+        <div class="callout">
+          <span class="title">고치는 법은 숫자를 올리는 게 아니다</span>
+          <span>Logfire든 어디든 트레이스를 보내는 곳에 들어가 실제로 읽는다. 스코어보드만 보면 방향이 맞아 보이는 결과 아래에 훨씬 큰 구조적 문제가 묻혀 있을 수 있다. 순서는 이렇다. <strong>더 어려운 평가를 만든다. 트레이스를 읽는다. 문제의 흔적을 찾는다. 하네스를 굳힌다. 다시 돌린다.</strong> 자기 스코어보드를 믿지 않는다.</span>
+        </div>
+        <p>모델은 계속 좋아진다. 분산은 줄고 우리가 원하는 일을 하는 쪽으로 움직인다. 그래서 쉬운 부분은 맥락과 도구를 만드는 것일 수 있다. 어려운 부분은 <strong>평가 루프, 모니터링, 관측 가능성</strong>을 만들어 에이전트가 원하는 도구로 원하는 일을 하는지 확인하는 것이다.</p>
+      </section>
+
+      <!-- 17 -->
+      <section id="beyond">
+        <header><span class="num">17</span><h2>파이썬, 의미의 층, 그다음 <span class="ts">1:25:50</span></h2></header>
+        <h3>Rust는 반칙이었다</h3>
+        <p>Rust 컴파일러가 디딤돌 1을 대신해 줬다. 쉬운 문제에서 잘 만든 버전을 완성하면 큰 문제로 키우기가 조금 쉬워진다. Python은 그냥 어렵다. <code>client</code>를 grep하면 5만 개의 결과에 갇힌다. 정적 분석으로 어느 정도 가능하지만 힘들다. 바로 이런 곳, 코드베이스가 크고 언어가 덜 구조적인 곳에서 코드 그래프가 밥값을 한다. Rust에서는 "이 트레이트의 구현체"를 <code>impl</code>로 검색하면 되지만 Python에서는 그렇지 않다.</p>
+        <p>그래프와 도구의 구조는 바꿀 필요가 없다. 바뀌는 것은 수집과 적재 방식이다. 그 부분을 모듈로 만들면 언어와 프로젝트를 얼마든지 늘릴 수 있다. Typedef도 여러 출처에서 데이터를 끌어오는 수집 과정을 가능한 한 많이 만들어 하나로 합치는 구조라고 한다.</p>
+
+        <h3>의미의 디딤돌: 큰 질문 하나가 아니라 작은 질문 여럿 <span class="ts">1:27:40</span></h3>
+        <p>구조는 무엇이 무엇과 이어지는지를, 의미는 왜 그런지를 말해 준다. 주석, 문서 문자열 같은 정보를 접어 넣으면 코드를 쓴 사람의 의도를 이해할 수 있다. 그러면 search가 위치뿐 아니라 코드가 무엇을 하는지도 답한다.</p>
+        <div class="callout">
+          <span class="title">만드는 법</span>
+          <span>SQL 한 덩어리를 통째로 주고 "필드 10개짜리 모델을 채워라"라고 하면 모델은 환각하고, 지어내고, 빠뜨린다. 대신 <strong>구조를 결정론적으로 파싱한 뒤</strong> 작은 조각마다 초점이 뚜렷한 질문을 하나씩 한다. "여기 컬럼 하나, 타입, 주석이 있다. 이것은 측정값인가 차원인가?" 분류와 요약은 모델이 잘하는 일이다. 더 잘 답하게 하려면 질문을 늘리지 말고 <strong>그 하나의 질문에 맥락을 더 준다</strong>. 작고, 근거가 있고, 감사할 수 있는 의미 연산을 구조 위에 얹는다. fenic이 그 용도다.</span>
+        </div>
+
+        <h3>더 나아가려면 <span class="ts">1:30:20</span></h3>
+        <ul class="plain">
+          <li>호출 그래프로 누가 무엇을 부르고 참조하는지 본다</li>
+          <li>코드 안팎의 주석과 산문을 접어 넣는다</li>
+          <li>GitHub 이슈, Linear 이슈, 티켓을 접어 넣는다</li>
+          <li>순서는 늘 같다. 가장 작은 것, 즉 구조 추출부터 시작하고 그 위에 의미를 쌓는다</li>
+        </ul>
+        <p>발표자가 붙인 발표 제목은 "에이전트는 어차피 grep을 돌린다"였다.</p>
+      </section>
+
+      <!-- 18 -->
+      <section id="qa3">
+        <header><span class="num">18</span><h2>마지막 질의응답 <span class="ts">1:31:40</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>Brandon Callender의 답</th></tr></thead>
+            <tbody>
+              <tr><td>마이크로서비스처럼 저장소와 HTTP 경계를 넘는 경우는? <span class="ts">1:31:40</span></td><td>해 보지 않았다. 경계를 알아보는 분류기를 써야 한다. 예를 들어 Rust가 Python을 부르는 지점을 이해해 연결 층을 만들어야 한다. 가능하지만 일이 많다.</td></tr>
+              <tr><td>Cursor의 코드베이스 검색은? <span class="ts">1:32:50</span></td><td>2단계인 임베딩 검색이고 잘 된다. 다만 그 방식은 살펴볼 곳을 찾아 줄 뿐, 그 모든 곳을 에이전트가 가서 봐야 한다. 이 접근의 목표는 IDE에서 함수를 클릭해 호출 지점을 모두 보듯 에이전트가 한 번에 보게 하는 것이다.</td></tr>
+              <tr><td>규모가 커질 때 캐시와 저장은? <span class="ts">1:34:00</span></td><td>저장보다 그래프 분석에 드는 계산이 걱정이다. 가장 중요한 것은 처음부터 <strong>증분 색인</strong>을 1급으로 설계하는 것이다. 웨어하우스를 500번 다시 질의하거나 SQL을 전부 다시 컴파일하고 싶지 않다. 저장과 계산 규모 문제보다 재동기화 문제를 훨씬 먼저 만난다.</td></tr>
+              <tr><td>정답 데이터셋을 만들고 유지하는 게 가장 큰 문제다 <span class="ts">1:36:00</span></td><td>동의한다. 평가용 정답은 특정 스냅샷에 고정한다. 평가는 특정 커밋, 주입한 diff, 기대하는 변경의 묶음이다. 나중에 리팩터링으로 그 함수가 안 쓰이게 되어도 그 평가는 여전히 "그 상황에서 그 변경을 할 수 있는가"를 잰다. 에이전트가 나아지는지 보려면 <strong>똑같은 과제를 다시 시켜야</strong> 한다. 라이브 테스트와 고정된 평가 세트는 다른 것이다.</td></tr>
+              <tr><td>온톨로지 같다. Palantir가 돈을 버는 그것 아닌가? <span class="ts">1:39:20</span></td><td>그것이 제품이다. 컨텍스트 그래프 위에 온톨로지 층을 만들어 데이터 아키텍처의 위치와 뜻을 정리하고, 에이전트에게 도구로 준다.</td></tr>
+              <tr><td>SaaS와 내부 시스템이 뒤섞인 데이터 환경을 작은 팀이 한 곳에서 한 번만 정의하고 싶다 <span class="ts">1:40:20</span></td><td>Snowflake 카탈로그만 읽는 게 아니라 Salesforce, Fivetran(추정), Airbyte, Airflow 등 모든 전송 경로를 하나의 그래프로 읽는 것이 목표다. 시맨틱 층은 아무도 유지하고 싶어 하지 않아서 더러운 단어가 됐다. 꿈은 비즈니스 분석가가 "이 대시보드가 이상하다"고 하면 에이전트가 세 층을 거슬러 올라가 지난주에 들어온 변경을 찾고, 담당 팀을 알아내고, 해결책이 담긴 티켓을 대신 써 주는 것이다. 티켓이 다섯 팀 사이를 떠돌지 않게.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">마지막 질문의 답은 Typedef의 제품 비전 설명이다. 발표자 스스로 "일부만 와 있다"고 했다.</p>
+      </section>
+
+      <!-- 19 -->
+      <section id="recap">
+        <header><span class="num">19</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>데이터 에이전트가 틀리는 이유는 SQL 실력이 아니라 <strong>그레인, 조인 안전성, 지표의 뜻, 의존 관계</strong>를 모르기 때문이다. 이 넷은 어디에도 적혀 있지 않다.</li>
+          <li>코드를 통째로 주면 기억이 없고, DB 접근을 주면 뜻을 모른다. 필요한 것은 <strong>시스템이 어떻게 움직이는지에 대한 지속적인 모델</strong>이다.</li>
+          <li><strong>결정론 먼저.</strong> SQL을 AST까지 파싱해 그레인과 계보를 계산하고, 테이블을 프로파일링해 조인 키를 검증한다. LLM은 이름 붙이기와 요약에만 쓴다.</li>
+          <li>결과는 <strong>그래프</strong>에 담아 커밋마다 증분 갱신한다. 에이전트는 필요한 부분 그래프만 한 번에 꺼낸다. 순회가 프롬프트 밀어 넣기를 이긴다.</li>
+          <li>결론이 아니라 증거를 저장하고, 도구 표면은 직접 소유하고, 평가는 일찍 자주 한다.</li>
+          <li>코드도 같다. grep은 정체성이 없고, 코드 RAG는 평평한 목록이다. <strong>해석된 심볼과 타입 있는 간선</strong>이 있어야 "바꾸면 뭐가 깨지나"를 한 번에 답한다.</li>
+          <li><strong>에이전트는 어차피 grep을 돌린다.</strong> 사후 학습의 반사 신경과 싸우지 말고 결에 맞춘다. 이름은 search, 응답은 ripgrep 형식, 첫 호출에 보상.</li>
+          <li>한 번 맞히기(pass@k)는 비슷해도 <strong>매번 맞히기(pass^k)는 그래프가 두 배</strong>, 토큰은 3.1배 절약. 목표는 정확도가 아니라 결정론이다.</li>
+          <li><strong>채택률을 재라.</strong> 3분의 1만 쓰이는 도구는 3분의 1짜리 도구다. 프롬프트를 바꿔 34%에서 72%로 올렸다.</li>
+          <li><strong>스코어보드를 믿지 마라.</strong> 트레이스를 직접 읽고, 더 어려운 평가를 만들고, 하네스를 굳히고, 다시 돌린다. 도구 만들기는 쉽고 평가 루프가 어렵다.</li>
+        </ol>
+      </section>
+
+      <!-- 20 -->
+      <section id="quiz">
+        <header><span class="num">20</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>그레인이 무엇이고, 왜 SQL이 멀쩡히 돌아가도 결과가 틀릴 수 있나?</span></summary><div class="answer">그레인은 테이블의 행 하나가 무엇을 나타내는지다. 고객 × 월이 고객 × 주로 바뀌어도 SQL은 컴파일되고 실행되지만, 하류의 모든 합계가 틀어진다. 그레인은 데이터 자체에 들어 있지 않아 에이전트가 알아챌 수 없다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>행 수가 40% 뛴 예에서 에이전트의 답과 실제 원인은?</span></summary><div class="answer">에이전트는 "데이터가 더 들어왔다"고 했다. 실제로는 상류 컬럼이 일대일 조인을 일대다로 바꿔 그레인이 변한 것이다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>에이전트가 읽을 수 없는 네 가지 사실은?</span></summary><div class="answer">행 하나가 무엇을 나타내나(그레인), 이 조인은 안전한가, 이 지표는 무슨 뜻인가, 무엇이 무엇과 이어지나(의존 관계).</div></details>
+          <details><summary><span class="qn">Q4</span><span>"코드를 준다"와 "DB 접근을 준다"가 각각 실패하는 이유는?</span></summary><div class="answer">코드를 주면 프롬프트마다 처음부터 다시 추론하고 세션이 바뀌면 이해가 사라진다. DB 접근을 주면 행은 보지만 행이 무엇을 뜻하는지 모른다. 둘 다 지속적인 시스템 모델이 없다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>결정론 층과 LLM 층의 역할 분담은?</span></summary><div class="answer">SQL을 AST까지 파싱해 그레인과 계보를 계산하고, 테이블을 프로파일링해 조인 키 고유성을 검증하는 것은 결정론 층이다. LLM은 비즈니스 이름 붙이기, 용도 요약, 남은 모호함 해결만 맡는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>마크다운 문서 묶음이 아니라 그래프를 고른 이유는?</span></summary><div class="answer">접근 방식 때문이다. 에이전트가 필요한 부분 그래프만 한 번의 순회로 꺼낼 수 있어 프롬프트에 전부 밀어 넣지 않아도 되고, 모델이 500개를 넘어도 프로젝트를 매번 다시 읽지 않는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>코드 맥락의 세 수준과 각 한계는?</span></summary><div class="answer">1단계 grep은 정체성이 없다. 2단계 코드 RAG는 더 관련 있는 결과를 주지만 평평한 목록이라 관계를 못 보여 준다. 3단계는 해석된 심볼과 타입 있는 간선으로 된 순회 가능한 그래프다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Brandon Callender가 Rust를 고른 것을 "반칙"이라 한 이유는?</span></summary><div class="answer">이름 충돌을 푸는 해석 단계를 Rust 컴파일러가 대신해 주고 rustdoc JSON에서 그대로 꺼낼 수 있기 때문이다. Python처럼 덜 구조적인 언어에서는 훨씬 어렵다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>좋은 도구를 줬는데도 에이전트가 grep을 돌린 이유와 대처법은?</span></summary><div class="answer">사후 학습에서 "grep하고 읽어라"가 정답인 상황을 무수히 봤기 때문이다. 싸우지 말고 결에 맞춘다. 도구 이름을 search로 짓고, ripgrep 형식으로 응답하고, 첫 호출에서 반드시 쓸모 있는 결과를 준다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>pass@k와 pass^k의 차이, 그리고 결과는?</span></summary><div class="answer">pass@k는 k번 중 한 번이라도 맞혔는가, pass^k는 k번 모두 맞혔는가다. pass@k는 둘이 비슷했지만 pass^k는 그래프 에이전트가 두 배였다. 토큰도 3.1배 적게 썼다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>평가를 다시 돌렸을 때 발견한 숨은 문제는?</span></summary><div class="answer">search 도구가 때때로 틀린 파일 경로를 돌려줘 에이전트가 엉뚱한 파일을 읽으러 갔다. 스코어보드는 방향이 맞아 보였지만 트레이스를 읽어야 보이는 문제였다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>의미 층을 만들 때 "큰 질문 하나" 대신 권하는 방법은?</span></summary><div class="answer">구조를 결정론적으로 파싱한 뒤 작은 조각마다 초점이 뚜렷한 질문을 하나씩 한다. 예를 들어 컬럼 하나와 타입, 주석을 주고 측정값인지 차원인지 묻는다. 더 잘 답하게 하려면 질문을 늘리지 말고 맥락을 더 준다.</div></details>
+        </div>
+      </section>
+
+      <!-- 21 -->
+      <section id="apply">
+        <header><span class="num">21</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>핵심 테이블의 그레인을 글로 적는다<span class="how">"행 하나 = 무엇"을 테이블마다 한 줄로. 에이전트가 읽을 수 있는 곳에 둔다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>자주 쓰는 조인 키의 고유성을 프로파일링으로 확인한다<span class="how">확인: 일대다로 행이 불어나는 조인 경로를 목록으로 갖고 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>SQL 안에 숨은 비즈니스 정의를 조건절 단위로 찾아 표시한다<span class="how">예: "유료"를 정의하는 WHERE 절. 리팩터링 때 지우면 안 되는 제약으로 다룬다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>결정론적으로 계산할 수 있는 것과 LLM에 맡길 것을 나눈다<span class="how">파싱, 계보, 프로파일링은 코드로. 이름 붙이기와 요약만 LLM으로</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트에게 새 도구를 줄 때 이름과 응답 형식을 기존 반사 신경에 맞춘다<span class="how">확인: 도구 이름이 search인가, 응답이 grep 결과처럼 생겼는가, 첫 호출에 빈 결과가 나오지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>도구 채택률을 트레이스에서 센다<span class="how">확인: 원하는 도구가 호출된 비율을 숫자로 말할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>평가는 여러 번 돌려 pass@k와 pass^k를 함께 본다<span class="how">목표는 한 번 맞히기가 아니라 매번 맞히기다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>채점기를 먼저 단위 테스트하고, 정답은 특정 스냅샷에 고정한다<span class="how">확인: 에이전트가 평가를 간신히 통과하는 수준인가. 100%면 너무 쉽다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>스코어보드가 좋아 보여도 트레이스를 직접 읽는다<span class="how">확인: 도구가 틀린 경로나 빈 결과를 돌려준 흔적이 없는가. 에이전트가 반칙한 흔적이 없는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>컨텍스트 색인은 처음부터 증분 갱신으로 설계한다<span class="how">바뀐 부분만 다시 만든다. 재동기화 문제가 저장 규모 문제보다 먼저 온다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 22 -->
+      <section id="glossary">
+        <header><span class="num">22</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>그레인</td><td>Grain. 테이블의 행 하나가 무엇을 나타내는지. 예: 고객 × 월</td></tr>
+              <tr><td>계보</td><td>Lineage. 데이터가 어디서 와서 어디로 가는지의 의존 관계. 테이블 수준과 컬럼 수준이 있다</td></tr>
+              <tr><td>팬아웃</td><td>Fan-out. 일대다 조인으로 행이 여러 배로 불어나는 것</td></tr>
+              <tr><td>카디널리티</td><td>Cardinality. 어떤 컬럼 값이 얼마나 고유한지. 조인 키가 고유해야 행이 불어나지 않는다</td></tr>
+              <tr><td>프로파일링</td><td>테이블의 실제 값을 훑어 고유성, 분포, 결측 같은 통계를 내는 것</td></tr>
+              <tr><td>영향 분석 / 블래스트 반경</td><td>Impact analysis / blast radius. 무언가를 바꿨을 때 하류에서 무엇이 깨지는지와 그 범위</td></tr>
+              <tr><td>dbt</td><td>SQL로 데이터 변환 모델을 정의하고 의존 순서대로 실행하는 도구</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 에이전트가 외부 시스템의 도구를 표준 방식으로 쓰게 하는 규약</td></tr>
+              <tr><td>AST</td><td>추상 구문 트리. 코드를 구조대로 나무 모양으로 분해한 것</td></tr>
+              <tr><td>tree-sitter</td><td>여러 언어의 코드를 빠르게 파싱해 AST를 만드는 라이브러리</td></tr>
+              <tr><td>rustdoc JSON</td><td>Rust 문서 도구가 내보내는 기계 판독용 출력. 심볼의 정식 경로와 위치가 들어 있다</td></tr>
+              <tr><td>심볼 해석</td><td>Resolution. 이름만 같은 여러 후보 중 어느 정의를 가리키는지 확정하는 것</td></tr>
+              <tr><td>Neo4j / Cypher</td><td>그래프 데이터베이스와 그 질의 언어</td></tr>
+              <tr><td>코드 RAG</td><td>코드를 임베딩해 의미 검색으로 관련 부분을 찾아 모델에 주는 방식</td></tr>
+              <tr><td>SCIP</td><td>코드 인덱싱 형식. 호출 그래프 같은 심볼 간 관계를 추출할 때 쓴다</td></tr>
+              <tr><td>Pydantic AI / Pydantic Evals</td><td>Python 에이전트 프레임워크와 그 평가 도구</td></tr>
+              <tr><td>fenic</td><td>Typedef의 오픈소스 라이브러리. 데이터프레임 연산과 LLM 호출을 합친 것</td></tr>
+              <tr><td>pass@k / pass^k</td><td>k번 시도 중 한 번이라도 성공 / k번 모두 성공</td></tr>
+              <tr><td>LLM 심판</td><td>LLM-as-judge. 다른 모델의 출력을 LLM이 채점하는 방식</td></tr>
+              <tr><td>트레이스</td><td>에이전트가 어떤 도구를 어떤 순서로 불렀는지 기록한 것. Logfire 같은 도구로 본다</td></tr>
+              <tr><td>하네스</td><td>에이전트를 감싸 도구, 규칙, 평가 환경을 정해 주는 실행 틀</td></tr>
+              <tr><td>시맨틱 층</td><td>지표와 차원의 비즈니스 정의를 한 곳에 모은 층. 유지보수가 어렵기로 유명하다</td></tr>
+              <tr><td>온톨로지</td><td>개념과 그 관계를 체계적으로 정의한 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 23 -->
+      <section id="timeline">
+        <header><span class="num">23</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>Yoni Michael 소개, Typedef와 데이터 컨텍스트 층</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>모델이 아니라 맥락이 병목. Typedef의 내기</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>세 가지 실패: 영향 분석, 조인 추천, 안전한 코드 변경</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>맥락이 흩어진 곳: 웨어하우스, 변환 코드, BI, 암묵지</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>그레인 정의와 행 수 40% 급증 예</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>뻔한 해법 둘: 코드 주기, DB 접근 주기</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>적혀 있지 않은 네 가지 사실</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>같은 조인 문법, 네 가지 결과</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>구조에서 도메인 자동 발견</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>결정론 먼저, LLM은 마지막</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>왜 그래프인가. 커밋마다 증분 갱신</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>부분 그래프의 노드와 간선</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>사용 사례 1: 영향 분석, 월 ARR 4배</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>사용 사례 2: 조인 추천, 7배 팬아웃과 12% 손실</td></tr>
+              <tr><td><span class="ts">19:50</span></td><td>사용 사례 3: 안전한 코드 변경, "유료" 정의</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>평가 주도 개발, 약 35점 향상</td></tr>
+              <tr><td><span class="ts">22:30</span></td><td>다섯 가지 패턴</td></tr>
+              <tr><td><span class="ts">25:10</span></td><td>1부 마무리</td></tr>
+              <tr><td><span class="ts">27:00</span></td><td>Brandon Callender 소개, 실습 저장소 안내</td></tr>
+              <tr><td><span class="ts">29:00</span></td><td>텍스트 검색의 한계: PostingList</td></tr>
+              <tr><td><span class="ts">30:10</span></td><td>매번 다시 뒤지는 비용과 깨지기 쉬움. 목표는 결정론</td></tr>
+              <tr><td><span class="ts">32:50</span></td><td>맥락의 세 수준</td></tr>
+              <tr><td><span class="ts">34:10</span></td><td>디딤돌 0, 1, 2</td></tr>
+              <tr><td><span class="ts">37:20</span></td><td>노트북 1 시작, 크레이트 다섯 개</td></tr>
+              <tr><td><span class="ts">39:40</span></td><td>디딤돌 0과 1 비교, 2단계 전문 검색</td></tr>
+              <tr><td><span class="ts">41:20</span></td><td>Neo4j에 그래프 적재</td></tr>
+              <tr><td><span class="ts">42:00</span></td><td>블래스트 반경 도구, 충돌 해결</td></tr>
+              <tr><td><span class="ts">44:10</span></td><td>Pydantic AI 에이전트, 자연어로 Cypher 생성</td></tr>
+              <tr><td><span class="ts">47:10</span></td><td>디딤돌 2 맛보기: fenic</td></tr>
+              <tr><td><span class="ts">48:50</span></td><td>1차 질의응답</td></tr>
+              <tr><td><span class="ts">57:40</span></td><td>에이전트는 어차피 grep을 돌린다</td></tr>
+              <tr><td><span class="ts">59:30</span></td><td>왜: 사후 학습의 반사 신경</td></tr>
+              <tr><td><span class="ts">1:00:30</span></td><td>결에 맞추기: search, ripgrep 형식, 첫 호출 보상</td></tr>
+              <tr><td><span class="ts">1:02:10</span></td><td>노트북 2: 평가 설계</td></tr>
+              <tr><td><span class="ts">1:04:20</span></td><td>좋은 평가 질문, 결정론적 채점</td></tr>
+              <tr><td><span class="ts">1:06:30</span></td><td>결과: pass@k vs pass^k, 토큰 3.1배</td></tr>
+              <tr><td><span class="ts">1:08:30</span></td><td>채택률 측정, 34%에서 72%</td></tr>
+              <tr><td><span class="ts">1:09:30</span></td><td>정직한 평가의 레시피</td></tr>
+              <tr><td><span class="ts">1:10:50</span></td><td>2차 질의응답</td></tr>
+              <tr><td><span class="ts">1:19:20</span></td><td>에이전트는 반칙한다. 하네스 굳히기</td></tr>
+              <tr><td><span class="ts">1:21:20</span></td><td>3분의 1짜리 도구. 채택률이 능력 향상을 가른다</td></tr>
+              <tr><td><span class="ts">1:22:30</span></td><td>어려운 고백: grep은 잘한다. 매몰 비용 함정</td></tr>
+              <tr><td><span class="ts">1:23:50</span></td><td>평가 재실행과 틀린 경로. 트레이스를 읽어라</td></tr>
+              <tr><td><span class="ts">1:25:50</span></td><td>Rust는 반칙, Python은 어렵다</td></tr>
+              <tr><td><span class="ts">1:27:40</span></td><td>의미의 디딤돌: 작은 질문 여럿</td></tr>
+              <tr><td><span class="ts">1:30:20</span></td><td>더 나아가려면: 호출 그래프, 이슈 접기</td></tr>
+              <tr><td><span class="ts">1:31:40</span></td><td>마지막 질의응답: 저장소 경계, Cursor, 규모, 정답 데이터셋</td></tr>
+              <tr><td><span class="ts">1:39:20</span></td><td>온톨로지와 제품 비전</td></tr>
+              <tr><td><span class="ts">1:45:50</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'KhRjivBSwiw:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

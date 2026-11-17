@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>커스텀 에이전트 확장 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#how">Copilot이 도는 구조</a></li>
+      <li><a href="#builtin">기본 에이전트에서 배우기</a></li>
+      <li><a href="#build">1단계: 직접 만들기</a></li>
+      <li><a href="#share">2단계: 팀에 나누기</a></li>
+      <li><a href="#orchestrate">3단계: 여러 저장소로</a></li>
+      <li><a href="#pipeline">4단계: 파이프라인으로</a></li>
+      <li><a href="#gate">사람이 승인하는 파이프라인</a></li>
+      <li><a href="#maximal">끝까지 가 본 사례</a></li>
+      <li><a href="#observe">보여야 줄일 수 있다</a></li>
+      <li><a href="#map">정리: 네 단계 지도</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-10 · 20분 · 영어 발표 한글 정리</span>
+      <h1>에이전트를 노트북에서 파이프라인으로</h1>
+      <p class="lead">내 노트북에서 만든 에이전트를 팀에 나누고, 여러 저장소로 넓히고, 마지막에는 파이프라인에서 혼자 돌게 하는 네 단계를 GitHub Copilot 기능으로 보여 주는 발표다. 파이프라인에 올리면 비용과 실패가 보이고, 보이면 줄일 수 있다는 것이 마지막 메시지다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=b9UhZkKjX_A" target="_blank" rel="noopener">From Your Laptop to the Pipeline: Scaling Custom Agents with GitHub Copilot</a></span>
+        <span>발표: Jose Palafox (GitHub 6년 반. 고객사의 도입과 확장을 돕는 현장 담당. 보안 사업을 키우다 최근 1년은 AI에 집중)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 알려진 이름으로 바로잡았다(<code>.github-private</code>, awesome-copilot, gh-aw, GitHub Next, OTel, SIEM). 명령 이름은 들린 대로 적었다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 GitHub 직원이고, 발표 전체가 GitHub Copilot 기능 소개다. 비용과 확장성에 관한 주장은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트는 결국 <strong>모델과 지시문을 담은 마크다운 파일</strong>이다. 어느 입구로 부르든 같은 하네스에서 돈다.</li>
+        <li>기본 에이전트는 <strong>일에 맞는 모델</strong>을 쓴다. 탐색은 작은 모델, 계획 검토는 다른 회사 모델이다.</li>
+        <li><strong>1단계 만들기</strong>: <code>/agent</code>에 한 줄만 쓰면 Copilot이 설명, 성공 기준, 방법까지 채운다.</li>
+        <li><strong>2단계 나누기</strong>: 마켓플레이스나 <code>.github-private</code> 저장소로 팀 전체에 배포한다. 모두 같은 에이전트를 쓰면 캐시 적중이 늘어 비용이 준다고 발표자는 말한다.</li>
+        <li><strong>3단계 넓히기</strong>: <code>orchestrate</code>는 이슈 여러 개를 목표로 받아, 저장소마다 그 안에서 하위 에이전트를 띄운다.</li>
+        <li><strong>4단계 옮기기</strong>: agentic workflows는 Copilot CLI를 GitHub Actions에서 돌린다. 에이전트는 내가 아니라 <strong>저장소의 이름과 예산</strong>으로 일하고, 사람은 승인 지점에서만 결정한다.</li>
+        <li>파이프라인에 올리면 <strong>실행이 보인다</strong>. 비용과 실패를 재서 고치고, 더 싼 모델을 고를 수 있다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="how">
+        <header><span class="num">01</span><h2>Copilot이 도는 구조 <span class="ts">01:30</span></h2></header>
+        <p>발표자는 에이전트를 두 종류로 나눈다 <span class="ts">00:50</span>. 하나는 내가 직접 불러 쓰는 로컬 에이전트다. 다른 하나는 파이프라인에서 혼자 도는 자율 에이전트<span class="en">autonomous agent</span>다. 둘 다 이해하려면 먼저 Copilot의 데이터 흐름을 알아야 한다.</p>
+
+        <h3>입구는 여러 개다 <span class="ts">01:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>입구</th><th>특징</th></tr></thead>
+            <tbody>
+              <tr><td>IDE</td><td>편집기 안에서 쓴다. 에이전트를 만드는 화면도 있다</td></tr>
+              <tr><td>Copilot CLI</td><td>데스크톱에서 쓰는 가벼운 인터페이스다. 세션을 github.com으로 넘겨 백그라운드에서 돌릴 수 있다. <code>/remote</code> 명령을 쓰면 휴대폰으로 로그인해 에이전트를 이어서 조종할 수 있다</td></tr>
+              <tr><td>SDK</td><td>Slack이나 Teams 안에 사는 에이전트를 만든다. GitHub 라이선스가 없는 동료에게 기능 일부만 열어 줄 때 쓴다</td></tr>
+              <tr><td>클라우드 에이전트</td><td>github.com에서 플랫폼이 호스팅하는 에이전트에게 일을 맡긴다 <span class="ts">09:00</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>모든 입구는 하네스를 지난다 <span class="ts">02:40</span></h3>
+        <p>어느 입구로 들어오든 요청은 같은 곳에 닿는다. 발표자는 이것을 Copilot API 서비스라고 했고, 내부에서는 'Cappy'라고 부른다고 했다. 다른 말로는 하네스<span class="en">harness</span>다. 모델을 감싸고 귀찮은 기반 작업을 대신 맡는 실행 틀이라는 뜻이다.</p>
+        <ul class="plain">
+          <li>입력을 잘게 나눠 모델에 보낸다</li>
+          <li>오픈소스 코드를 그대로 되풀이하지 않는지 확인한다</li>
+          <li>인증을 처리한다</li>
+          <li>지표와 감사 로그<span class="en">audit log</span>를 남긴다</li>
+        </ul>
+        <p>하네스는 요청을 모델 제공사에 넘긴다. 답이 돌아오면 걸러서 사용자에게 보여 준다.</p>
+        <div class="callout">
+          <span class="title">왜 알아 두나</span>
+          <span>입구가 달라도 같은 하네스를 거친다. 그래서 같은 에이전트를 IDE, CLI, 웹에서 똑같이 부를 수 있다. 뒤에 나오는 클라우드 에이전트 예시가 그 경우다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="builtin">
+        <header><span class="num">02</span><h2>기본 에이전트에서 배우기 <span class="ts">03:30</span></h2></header>
+        <p>Copilot CLI에는 처음부터 들어 있는 에이전트가 있다. <code>/agents</code>를 치면 목록이 나온다. 발표자는 이것부터 보라고 권한다. 에이전트든 스킬이든 형식은 같기 때문이다.</p>
+        <blockquote>결국 다 마크다운이다.<cite>발표자의 표현을 옮김</cite></blockquote>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">explore · 탐색 <span class="ts">04:10</span></span>
+            <p>코드베이스를 조사하는 연구용 에이전트다. 키워드나 슬래시 명령으로 부른다.</p>
+            <ul>
+              <li>작은 모델(Haiku)로 돈다</li>
+              <li>코드를 둘러보는 데 가장 큰 모델은 필요 없다</li>
+            </ul>
+            <p class="verdict"><b>교훈</b>: 일의 크기에 맞는 모델을 고른다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Rubber duck · 계획 검증 <span class="ts">04:40</span></span>
+            <p>이미 써 둔 계획 문서를 다른 회사의 모델이 검토한다.</p>
+            <ul>
+              <li>예: Opus가 쓴 계획을 GPT가 한 번 더 본다</li>
+              <li>학습 데이터와 모델 가중치가 달라 다른 눈으로 본다</li>
+            </ul>
+            <p class="verdict"><b>교훈</b>: 검토는 만든 모델과 다른 모델에게 맡긴다.</p>
+          </div>
+        </div>
+
+        <p>기본 에이전트는 모두 쓸 모델을 파일에 적어 둔다 <span class="ts">04:50</span>. 커스텀 에이전트<span class="en">custom agent</span>를 만들 때도 똑같이 두 가지를 정한다. <strong>어떤 모델을 쓸지</strong>, 그리고 <strong>어떤 지시를 줄지</strong>다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="build">
+        <header><span class="num">03</span><h2>1단계: 직접 만들기 <span class="ts">05:00</span></h2></header>
+        <p>기본 에이전트로 안 되는 일이 있다. 이럴 때 직접 만든다.</p>
+        <ul class="plain">
+          <li>우리 팀만 하는 작업이나 리뷰</li>
+          <li>꼭 지켜야 하는 컴플라이언스나 규제 요건</li>
+          <li>돌려야 하는 도구나 우리만의 검사 묶음</li>
+        </ul>
+
+        <h3>만드는 순서 <span class="ts">05:20</span></h3>
+        <ol class="plain">
+          <li>CLI에서 <code>/agent</code> 명령을 친다. 만들기 과정이 시작된다.</li>
+          <li>저장 위치를 고른다. 지금 Git 프로젝트에만 둘 수도 있고(프로젝트 수준), 어느 프로젝트에서나 쓰게 할 수도 있다(사용자 수준).</li>
+          <li>하고 싶은 일을 한 줄로 적고 Copilot에게 만들게 한다.</li>
+          <li>만들어진 파일을 읽고 고친다.</li>
+        </ol>
+        <p>IDE에도 같은 만들기 화면이 있다 <span class="ts">06:10</span>.</p>
+
+        <h3>한 줄이 파일이 되기까지 <span class="ts">06:20</span></h3>
+        <p>발표자는 "GitHub 변경 기록<span class="en">changelog</span>에 가서 바뀐 것을 요약해 줘" 한 줄로 에이전트를 만들었다. Copilot이 채운 것은 다음과 같다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>채운 것</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>설명</td><td>에이전트가 무엇을 하는지 적는다</td></tr>
+              <tr><td>front matter</td><td>파일 맨 위 설정 부분의 형식을 맞춘다</td></tr>
+              <tr><td>성공 기준</td><td>언제 일이 끝난 것인지 정리한다</td></tr>
+              <tr><td>방법</td><td>어떤 순서로 일할지 초안을 쓴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자 표현으로는 "조금 게을러도 된다." 사람은 큰 방향만 쓰고 세부는 Copilot이 채운다.</p>
+        <p>물론 고칠 수 있다 <span class="ts">06:50</span>. 예시 에이전트는 GitHub 로드맵부터 읽도록 만들어졌다. 로드맵 항목이 섞이는 게 싫다면 변경 기록으로 바로 가게 순서를 바꾸면 된다.</p>
+        <div class="callout">
+          <span class="title">결과 <span class="ts">07:10</span></span>
+          <span>하네스에서 도는 내 에이전트가 생겼다. 반복하는 일이 있으면 이 에이전트를 부르면 된다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="share">
+        <header><span class="num">04</span><h2>2단계: 팀에 나누기 <span class="ts">07:20</span></h2></header>
+        <p>에이전트를 만들고 나면 다음 질문은 "다른 사람은 어떻게 쓰게 하나"다. 발표자는 두 길을 보여 준다.</p>
+
+        <h3>마켓플레이스 <span class="ts">07:30</span></h3>
+        <p>마켓플레이스<span class="en">marketplace</span>는 특별한 시스템이 아니다. 보통 저장소의 한 폴더에 "이건 마켓플레이스다"라고 알리는 JSON을 조금 넣은 것이다. 이것만으로 가벼운 패키지 관리가 생긴다.</p>
+        <ul class="plain">
+          <li>구독하면 에이전트를 한꺼번에 업데이트할 수 있다</li>
+          <li>에이전트에 버전을 매긴다</li>
+          <li>보안 취약점이 생기면 사용자에게 알린다</li>
+        </ul>
+        <div class="callout">
+          <span class="title">발표자가 기업에 가서 먼저 하는 일 <span class="ts">08:00</span></span>
+          <span>마켓플레이스 만들기다. 팀이 에이전트나 스킬을 모을 중앙 저장소가 없는 회사가 많다. 없으면 만들라는 것이 발표자의 조언이다. 이 저장소는 각자의 기기와 동기화되고, 새 에이전트를 밀어 보낼 수 있다.</span>
+        </div>
+
+        <h3>조직 전용 저장소 <code>.github-private</code> <span class="ts">08:30</span></h3>
+        <p>조직 안에 이름이 <code>.github-private</code>인 저장소를 만들면, 그 안의 에이전트 파일이 조직 전체에 공개된다. GitHub가 정한 이름 규칙이라 정확히 맞춰야 한다.</p>
+        <p>데모 저장소에는 에이전트가 세 개 있었다. github.com의 클라우드 에이전트 선택 목록에 그중 compliance bot이 그대로 떴다 <span class="ts">09:10</span>. 같은 에이전트가 모든 사람의 IDE와 CLI에도 들어간다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>비교</th><th>마켓플레이스</th><th><code>.github-private</code></th></tr></thead>
+            <tbody>
+              <tr><td>범위</td><td>조직 사이, 조직 밖까지 가능</td><td>조직 안에서만</td></tr>
+              <tr><td>받는 방식</td><td>사용자가 구독한다</td><td>관리자가 조직 전체에 밀어 준다</td></tr>
+              <tr><td>예</td><td>예제 모음 저장소 awesome-copilot을 마켓플레이스로 등록</td><td>데모의 compliance bot</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>재사용이 비용을 줄이는 이유 <span class="ts">09:50</span></h3>
+        <p>나누는 목적은 편의만이 아니다. 발표자는 표준화와 비용을 든다.</p>
+        <ol class="plain">
+          <li>이런 제품을 가장 싸게 쓰는 길은 캐시 적중<span class="en">cache hit</span>이다. 같은 데이터가 정확히 똑같이 반복될 때 생긴다.</li>
+          <li>모두가 같은 에이전트로 같은 문제를 풀면 똑같은 요청이 늘어 캐시 적중률이 오른다.</li>
+          <li>사람마다 바퀴를 새로 발명하면 그만큼 캐시를 놓치고 청구액이 커진다.</li>
+        </ol>
+        <p class="note">공유 에이전트가 캐시 적중률을 얼마나 올리는지 발표에 수치는 없다. 프롬프트 캐시는 보통 요청의 앞부분이 이전 요청과 똑같을 때 맞는다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="orchestrate">
+        <header><span class="num">05</span><h2>3단계: 여러 저장소로 <span class="ts">10:40</span></h2></header>
+        <p>컴플라이언스 에이전트 같은 공용 에이전트에는 약점이 있다. 에이전트는 자기가 사는 저장소에서 시작한다. 다른 저장소에서 일하려면 그 저장소의 권한이 필요하다. 그러려면 그 저장소에서 에이전트를 시작해야 한다.</p>
+
+        <h3><code>orchestrate</code>: 저장소를 가로질러 늘리기 <span class="ts">11:10</span></h3>
+        <p>발표자가 말한 Copilot 앱에는 <code>orchestrate</code>라는 명령이 있다. 발표자는 이것을 저장소를 가로지르는 수평 확장<span class="en">horizontal scaling</span>이라고 부른다.</p>
+        <ol class="plain">
+          <li>GitHub 이슈 여러 개를 에이전트의 목표로 정한다.</li>
+          <li><code>orchestrate</code>가 하위 에이전트<span class="en">subagent</span>를 여러 개 띄운다.</li>
+          <li>하위 에이전트는 각자 일해야 할 저장소 안에서 시작한다. 그래서 권한 문제가 없다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">쓰는 장면 <span class="ts">11:30</span></span>
+          <span>한 마이크로서비스의 API를 바꾸면, 그 API를 쓰는 다른 서비스도 고쳐야 한다. <code>orchestrate</code>로 여러 에이전트가 여러 저장소를 동시에 고치게 한다. 마켓플레이스나 관리자가 나눠 준 기성 에이전트를 불러와 각 저장소에 보낼 수 있다. <code>orchestrate</code>는 각 에이전트가 맡은 일에서 벗어나지 않게 붙잡는다.</span>
+        </div>
+        <p>여기까지가 로컬에서 에이전트를 쓰는 세 층이다 <span class="ts">12:00</span>. 만들고, 나누고, 여러 저장소로 넓힌다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="pipeline">
+        <header><span class="num">06</span><h2>4단계: 파이프라인으로 <span class="ts">12:10</span></h2></header>
+        <p>어떤 에이전트는 내 컴퓨터에서 돌 이유가 없다. 저장소를 관리하는 유지보수 작업이 그렇다.</p>
+        <ul class="plain">
+          <li><strong>예산</strong>: 내 예산이 아니라 저장소의 예산으로 돌아야 한다.</li>
+          <li><strong>신원</strong>: 내 이름이 아니라 저장소의 이름으로 행동해야 한다.</li>
+        </ul>
+        <blockquote>모든 에이전트가 '나'로서 행동할 필요는 없다.<cite>발표자의 표현을 옮김</cite></blockquote>
+
+        <h3>agentic workflows <span class="ts">12:40</span></h3>
+        <p>GitHub는 이를 위해 agentic workflows라는 프레임워크를 내놓았다. 원리는 간단하다.</p>
+        <ol class="plain">
+          <li>Copilot CLI는 헤드리스 모드<span class="en">headless mode</span>로 쓸 수 있다. 화면에서 대화하지 않고 명령 한 번으로 실행하는 방식이다.</li>
+          <li><code>-p</code> 옵션에 한 번짜리 프롬프트를 넘긴다.</li>
+          <li>이 실행을 GitHub Actions 러너나 다른 CI에서 돌린다 <span class="ts">13:00</span>. 그러면 파이프라인에서 도는 에이전트가 된다.</li>
+        </ol>
+        <p>저장소에서 일어나는 일을 계기<span class="en">trigger</span>로 걸 수 있다. 발표자가 든 예는 다음과 같다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>계기</th><th>에이전트가 할 일</th></tr></thead>
+            <tbody>
+              <tr><td>릴리스할 때</td><td>문서를 갱신한다</td></tr>
+              <tr><td>매주</td><td>컨텍스트 파일을 갱신한다</td></tr>
+              <tr><td>정해진 일정</td><td>각종 유지보수 작업을 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="gate">
+        <header><span class="num">07</span><h2>사람이 승인하는 파이프라인 <span class="ts">13:20</span></h2></header>
+        <p>발표자가 드는 예는 중복 코드다. 에이전트로 개발을 많이 하는 저장소에서 지금 가장 큰 문제 중 하나라고 한다.</p>
+        <ul class="plain">
+          <li>스파게티 코드와 중복 코드가 계속 쌓인다.</li>
+          <li>에이전트는 함수를 제대로 나눠 구현하는 데 게으르다.</li>
+          <li>네임스페이스<span class="en">namespace</span>를 정리하는 데는 더 게으르다. 그래서 같은 코드가 계속 복제된다.</li>
+        </ul>
+        <p>그래서 코드베이스를 살펴 중복을 줄일 곳을 찾고, 그걸 이슈로 만드는 에이전트를 둔다. agentic workflows는 여기에 사람 승인 지점<span class="en">human in the loop</span>을 넣어 준다 <span class="ts">13:50</span>. 다음 단계에 돈을 쓸지 사람이 보고 정한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>누가</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1 발견</td><td>파이프라인 에이전트 (cron 일정)</td><td>저장소를 살펴 개선할 곳 세 군데를 찾아 이슈로 만든다</td></tr>
+              <tr><td>2 판단</td><td>개발자</td><td>이슈를 읽고 고칠 가치가 있는지 정한다. 있으면 이슈 댓글에 슬래시 명령을 달아 "다음 단계로" 보낸다</td></tr>
+              <tr><td>3 계획</td><td>PRD를 쓰는 제품 관리자 에이전트</td><td>기능 범위를 정하고 계획을 쓴다</td></tr>
+              <tr><td>4 구현</td><td>플랫폼의 Copilot</td><td>넘겨받은 계획대로 구현한다</td></tr>
+              <tr><td>5 수락</td><td>개발자</td><td>코드를 보고 프로젝트에 받을지 정한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">사람이 하는 일</span>
+          <span>매 단계를 직접 하지 않는다. 돈이 드는 다음 단계 앞에서 "진행할까"만 정한다. 결정은 이슈 댓글의 슬래시 명령 하나로 끝난다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="maximal">
+        <header><span class="num">08</span><h2>끝까지 가 본 사례 <span class="ts">14:50</span></h2></header>
+        <p>파이프라인 에이전트의 장점은 늘리기 쉽다는 것이다. 로컬은 세션 하나, 기기 하나에 묶인다. 기기가 꺼지거나 네트워크가 끊기면 일이 멈춘다 <span class="ts">15:00</span>. 파이프라인 에이전트는 플랫폼에서 사람과 상관없이 돈다.</p>
+
+        <h3>gh-aw: 에이전트가 만드는 프레임워크 <span class="ts">15:10</span></h3>
+        <p>agentic workflows 프레임워크의 저장소가 gh-aw다. 발표자에 따르면 이 프로젝트는 전부 에이전트가 만든다.</p>
+        <ul class="plain">
+          <li>팀의 내부 목표는 개발을 휴대폰으로만 하는 것이다. 앞 절의 슬래시 명령으로만 프로젝트와 소통하기 때문이다.</li>
+          <li>에이전트가 200개쯤 있고, 파이프라인의 서로 다른 부분을 맡는다 <span class="ts">15:40</span>.</li>
+          <li>모두 앞 절의 흐름과 비슷한 구조를 따른다. 그 구조를 재사용할 수 있다는 뜻이다.</li>
+        </ul>
+        <p>발표자가 무작위로 하나를 열어 봤다 <span class="ts">16:00</span>. 다른 에이전트들의 일일 보고를 확인하는 메타 에이전트<span class="en">meta agent</span>였다. 매일 돌고, 정의는 마크다운 파일 하나다. 돌 때마다 마크다운 보고서를 쓰거나, 다른 에이전트가 받을 입력을 만든다. 그렇게 에이전트가 다음 에이전트를 계속 깨운다.</p>
+
+        <h3>Agentics: 가져다 쓰는 에이전트 모음 <span class="ts">16:30</span></h3>
+        <p>GitHub Next 조직의 Agentics 프로젝트에는 바로 가져다 쓸 파이프라인 에이전트가 30개쯤 있다.</p>
+        <ul class="plain">
+          <li>앞에서 말한 중복 코드 정리</li>
+          <li>QA 리뷰어 같은 여러 종류의 리뷰어</li>
+          <li>농담만 하는 재미용 리뷰어</li>
+        </ul>
+
+        <figure class="chart" aria-label="발표자가 어림한 파이프라인 에이전트 수: gh-aw 약 200개, Agentics 약 30개">
+          <span class="chart-title">저장소에 든 파이프라인 에이전트 수 (발표자 어림)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>gh-aw · 에이전트가 만드는 프레임워크</span><span class="val">약 200</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="gh-aw: 약 200개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Agentics · 가져다 쓰는 모음</span><span class="val">약 30</span></div>
+              <div class="track"><div class="fill" style="width:15%" title="Agentics: 약 30개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>100</span><span>200</span></div>
+          <span class="caption">발표자는 gh-aw를 "200개쯤"이라고 어림했고, 바로 뒤에서는 "수백 개"라고 했다. 정확한 개수가 아니라 규모 차이를 보는 그림이다.</span>
+        </figure>
+        <p class="note">gh-aw와 Agentics는 모두 GitHub 쪽 프로젝트다. 발표자가 자사 사례를 소개한 것이라는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="observe">
+        <header><span class="num">09</span><h2>보여야 줄일 수 있다 <span class="ts">17:00</span></h2></header>
+        <p>발표자는 작업을 노트북에서 떼어 내는 것이 비용 최적화의 열쇠라고 말한다. 조직 전체가 AI를 쓰는데 어떻게 쓰는지 볼 수 없으면 고칠 기회도 없다.</p>
+
+        <h3>노트북에서는 안 보이는 것 <span class="ts">17:10</span></h3>
+        <ul class="plain">
+          <li>에이전트가 너무 장황한가</li>
+          <li>맡은 일을 실제로 해내는가</li>
+          <li>도구 호출이 성공하는가, 실패하는가</li>
+          <li>검색 같은 일까지 모델의 추론으로 처리하는가, 작은 bash 스크립트를 만들어 처리하는가</li>
+        </ul>
+
+        <h3>파이프라인에서는 재고 고칠 수 있다 <span class="ts">17:50</span></h3>
+        <p>CI로 옮기면 모든 에이전트 실행이 OTel<span class="en">OpenTelemetry</span>로 기록된다. 이 기록을 SIEM 같은 로그 플랫폼에 모아 본다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>묻고 싶은 것</th><th>할 수 있는 것</th></tr></thead>
+            <tbody>
+              <tr><td>중복 코드 에이전트는 저장소마다 어떻게 돌고, 얼마가 드나</td><td>에이전트별, 저장소별로 비용과 평균 토큰 사용량을 나눠 본다</td></tr>
+              <tr><td>이번 실행이 평소보다 비쌌나 <span class="ts">18:10</span></td><td>예상 비용의 P90을 넘으면 에이전트가 원인을 조사하게 한다. 더 살펴볼 디버깅 정보를 보고받는다</td></tr>
+              <tr><td>도구 호출이 계속 실패하나 <span class="ts">18:30</span></td><td>front matter나 모델을 바꿔 A/B 테스트한다. 원하는 결과가 나오면 더 싼 모델로 바꾼다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">파이프라인으로 옮기면 비용이 준다는 주장은 GitHub Actions 같은 자사 제품 사용과 맞닿아 있다. 발표에는 파이프라인 실행 자체의 비용이나 절감 수치가 나오지 않는다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="map">
+        <header><span class="num">10</span><h2>정리: 네 단계 지도 <span class="ts">18:50</span></h2></header>
+        <p>발표자는 마지막에 흐름을 이렇게 묶었다. 로컬에서 만들고, 플랫폼으로 나누고, 결국 파이프라인으로 옮긴다. 이 노트는 여러 저장소로 넓히는 단계를 따로 떼어 네 단계로 정리했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>어디서</th><th>쓰는 것</th><th>얻는 것</th></tr></thead>
+            <tbody>
+              <tr><td>1 만들기</td><td>내 노트북 (CLI, IDE)</td><td><code>/agent</code>, Copilot의 자동 뼈대</td><td>반복하는 일을 맡길 에이전트</td></tr>
+              <tr><td>2 나누기</td><td>조직</td><td>마켓플레이스, <code>.github-private</code></td><td>표준화, 재사용, 캐시 적중</td></tr>
+              <tr><td>3 넓히기</td><td>여러 저장소</td><td><code>orchestrate</code></td><td>저장소를 가로지르는 동시 변경</td></tr>
+              <tr><td>4 옮기기</td><td>파이프라인 (Actions, CI)</td><td>agentic workflows, <code>-p</code></td><td>저장소의 신원과 예산, 관측, 비용 최적화</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>비교</th><th>내 노트북</th><th>파이프라인</th></tr></thead>
+            <tbody>
+              <tr><td>누구로 행동하나</td><td>나</td><td>저장소</td></tr>
+              <tr><td>누구 돈으로</td><td>내 예산</td><td>저장소 예산</td></tr>
+              <tr><td>끊기면</td><td>기기가 꺼지거나 네트워크가 끊기면 멈춘다</td><td>플랫폼에서 혼자 돈다</td></tr>
+              <tr><td>보이나</td><td>조직이 볼 수 없다</td><td>실행마다 기록이 남는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트는 <strong>모델과 지시문을 담은 마크다운 파일</strong>이다. 커스텀 에이전트는 둘을 직접 정한다.</li>
+          <li>IDE, CLI, SDK, 웹 어느 입구든 같은 하네스를 거친다. 인증, 기록, 출력 필터를 하네스가 맡는다.</li>
+          <li>일에 맞는 모델을 고른다. 탐색은 작은 모델, 계획 검토는 <strong>만든 모델과 다른 회사 모델</strong>이다.</li>
+          <li><code>/agent</code>에 한 줄 설명만 주면 Copilot이 설명, front matter, 성공 기준, 방법을 채운다. 사람은 고치기만 한다.</li>
+          <li>만든 에이전트는 마켓플레이스나 <code>.github-private</code>로 나눈다. 버전, 일괄 업데이트, 보안 알림이 따라온다.</li>
+          <li>같은 에이전트로 같은 문제를 풀면 <strong>캐시 적중</strong>이 늘어 비용이 준다고 발표자는 말한다.</li>
+          <li>에이전트는 자기 저장소 밖에 권한이 없다. <code>orchestrate</code>는 이슈를 목표로 받아 각 저장소 안에서 하위 에이전트를 띄운다.</li>
+          <li>유지보수 작업은 <strong>저장소의 신원과 예산</strong>으로 파이프라인에서 돌린다. agentic workflows는 CLI 헤드리스 실행을 Actions에 올린 것이다.</li>
+          <li>사람은 매 단계가 아니라 <strong>돈이 드는 다음 단계 앞에서</strong> 슬래시 명령으로 결정한다.</li>
+          <li>파이프라인에 올리면 실행이 보인다. OTel로 비용과 실패를 재고, P90 초과를 조사하고, 더 싼 모델을 고른다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 나눈 에이전트의 두 종류는?</span></summary><div class="answer">내가 직접 불러 쓰는 로컬 에이전트, 그리고 파이프라인에서 혼자 도는 자율 에이전트.</div></details>
+          <details><summary><span class="qn">Q2</span><span>IDE, CLI, SDK 어느 입구로 들어와도 거치는 곳은? 무슨 일을 하나?</span></summary><div class="answer">하네스(Copilot API 서비스). 입력을 나눠 모델에 보내고, 오픈소스 코드 되풀이를 확인하고, 인증과 지표·감사 로그를 처리하고, 모델의 답을 걸러 보여 준다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>explore와 Rubber duck 에이전트는 모델 선택에 대해 무엇을 보여 주나?</span></summary><div class="answer">explore는 탐색에 큰 모델이 필요 없어 작은 모델(Haiku)을 쓴다. Rubber duck은 Opus가 쓴 계획을 GPT 같은 다른 회사 모델이 검토한다. 학습 데이터와 가중치가 달라 다른 눈으로 보기 때문이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span><code>/agent</code>에 한 줄 설명만 주면 Copilot이 채워 주는 것은?</span></summary><div class="answer">설명, front matter 형식, 성공 기준, 방법 초안. 사람은 큰 방향만 쓰고, 만들어진 파일을 고친다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>마켓플레이스는 무엇이고, 구독하면 무엇이 생기나?</span></summary><div class="answer">마켓플레이스임을 알리는 JSON을 넣은 저장소다. 구독하면 에이전트를 한꺼번에 업데이트하고, 버전을 관리하고, 보안 취약점 알림을 받는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>마켓플레이스와 <code>.github-private</code>의 차이는?</span></summary><div class="answer">마켓플레이스는 조직 사이, 조직 밖까지 나눌 수 있고 사용자가 구독한다. <code>.github-private</code>는 조직 안에서만 쓰고 관리자가 전체에 밀어 준다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>발표자는 왜 재사용 에이전트가 비용을 줄인다고 하나?</span></summary><div class="answer">같은 에이전트로 같은 문제를 풀면 똑같은 요청이 늘어 캐시 적중률이 오른다. 캐시 적중이 이런 제품을 가장 싸게 쓰는 길이다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>공용 에이전트가 다른 저장소에서 일하기 어려운 이유와 <code>orchestrate</code>의 해법은?</span></summary><div class="answer">에이전트는 자기가 사는 저장소에서 시작해 다른 저장소의 권한이 없다. <code>orchestrate</code>는 이슈 여러 개를 목표로 받아 각 저장소 안에서 하위 에이전트를 띄운다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>유지보수 에이전트를 내 노트북이 아니라 파이프라인에서 돌려야 하는 이유 두 가지는?</span></summary><div class="answer">내 예산이 아니라 저장소의 예산으로, 내 이름이 아니라 저장소의 이름으로 일해야 하기 때문이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>agentic workflows의 원리는?</span></summary><div class="answer">Copilot CLI를 헤드리스 모드로 <code>-p</code>에 한 번짜리 프롬프트를 줘서 실행한다. 이걸 GitHub Actions 러너나 CI에서 릴리스, 주간 일정 같은 계기로 돌린다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>중복 코드 정리 흐름에서 사람이 끼는 두 지점은?</span></summary><div class="answer">에이전트가 만든 이슈를 읽고 슬래시 명령 댓글로 다음 단계를 허락하는 판단 단계, 그리고 구현된 코드를 받을지 정하는 수락 단계.</div></details>
+          <details><summary><span class="qn">Q12</span><span>파이프라인에서 에이전트 비용을 줄이는 방법 두 가지는?</span></summary><div class="answer">예상 비용의 P90을 넘은 실행은 원인을 조사하게 한다. 도구 호출이 계속 실패하면 front matter나 모델을 바꿔 A/B 테스트하고, 같은 결과면 더 싼 모델로 바꾼다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>반복하는 일 하나를 골라 커스텀 에이전트로 만든다<span class="how">한 줄 설명으로 시작하고, 만들어진 성공 기준과 방법을 직접 고친다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트마다 모델을 일부러 고른다<span class="how">탐색은 작은 모델, 계획 검토는 만든 모델과 다른 회사 모델</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>팀이 에이전트를 모을 중앙 저장소를 만든다<span class="how">조직 밖까지 나누면 마켓플레이스, 조직 안이면 <code>.github-private</code></span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>같은 문제는 같은 에이전트로 풀게 한다<span class="how">확인: 비슷한 프롬프트를 사람마다 따로 쓰고 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>여러 저장소에 걸친 변경은 저장소별 이슈로 나눈다<span class="how">에이전트가 각 저장소 안에서 시작하게 해 권한 문제를 피한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>내 이름으로 할 필요 없는 유지보수 작업을 파이프라인으로 옮긴다<span class="how">예: 릴리스 때 문서 갱신, 매주 컨텍스트 파일 갱신, 중복 코드 찾기</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>돈이 드는 다음 단계 앞에 사람의 승인 지점을 둔다<span class="how">확인: 계획과 구현이 사람의 허락 없이 시작되지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트 실행을 기록하고 비용 기준을 둔다<span class="how">OTel로 모으고, P90을 넘으면 조사하고, 실패가 반복되면 front matter나 모델을 바꿔 비교한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트</td><td>Agent. 모델에 지시문과 도구를 붙여 일을 스스로 진행하게 한 것. Copilot에서는 마크다운 파일 하나로 정의한다</td></tr>
+              <tr><td>커스텀 에이전트</td><td>Custom agent. 사용자가 모델과 지시문을 직접 정해 만든 에이전트</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 입력 처리, 인증, 기록, 출력 필터를 맡는 실행 틀. 발표에서는 Copilot API 서비스</td></tr>
+              <tr><td>감사 로그</td><td>Audit log. 누가 언제 무엇을 했는지 남기는 기록</td></tr>
+              <tr><td>SDK</td><td>다른 프로그램 안에 기능을 넣을 수 있게 제공하는 개발 도구 묶음</td></tr>
+              <tr><td>front matter</td><td>마크다운 파일 맨 위에 설정값을 적는 부분</td></tr>
+              <tr><td>마켓플레이스</td><td>Marketplace. 에이전트를 모아 두고 구독, 버전, 업데이트를 관리하는 저장소</td></tr>
+              <tr><td><code>.github-private</code></td><td>조직 전체에 에이전트를 공개하는, 이름이 정해진 저장소</td></tr>
+              <tr><td>캐시 적중</td><td>Cache hit. 요청 앞부분이 이전과 똑같아 저장된 계산을 다시 쓰는 것. 더 싸고 빠르다</td></tr>
+              <tr><td>하위 에이전트</td><td>Subagent. 큰 일을 나눠 맡도록 다른 에이전트가 띄운 에이전트</td></tr>
+              <tr><td>수평 확장</td><td>Horizontal scaling. 한 개를 키우는 대신 같은 일을 하는 단위를 여러 개로 늘리는 방식</td></tr>
+              <tr><td>헤드리스 모드</td><td>Headless mode. 화면에서 대화하지 않고 명령 한 번으로 실행하는 방식</td></tr>
+              <tr><td>CI</td><td>Continuous Integration. 코드가 바뀌거나 정해진 때가 되면 자동으로 작업을 돌리는 시스템. GitHub Actions가 그 예다</td></tr>
+              <tr><td>agentic workflows</td><td>GitHub Agentic Workflows. Copilot CLI를 Actions에서 돌려 저장소 일을 에이전트에게 맡기는 프레임워크. 저장소 이름은 gh-aw</td></tr>
+              <tr><td>cron</td><td>정해진 시각이나 주기마다 작업을 실행하게 하는 일정 표기</td></tr>
+              <tr><td>사람 승인 지점</td><td>Human in the loop. 자동 흐름 중간에 사람이 보고 진행 여부를 정하는 곳</td></tr>
+              <tr><td>PRD</td><td>Product Requirements Document. 무엇을 왜 만들지 적은 제품 요구사항 문서</td></tr>
+              <tr><td>네임스페이스</td><td>Namespace. 이름이 겹치지 않게 코드를 묶는 단위</td></tr>
+              <tr><td>메타 에이전트</td><td>Meta agent. 다른 에이전트들의 결과를 확인하는 에이전트</td></tr>
+              <tr><td>OTel</td><td>OpenTelemetry. 실행 추적, 지표, 로그를 표준 형식으로 모으는 도구 모음</td></tr>
+              <tr><td>SIEM</td><td>Security Information and Event Management. 여러 시스템의 로그를 모아 분석하는 보안 로그 플랫폼</td></tr>
+              <tr><td>P90</td><td>90번째 백분위수. 100번 실행하면 90번은 이 값 이하로 나온다</td></tr>
+              <tr><td>A/B 테스트</td><td>두 가지 안을 같은 조건에서 돌려 결과를 비교하는 실험</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>에이전트의 두 종류: 로컬과 파이프라인</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>Copilot의 데이터 흐름과 입구들</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td><code>/remote</code>로 휴대폰에서 조종, SDK로 Slack·Teams 연결</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>하네스: Copilot API 서비스</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>CLI 기본 에이전트와 <code>/agents</code></td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>explore 에이전트와 작은 모델</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>Rubber duck: 다른 회사 모델로 계획 검증</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>커스텀 에이전트가 필요한 때</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td><code>/agent</code>로 만들기, 프로젝트·사용자 수준</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>변경 기록 요약 에이전트 예시</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>한 줄 설명에서 자동으로 만든 뼈대</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>만들어진 파일 고치기</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>나누기: 마켓플레이스</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>중앙 저장소부터 만들기</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td><code>.github-private</code> 저장소</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>클라우드 에이전트에서 공유 에이전트 호출</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>재사용과 캐시 적중</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>조직 내부 배포와 마켓플레이스, awesome-copilot</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>저장소 경계와 권한 문제</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td><code>orchestrate</code>: 저장소를 가로지르는 하위 에이전트</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>로컬 세 층 정리</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>저장소의 예산과 신원으로 돌리기</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>agentic workflows: CLI 헤드리스 실행</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>Actions에서 실행, 릴리스·주간 계기</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>에이전트가 만드는 중복 코드 문제</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>사람 승인 지점</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>발견 → 판단 → 계획 → 구현 → 수락</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>파이프라인 에이전트의 확장성</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>gh-aw: 에이전트가 만드는 프로젝트, 휴대폰으로만 개발</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>에이전트 약 200개</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>메타 에이전트 예시</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>GitHub Next의 Agentics, 약 30개</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>노트북에서 떼어 내야 최적화할 수 있다</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>CI로 옮기면 보인다: OTel</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>P90 초과 조사</td></tr>
+              <tr><td><span class="ts">18:30</span></td><td>front matter·모델 A/B 테스트로 더 싼 모델 찾기</td></tr>
+              <tr><td><span class="ts">18:50</span></td><td>정리: 만들기, 나누기, 파이프라인으로</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>연락 방법과 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'b9UhZkKjX_A:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

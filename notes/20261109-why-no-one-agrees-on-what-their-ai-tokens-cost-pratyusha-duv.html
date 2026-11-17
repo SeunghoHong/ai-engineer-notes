@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 토큰 비용 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#answers">토크노믹스, 답이 다 다르다</a></li>
+      <li><a href="#trends">AI 비용의 세 가지 흐름</a></li>
+      <li><a href="#icp">토큰 비용을 보는 세 사람</a></li>
+      <li><a href="#dashboards">제공자 대시보드로는 왜 부족한가</a></li>
+      <li><a href="#definition">발표자의 정의</a></li>
+      <li><a href="#inputs">도입에 필요한 세 가지</a></li>
+      <li><a href="#leader">데모: 리더 뷰</a></li>
+      <li><a href="#finance">데모: 재무 뷰와 권한</a></li>
+      <li><a href="#roadmap">10주 만의 출시와 다음 기능</a></li>
+      <li><a href="#challenges">만들며 부딪힌 어려움</a></li>
+      <li><a href="#closing">다시, 토크노믹스란</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-09 · 19분 · 영어 발표 한글 정리</span>
+      <h1>AI 토큰 비용은 왜 사람마다 다르게 보일까</h1>
+      <p class="lead">토큰 비용을 물으면 엔지니어, 매니저, 재무팀이 각자 다른 질문을 한다. 발표자는 이 차이를 세 사용자 유형으로 나누고, 여러 제공자의 비용을 조직도와 재무 계층에 맞춰 한곳에 모으는 제품을 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=KdG9OSOtJOA" target="_blank" rel="noopener">Why No One Agrees on What Their AI Tokens Cost</a></span>
+        <span>발표: Pratyusha Duvvuri (Cisco. Galileo 출신, 에이전트 관측·분산 추적·토크노믹스 테크 리드)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용하거나 예로 든 것이고, 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다(G 2 Patel → Jeetu Patel). 확실하지 않은 이름에는 (추정)을 붙였다. 데모 화면의 실제 숫자는 발표에서도 가려져 있었다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>토크노믹스의 뜻은 사람마다 다르다. 100여 곳을 조사해 보니 <strong>"토큰이 얼마 드나"부터 "팀별 ROI"까지</strong> 답이 넓게 퍼져 있었다.</li>
+        <li>분위기가 바뀌었다. 토큰을 많이 쓰는 게 자랑이던 때에서 <strong>효율을 따지는 때</strong>로 넘어왔다.</li>
+        <li>모델 선택은 용도에 달렸다. 내부용은 <strong>96%짜리 싼 모델</strong>로 충분하고, 고객용은 <strong>99%짜리 비싼 모델</strong>도 감수한다.</li>
+        <li>토큰 단가는 <strong>회사마다 다르다.</strong> 제공자와 맺은 계약이 제각각이라서다.</li>
+        <li>토큰 비용을 보는 사람은 <strong>엔지니어, 엔지니어링 매니저, 재무팀</strong> 셋이다. 묻는 질문이 서로 다르다.</li>
+        <li>제공자 대시보드로는 부족하다. 제공자별로 흩어져 있고, <strong>정산 뒤 금액이 바뀌고</strong>, 재무가 보는 소유 구조와 맞지 않는다.</li>
+        <li>발표자의 정의: 토크노믹스는 <strong>토큰 사용량과 비용을 관측하고 해석하는 일</strong>이다. 제품은 비용을 조직도와 재무 계층에 쌓아 올려 보여 주고, 권한에 따라 보이는 범위를 나눈다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="answers">
+        <header><span class="num">01</span><h2>토크노믹스, 답이 다 다르다 <span class="ts">00:00</span></h2></header>
+        <p>발표는 청중에게 7초 동안 눈을 감고 "토크노믹스<span class="en">tokenomics</span>가 나에게 무슨 뜻인가"를 떠올려 보라는 요청으로 시작한다. 발표자는 같은 답을 떠올린 사람이 둘도 없을 거라고 장담한다.</p>
+        <p>근거는 조사다. 발표자 팀은 100곳 넘는 고객사를 만났다. 엔지니어, PM, 엔지니어링 매니저, CFO까지 두루 이야기했다.</p>
+        <div class="shift" aria-label="조사에서 나온 답의 범위">
+          <div><span class="tag">가장 단순한 답</span><b>관측</b><span class="muted">내 토큰이 얼마나 드는지 보고 싶다</span></div>
+          <span class="arrow" aria-hidden="true">↔</span>
+          <div class="to"><span class="tag">가장 복잡한 답</span><b>재무 분석</b><span class="muted">팀마다 ROI를 전부 쪼개서 보고 싶다</span></div>
+        </div>
+        <p>발표자도 토크노믹스의 정답은 없다고 인정한다. 대신 자기 나름의 정의를 내놓겠다고 한다. <span class="ts">01:10</span></p>
+        <p>발표자는 Galileo에서 일했다. Galileo는 Splunk에 인수됐고, Splunk는 Cisco에 인수됐다. 발표자는 이를 마트료시카 인형에 빗댔다. 맡은 일은 에이전트 관측<span class="en">agent observability</span>, 분산 추적<span class="en">distributed tracing</span>, 그리고 최근의 토크노믹스다. <span class="ts">01:20</span></p>
+      </section>
+
+      <!-- 2 -->
+      <section id="trends">
+        <header><span class="num">02</span><h2>AI 비용의 세 가지 흐름 <span class="ts">01:50</span></h2></header>
+        <p>제품을 보여 주기 전에 발표자는 AI 업계의 흐름 세 가지를 먼저 짚는다.</p>
+
+        <h3>1. 많이 쓰기에서 아껴 쓰기로 <span class="ts">02:00</span></h3>
+        <p>한때는 토큰을 많이 쓰는 것이 일종의 지위였다. 이를 토큰 맥싱<span class="en">token maxing</span>이라 부른다. 발표자는 NVIDIA의 Jensen Huang이 5월에 했다는 말을 인용한다. 연봉 50만 달러짜리 직원이 토큰에 25만 달러 정도도 쓰지 않으면 "겁이 난다"는 내용이다.</p>
+        <figure class="chart" aria-label="Jensen Huang 발언 속 비교: 직원 연봉 50만 달러, 기대하는 토큰 지출 25만 달러">
+          <span class="chart-title">연봉 대비 기대하는 토큰 지출 (만 달러)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>직원 연봉</span><span class="val">50</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="직원 연봉: 50만 달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>그 직원에게 기대하는 토큰 지출</span><span class="val">25</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="기대 토큰 지출: 25만 달러"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>25</span><span>50</span></div>
+          <span class="caption">발표자가 인용한 발언이다. 토큰 지출이 연봉의 절반 수준이다.</span>
+        </figure>
+        <p>지금은 반대 이야기가 나온다. 발표자는 발표 당일 아침 X에서 본 글을 소개한다. Ramp의 CEO Eric(Eric Glyman, 추정)이 "CFO가 올리지 말라고 했지만 올린다"며 <strong>일주일에 150만 달러</strong>를 썼고 CFO가 기겁했다고 적었다. 흐름은 이제 효율 쪽으로 간다. <span class="ts">02:20</span></p>
+
+        <h3>2. 무조건 최고 모델에서 용도별 모델로 <span class="ts">02:40</span></h3>
+        <p>예전에는 어떤 일이든 최고 성능 모델<span class="en">SOTA</span>을 썼다. 이제는 도구 호출과 모델 사용에서 효율을 얼마나 뽑을지를 따진다. 다만 여기에는 미묘한 차이가 있다.</p>
+        <p>Galileo의 내부 업무 하나에 Luna 같은 싼 모델을 썼다. 평가<span class="en">eval</span> 점수는 96%였다. 재미 삼아 더 비싼 모델(자막에는 "GPT-6 Astra"로 들림, 추정)로 돌려 보니 99%가 나왔다. <span class="ts">03:10</span></p>
+        <figure class="chart" aria-label="같은 내부 업무의 평가 점수: 싼 모델 96%, 비싼 모델 99%">
+          <span class="chart-title">같은 내부 업무의 평가 점수 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>내부용으로 쓰던 싼 모델 (Luna 계열)</span><span class="val">96</span></div>
+              <div class="track"><div class="fill key" style="width:96%" title="싼 모델: 96%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>시험 삼아 돌린 비싼 모델 (GPT-6 Astra, 추정)</span><span class="val">99</span></div>
+              <div class="track"><div class="fill" style="width:99%" title="비싼 모델: 99%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">진한 막대가 내부에서 그대로 쓰기로 한 모델이다. 두 막대 길이가 거의 같은 것이 이 사례의 요점이다.</span>
+        </figure>
+        <p class="note">발표자는 이 차이를 "3%"라고 말했다. 정확히는 3%포인트다.</p>
+        <p>회사는 모델을 바꾸지 않았다. 내부용이라 돈을 아끼는 쪽이 낫다고 봤다. 고객을 상대하는 일이라면 판단이 달라진다. 고객 만족이 오른다면 비싼 모델의 비용을 감수한다. <strong>효율은 용도에 따라 다르게 정의된다.</strong></p>
+        <p class="note">발표자는 최고 모델의 예로 Opus 5.5를 들었다. 자막에는 "Astra Opus 5.5"로 들려서, 앞에 붙은 말은 확실하지 않다.</p>
+
+        <h3>3. 정가표에서 회사별 계약으로 <span class="ts">03:50</span></h3>
+        <p>예전에는 OpenAI, Anthropic, Cursor 같은 제공자가 크레딧<span class="en">credit</span>당 가격, 모델 목록, 라이선스 요금제를 내밀면 끝이었다. 맞춤 계약은 없었다.</p>
+        <p>지금은 통신사, 핀테크 회사 등 고객마다 제공자와 맺은 계약이 다르다. 발표자는 그 예를 이렇게 들었다. <span class="ts">04:20</span></p>
+        <figure class="chart" aria-label="회사별 크레딧당 단가 예: 3센트, 4센트, 10센트">
+          <span class="chart-title">계약마다 다른 크레딧당 단가 (센트)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>계약 A</span><span class="val">3</span></div>
+              <div class="track"><div class="fill" style="width:30%" title="계약 A: 크레딧당 3센트"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>계약 B</span><span class="val">4</span></div>
+              <div class="track"><div class="fill" style="width:40%" title="계약 B: 크레딧당 4센트"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>계약 C (30달러까지 무료, 넘으면)</span><span class="val">10</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="계약 C: 30달러 초과분 크레딧당 10센트"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>5</span><span>10</span></div>
+          <span class="caption">발표자가 든 예다. 계약 C는 30달러까지 받지 않고, 그 뒤부터 크레딧당 10센트를 받는다.</span>
+        </figure>
+        <p>같은 토큰이라도 회사마다 값이 다르다. 발표자는 이것이 토크노믹스가 중요해지는 가장 큰 이유인데도 사람들이 잘 생각하지 않는다고 말한다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="icp">
+        <header><span class="num">03</span><h2>토큰 비용을 보는 세 사람 <span class="ts">04:40</span></h2></header>
+        <p>제품을 만들려면 대표 고객 유형, 즉 ICP<span class="en">ideal customer profile</span>를 정해야 한다. 100여 곳의 답을 세 묶음으로 나누기는 어려웠지만, 발표자 팀은 셋으로 정리했다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">엔지니어 <span class="ts">05:10</span></span>
+            <ul>
+              <li>어떤 모델을 써야 하나</li>
+              <li>이번 달 예산(예: 1만 달러)을 넘고 있나</li>
+              <li>어떤 스킬을 쓰고 있나</li>
+              <li>Opus 대신 Sonnet을 써도 되나</li>
+            </ul>
+            <p class="verdict"><b>관심사</b>: 내 사용량과 내 예산</p>
+          </div>
+          <div class="card">
+            <span class="tag">엔지니어링 매니저 <span class="ts">05:30</span></span>
+            <ul>
+              <li>관측팀은 성과를 내지만 비용을 넘긴다</li>
+              <li>제품팀은 비용은 적은데 약속한 KPI를 못 낸다</li>
+              <li>무슨 일이 일어나고 있나, 추세는 어떤가</li>
+            </ul>
+            <p class="verdict"><b>관심사</b>: 팀 단위의 사용과 도입</p>
+          </div>
+          <div class="card">
+            <span class="tag">재무팀 <span class="ts">06:00</span></span>
+            <ul>
+              <li>예산과 초과 알림</li>
+              <li>상사, CEO, 이사회에 이 지출의 ROI를 설명해야 한다</li>
+            </ul>
+            <p class="verdict"><b>관심사</b>: 지출의 근거. 기술팀이 가장 놓치기 쉬운 사람들이다</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">택시 미터 비유 <span class="ts">06:20</span></span>
+          <span>발표자가 X에서 읽은 글을 소개한다. 토큰 사용은 미터기가 도는 택시를 타는 것과 같다. 내릴 때 얼마가 찍힐지 모른다. 내려 보니 200만이 찍혀 있다. 미리 정한 금액만 내는 선불 요금제와는 전혀 다르다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="dashboards">
+        <header><span class="num">04</span><h2>제공자 대시보드로는 왜 부족한가 <span class="ts">06:40</span></h2></header>
+        <p>제공자도 대시보드를 준다. OpenAI 포털에 들어가면 사용한 스킬, 비용, 예측까지 볼 수 있다. 발표자는 그래도 부족한 이유를 넷으로 든다.</p>
+        <ol class="plain">
+          <li><strong>제공자마다 따로다.</strong> OpenAI, Anthropic, GitHub Copilot, 그 밖에 네 곳을 더 쓰면 화면도 그만큼 많다. 한곳에서 다 볼 방법이 없다.</li>
+          <li><strong>엔지니어에게 맞춰져 있다.</strong> 발표자도 엔지니어로서 이 대시보드들을 오가며 썼다. 매니저와 재무팀의 질문에는 답하지 못한다.</li>
+          <li><strong>청구액이 나중에 바뀐다.</strong> 아래 정산 문제다.</li>
+          <li><strong>재무는 소유를 다르게 본다.</strong> 아래 조직도와 재무 계층 문제다.</li>
+        </ol>
+
+        <h3>정산: 청구액이 나중에 바뀐다 <span class="ts">07:30</span></h3>
+        <p>제공자는 정산<span class="en">reconciliation</span>이라는 과정을 거친다. 이번 달 10만 달러라고 알려 놓고, 정산 뒤에 "사실 12만 달러였다"고 고칠 수 있다. 그래서 모든 제공자의 사용량을 정직하게 보여 주는 한곳이 필요하다는 것이 발표자의 주장이다.</p>
+        <figure class="chart" aria-label="정산 예: 처음 알린 금액 10만 달러, 정산 후 금액 12만 달러">
+          <span class="chart-title">정산 전후의 이번 달 청구액 (만 달러)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>처음 알린 금액</span><span class="val">10</span></div>
+              <div class="track"><div class="fill" style="width:83.3%" title="처음 알린 금액: 10만 달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>정산 뒤 고친 금액</span><span class="val">12</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="정산 뒤 금액: 12만 달러"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>6</span><span>12</span></div>
+          <span class="caption">발표자가 든 가상의 예다. 정산에서 20%가 늘었다.</span>
+        </figure>
+
+        <h3>재무는 소유를 다르게 본다 <span class="ts">07:50</span></h3>
+        <p>회사에는 Workday 같은 인사 시스템에 담긴 관리 구조가 있다. 발표자 → 상사 → 그 상사 → … → Cisco CEO Chuck Robbins로 이어진다. 재무팀은 이 구조로 비용을 보지 않는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구분</th><th>조직도 (Workday)</th><th>재무 계층</th></tr></thead>
+            <tbody>
+              <tr><td>무엇을 따라 나뉘나</td><td>누가 누구에게 보고하는가</td><td>운영비, 매출원가 같은 비용 분류<span class="en">OPEX, COGS</span></td></tr>
+              <tr><td>꼭대기</td><td>CEO</td><td>같은 CEO</td></tr>
+              <tr><td>"소유"의 뜻</td><td>내 매니저, 그 매니저의 매니저</td><td>비용이 쌓이는 재무 단위와 부서</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>재무팀이 원하는 것은 <strong>지출을 재무 관점의 소유자에게 매핑하는 것</strong>이다. 같은 사람의 토큰 비용이라도 두 구조에서 다른 자리에 쌓인다.</p>
+        <p class="note">이 섹션의 주장은 발표자 팀이 만든 제품의 존재 이유이기도 하다. 자기 제품을 소개하는 발표이니 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="definition">
+        <header><span class="num">05</span><h2>발표자의 정의 <span class="ts">08:30</span></h2></header>
+        <blockquote>토크노믹스는 토큰 사용량과 비용의 관측 가능성이자 해석 가능성이다.<cite>발표자의 정의를 옮김 (observability and interpretability of token usage and cost)</cite></blockquote>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>말</th><th>이 발표에서의 뜻</th></tr></thead>
+            <tbody>
+              <tr><td>관측 가능성<span class="en">observability</span></td><td>얼마나 썼고 얼마가 들었는지 보는 것</td></tr>
+              <tr><td>해석 가능성<span class="en">interpretability</span></td><td>ROI를 따지는 것. 어떤 모델 조합을 쓰는지 보는 것. 용도에 맞게 쓰고 분류하는지 보는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 이 단어들이 모호하다고 스스로 인정한다. 중요한 건 정의가 아니라 <strong>각 ICP가 무엇을 원하는지 파고드는 것</strong>이다. 그래야 어떤 제품을 만들지 보인다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="inputs">
+        <header><span class="num">06</span><h2>도입에 필요한 세 가지 <span class="ts">09:20</span></h2></header>
+        <p>이 제품을 쓰려면 고객이 세 가지를 넘겨야 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>넘길 것</th><th>왜 필요한가</th><th>메모</th></tr></thead>
+            <tbody>
+              <tr><td>인사 조직도</td><td>사용량을 사람과 팀에 붙이려고</td><td>Workday, ADP 등 회사 구조를 담은 도구에서 뽑는다</td></tr>
+              <tr><td>제공자별 API 키와 org ID</td><td>OpenAI, Anthropic 등에서 매일 데이터를 가져오려고</td><td>데이터는 하루 단위로 새로 고친다 <span class="ts">09:40</span></td></tr>
+              <tr><td>재무 계층</td><td>비용을 재무 관점의 소유자에 매핑하려고</td><td>회사마다 다르다. 셋 중 가장 까다롭다 <span class="ts">10:00</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">인사 데이터는 최소한만 받는다 <span class="ts">10:10</span></span>
+          <span>사람들은 인사 데이터를 넘기는 데 민감하다. 고객들은 이름, ID, 직무 정도만 주고 근속 기간 같은 건 주지 않으려 했다. 그래서 발표자 팀은 필수 항목 여섯 개를 담은 CSV 파일 하나만 받는다. 발표에서 언급된 항목은 이름, ID, 직무다. 더 주면 그만큼 더 잘게 나눠 보여 준다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="leader">
+        <header><span class="num">07</span><h2>데모: 리더 뷰 <span class="ts">10:50</span></h2></header>
+        <p>데모 화면의 숫자는 흐리게 가렸다. 회사가 실제 숫자 공개를 허락하지 않았기 때문이다. 숫자 말고는 제품을 그대로 보여 준다.</p>
+        <p>오른쪽 위의 <strong>리더 뷰</strong>는 엔지니어와 엔지니어링 매니저를 위한 화면이다. 재무팀도 들어올 수는 있다. <span class="ts">11:30</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>화면 요소</th><th>보여 주는 것</th></tr></thead>
+            <tbody>
+              <tr><td>기간 필터</td><td>이번 달 누적, 주 단위, 재무팀용 회계 달력<span class="en">fiscal calendar</span></td></tr>
+              <tr><td>비용 대시보드</td><td>쓴 돈과 토큰</td></tr>
+              <tr><td>도입 대시보드</td><td>팀이 AI 도구를 실제로 쓰고 있나. 예: Codex 사용이 늘었나 줄었나. 빨간 숫자는 고른 기간의 증감 추세다</td></tr>
+              <tr><td>예측 그래프</td><td>앞으로의 사용량을 흐릿한 그래프로 보여 준다 <span class="ts">12:10</span></td></tr>
+              <tr><td>일별 비용 추세</td><td>날마다의 비용 변화 <span class="ts">12:40</span></td></tr>
+              <tr><td>조직도 롤업</td><td>아래 사람들의 사용량을 위 사람에게 합쳐 보여 준다 <span class="ts">12:50</span></td></tr>
+              <tr><td>직무군별 사용량</td><td>영업, 제품, 엔지니어링 같은 직무군<span class="en">job family</span>별 비교 <span class="ts">13:40</span></td></tr>
+              <tr><td>세부 필터</td><td>모델별 비용, 생각 수준(high, medium, low)별 비용, 사람·직무·총비용으로 거르기 <span class="ts">14:20</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>예측: 가장 큰 스트레스 <span class="ts">12:10</span></h3>
+        <p>고객 인터뷰에서 매니저와 재무팀이 모두 꼽은 가장 큰 걱정은 예측<span class="en">forecasting</span>이었다. 예산을 일주일 만에 다 쓸지, 한 달을 버틸지 모른다. 그래프의 폭이 넓은 것은 새 모델과 새 가격이 계속 나오는 지금 AI 환경 탓이라고 발표자는 설명한다.</p>
+        <p class="note">발표 뒷부분(16:10)에서 발표자는 예측 기능이 아직 공개 전이고 몇 주 안에 나온다고 말한다. 데모의 예측 그래프는 공개 전 기능으로 보인다.</p>
+
+        <h3>조직도를 따라 내려가기 <span class="ts">12:50</span></h3>
+        <p>맨 위에 CEO Chuck Robbins가 있고, 그 아래 직속 보고자들의 사용량이 합쳐져 있다. 발표자의 사용량은 CPO인 Jeetu Patel 아래로 쌓인다. Jeetu Patel은 CEO에게 보고한다. 한 단계씩 내려가며 팀 합계와 개인 사용량을 빠르게 볼 수 있다. 발표자는 이 속도를 사용자 경험에서 중요한 부분으로 꼽는다.</p>
+
+        <div class="callout">
+          <span class="title">고객 사례: 영업팀이 더 많이 썼다 <span class="ts">14:00</span></span>
+          <span>매니저의 매니저의 매니저쯤 되면 제품팀, 영업팀, 엔지니어링팀을 함께 맡는다. 이 사람은 영업팀이 엔지니어링팀보다 토큰을 더 쓰는지 궁금해한다. 실제 고객 사례에서 영업팀이 엔지니어링팀보다 더 많이 쓰고 있었다. 발표자는 "조금 걱정스러웠다"고 했다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="finance">
+        <header><span class="num">08</span><h2>데모: 재무 뷰와 권한 <span class="ts">14:30</span></h2></header>
+        <p>엔지니어 출신인 발표자에게 재무 뷰는 처음엔 낯설었다. 매출원가와 운영비 보고 구조를 이해하고 나니, 이것도 결국 계층이라는 걸 알게 됐다.</p>
+        <ol class="plain">
+          <li>재무 계층을 나무 모양의 비용 지도로 그린다. 노드가 여럿 있다.</li>
+          <li>나무의 끝은 부서다.</li>
+          <li>발표자부터 CEO까지 모든 사람이 어떤 부서에 속한다.</li>
+          <li>그래서 모든 사람의 비용이 나무의 어떤 노드로 쌓인다.</li>
+          <li>재무 통제 담당자<span class="en">financial controller</span>와 분석가 같은 재무 역할도 이 구조에 들어간다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">보이는 범위는 권한으로 나눈다 <span class="ts">15:20</span></span>
+          <span>역할 기반 접근 제어<span class="en">RBAC</span>를 엄격하게 건다. 팀 A의 매니저는 관리자가 아니면 팀 B의 사용량을 볼 수 없다. 각자 봐도 되는 것만 보인다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="roadmap">
+        <header><span class="num">09</span><h2>10주 만의 출시와 다음 기능 <span class="ts">15:40</span></h2></header>
+        <p>설정 화면 설명은 시간 때문에 건너뛰었다. 발표자 팀은 고객 인터뷰부터 시작해 <strong>10주 만에</strong> 제품을 정식 출시<span class="en">GA</span>했다. 주말을 많이 반납했다고 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>요청이 많은 기능</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>예측</td><td>아직 공개 전. 몇 주 안에 나온다고 했다 <span class="ts">16:10</span></td></tr>
+              <tr><td>ROI 추론<span class="en">ROI inference</span></td><td>사업 성과를 토큰 사용과 연결한다. 예: 고객을 얼마나 확보했나, 마이그레이션을 끝냈나, 새 제품이 관심을 끌었나 <span class="ts">16:20</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="challenges">
+        <header><span class="num">10</span><h2>만들며 부딪힌 어려움 <span class="ts">16:40</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 목적지를 모르는 큰 배</span>
+            <p>토크노믹스는 아직 뜻이 정해지지 않은 주제다. 목적지를 모른 채 큰 배를 모는 셈이라 규모에 맞게 방향을 잡기 어렵다.</p>
+            <p class="verdict"><b>발표자가 든 예</b>: 9만 명을 위한 데이터 모델을 다 만들었는데, 구조를 뒤집는 새 요청이 들어온다. 이제 1만 명의 새 사용자와 새 제품 사용자까지 함께 감당해야 한다. <span class="ts">17:00</span></p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 서로 다른 세 청중 <span class="ts">17:30</span></span>
+            <p>만들어서 내보내는 것 자체는 진짜 어려움이 아니다. 누구든 원하는 걸 바로 얻을 만큼 단순하게 만드는 게 어렵다.</p>
+            <p class="verdict"><b>이유</b>: 엔지니어, 매니저, 재무팀의 질문이 서로 너무 다르다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 정산과 사람의 이동 <span class="ts">18:00</span></span>
+            <p>제공자 데이터는 고정돼 있지 않다. 바뀌지 않는다고 했던 과거 데이터도 정산 뒤에 바뀐다.</p>
+            <p class="verdict"><b>더해서</b>: 사람도 바뀐다. 누군가 퇴사하고, 매니저가 바뀐다. 비용을 누구에게 매길지, 즉 귀속<span class="en">attribution</span>을 계속 다시 맞춰야 한다. <span class="ts">18:20</span></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="closing">
+        <header><span class="num">11</span><h2>다시, 토크노믹스란 <span class="ts">18:30</span></h2></header>
+        <p>발표자는 처음 질문으로 돌아가며 마친다. 이 발표를 들은 지금, 토크노믹스는 나에게 무슨 뜻인가. 발표자는 정답을 주지 않았다. 대신 누가 무엇을 묻는지부터 나눠 보라는 틀을 남겼다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>토크노믹스의 뜻은 사람마다 다르다. 100여 곳의 답이 "토큰 비용 보기"부터 "팀별 ROI"까지 퍼져 있었다.</li>
+          <li>토큰을 많이 쓰는 게 자랑이던 때에서 <strong>효율을 따지는 때</strong>로 넘어왔다.</li>
+          <li>효율은 용도에 따라 다르다. 내부용은 96%짜리 싼 모델을 두고, 고객용은 비싼 모델도 감수한다.</li>
+          <li>토큰 단가는 회사별 계약에 따라 다르다. 같은 사용량도 회사마다 값이 다르다.</li>
+          <li>토큰 비용을 보는 사람은 <strong>엔지니어, 엔지니어링 매니저, 재무팀</strong>이다. 각자 내 예산, 팀 추세, 지출 근거를 묻는다.</li>
+          <li>제공자 대시보드는 제공자별로 흩어져 있고 엔지니어에게 맞춰져 있다.</li>
+          <li>제공자 청구액은 <strong>정산 뒤에 바뀔 수 있다.</strong></li>
+          <li>재무는 조직도가 아니라 <strong>재무 계층</strong>으로 소유를 본다. 비용을 두 구조에 모두 매핑해야 한다.</li>
+          <li>발표자의 정의: 토크노믹스는 <strong>토큰 사용량과 비용의 관측과 해석</strong>이다.</li>
+          <li>남은 어려움은 계속 바뀌는 요구, 서로 다른 세 청중, 정산과 사람의 이동이다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>100여 곳을 조사해서 발표자 팀이 발견한 것은?</span></summary><div class="answer">토크노믹스의 뜻이 사람마다 달랐다. "내 토큰이 얼마 드나"를 보고 싶다는 답부터 "팀마다 ROI를 전부 쪼개 보고 싶다"는 답까지 있었다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Jensen Huang의 발언과 Ramp CEO의 글은 어떤 흐름 변화를 보여 주나?</span></summary><div class="answer">토큰을 많이 쓰는 것이 자랑이던 분위기(연봉 50만 달러 직원에게 토큰 25만 달러)에서, 일주일 150만 달러 지출에 CFO가 기겁하는 분위기로 바뀌었다. 효율을 따지는 쪽으로 갔다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Galileo는 왜 99% 모델로 바꾸지 않았나? 고객용이라면 어떻게 하나?</span></summary><div class="answer">내부용이라 96%로 충분했고 돈을 아끼는 쪽을 택했다. 고객을 상대하는 일이라면 만족도를 위해 비싼 모델의 비용을 감수한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>같은 토큰이 회사마다 값이 다른 이유는?</span></summary><div class="answer">고객마다 제공자와 맺은 계약이 다르다. 크레딧당 3센트, 4센트, 또는 30달러까지 무료이고 그 뒤 10센트 같은 식이다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>세 ICP는 누구이고, 각자 무엇을 걱정하나?</span></summary><div class="answer">엔지니어는 모델 선택과 내 예산을, 엔지니어링 매니저는 팀별 성과 대비 비용과 도입 추세를, 재무팀은 예산·알림과 경영진에게 설명할 ROI를 걱정한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>택시 미터 비유가 가리키는 문제는?</span></summary><div class="answer">쓰는 동안에는 최종 금액을 모른다는 점이다. 끝나고 보면 예상보다 훨씬 큰 금액이 나와 있다. 선불 요금제와 다르다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>제공자 대시보드로 부족한 이유 네 가지는?</span></summary><div class="answer">제공자마다 따로 흩어져 있다. 엔지니어에게 맞춰져 있다. 정산 뒤에 청구액이 바뀐다. 재무가 보는 소유 구조와 맞지 않는다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>조직도와 재무 계층은 무엇이 다른가?</span></summary><div class="answer">조직도는 누가 누구에게 보고하는지를 따른다. 재무 계층은 운영비·매출원가 같은 비용 분류를 따르고, 끝은 부서다. 꼭대기의 CEO는 같지만 "소유"의 뜻이 다르다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>발표자의 토크노믹스 정의와, 그중 "해석"이 뜻하는 것은?</span></summary><div class="answer">토큰 사용량과 비용의 관측 가능성이자 해석 가능성이다. 해석은 ROI, 쓰는 모델 조합, 용도별 사용과 분류를 읽어 내는 것이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>도입에 필요한 세 가지와, 인사 데이터를 CSV로 최소한만 받는 이유는?</span></summary><div class="answer">인사 조직도, 제공자별 API 키와 org ID, 재무 계층이다. 고객들이 인사 데이터 공유에 민감해서 이름, ID, 직무 같은 필수 항목만 받는다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>리더 뷰의 비용 대시보드와 도입 대시보드는 무엇이 다른가?</span></summary><div class="answer">비용 대시보드는 쓴 돈과 토큰을 보여 준다. 도입 대시보드는 팀이 AI 도구를 실제로 쓰고 있는지, 사용이 늘었는지 줄었는지를 보여 준다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>정산 말고도 비용 귀속을 어렵게 만드는 것은?</span></summary><div class="answer">사람의 이동이다. 누군가 퇴사하거나 매니저가 바뀌면 비용을 매길 자리가 달라진다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>토큰 비용에 대해 역할별로 알고 싶은 질문을 적는다<span class="how">엔지니어: 내 예산 / 매니저: 팀 추세와 도입 / 재무: 지출 근거와 ROI</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>쓰고 있는 AI 제공자와 계약 단가를 한 표로 모은다<span class="how">크레딧당 단가, 무료 구간, 초과 단가를 함께 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>업무를 내부용과 고객용으로 나눠 모델을 고른다<span class="how">확인: 내부용 업무에서 싼 모델의 평가 점수가 충분한가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>월말 청구액과 정산 후 금액을 비교한다<span class="how">확인: 정산에서 금액이 바뀐 적이 있는가, 얼마나 바뀌었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>토큰 비용을 조직도와 재무 계층 양쪽에 붙일 수 있는지 확인한다<span class="how">필요한 키: 사람 ID, 직무, 부서</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>비용 분석에 넘기는 인사 데이터는 최소 항목만 쓴다<span class="how">이름, ID, 직무처럼 꼭 필요한 것만</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>비용 화면에 권한 규칙을 건다<span class="how">확인: 다른 팀의 사용량은 관리자만 볼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>월 예산 대비 소진 속도를 주기적으로 본다<span class="how">확인: 예산을 언제 다 쓸지 미리 알 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>토큰 사용과 연결할 사업 성과 지표를 하나 정한다<span class="how">예: 확보한 고객 수, 끝낸 마이그레이션, 새 제품 반응</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>토크노믹스</td><td>Tokenomics. 이 발표에서는 토큰 사용량과 비용을 관측하고 해석하는 일</td></tr>
+              <tr><td>토큰 맥싱</td><td>Token maxing. 토큰을 많이 쓰는 것을 자랑이나 지위로 여기는 태도</td></tr>
+              <tr><td>SOTA 모델</td><td>State of the art. 현재 가장 성능이 좋은 모델</td></tr>
+              <tr><td>평가 (eval)</td><td>모델이나 시스템의 결과 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>크레딧</td><td>Credit. 제공자가 사용량에 값을 매기는 과금 단위</td></tr>
+              <tr><td>ICP</td><td>Ideal customer profile. 제품이 겨냥하는 대표 고객 유형</td></tr>
+              <tr><td>관측 가능성</td><td>Observability. 시스템이 무엇을 얼마나 했는지 밖에서 볼 수 있는 정도</td></tr>
+              <tr><td>해석 가능성</td><td>Interpretability. 이 발표에서는 ROI, 모델 조합, 용도별 분류를 읽어 내는 것</td></tr>
+              <tr><td>ROI</td><td>Return on investment. 쓴 돈에 비해 얻은 성과</td></tr>
+              <tr><td>정산</td><td>Reconciliation. 청구한 금액을 실제 사용 기록과 맞춰 보고 고치는 과정</td></tr>
+              <tr><td>OPEX / COGS</td><td>운영비 / 매출원가. 재무팀이 비용을 나누는 대표적인 분류</td></tr>
+              <tr><td>Workday / ADP</td><td>회사 조직 구조와 인사 정보를 담는 인사 시스템</td></tr>
+              <tr><td>재무 계층</td><td>Finance hierarchy. 비용 분류에 따라 회사를 나눈 나무 구조. 끝은 부서다</td></tr>
+              <tr><td>org ID</td><td>제공자 계정에서 조직을 구별하는 식별자</td></tr>
+              <tr><td>롤업</td><td>Roll-up. 아래 단위의 값을 위 단위로 합쳐 보여 주는 것</td></tr>
+              <tr><td>직무군</td><td>Job family. 영업, 제품, 엔지니어링처럼 비슷한 일을 하는 직무의 묶음</td></tr>
+              <tr><td>도입</td><td>Adoption. 팀이 AI 도구를 실제로 쓰기 시작하고 꾸준히 쓰는 정도</td></tr>
+              <tr><td>예측</td><td>Forecasting. 지금 추세로 앞으로의 사용량과 비용을 내다보는 것</td></tr>
+              <tr><td>회계 달력</td><td>Fiscal calendar. 회사가 재무 보고에 쓰는 연도·분기 구분</td></tr>
+              <tr><td>RBAC</td><td>Role-based access control. 역할에 따라 볼 수 있는 범위를 정하는 권한 방식</td></tr>
+              <tr><td>귀속</td><td>Attribution. 비용을 어느 사람, 팀, 부서의 것으로 매기는 일</td></tr>
+              <tr><td>GA</td><td>General availability. 정식 출시</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>도입: 토크노믹스는 나에게 무슨 뜻인가</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>100여 곳 조사: 답이 다 달랐다</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>발표자 소개: Galileo → Splunk → Cisco</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>AI 비용의 세 가지 흐름</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>토큰 맥싱과 Jensen Huang의 발언</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>Ramp: 일주일에 150만 달러</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>용도별 모델 선택: 96% vs 99%</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>정가표에서 회사별 계약으로</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>세 ICP: 엔지니어, 매니저, 재무팀</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>택시 미터 비유</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>제공자 대시보드의 한계</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>정산: 10만 달러가 12만 달러로</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>조직도와 재무 계층의 차이</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>발표자의 토크노믹스 정의</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>도입에 필요한 세 가지</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>인사 데이터는 CSV 최소 항목만</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>데모 시작: 기간 필터, 리더 뷰</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>비용 대시보드와 도입 대시보드</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>예측 그래프</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>조직도 롤업: Chuck Robbins, Jeetu Patel</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>직무군별 사용량과 영업팀 사례</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>모델별, 생각 수준별 비용</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>재무 뷰</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>RBAC: 볼 수 있는 것만 보인다</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>10주 만에 정식 출시</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>다음 기능: 예측, ROI 추론</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>어려움 1: 목적지를 모르는 배</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>어려움 2: 서로 다른 세 청중</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>어려움 3: 정산과 사람의 이동</td></tr>
+              <tr><td><span class="ts">18:30</span></td><td>마무리: 토크노믹스는 이제 무슨 뜻인가</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'KdG9OSOtJOA:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>어제의 웹으로 백테스트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#search">AI가 더 많이 검색한다</a></li>
+      <li><a href="#exa">Exa가 내세우는 세 가지</a></li>
+      <li><a href="#snapshot">Exa Snapshot</a></li>
+      <li><a href="#uses">두 가지 쓰임새</a></li>
+      <li><a href="#leak">지금의 검색은 미래를 흘린다</a></li>
+      <li><a href="#patterns">백테스트 패턴 세 가지</a></li>
+      <li><a href="#exercise">실습: 인수 예측 게임</a></li>
+      <li><a href="#demo">시연: OR와 AND</a></li>
+      <li><a href="#overfit">1위는 과적합이었다</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 시스템에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-19 · 27분 · 영어 발표 한글 정리</span>
+      <h1>어제의 웹으로 에이전트를 시험하기</h1>
+      <p class="lead">웹 검색을 쓰는 예측 시스템을 과거 사례로 시험하면, 지금의 검색 결과에 이미 일어난 결말이 섞여 점수가 부풀려진다. Exa의 스냅샷은 검색을 과거 날짜로 고정해 이 누수를 막는다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=L4dUFimVDKU" target="_blank" rel="noopener">Backtest Your Agent Against Yesterday's Web</a></span>
+        <span>발표: Ryan Ahern (Exa 풀스택 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 사례는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고, 확실하지 않은 것은 들린 대로 두고 "(추정)"을 붙였다. 후반부는 청중 실습이라 화면 내용은 발표자의 말로만 정리했다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI 에이전트는 사람보다 <strong>더 많이, 더 끈질기게</strong> 검색한다. 웹 검색은 에이전트의 기본 도구가 됐다.</li>
+        <li>웹 검색을 쓰는 예측 시스템을 과거 사례로 시험하면 문제가 생긴다. 지금 검색하면 <strong>이미 일어난 결말이 함께 나온다.</strong></li>
+        <li><strong>Exa Snapshot</strong>은 검색을 과거 날짜로 고정한다. URL 하나의 옛 버전을 보거나, 검색 자체를 그날 기준으로 돌린다.</li>
+        <li>쓰는 방식은 세 가지다. 기존 모델의 과거 피처 모으기, 에이전트 피처를 하나씩 붙여 시험하기, 에이전트 시스템 전체를 그 시점에 가두기.</li>
+        <li>실습에서는 인수 <strong>1·7·30일 전</strong> 시점으로 "인수될까" 피처를 시험했다. 맞히면 +1, 거짓 경보는 −1이다.</li>
+        <li>1위 피처는 인수되지 않은 회사 이름을 빼는 조건이었다. <strong>홀드아웃 없이 고르면 정답을 외워서 이긴다.</strong></li>
+        <li>가져갈 것: 시점을 고정한 백테스트로 가치를 <strong>증거로</strong> 보이고, 홀드아웃 세트를 반드시 남긴다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="search">
+        <header><span class="num">01</span><h2>AI가 사람보다 더 많이 검색한다 <span class="ts">01:40</span></h2></header>
+        <p>발표자는 먼저 청중에게 물었다. 예전에는 Google로 조사했는데, 이제는 ChatGPT나 Claude에게 대신 찾아 달라고 하느냐는 질문이다. 대부분 손을 들었다.</p>
+        <p>발표자는 이 변화가 업계 전체에서 보인다고 말한다. <strong>지금은 AI가 사람보다 더 많이 검색한다.</strong></p>
+        <div class="shift" aria-label="사람의 검색과 AI 에이전트의 검색 비교">
+          <div><span class="tag">사람의 검색</span><b>키워드 몇 개를 넣는다</b><span class="muted">첫 페이지에 없으면 그만둔다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">AI 에이전트의 검색</span><b>찾을 때까지 계속한다</b><span class="muted">여러 번 검색하고 여러 페이지를 읽는다. 사용자를 만족시키려는 성향이 강해서 쉽게 포기하지 않는다</span></div>
+        </div>
+        <p>모델은 학습한 지식 범위 밖의 질문을 받으면 인터넷을 찾아봐야 한다. 이때 부르는 검색 도구가 Exa 같은 서비스다. 발표자는 이런 방식을 <strong>에이전트형 웹 검색</strong> <span class="en">agentic web search</span>이라고 부른다.</p>
+
+        <h3>Exa를 쓰는 곳 <span class="ts">02:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>사용처</th><th>무엇을 찾나 (발표자 인용)</th></tr></thead>
+            <tbody>
+              <tr><td>Cursor</td><td>코딩 중 필요한 문서를 찾아 오케스트레이션 에이전트에게 돌려준다</td></tr>
+              <tr><td>Gamma</td><td>슬라이드에 넣을 재무 수치를 찾는다. 예: Bank of America의 2019년 실적</td></tr>
+              <tr><td>헤지펀드</td><td>투자 판단에 쓸 초과 수익 신호, 곧 알파 <span class="en">alpha</span></td></tr>
+              <tr><td>자산운용사</td><td>위험을 예측할 정보</td></tr>
+              <tr><td>벤처캐피털</td><td>언론에 기사가 나기 전에 뜨는 스타트업</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 국부펀드와도 일한다고 했다. 이 발표는 금융과 AI를 묶은 세션의 일부였다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="exa">
+        <header><span class="num">02</span><h2>Exa가 내세우는 세 가지 <span class="ts">03:50</span></h2></header>
+        <p>발표자는 Exa를 기초 연구를 하는 연구소로 소개한다. 검색의 세 축인 품질, 비용, 지연 시간을 모두 챙긴다는 주장이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">품질 <span class="ts">04:10</span></span>
+            <p>자체 <strong>재생형 벤치마크</strong> <span class="en">regenerative benchmark</span>를 만들었다.</p>
+            <ul>
+              <li>벤치마크를 공개하면 검색 업체와 AI 연구소가 그걸로 학습해 점수만 올린다</li>
+              <li>그래서 사용자가 자기 용도에 맞게 직접 만들 수 있어야 한다</li>
+              <li>그리고 계속 최신으로 갱신돼야 한다</li>
+            </ul>
+            <p class="verdict">이유: 검색 업체를 쓰는 목적 자체가 <b>최신 정보</b>다. 모델이 학습한 지식만으로 답하면 최신 정보가 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">비용 <span class="ts">04:50</span></span>
+            <p>검색 결과는 토큰이 많다. 그 토큰은 모두 모델의 컨텍스트 창에 들어가고, 입력 토큰 비용이 된다.</p>
+            <p class="verdict">Exa는 결과 전체를 통틀어 <b>답에 필요한 토큰만</b> 돌려주는 기술을 만들었다고 한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">지연 시간 <span class="ts">05:10</span></span>
+            <ul>
+              <li>빠른 쪽: 300밀리초 미만 검색</li>
+              <li>느린 쪽: 20분 동안 일하는 깊은 검색</li>
+            </ul>
+            <p>발표자는 평가용으로 "비디오 게임 퍼블리셔를 모두 찾아라"를 돌렸다. 20분 동안 3,212곳과 각 회사가 함께 일하는 개발사까지 찾았다.</p>
+            <p class="verdict">20분은 120만 밀리초다. 두 끝은 <b>약 4,000배</b> 차이가 난다.</p>
+          </div>
+        </div>
+        <p class="note">발표자는 Exa 직원이고, 이 세 가지는 회사의 주장이다. 발표에는 다른 업체와 비교한 독립 수치가 없다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="snapshot">
+        <header><span class="num">03</span><h2>Exa Snapshot: 검색을 과거로 돌리기 <span class="ts">05:50</span></h2></header>
+        <p>발표의 주제는 Exa가 새로 내놓은 <strong>Exa Snapshot</strong>이다. 오늘의 검색 엔진으로, 과거 어느 날에 검색했다면 무엇이 나왔을지 보여 준다. 발표자는 이를 검색의 버전 관리라고 부른다.</p>
+        <p>원리는 단순하다. Exa는 웹을 계속 돌며 찾은 내용을 인덱스에 넣는다. 페이지의 새 버전을 찾으면 그 버전을 따로 저장한다. 같은 페이지를 다른 날짜에 다시 발견해도 저장한다. 인덱스는 문서 약 1,000억 개이고, 추적하는 URL은 수조 개라고 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>입력</th><th>돌려주는 것</th></tr></thead>
+            <tbody>
+              <tr><td>콘텐츠 버전 조회 <span class="en">content versioning</span></td><td>URL과 날짜</td><td>그 날짜 기준 페이지 내용. 그날 버전이 없으면 그 이전의 가장 가까운 버전. 그때 Exa가 내줬을 버전임을 보장한다</td></tr>
+              <tr><td>버전 검색 <span class="en">version search</span></td><td>검색어와 날짜</td><td>그 날짜에 검색했다면 나왔을 결과</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>첫째는 이미 아는 URL의 옛 모습을 볼 때 쓴다. 둘째는 검색 자체를 과거 시점에서 실행할 때 쓴다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="uses">
+        <header><span class="num">04</span><h2>두 가지 쓰임새 <span class="ts">07:10</span></h2></header>
+        <p>발표자는 스냅샷이 쓸모 있는 장면을 두 가지 들었다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">회사 정보 읽기 · OpenAI 매출 <span class="ts">07:20</span></span>
+            <p>Axios 등은 OpenAI의 연환산 매출이 약 700억 달러에 이른다고 보도했다. 최근에는 700억이냐 500억이냐는 논쟁이 붙었다.</p>
+            <p>차이는 회계 처리에서 나왔다. 총매출로 잡느냐 순매출로 잡느냐, 클라우드 업체에 넘어가는 비용을 매출로 인정하느냐의 문제다.</p>
+            <p class="verdict">물어야 할 것: 그 시점에 검색했을 때, 내 시스템이 <b>이 회계 각주를 찾아내도록</b> 맞춰져 있었나. 발표자는 이런 각주가 거래에 쓸 만큼 값지다고 말한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">상대 조사 · 부정적 보도 <span class="ts">08:30</span></span>
+            <p>발표자는 가수 Ed Sheeran을 예로 들었다. 최근 부정적 보도가 있었는데, 그 일 직전으로 돌아가면 그 전에 어떤 신호가 있었는지 볼 수 있다.</p>
+            <p>보험사의 거래 상대방 실사, 고객 확인 <span class="en">KYC</span>, 사업자 확인 <span class="en">KYB</span>, 파트너십 심사가 모두 같은 구조다. 웹을 검색해 상대가 누구이고 어떻게 분류되는지 판단한다.</p>
+            <p class="verdict">이런 조사 시스템을 만든 뒤, <b>과거 시점으로 돌아가 시험</b>할 수 있다.</p>
+          </div>
+        </div>
+
+        <figure class="chart" aria-label="발표자가 인용한 OpenAI 연환산 매출: 앞선 보도 약 700억 달러, 최근 논쟁의 낮은 쪽 약 500억 달러">
+          <span class="chart-title">OpenAI 연환산 매출, 어느 숫자가 맞나 (10억 달러, 발표자 인용)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>앞선 보도 (Axios 등)</span><span class="val">약 70</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="앞선 보도: 약 700억 달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>최근 논쟁의 낮은 쪽</span><span class="val">약 50</span></div>
+              <div class="track"><div class="fill key" style="width:71.4%" title="최근 논쟁의 낮은 쪽: 약 500억 달러"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>35</span><span>70</span></div>
+          <span class="caption">같은 회사의 같은 매출인데 약 200억 달러가 차이 난다. 높은 쪽 기준으로 약 29%다. 회계 각주 하나가 이만큼을 가른다.</span>
+        </figure>
+      </section>
+
+      <!-- 5 -->
+      <section id="leak">
+        <header><span class="num">05</span><h2>지금의 검색은 미래를 흘린다 <span class="ts">09:50</span></h2></header>
+        <p>회사 인수를 미리 맞히는 시스템을 만든다고 하자. 과거 인수 사례로 시험하려고 지금 검색하면, 그 회사가 이미 인수됐다는 기사가 나온다.</p>
+        <p>라이브 검색은 항상 최신이다. 그게 돈을 내고 쓰는 이유다. 하지만 과거를 평가할 때는 그 최신성이 독이 된다. <strong>평가 시점에는 몰랐어야 할 정보가 섞인다.</strong></p>
+        <div class="callout warn">
+          <span class="title">점수 100%의 함정 <span class="ts">10:30</span></span>
+          <span>시스템이 "뉴스에 인수됐다고 나온다, 그러니 인수다"라고 판단하면 진양성률은 100%다. 점수는 완벽하지만 아무것도 예측하지 않았다. 이 경우에도 검색 품질이 충분히 좋다는 전제가 붙는다.</span>
+        </div>
+        <div class="shift" aria-label="라이브 검색으로 시험할 때와 스냅샷으로 시험할 때 비교">
+          <div><span class="tag">라이브 검색으로 시험</span><b>오늘 기준 결과가 나온다</b><span class="muted">인수 완료 기사가 섞여 점수가 부풀려진다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">스냅샷으로 시험</span><b>결과 발표 직전 날짜로 고정한다</b><span class="muted">그때 있던 정보만 쓰므로 진짜 예측력이 보인다</span></div>
+        </div>
+        <p>날짜를 고정한 뒤에는 피처를 하나씩 조정한다 <span class="ts">11:10</span>. 채용 신호, 실적 발표 통화 내용, 인터뷰 녹취, CEO의 팟캐스트 인터뷰 같은 것이다. 각 피처가 예측을 실제로 개선했는지, 아닌지를 확인한다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="patterns">
+        <header><span class="num">06</span><h2>백테스트 패턴 세 가지 <span class="ts">11:40</span></h2></header>
+        <p><strong>백테스트</strong> <span class="en">backtest</span>는 과거 데이터를 넣어 그때 시스템이 어떻게 했을지 시험하는 것이다. 발표자는 최근 본 백테스트 방식을 세 가지로 나눈다. 첫째는 지금 흔한 방식이고, 둘째와 셋째는 앞으로의 방식이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">패턴 1 · 기존 모델의 과거 피처 모으기 <span class="ts">11:50</span></span>
+            <p>이미 잘 돌아가는 모델이 있다. 에이전트형 검색은 필요 없다. 문제는 과거 시점의 피처를 지금 다시 모을 수 없다는 것이다.</p>
+            <ul>
+              <li>웹 페이지는 과거 버전을 남기지 않는다</li>
+              <li>기사 발행일도 믿기 어렵다 <span class="ts">12:30</span></li>
+            </ul>
+            <p>그래서 아는 URL이나 사이트를 스냅샷으로 과거로 돌려 데이터를 모은다. 모은 데이터는 숫자 피처로 바꿔 모델에 넣는다.</p>
+            <p class="verdict">Exa는 <b>예측에 관여하지 않는다.</b> 과거 데이터만 공급한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">패턴 2 · 기존 모델에 에이전트 피처 더하기 <span class="ts">13:30</span></span>
+            <p>운영 중에 에이전트가 웹을 검색한다. 비정형 정보를 정형 신호로 바꿔 피처로 넘긴다. 예: 거래 상대방 실사용 부정적 보도 조사.</p>
+            <p>에이전트는 피처를 모으는 한 갈래일 뿐이다. 투자할지 말지는 전통적인 머신러닝 모델이 정한다.</p>
+            <p class="verdict">에이전트 피처를 <b>하나씩</b> 실제 결과와 대조해 시험한다. 검색 방식에 따라 맞히는 비율이 달라지므로, 조정한 뒤에 한 번에 피처 하나씩 넣는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">패턴 3 · 시스템 전체가 에이전트 <span class="ts">15:10</span></span>
+            <p>시스템이 도구 호출로 검색할지 말지를 스스로 정한다. 내부 지식과 외부 정형 데이터를 실행 중에 섞는다. 사람이 예측할 때 하는 방식과 비슷하다.</p>
+            <p>스냅샷은 이 시스템과 바깥 세상의 접점을 그 시점에 묶는다. 그때 있던 정보만 검색하게 된다.</p>
+            <p class="verdict">예 <span class="ts">16:00</span>: 코딩 모델을 시험할 때, 외부 저장소의 PR이 해결되기 <b>직전으로 고정</b>하고 돌린다. 문제를 풀면 그 개선이 학습 덕분이라고 더 확신할 수 있다. 미래 정보가 새어 들어온 덕이 아니다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">여담: 기사 발행일은 계속 바뀐다</span>
+          <span>기사는 내용을 정말 고쳐서 날짜가 바뀌기도 한다. 검색 엔진이 최신 글을 좋아하니 SEO 때문에 날짜만 바꾸기도 한다. 큰 결정을 내리는 피처라면 발행일을 그대로 믿으면 안 된다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="exercise">
+        <header><span class="num">07</span><h2>실습: 인수 예측 게임 <span class="ts">17:10</span></h2></header>
+        <p>후반부는 청중이 직접 해 보는 실습이었다. 상황 설정은 이렇다. 금융회사의 윗선이 AI 엔지니어 워크숍에서 이 검색 기능을 듣고 왔다. 포트폴리오 매니저가 "20분 줄 테니 쓸 만하게 만들어 보라"고 한다. 코딩 에이전트 사용량이 바닥나서 손으로 해야 한다는 농담도 붙었다.</p>
+        <ul class="plain">
+          <li><strong>과제</strong> <span class="ts">18:20</span>: 회사 인수를 가장 잘 예측하는 피처 두 개를 찾는다</li>
+          <li><strong>피처</strong>: 인수를 예측한다고 믿는 예/아니오 질문 하나</li>
+          <li><strong>대상</strong>: 회사 10곳. 일부는 인수됐고 일부는 인수되지 않았다</li>
+          <li><strong>시험</strong>: Exa Snapshot이 인수 1일, 7일, 30일 전으로 돌아가 피처를 묻는다. 인수되지 않은 회사는 임의의 날짜를 쓴다</li>
+          <li><strong>시간</strong>: 실제 실습은 30분이었다. 최고 점수가 자동으로 기록되고, 몇 번이든 다시 돌릴 수 있다</li>
+        </ul>
+
+        <figure class="chart" aria-label="인수 발표 전 시험 시점: 1일 전, 7일 전, 30일 전">
+          <span class="chart-title">인수 며칠 전 시점에서 피처를 묻나 (일)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>1일 전</span><span class="val">1</span></div>
+              <div class="track"><div class="fill key" style="width:3.3%" title="인수 1일 전"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>7일 전</span><span class="val">7</span></div>
+              <div class="track"><div class="fill key" style="width:23.3%" title="인수 7일 전"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>30일 전</span><span class="val">30</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="인수 30일 전"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>15</span><span>30</span></div>
+          <span class="caption">같은 피처를 세 시점에서 따로 묻는다. 시점마다 그날까지 있던 정보만 검색된다.</span>
+        </figure>
+
+        <h3>점수 규칙 <span class="ts">19:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>경우</th><th>점수</th></tr></thead>
+            <tbody>
+              <tr><td>인수된 회사를 인수 전 시점에 "인수된다"고 맞힘</td><td>+1</td></tr>
+              <tr><td>"인수된다"고 했는데 인수되지 않음 (거짓 경보)</td><td>−1</td></tr>
+              <tr><td>놓쳤거나 "아니다"라고 함</td><td>0</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">규칙에서 읽히는 점</span>
+          <span>놓쳐도 감점이 없고, 거짓 경보만 감점이다. 발표자는 "우리는 친절하니까" 놓침에 감점을 주지 않았다고 했다. 그래서 넓게 "예"를 외치는 피처보다, 확실할 때만 "예"라고 하는 좁은 피처가 유리하다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="demo">
+        <header><span class="num">08</span><h2>시연: 피처 하나, 둘, 그리고 AND <span class="ts">19:50</span></h2></header>
+        <p>발표자가 직접 한 번 돌려 보였다. 예시 피처를 고르거나 직접 써 넣고 실행하면, 스냅샷 검색으로 10개 회사를 각 시점에서 확인한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>피처와 결과</th><th>읽을 점</th></tr></thead>
+            <tbody>
+              <tr><td>피처 1 <span class="ts">20:30</span></td><td>"CEO나 CFO가 떠났거나 임시 경영진을 세웠나?" Delivery Hero는 "예"였고 실제로 인수됐다. Qiagen도 "예"였지만 인수되지 않았다</td><td>예측력이 있어 보이지만, 인수되지 않은 회사에서 거짓 경보가 난다</td></tr>
+              <tr><td>피처 2 추가 <span class="ts">21:10</span></td><td>"매각을 검토 중이라는 보도가 있나?"</td><td>인수된 회사를 많이 잡았다. 거짓 경보도 많았다</td></tr>
+              <tr><td>OR 조합 <span class="ts">21:40</span></td><td>둘 중 하나라도 "예"면 인수로 본다</td><td>잡는 범위가 넓어진다</td></tr>
+              <tr><td>AND 조합</td><td>둘 다 "예"일 때만 인수로 본다</td><td>점수가 조금 올랐다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>AND가 나았던 이유는 점수 규칙으로 설명된다. 두 조건이 모두 맞아야 하니 거짓 경보(−1)가 줄어든다. 대신 놓치는 경우가 늘지만, 놓침은 0점이라 손해가 작다.</p>
+        <p class="note">발표자는 인수되지 않은 회사를 "교란 변수" <span class="en">confounding variable</span>라고 불렀다. 여기서는 예측을 헷갈리게 하는 비교용 회사라는 뜻이다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="overfit">
+        <header><span class="num">09</span><h2>1위는 과적합이었다 <span class="ts">23:40</span></h2></header>
+        <p>실습이 끝나고 상위 3명에게 상품을 줬다 <span class="ts">22:20</span>. 그다음 발표자가 1위의 피처를 열어 봤다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>순위</th><th>피처</th><th>발표자의 평가</th></tr></thead>
+            <tbody>
+              <tr><td>1위</td><td>① 상장사인가? ② Qiagen, Vitris(추정), Bank of Cryptos(추정), American Electric Power가 <strong>아닌</strong> 회사인가?</td><td>두 번째 조건은 인수되지 않은 회사를 이름으로 빼 버린다. 이 10곳에서만 통하는 답안지다</td></tr>
+              <tr><td>2위 <span class="ts">24:20</span></td><td>1위와 같은 피처</td><td>근처에 앉아서 베꼈나 보다는 농담</td></tr>
+              <tr><td>3위 <span class="ts">24:30</span></td><td>지난 12개월 안에 행동주의 투자자나 대주주가 회사 전체 매각을 공개 요구했나? 또는 현재 주가가 지난 5년 최고가보다 60% 이상 낮은가? 또는 이름이 Dominion인가?</td><td>마지막 조건은 과적합이다. 그래도 앞의 두 조건은 실제 신호라서 이쪽이 더 나았을 것이라고 봤다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>과적합</strong> <span class="en">overfitting</span>은 주어진 데이터의 답을 외워서 점수를 내는 것이다. 그 데이터에서는 잘 맞지만 새 데이터에서는 통하지 않는다.</p>
+        <div class="callout warn">
+          <span class="title">발표자의 고백 <span class="ts">23:50</span></span>
+          <span>원래는 홀드아웃 세트를 넣으려 했다. 실습이 복잡해 보일까 봐 뺐다. 1위 참가자가 바로 그걸 넣으려던 이유를 보여 줬다. 발표자는 이 일을 "버그가 아니라 기능"으로 삼아, 백테스트에는 홀드아웃이 필요하다는 예로 썼다.</span>
+        </div>
+        <p>정답을 아는 데이터만 보고 피처를 고르면, 누구든 외워서 맞힐 수 있다. 발표자가 말한 해법은 이렇다 <span class="ts">25:10</span>. 무슨 일이 있었던 회사 10곳과 없었던 회사 20곳을 정해 그 안에서 모델을 고치고 다시 돌린다. 그리고 <strong>공개된 세트 밖에서도 성능이 유지되는지</strong> 확인한다.</p>
+        <div class="shift" aria-label="개발 세트와 홀드아웃 세트의 역할 (예시)">
+          <div><span class="tag">개발 세트 · 예시</span><b>마음껏 고치고 다시 돌린다</b><span class="muted">결과를 아는 회사들. 발표자 예: 사건이 있던 10곳, 없던 20곳</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">홀드아웃 세트 · 예시</span><b>마지막에 한 번만 확인한다</b><span class="muted">개발 중에는 보지 않고 따로 떼어 둔 회사들</span></div>
+        </div>
+        <p class="note">홀드아웃을 언제, 몇 번 보는지는 발표에 없다. 일반적인 사용법을 예시로 덧붙였다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="conclusion">
+        <header><span class="num">10</span><h2>결론 <span class="ts">25:30</span></h2></header>
+        <p>발표자는 마지막에 세 가지로 정리했다 <span class="ts">26:00</span>.</p>
+        <ol class="plain">
+          <li><strong>Exa는 좋은 에이전트형 웹 검색이다.</strong> 비용 대비 효과가 좋고, 원하는 지연 시간에 맞출 수 있다.</li>
+          <li><strong>Snapshot으로 모델을 백테스트한다.</strong> Exa가 모델을 얼마나 개선하는지 직접 볼 수 있다.</li>
+          <li><strong>홀드아웃 세트를 넣는다.</strong> 넣지 않으면 과적합한다.</li>
+        </ol>
+        <blockquote>검색을 버전 관리해야, 그 검색이 가치를 더한다는 걸 느낌과 기대가 아니라 증거로 보일 수 있다.<cite>발표자의 중간 정리를 옮김 · 17:00</cite></blockquote>
+        <div class="callout">
+          <span class="title">쓸 수 있는 방법</span>
+          <span>Snapshot은 엔터프라이즈 기능이다. 일부는 공개로 쓸 수 있다고 했다. 팀 단위로 쓰려면 발표자에게 메일을 보내면 엔터프라이즈 팀과 연결해 준다. 마지막 화면에는 문서와 블로그 링크가 있었다.</span>
+        </div>
+        <p class="note">발표자는 Exa 직원이고, 결론의 첫째와 둘째는 자사 제품 홍보다. 셋째 교훈인 홀드아웃은 어떤 검색 도구를 쓰든 그대로 통한다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>AI 에이전트는 사람보다 많이, 끈질기게 검색한다. 웹 검색은 에이전트의 기본 도구다.</li>
+          <li>Exa는 품질, 비용, 지연 시간 세 축을 내세운다. 품질은 각자 만들고 계속 갱신하는 벤치마크로 재야 한다고 본다.</li>
+          <li>검색 결과는 토큰이 많아 입력 비용이 된다. <strong>필요한 토큰만 돌려주는 것</strong>도 검색 품질의 일부다.</li>
+          <li>라이브 검색은 항상 최신이라, 과거를 평가할 때 <strong>미래 정보를 흘린다.</strong></li>
+          <li>Exa Snapshot은 URL의 옛 버전 조회와 과거 시점 검색, 두 방식으로 시간을 되돌린다.</li>
+          <li>시험 날짜는 <strong>결과가 발표되기 직전</strong>으로 잡는다. 그래야 진짜 예측력이 보인다.</li>
+          <li>백테스트 패턴은 셋이다. 과거 피처 모으기, 에이전트 피처를 하나씩 붙이기, 시스템 전체를 그 시점에 가두기.</li>
+          <li>기사 발행일은 SEO 때문에도 바뀌므로 믿기 어려운 피처다.</li>
+          <li>거짓 경보만 감점되는 규칙에서는 피처를 <strong>AND로 좁히는 쪽</strong>이 유리했다.</li>
+          <li>홀드아웃 없이 고른 1위 피처는 정답을 외운 것이었다. <strong>백테스트에는 반드시 홀드아웃을 둔다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 AI가 사람보다 검색을 더 많이 한다고 보는 이유는?</span></summary><div class="answer">사람은 키워드 몇 개를 넣고 첫 페이지에 없으면 그만둔다. AI 에이전트는 여러 번 검색하고 여러 페이지를 읽으며 찾을 때까지 계속한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Exa가 공개 벤치마크 대신 재생형 벤치마크를 만든 이유는?</span></summary><div class="answer">벤치마크를 공개하면 업체와 연구소가 그걸로 학습해 점수만 올린다. 사용자가 자기 용도로 직접 만들고 계속 최신으로 갱신할 수 있어야 실제 품질을 잴 수 있다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>콘텐츠 버전 조회와 버전 검색은 어떻게 다른가?</span></summary><div class="answer">콘텐츠 버전 조회는 URL과 날짜를 주면 그날 기준 페이지 내용을 돌려준다. 그날 버전이 없으면 그 이전의 가장 가까운 버전이다. 버전 검색은 검색 자체를 그 날짜 기준으로 실행한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>라이브 검색으로 인수 예측 시스템을 백테스트하면 무엇이 문제인가?</span></summary><div class="answer">인수 완료 기사가 검색 결과에 섞인다. 시스템이 그 기사를 읽고 맞히면 진양성률 100%가 나오지만, 실제로는 아무것도 예측하지 않았다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>기사 발행일을 피처로 그대로 믿기 어려운 이유는?</span></summary><div class="answer">내용을 정말 고쳐서 날짜가 바뀌기도 하고, SEO 때문에 날짜만 바꾸기도 한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>패턴 2에서 에이전트는 어떤 역할을 하고, 어떻게 백테스트하나?</span></summary><div class="answer">에이전트는 웹을 검색해 비정형 정보를 정형 신호로 바꾸는 피처 수집 갈래다. 최종 판단은 전통적인 머신러닝 모델이 한다. 에이전트 피처를 하나씩 실제 결과와 대조하고, 검색 방식을 조정한 뒤 한 번에 하나씩 넣는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>코딩 모델을 시험할 때 PR이 해결되기 직전으로 고정하는 이유는?</span></summary><div class="answer">모델이 문제를 풀었을 때, 그게 학습으로 나아진 덕분인지 확신하기 위해서다. 고정하지 않으면 이미 나온 해결책이 검색으로 새어 들어올 수 있다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>실습의 점수 규칙은?</span></summary><div class="answer">인수된 회사를 인수 전 시점에 맞히면 +1, "인수된다"고 했는데 인수되지 않으면 −1, 놓치거나 "아니다"라고 하면 0이다. 시험 시점은 인수 1일, 7일, 30일 전이다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>시연에서 Qiagen은 무엇을 보여 줬나?</span></summary><div class="answer">"CEO나 CFO가 떠났나" 피처에 "예"가 나왔지만 인수되지 않았다. 그럴듯한 신호도 거짓 경보를 낼 수 있다는 예다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>두 피처를 OR 대신 AND로 묶자 점수가 오른 이유는?</span></summary><div class="answer">두 조건이 모두 맞아야 "인수"라고 하니 거짓 경보(−1)가 줄었다. 놓치는 경우는 늘지만 놓침은 0점이라 손해가 작다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>1위 피처가 실전에서 통하지 않는 이유는?</span></summary><div class="answer">인수되지 않은 회사를 이름으로 빼는 조건이 들어 있다. 이 10곳의 정답을 외운 것이라 새 회사에는 쓸 수 없다. 과적합이다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>과적합을 막으려면 어떻게 해야 하나?</span></summary><div class="answer">결과를 아는 회사들로 피처를 고치고 반복하되, 그와 별도로 떼어 둔 홀드아웃 세트에서도 성능이 유지되는지 확인한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 시스템에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>웹 검색을 쓰는 평가에서 검색 기준 날짜를 기록한다<span class="how">확인: 평가 결과마다 "어느 날짜 기준 검색인지"가 남아 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>과거 사례를 시험할 때 날짜를 결과 발표 직전으로 잡는다<span class="how">결말을 직접 알려 주는 기사가 검색에 들어오지 않게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>점수가 너무 좋으면 미래 정보 누수부터 의심한다<span class="how">확인: 맞힌 근거가 결과 발표 기사가 아닌가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>기사 발행일을 피처로 쓰기 전에 검증한다<span class="how">SEO 때문에 날짜만 바뀐 글이 있는지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트 피처는 한 번에 하나씩 넣고 효과를 잰다<span class="how">확인: 피처마다 넣기 전과 후의 점수가 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>같은 피처를 여러 시점에서 시험한다<span class="how">예: 사건 1일, 7일, 30일 전</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>거짓 경보와 놓침의 비용을 점수에 따로 반영한다<span class="how">비용이 다르면 피처 조합(AND/OR) 선택이 달라진다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>홀드아웃 세트를 먼저 떼어 두고 마지막에만 본다<span class="how">확인: 개발 중에 홀드아웃 결과를 본 적이 없는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>피처에 정답을 외우는 조건이 섞였는지 검사한다<span class="how">회사 이름, 특정 날짜처럼 일반화되지 않는 조건을 찾는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>검색 업체의 품질 주장은 내 질문으로 만든 작은 평가 세트로 확인한다<span class="how">평가 세트는 주기적으로 새 질문으로 갱신한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트형 웹 검색</td><td>Agentic web search. AI 에이전트가 여러 번 검색하고 여러 페이지를 읽으며 답을 찾는 방식</td></tr>
+              <tr><td>백테스트</td><td>Backtest. 과거 데이터를 넣어 그때 시스템이 어떻게 했을지 시험하는 것</td></tr>
+              <tr><td>Exa Snapshot</td><td>검색을 과거 날짜 기준으로 실행하게 해 주는 Exa의 기능</td></tr>
+              <tr><td>콘텐츠 버전 조회</td><td>Content versioning. URL과 날짜를 주면 그날 기준 페이지 내용을 돌려준다</td></tr>
+              <tr><td>버전 검색</td><td>Version search. 검색 자체를 과거 날짜 기준으로 실행한다</td></tr>
+              <tr><td>인덱스</td><td>검색 엔진이 모아 둔 문서 목록과 그 내용</td></tr>
+              <tr><td>미래 정보 누수</td><td>평가 시점에는 알 수 없던 정보가 평가에 섞이는 것. 금융 백테스트에서는 look-ahead bias라고 부른다</td></tr>
+              <tr><td>피처</td><td>Feature. 모델이 판단에 쓰는 입력 신호. 실습에서는 예/아니오 질문 하나</td></tr>
+              <tr><td>진양성</td><td>True positive. 일어날 일을 일어난다고 맞힌 것</td></tr>
+              <tr><td>거짓 경보</td><td>False positive. 일어나지 않을 일을 일어난다고 잘못 말한 것</td></tr>
+              <tr><td>과적합</td><td>Overfitting. 주어진 데이터의 답을 외워서 점수를 내는 것. 새 데이터에서는 통하지 않는다</td></tr>
+              <tr><td>홀드아웃 세트</td><td>Holdout set. 개발과 조정에 쓰지 않고 마지막 검증에만 쓰려고 떼어 둔 데이터</td></tr>
+              <tr><td>재생형 벤치마크</td><td>Regenerative benchmark. 사용자가 자기 용도로 만들고 계속 갱신하는 벤치마크. 발표자의 표현</td></tr>
+              <tr><td>지연 시간</td><td>Latency. 요청부터 결과가 돌아오기까지 걸리는 시간</td></tr>
+              <tr><td>컨텍스트 창</td><td>Context window. 모델이 한 번에 읽는 입력의 범위. 넣는 토큰만큼 입력 비용이 든다</td></tr>
+              <tr><td>알파</td><td>Alpha. 시장 평균을 넘는 초과 수익</td></tr>
+              <tr><td>연환산 매출</td><td>Annualized revenue. 최근 기간의 매출을 1년 치로 늘려 계산한 값</td></tr>
+              <tr><td>총매출 / 순매출</td><td>Gross / net revenue. 들어온 돈 전체로 잡느냐, 남에게 넘길 비용을 빼고 잡느냐의 차이</td></tr>
+              <tr><td>부정적 보도 조사</td><td>Adverse media screening. 거래 상대에 대한 나쁜 뉴스를 찾아보는 것</td></tr>
+              <tr><td>거래 상대방 실사</td><td>Counterparty due diligence. 거래하기 전에 상대를 조사하는 것</td></tr>
+              <tr><td>KYC / KYB</td><td>Know Your Customer / Know Your Business. 고객이나 사업자의 신원과 위험을 확인하는 절차</td></tr>
+              <tr><td>도구 호출</td><td>Tool call. 모델이 검색 같은 외부 기능을 스스로 불러 쓰는 것</td></tr>
+              <tr><td>행동주의 투자자</td><td>Activist investor. 지분을 사서 회사에 매각이나 경영 변화를 공개적으로 요구하는 투자자</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개와 순서: Exa, 버전 관리, 실습</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>청중 질문: 이제 검색을 AI에게 맡기나</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>AI가 사람보다 많이 검색한다</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>Exa를 쓰는 곳: Cursor, Gamma</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>금융 고객: 헤지펀드, 자산운용사, VC</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>품질, 비용, 지연 시간 세 축</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>재생형 벤치마크</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>필요한 토큰만 돌려주기</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>300밀리초 미만부터 20분까지</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>Exa Snapshot 소개</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>콘텐츠 버전 조회와 버전 검색</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>예 1: OpenAI 매출 700억이냐 500억이냐</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>예 2: 부정적 보도 조사, KYC</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>인수 예측과 미래 정보 누수</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>결과 발표 직전으로 날짜 고정</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>피처별 조정: 채용, 실적 발표, 인터뷰</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>패턴 1: 기존 모델의 과거 피처 모으기</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>여담: 기사 발행일은 믿기 어렵다</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>패턴 2: 에이전트 피처 더하기</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>패턴 3: 시스템 전체가 에이전트</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>코딩 모델 예: PR 해결 직전으로 고정</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>중간 정리</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>실습 안내: 인수 예측 피처 찾기</td></tr>
+              <tr><td><span class="ts">18:30</span></td><td>1일, 7일, 30일 전 시험</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>점수 규칙</td></tr>
+              <tr><td><span class="ts">19:50</span></td><td>시연: CEO/CFO 교체 피처</td></tr>
+              <tr><td><span class="ts">21:10</span></td><td>매각 검토 보도 피처 추가</td></tr>
+              <tr><td><span class="ts">21:40</span></td><td>OR와 AND 조합</td></tr>
+              <tr><td><span class="ts">22:20</span></td><td>시상</td></tr>
+              <tr><td><span class="ts">23:40</span></td><td>1위 피처: 정답 회사 이름 빼기</td></tr>
+              <tr><td><span class="ts">23:50</span></td><td>홀드아웃과 과적합</td></tr>
+              <tr><td><span class="ts">24:30</span></td><td>3위 피처</td></tr>
+              <tr><td><span class="ts">25:10</span></td><td>홀드아웃을 두는 방법</td></tr>
+              <tr><td><span class="ts">25:30</span></td><td>문서, 블로그, 엔터프라이즈 안내</td></tr>
+              <tr><td><span class="ts">26:00</span></td><td>세 가지 정리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'L4dUFimVDKU:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

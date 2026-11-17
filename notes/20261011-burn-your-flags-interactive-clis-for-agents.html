@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트를 위한 대화형 CLI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- code example (added for this note: terminal commands and JSON samples) ---------- */
+figure.code { display: grid; gap: 6px; min-width: 0; }
+figure.code figcaption { font-size: 0.8rem; color: var(--muted); }
+pre {
+  margin: 0; padding: 12px 16px; overflow-x: auto;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: var(--step--1); line-height: 1.6;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#comeback">CLI가 다시 돌아왔다</a></li>
+      <li><a href="#silent">조용한 실패</a></li>
+      <li><a href="#flags">플래그를 늘리면 생기는 일</a></li>
+      <li><a href="#agents">에이전트는 스크립트가 아니다</a></li>
+      <li><a href="#workshop">워크숍 과제: 커피 주문 CLI</a></li>
+      <li><a href="#tmux">좋은 아이디어 1: tmux</a></li>
+      <li><a href="#side-channel">좋은 아이디어 2: 사이드 채널</a></li>
+      <li><a href="#context">좋은 아이디어 3: 컨텍스트 주입</a></li>
+      <li><a href="#compare">세 아이디어 한눈에</a></li>
+      <li><a href="#gamed">점수판을 뚫은 결정론</a></li>
+      <li><a href="#winners">상위권은 어떻게 했나</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 CLI에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-11 · 54분 · 영어 발표 한글 정리</span>
+      <h1>플래그를 늘리지 말고, 에이전트가 대화를 따라가게 하라</h1>
+      <p class="lead">에이전트는 CLI를 자주 부르지만, 화살표 키로 고르는 대화형 프롬프트 앞에서는 오류도 없이 멈춘다. PayPal 개발자 도구 팀은 플래그를 늘리는 대신 tmux, 사이드 채널, 컨텍스트 주입으로 에이전트가 대화형 흐름을 따라가게 하자고 제안한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=aV_vgUSatqs" target="_blank" rel="noopener">Burn Your Flags: Interactive CLIs for Agents</a></span>
+        <span>발표: Mark Lummus (PayPal 개발자 도구 총괄), Navinkumar Patil (PayPal 개발자 도구 팀 테크 리드)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 실습 워크숍이라 참가자가 작업하는 긴 구간이 있고, 그 구간에는 자막이 거의 없다. 수치와 주장은 모두 발표자나 참가자가 말한 것이다. 자막에서 뭉개진 이름은 확실한 것만 고쳤다(T-Max → tmux, Haik coup → Haiku, cloud agent SDK → Claude Agent SDK). 확실하지 않은 이름은 들린 대로 쓰고 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트는 Bash로 CLI를 자주 실행한다. 그런데 화살표 키 메뉴 같은 <strong>대화형 프롬프트를 만나면 오류 없이 조용히 실패</strong>한다. 에이전트 눈에는 질문이 아니라 화면이 계속 다시 그려지는 글자로 보인다.</li>
+        <li>흔한 해법은 <strong>플래그를 더 붙이는 것</strong>이다. 흐름이 미리 정해진 단순한 명령에는 맞다. 하지만 앞 답이나 API 응답에 따라 다음 질문이 바뀌면 플래그로 다 담을 수 없다.</li>
+        <li>에이전트는 자동화 스크립트와 다르다. 판단하고, 되묻고, 다시 시도하고, 되돌아갈 수 있다. <strong>결정 트리를 보여 주면 따라 걸을 수 있다.</strong></li>
+        <li>발표자는 이 문제를 <strong>접근성</strong>과 같은 일로 본다. 사람을 위해 하던 일을 새 독자인 에이전트에게 맞춰 다시 하는 것이다.</li>
+        <li>발표자의 좋은 아이디어 세 가지. <strong>tmux</strong>로 화면을 읽고 키를 보낸다. <strong>사이드 채널</strong>로 상태와 질문을 JSON으로 준다. <strong>컨텍스트 주입</strong>으로 에이전트가 사용자에게 무엇을 물을지 미리 알려 준다.</li>
+        <li>과제 조건은 최고 모델이 아니라 <strong>Haiku나 Sonnet급 모델로도 돌아가는 CLI</strong>였다. 팀마다 토큰 예산을 따지기 때문이다.</li>
+        <li>실제 점수판은 <strong>결정론적 풀이기</strong>로 뚫렸다. 발표자는 여기서 교훈을 얻었다. CLI는 같은 명령에 늘 같은 답을 주는 도구여야 하고, CLI 안에 에이전트를 넣으면 안 된다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="comeback">
+        <header><span class="num">01</span><h2>CLI가 다시 돌아왔다 <span class="ts">01:20</span></h2></header>
+        <p>Mark Lummus는 MS-DOS 시절부터 일했다. 첫 직장에서는 임베디드 시스템을 설계했다. 시리얼 포트로 컴퓨터에 붙어 VT100 호환 터미널에 명령을 쳤다. 그때는 모든 것이 CLI<span class="en">command-line interface</span>였다.</p>
+        <p>Navinkumar Patil은 IDE의 변화를 돌아봤다 <span class="ts">08:30</span>. Java를 쓰며 Eclipse로 시작했고 IntelliJ로 옮겼다. 그 뒤 VS Code가 나왔고, 그 위에서 Cursor, Windsurf 같은 AI IDE가 생겼다. 그동안 CLI는 늘 그 자리에 있었다. 한때는 CLI가 서서히 사라질 거라고 생각했다고 한다.</p>
+        <p>CLI를 다시 불러낸 건 에이전트다. 발표자는 Claude Code가 CLI를 크게 유행시켰고, 이어서 Codex가 나왔다고 본다. 이제 많은 팀이 자기 기능을 에이전트가 쓰기 쉽게 CLI 도구로 내놓는다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="silent">
+        <header><span class="num">02</span><h2>조용한 실패 <span class="ts">02:30</span></h2></header>
+        <p>에이전트는 끊임없이 Bash로 명령을 실행한다<span class="en">shell out</span>. 이건 좋은 일이다. 문제는 그 명령이 대화형 CLI<span class="en">interactive CLI</span>일 때다. 대화형 CLI는 실행 도중에 질문을 띄우고 답을 기다린다.</p>
+        <p>모든 하네스<span class="en">harness</span>가 이런 대화를 잘 다루지는 못한다. 하네스는 모델을 감싸 도구 실행과 입출력을 맡는 틀이다. 하네스가 대화를 못 다루면 에이전트는 조용히 실패한다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">사람이 보는 것 <span class="ts">03:50</span></span>
+            <p>CLI가 화살표 키로 고르는 메뉴를 띄운다.</p>
+            <ul>
+              <li>질문과 선택지 목록이 보인다</li>
+              <li>화살표 키로 옮기고 Enter로 고른다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">에이전트가 보는 것</span>
+            <p>같은 메뉴가 질문으로 보이지 않는다.</p>
+            <ul>
+              <li>화면을 지우고 다시 그리는 출력<span class="en">redraw loop</span>만 쌓인다</li>
+              <li>하네스는 지금 화면이 어떤 상태인지 놓친다</li>
+            </ul>
+            <p class="verdict"><b>결과</b>: 오류 메시지가 없다. 실패했다는 사실조차 드러나지 않는다.</p>
+          </div>
+        </div>
+
+        <div class="callout warn">
+          <span class="title">이 실패가 위험한 이유</span>
+          <span>소리 없이, 눈에 띄지 않게 실패한다. 개발자는 에이전트가 그 CLI를 못 쓴다는 걸 모른 채 넘어갈 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="flags">
+        <header><span class="num">03</span><h2>플래그를 늘리면 생기는 일 <span class="ts">03:00</span></h2></header>
+        <p>그렇다고 대화형 CLI를 버릴 수는 없다. 발표자가 꼽은 장점은 이렇다.</p>
+        <ul class="plain">
+          <li>앞 질문에 어떻게 답했느냐에 따라 <strong>다음 질문이 달라질 수 있다.</strong></li>
+          <li>선택지가 상황에 맞춰 바뀐다. CLI가 API를 부르고, <strong>그 응답에 따라 다음 질문</strong>을 정할 수 있다.</li>
+          <li>잘못된 선택을 막는 가드레일<span class="en">guardrail</span>을 대화 흐름 안에 둘 수 있다.</li>
+          <li>모든 흐름을 플래그로 미리 정하려 하면 <strong>플래그 수가 끝없이 불어난다.</strong></li>
+        </ul>
+
+        <p>그래도 흔한 해법은 플래그<span class="en">flag</span>를 더 붙이는 것이다 <span class="ts">04:30</span>. 플래그는 <code>--size large</code>처럼 실행할 때 미리 주는 옵션이다. 플래그가 맞는 경우와 안 맞는 경우가 있다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">플래그로 충분할 때</span>
+            <ul>
+              <li>가능한 흐름을 미리 다 안다</li>
+              <li>한 번 실행으로 끝난다</li>
+              <li>선택지끼리 서로 영향을 주지 않는다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">플래그로 안 될 때</span>
+            <ul>
+              <li>앞 답에 따라 다음 질문이 바뀐다</li>
+              <li>실행 중에 생기는 일에 따라 답이 바뀐다</li>
+            </ul>
+            <p class="verdict">이런 흐름은 실행하기 전에는 무엇을 물을지조차 모른다. <b>미리 정하는 플래그로는 담을 수 없다.</b></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="agents">
+        <header><span class="num">04</span><h2>에이전트는 스크립트가 아니다 <span class="ts">05:10</span></h2></header>
+        <p>플래그는 자동화 스크립트를 위한 해법이다. 그런데 에이전트는 스크립트와 다르게 움직인다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>자동화 스크립트</th><th>에이전트</th></tr></thead>
+            <tbody>
+              <tr><td>결정</td><td>실행 전에 모두 정해 둔다</td><td>실행하면서 판단한다</td></tr>
+              <tr><td>아는 것</td><td>미리 적어 둔 것 외에는 모른다</td><td>상황에 반응하고, 묻고, 다시 시도하고, 되돌아간다</td></tr>
+              <tr><td>맞는 입력 방식</td><td>플래그</td><td>결정 트리<span class="en">decision tree</span>를 보여 주면 그 길을 따라 걷는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <span class="title">이미 있는 답: 접근성 <span class="ts">05:50</span></span>
+          <span>발표자는 이 문제의 틀이 이미 있다고 말한다. 접근성<span class="en">accessibility</span>이다. 사람을 위해 하던 일을 에이전트에게 맞게 옮기면 해법이 보인다. "같은 원칙에, 독자만 새로 생겼다"는 것이다.</span>
+        </div>
+
+        <blockquote>가드레일과 안내는 그대로 두면서, 에이전트와 사람이 같은 능력을 가진 척하는 일은 어떻게 그만둘 수 있을까?<cite>워크숍 과제로 던진 질문 <span class="ts">06:10</span>. 발표자는 답을 주지 않고 참가자에게 넘겼다.</cite></blockquote>
+      </section>
+
+      <!-- 5 -->
+      <section id="workshop">
+        <header><span class="num">05</span><h2>워크숍 과제: 커피 주문 CLI <span class="ts">06:40</span></h2></header>
+        <p>과제는 커피 주문을 받는 CLI다. 이름은 Bris Barista 9000(추정)이다. 이 CLI는 에이전트로 돌리면 실패하게 만들어져 있다. 우승 상품은 Mac Mini였다.</p>
+        <ol class="plain">
+          <li>PayPal Cafe 사이트에서 기본 CLI를 내려받는다. 규칙은 같은 사이트의 rules 페이지에 있다 <span class="ts">10:30</span>.</li>
+          <li><code>init</code> 명령으로 닉네임을 등록한다.</li>
+          <li>CLI를 고쳐서 에이전트가 커피를 주문할 수 있게 만든다.</li>
+          <li>에이전트로 실행하면 결과가 서버로 가고 점수판<span class="en">leaderboard</span>이 바뀐다.</li>
+        </ol>
+        <p>규칙은 사실상 "마음대로 고쳐도 된다"였다. 발표자들은 처음에 힌트를 주지 않고, 15~20분마다 힌트를 하나씩 내놓았다 <span class="ts">11:40</span>.</p>
+
+        <div class="callout">
+          <span class="title">"모범 사례"가 아니라 "좋은 아이디어"</span>
+          <span>Mark Lummus는 힌트를 모범 사례<span class="en">best practice</span>라고 부르지 않았다. 아직 초기라서 무엇이 모범 사례인지 아무도 모른다는 이유다. 지금은 다 함께 감을 잡아 가는 단계라고 했다.</span>
+        </div>
+
+        <div class="callout">
+          <span class="title">진짜 과제: 중간급 모델로 돌리기 <span class="ts">15:50</span></span>
+          <span>최신 최고 모델의 최대 사고 모드를 쓰면 억지로 뚫을 수 있다. 하지만 발표자는 팀들이 이제 토큰 예산<span class="en">token budget</span>을 따지기 시작했다고 본다. CLI 하나 돌리는 데 비싼 사고 토큰을 쓸 이유가 없다. 그래서 Haiku나 Sonnet급 모델처럼 <strong>더 빠르고 싼 모델로도 돌아가는 CLI</strong>를 만들라고 했다.</span>
+        </div>
+
+        <p>점수 규칙은 이렇다 <span class="ts">35:10</span>. 점수가 먼저다. 점수가 같으면 걸린 시간이 짧은 쪽이 이긴다. 정확한 답을 빨리 낸 쪽이 정확한 답을 늦게 낸 쪽보다 앞선다. 참가자 점수는 4,000점대가 많았고, 5,000점에 다가간 사람도 나왔다.</p>
+        <p class="note">도중에 주문 3건을 "0초"에 끝낸 기록이 여럿 올라왔다. Mark Lummus는 "그럴 수 없는 일"이라며 확인이 필요하다고 했다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="tmux">
+        <header><span class="num">06</span><h2>좋은 아이디어 1: tmux <span class="ts">26:00</span></h2></header>
+        <p>첫 힌트는 tmux를 쓰라는 것이다. tmux는 터미널 세션을 여러 개 만들고, 화면 없이 뒤에서 돌리고, 나중에 다시 붙을 수 있게 해 주는 도구다.</p>
+        <ul class="plain">
+          <li><strong>먼저 help부터.</strong> Navinkumar Patil은 요즘 AI 에이전트가 명령을 쓰기 전에 거의 항상 help를 먼저 본다고 했다. help 출력이 첫 안내서다.</li>
+          <li><strong>send-keys와 capture-pane.</strong> send-keys로 세션에 키 입력을 보내고, capture-pane으로 지금 화면을 텍스트로 읽는다. 발표자는 이 둘만으로도 꽤 멀리 간다고 했다.</li>
+          <li><strong><code>-d</code> 옵션.</strong> CLI를 분리된<span class="en">detached</span> tmux 세션에서 실행한다. 에이전트가 그 세션을 드나들며 다룬다.</li>
+          <li><strong>여러 에이전트, 긴 작업.</strong> 에이전트마다 세션을 따로 띄울 수 있다. 세션은 계속 살아 있어서 오래 걸리는 작업을 맡기기 좋다고 발표자는 설명했다.</li>
+        </ul>
+        <figure class="code">
+          <figcaption>예시 · 발표 슬라이드를 옮긴 것이 아니다. 설명을 위해 만든 명령이다.</figcaption>
+<pre><code>tmux new-session -d -s cafe 'barista'   # 분리된 세션에서 CLI 실행
+tmux capture-pane -t cafe -p            # 지금 화면을 텍스트로 읽기
+tmux send-keys -t cafe Down Enter       # 아래 화살표, Enter 보내기
+tmux capture-pane -t cafe -p            # 바뀐 화면 다시 읽기</code></pre>
+        </figure>
+        <p>tmux 방식은 결국 <strong>사람용 화면을 긁어 읽는 것</strong><span class="en">screen scraping</span>이다. 에이전트가 화면 글자를 보고 지금 무슨 질문인지 추론해야 한다. 그래서 다음 힌트로 넘어간다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="side-channel">
+        <header><span class="num">07</span><h2>좋은 아이디어 2: 사이드 채널 <span class="ts">28:30</span></h2></header>
+        <p>두 번째 힌트는 IPC 사이드 채널<span class="en">IPC side channel</span>이다. CLI가 사람용 화면과 별도로, 기계가 읽는 통로를 하나 더 여는 것이다. IPC는 프로세스끼리 데이터를 주고받는 방법을 말한다.</p>
+        <ul class="plain">
+          <li>에이전트는 화면을 긁는 대신 <strong>상태를 데이터로 읽는다.</strong></li>
+          <li>화살표 키로 고르던 선택지도 데이터로 정의한다.</li>
+          <li>에이전트는 키를 누르는 대신 <strong>입력을 데이터로 보낸다.</strong></li>
+          <li>핵심은 <strong>출력 JSON</strong>이다. 에이전트가 CLI의 출력 JSON 모양을 알아야 한다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">발표자의 비유</span>
+          <span>웹 애플리케이션에 REST API를 붙이는 것과 같다. 웹사이트는 사람에게 화면을 준다. API는 기계에게 구조화된 인터페이스를 준다. 사이드 채널은 CLI의 API다.</span>
+        </div>
+
+        <p>슬라이드에는 에이전트 모드로 CLI를 실행하는 명령이 나왔다. 자막으로는 <code>barista brew --agent</code>(추정)로 들린다. 주문 단계에서는 묻는 항목, 선택지(small, medium, large), 기본값(large) 같은 정보를 기계가 읽는 형식으로 내보낸다. 발표자는 "사람이 보는 걸 그대로 에이전트에게 전하지 말라"고 했다. 같은 질문이라도 받는 두뇌가 다르다.</p>
+        <figure class="code">
+          <figcaption>예시 · 발표에서 말한 항목(질문 항목, 선택지, 기본값)을 JSON으로 옮겨 본 것이다. 실제 과제 CLI의 출력 형식은 아니다.</figcaption>
+<pre><code>{
+  "state": "awaiting_input",
+  "ask": {
+    "field": "size",
+    "question": "컵 크기를 고르세요",
+    "options": ["small", "medium", "large"],
+    "default": "large"
+  }
+}</code></pre>
+        </figure>
+
+        <h3>사람 페르소나, 에이전트 페르소나 <span class="ts">31:40</span></h3>
+        <p>예전에는 사람만 사용자였다. 이제 CLI 사용자는 두 종류다. 같은 CLI라도 두 사용자를 따로 생각해야 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">사람</span>
+            <p>선택지를 하나씩 보며 고른다. 단계별 질문이 편하다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">에이전트</span>
+            <p>필요한 정보를 입력 파일 하나에 한꺼번에 담아 넘길 수 있다. 화면을 한 단계씩 넘길 필요가 없다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="context">
+        <header><span class="num">08</span><h2>좋은 아이디어 3: 컨텍스트 주입 <span class="ts">32:10</span></h2></header>
+        <p>세 번째 힌트는 컨텍스트 주입<span class="en">context injection</span>이다. 에이전트가 판단하는 데 필요한 상황 정보를 CLI가 미리 넣어 주는 것이다. 특히 <strong>에이전트가 사용자에게 무엇을 되물어야 하는지</strong>까지 알려 준다.</p>
+        <div class="callout">
+          <span class="title">발표자의 예: 귀리 우유가 얼마 안 남았다</span>
+          <span>CLI는 귀리 우유가 조금밖에 없다는 사실을 에이전트에게 알린다. 그리고 에이전트가 사용자에게 물어야 할 것을 함께 준다. 남은 양으로 충분한지 확인할 것. 부족하면 대신 쓸 우유를 골라 줄지 물을 것.</span>
+        </div>
+        <p class="note">발표에서는 남은 양을 "2갤런"이라고 했다가 곧바로 "2온스"라고 말했다. 단위는 예시의 핵심이 아니라서 여기서는 "조금"으로 적었다.</p>
+        <figure class="code">
+          <figcaption>예시 · 귀리 우유 사례를 CLI 출력으로 옮겨 본 것이다. 발표 슬라이드의 내용은 아니다.</figcaption>
+<pre><code>{
+  "warning": "oat_milk_low",
+  "remaining": "조금",
+  "ask_user": [
+    "남은 양으로 충분한지 확인한다",
+    "부족하면 대신 쓸 우유를 골라 줄지 묻는다"
+  ]
+}</code></pre>
+        </figure>
+        <p>발표자는 이 방식이 <strong>사람용 흐름에는 없던 상황</strong>을 다룬다고 했다. 사람은 화면을 보고 스스로 판단하지만, 에이전트는 사용자를 대신해 움직이다가 멈추고 확인해야 할 순간이 있다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="compare">
+        <header><span class="num">09</span><h2>세 아이디어 한눈에 <span class="ts">33:10</span></h2></header>
+        <p>발표자는 세 아이디어를 하나의 여정으로 묶었다. 화면을 긁어 읽는 tmux에서 시작해, 에이전트에게 맥락을 넣어 주는 쪽으로 나아간다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방법</th><th>에이전트가 하는 일</th><th>발표에서 말한 특징</th></tr></thead>
+            <tbody>
+              <tr><td>tmux</td><td>사람용 화면을 텍스트로 읽고 키를 보낸다</td><td>노력이 적게 든다. 많은 참가자가 이미 해 봤다. 화면을 보고 추론해야 한다</td></tr>
+              <tr><td>사이드 채널</td><td>상태와 질문을 JSON으로 읽고, 답을 데이터로 보낸다</td><td>에이전트에게 정돈된 피드백을 준다. 웹에 REST API를 붙이는 것과 같다</td></tr>
+              <tr><td>컨텍스트 주입</td><td>상황 정보와 사용자에게 물을 것을 미리 받는다</td><td>사람용 흐름에는 없던 상황을 다룬다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="gamed">
+        <header><span class="num">10</span><h2>점수판을 뚫은 결정론 <span class="ts">41:00</span></h2></header>
+        <p>발표자가 참가자들에게 방법을 물었다. 한 참가자가 이 벤치마크는 쉽게 뚫린다고 답했다.</p>
+        <ul class="plain">
+          <li>점수에 중요한 건 주문 하나를 아주 짧은 지연 시간<span class="en">latency</span>에 끝내는 것뿐이다.</li>
+          <li>그래서 결정론적 파서<span class="en">deterministic parser</span>를 만들었다. 같은 입력에 늘 같은 결과를 내는 프로그램이다.</li>
+          <li>서버 가까이에서 반복해 돌리면 지연 시간을 크게 줄일 수 있다.</li>
+          <li>참가자 스스로도 "도전 취지와는 완전히 어긋난다"고 인정했다.</li>
+        </ul>
+
+        <p>Mark Lummus는 오히려 CLI 안의 결정론이 마음에 든다고 했다 <span class="ts">41:40</span>.</p>
+        <blockquote>CLI는 작고 날카로운 도구여야 한다. 하는 일이 분명하고, 같은 명령에는 매번 같은 답을 돌려줘야 한다.<cite>Mark Lummus. "작고 날카로운 도구"는 다른 사람의 표현을 빌렸다고 밝혔다.</cite></blockquote>
+        <div class="callout">
+          <span class="title">CLI 안에 에이전트를 넣지 마라</span>
+          <span>LLM이 쓰는 도구라면 CLI는 반드시 결정론적이어야 한다. 비결정적인 쪽은 이미 LLM이다. CLI 안에 에이전트를 넣고 그 CLI를 다른 에이전트에게 넘기면, 무엇이 돌아올지 알 수 없다.</span>
+        </div>
+        <div class="callout">
+          <span class="title">이 노트의 해석</span>
+          <span>점수판은 정확도와 속도만 쟀다. 그래서 에이전트를 빼고 결정론적 프로그램으로 바로 서버를 부르는 쪽이 유리했다. 이 워크숍 결과만으로는 세 아이디어 중 무엇이 더 나은지 알 수 없다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="winners">
+        <header><span class="num">11</span><h2>상위권은 어떻게 했나 <span class="ts">47:30</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">우승 · Bonk(추정)</span>
+            <p>Claude Agent SDK로 만든 에이전트가 거의 전부를 했다.</p>
+            <ul>
+              <li>참가자는 이미 "평가 벤치" 스킬을 갖고 있었다. 실험 환경을 만들고 최적화하는 스킬이다</li>
+              <li>에이전트가 결정론적 CLI 풀이기를 만들었다</li>
+              <li>그 풀이기를 tmux에서 돌리며 서버 API를 계속 호출했다</li>
+              <li>에이전트는 Slack으로 조종했고, 모델은 Opus 4.8(추정)이었다</li>
+            </ul>
+            <p class="verdict"><b>참가자의 설명</b>: 한때 29밀리초가 나왔는데, 서버와 같은 리전에 있어서 운이 좋았을 뿐이다. 결국 네트워크 지연 싸움이었다. 다른 모델로 해 봤냐는 질문에는 CLI가 완전히 결정론적이라 의미가 없다는 취지로 답했다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Danny · 바이브 코더 <span class="ts">48:40</span></span>
+            <p>코딩을 전혀 모른다고 소개했다. CLI를 만들어 본 적도 없다.</p>
+            <ul>
+              <li>VS Code의 Claude Code에 "문제를 읽고 고쳐"라고만 시켰다</li>
+              <li>"아무것도 모르는 사람에게 설명하듯" 풀어 달라고 했다</li>
+              <li>스크립트 두 개를 돌렸다. 한쪽 점수가 나오자, 복사본을 만들어 더 올릴 방법을 제안하게 했다</li>
+            </ul>
+            <p class="verdict"><b>방식</b>: 시작과 끝만 주고, 처음에 필요한 질문만 받은 뒤 나머지는 에이전트가 알아서 고치게 했다.</p>
+          </div>
+        </div>
+        <p>Mark Lummus는 두 사례를 이렇게 정리했다 <span class="ts">50:40</span>. 많은 사람이 Claude나 Codex에게 "CLI를 만들어. 빠르게. 결정론적으로."라고 시킬 것이다. 참가자들에게서 나온 아이디어도 이 세 가지였다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="conclusion">
+        <header><span class="num">12</span><h2>결론 <span class="ts">52:00</span></h2></header>
+        <p>참가자들에게서 가장 많이 나온 아이디어는 "에이전트가 알아서 하게 두라"였다. 발표자는 이 아이디어가 마음에 든다고 했다.</p>
+        <div class="callout">
+          <span class="title">발표자가 권하는 시작점 세 가지</span>
+          <span><strong>좋은 컨텍스트를 준다.</strong> <strong>사이드 채널을 연다.</strong> <strong>tmux를 쓰라고 알려 준다.</strong></span>
+        </div>
+        <p class="note">발표 첫머리에서 제목이 왜 도발적인지는 끝에 알게 될 거라고 했지만, 자막에는 제목을 따로 풀어 설명하는 대목이 없다. 발표 흐름으로 보면 "모든 경우를 플래그로 미리 정하려 하지 말고, 에이전트가 대화형 흐름을 따라갈 수 있게 만들라"는 뜻으로 읽힌다. 이건 이 노트의 해석이다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트는 Bash로 CLI를 자주 부르지만, 대화형 프롬프트 앞에서는 <strong>오류 없이 조용히 실패</strong>한다.</li>
+          <li>화살표 키 메뉴는 사람에게는 질문이지만, 에이전트에게는 화면이 다시 그려지는 글자일 뿐이다.</li>
+          <li>플래그는 흐름을 미리 알고, 한 번에 끝나고, 선택지가 서로 독립일 때만 잘 맞는다.</li>
+          <li>앞 답이나 API 응답에 따라 다음 질문이 바뀌면 <strong>플래그로 다 담을 수 없다.</strong></li>
+          <li>에이전트는 스크립트와 달리 판단하고, 되묻고, 되돌아갈 수 있다. <strong>결정 트리를 주면 따라간다.</strong></li>
+          <li>해법의 틀은 <strong>접근성</strong>이다. 같은 원칙을 새 독자에게 적용한다.</li>
+          <li><strong>tmux</strong>: send-keys로 키를 보내고 capture-pane으로 화면을 읽는다. 시작은 help 명령이다.</li>
+          <li><strong>사이드 채널</strong>: 상태와 질문을 JSON으로 내보내고 답을 데이터로 받는다. 웹에 REST API를 붙이는 것과 같다.</li>
+          <li><strong>컨텍스트 주입</strong>: 재고 부족 같은 상황에서 에이전트가 사용자에게 무엇을 물을지 CLI가 알려 준다.</li>
+          <li>CLI는 같은 명령에 늘 같은 답을 주는 <strong>결정론적 도구</strong>로 둔다. CLI 안에 에이전트를 넣지 않는다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>에이전트가 화살표 키 메뉴를 만나면 무엇을 보고, 무슨 일이 생기나?</span></summary><div class="answer">질문이 아니라 화면을 지우고 다시 그리는 출력을 본다. 하네스는 화면 상태를 놓치고, 에이전트는 오류 메시지 없이 조용히 실패한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>플래그로 충분한 세 가지 조건은?</span></summary><div class="answer">가능한 흐름을 미리 다 안다. 한 번 실행으로 끝난다. 선택지끼리 서로 영향을 주지 않는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>대화형 CLI가 플래그보다 나은 경우는?</span></summary><div class="answer">앞 답에 따라 다음 질문이 바뀔 때, 또는 API 응답처럼 실행 중에 생긴 일에 따라 선택지가 바뀔 때다. 이런 흐름을 플래그로 다 담으려 하면 플래그 수가 끝없이 불어난다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>에이전트와 자동화 스크립트는 무엇이 다른가?</span></summary><div class="answer">스크립트는 모든 결정을 미리 정해 두고 그 외에는 모른다. 에이전트는 판단하고, 반응하고, 묻고, 다시 시도하고, 되돌아갈 수 있다. 결정 트리를 주면 따라 걸을 수 있다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>발표자가 "이미 있는 답"으로 든 분야는? 무슨 뜻인가?</span></summary><div class="answer">접근성. 사람을 위해 하던 일을 에이전트에게 맞게 옮기면 해법이 보인다. 같은 원칙에 새 독자가 생겼을 뿐이다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>tmux로 에이전트가 대화형 CLI를 다룰 때 쓰는 두 명령은?</span></summary><div class="answer">send-keys로 세션에 키 입력을 보내고, capture-pane으로 지금 화면을 텍스트로 읽는다. CLI는 <code>-d</code>로 분리된 세션에서 실행한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>tmux를 쓸 때 발표자가 먼저 하라고 한 것은? 왜인가?</span></summary><div class="answer">help 명령을 넣는 것. 발표자는 요즘 AI 에이전트가 명령을 쓰기 전에 거의 항상 help를 먼저 본다고 했다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>사이드 채널을 웹에 빗대면 무엇인가?</span></summary><div class="answer">웹 애플리케이션에 REST API를 붙이는 것. 웹사이트는 사람에게 화면을, API는 기계에게 구조화된 인터페이스를 준다. 에이전트는 상태를 데이터로 읽고 입력을 데이터로 보낸다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>귀리 우유 예시에서 CLI가 에이전트에게 넣어 줘야 할 것은?</span></summary><div class="answer">귀리 우유가 조금밖에 없다는 사실, 그리고 사용자에게 물을 것. 남은 양으로 충분한지 확인하고, 부족하면 대신 쓸 우유를 골라 줄지 묻는다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>왜 Haiku나 Sonnet급 모델로 풀라고 했나?</span></summary><div class="answer">최고 모델의 최대 사고 모드로는 억지로 뚫을 수 있다. 하지만 팀들이 토큰 예산을 따지기 시작했고, CLI 하나 돌리는 데 비싼 토큰을 쓸 이유가 없다. 더 빠르고 싼 모델로도 돌아가는 CLI가 좋은 CLI다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>상위권 참가자는 어떻게 점수를 올렸고, 발표자는 어떻게 반응했나?</span></summary><div class="answer">결정론적 파서와 풀이기를 만들어 서버 가까이에서 지연 시간을 줄였다. 도전 취지에는 어긋났지만, Mark Lummus는 CLI 안의 결정론은 좋은 것이라고 했다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>CLI 안에 에이전트를 넣으면 안 되는 이유는?</span></summary><div class="answer">비결정적인 쪽은 이미 그 CLI를 쓰는 LLM이다. CLI까지 비결정적이면 무엇이 돌아올지 알 수 없다. CLI는 같은 명령에 늘 같은 답을 주는 작고 날카로운 도구여야 한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 CLI에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 CLI를 에이전트로 직접 돌려 보고, 조용히 멈추는 곳을 찾는다<span class="how">화살표 키 메뉴, 확인 프롬프트처럼 입력을 기다리는 지점</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>help 출력을 에이전트가 읽고 바로 쓸 수 있게 다듬는다<span class="how">명령, 옵션, 대화형 단계가 무엇을 묻는지까지 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>플래그로 충분한 명령과 대화가 필요한 명령을 나눈다<span class="how">기준: 흐름을 미리 아나, 한 번에 끝나나, 선택지가 서로 독립인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>tmux로 에이전트가 대화형 CLI를 다루게 해 본다<span class="how">분리된 세션(<code>-d</code>), send-keys, capture-pane</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트용 출력 모드(사이드 채널)를 만든다<span class="how">현재 상태, 묻는 질문, 선택지, 기본값을 JSON으로 내보낸다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>키 입력 대신 데이터로 답을 받는 길을 연다<span class="how">예: 필요한 답을 입력 파일 하나에 담아 넘기기</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>에이전트가 사용자에게 되물어야 할 상황을 출력에 적는다<span class="how">재고 부족 같은 예외에서 무엇을 확인하고 어떤 대안을 제시할지</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>CLI를 결정론적으로 유지한다<span class="how">같은 명령에 같은 응답. CLI 안에 LLM을 넣지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>중간급 모델(Haiku, Sonnet급)로 CLI를 돌려 본다<span class="how">확인: 비싼 모델 없이도 끝까지 가는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>CLI</td><td>Command-line interface. 글자로 명령을 입력해 쓰는 프로그램</td></tr>
+              <tr><td>대화형 CLI</td><td>Interactive CLI. 실행 도중에 질문을 띄우고 답을 받아 다음 단계로 가는 CLI</td></tr>
+              <tr><td>플래그</td><td>Flag. <code>--size large</code>처럼 실행할 때 미리 주는 옵션</td></tr>
+              <tr><td>셸 아웃</td><td>Shell out. 에이전트가 Bash 같은 셸로 외부 명령을 실행하는 것</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구 실행, 입출력, 순서를 맡는 실행 틀</td></tr>
+              <tr><td>다시 그리기 루프</td><td>Redraw loop. 화면을 지우고 다시 그리기를 반복하는 출력. 사람에게는 메뉴로 보이지만 에이전트에게는 글자 더미다</td></tr>
+              <tr><td>가드레일</td><td>Guardrail. 잘못된 선택이나 위험한 동작을 막는 장치</td></tr>
+              <tr><td>결정 트리</td><td>Decision tree. 답에 따라 다음 질문이 갈라지는 구조</td></tr>
+              <tr><td>접근성</td><td>Accessibility. 화면을 다른 방식으로 읽는 사람도 쓸 수 있게 만드는 설계</td></tr>
+              <tr><td>tmux</td><td>터미널 세션을 여러 개 만들고, 뒤에서 돌리고, 다시 붙을 수 있게 하는 도구</td></tr>
+              <tr><td>send-keys / capture-pane</td><td>tmux 명령. 세션에 키 입력 보내기 / 세션 화면을 텍스트로 가져오기</td></tr>
+              <tr><td>화면 긁기</td><td>Screen scraping. 사람용 화면 출력을 읽어서 정보를 뽑아내는 방식</td></tr>
+              <tr><td>IPC</td><td>Inter-process communication. 프로세스끼리 데이터를 주고받는 방법</td></tr>
+              <tr><td>사이드 채널</td><td>Side channel. 사람용 화면과 별도로, 기계가 상태를 읽고 입력을 보내는 통로</td></tr>
+              <tr><td>컨텍스트 주입</td><td>Context injection. 에이전트가 판단에 필요한 상황 정보와 사용자에게 물을 것을 미리 넣어 주는 것</td></tr>
+              <tr><td>페르소나</td><td>Persona. 설계할 때 염두에 두는 사용자 유형. 여기서는 사람과 에이전트</td></tr>
+              <tr><td>결정론적</td><td>Deterministic. 같은 입력에 늘 같은 결과를 내는 성질</td></tr>
+              <tr><td>토큰 예산</td><td>Token budget. 모델 사용량, 곧 비용에 정해 둔 한도</td></tr>
+              <tr><td>지연 시간</td><td>Latency. 요청을 보내고 응답을 받기까지 걸리는 시간</td></tr>
+              <tr><td>Claude Agent SDK</td><td>Anthropic이 내놓은 에이전트 개발 도구 모음</td></tr>
+              <tr><td>바이브 코더</td><td>Vibe coder. 코드를 직접 읽거나 쓰지 않고 AI에게 말로 시켜 만드는 사람</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 워크숍 안내</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>MS-DOS 시절과 CLI의 부활</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>대화형 CLI 앞에서의 조용한 실패</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>대화형 CLI가 좋은 이유</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>화살표 키 메뉴 예시: 사람과 에이전트가 보는 것</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>흔한 해법: 플래그 추가와 그 한계</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>에이전트는 자동화 스크립트가 아니다</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>접근성이라는 기존 답</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>워크숍 질문 제시</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>과제 소개: 커피 주문 CLI, 상품 Mac Mini</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>규칙: CLI 수정, 에이전트로 실행, 점수판</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>Navinkumar Patil의 IDE 이야기</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>PayPal Cafe 저장소와 init 등록</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>힌트는 "좋은 아이디어"로 15~20분마다</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>기술 문제 해결, 실습 시작</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>모델 조건: Haiku·Sonnet급으로</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>중간 점수판</td></tr>
+              <tr><td><span class="ts">26:00</span></td><td>좋은 아이디어 1: tmux와 help</td></tr>
+              <tr><td><span class="ts">28:30</span></td><td>좋은 아이디어 2: IPC 사이드 채널과 출력 JSON</td></tr>
+              <tr><td><span class="ts">30:10</span></td><td>에이전트 모드 명령과 기계용 입력 예시</td></tr>
+              <tr><td><span class="ts">31:40</span></td><td>사람 페르소나와 에이전트 페르소나</td></tr>
+              <tr><td><span class="ts">32:10</span></td><td>좋은 아이디어 3: 컨텍스트 주입, 귀리 우유 예시</td></tr>
+              <tr><td><span class="ts">33:10</span></td><td>tmux에서 컨텍스트 주입까지 정리</td></tr>
+              <tr><td><span class="ts">35:10</span></td><td>동점 처리 규칙과 "0초" 기록</td></tr>
+              <tr><td><span class="ts">40:00</span></td><td>참가자 아이디어 공유 시작</td></tr>
+              <tr><td><span class="ts">41:00</span></td><td>결정론적 파서로 점수판 뚫기</td></tr>
+              <tr><td><span class="ts">41:40</span></td><td>CLI는 결정론적이어야 한다</td></tr>
+              <tr><td><span class="ts">47:30</span></td><td>우승자 Bonk(추정)의 방법</td></tr>
+              <tr><td><span class="ts">48:40</span></td><td>바이브 코더 Danny의 방법</td></tr>
+              <tr><td><span class="ts">50:40</span></td><td>"CLI를 만들어, 빠르게, 결정론적으로"</td></tr>
+              <tr><td><span class="ts">52:00</span></td><td>결론: 컨텍스트, 사이드 채널, tmux</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'aV_vgUSatqs:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

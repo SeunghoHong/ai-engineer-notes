@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>사내 도구 다듬기 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#gap">돌아가는 것과 쓰고 싶은 것</a></li>
+      <li><a href="#structure">스택보다 구조</a></li>
+      <li><a href="#patterns">에이전트가 알아서 안 하는 것</a></li>
+      <li><a href="#autosave">자동 저장과 실시간 편집</a></li>
+      <li><a href="#optimistic">낙관적 업데이트</a></li>
+      <li><a href="#undo">되돌리기와 보관</a></li>
+      <li><a href="#url">URL 상태와 무한 스크롤</a></li>
+      <li><a href="#reference">기존 페이지를 기준으로</a></li>
+      <li><a href="#skills">취향은 에이전트 스킬로</a></li>
+      <li><a href="#verify">가장 중요한 단계: 검증</a></li>
+      <li><a href="#conclusion">회사의 SaaS 층이 되기</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 도구에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-12 · 13분 · 영어 발표 한글 정리</span>
+      <h1>한 번에 뽑은 SaaS 대체품은 이제 그만</h1>
+      <p class="lead">에이전트에게 한 번 시켜 만든 SaaS 대체품은 돌아가기는 해도 매일 쓰고 싶은 물건은 아니다. 발표자가 Railway의 사내 마케팅 도구를 직접 만들며 그 간극을 메운 원칙을 정리한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=oixzVKMAXG0" target="_blank" rel="noopener">Please… Enough with the Sloppy, One-Shot SaaS Replacements</a></span>
+        <span>발표: Mahmoud Abdelwahab (Railway)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 따로 확인하지 않았다. 자막에서 뭉개진 말은 앞뒤 맥락으로 바로잡았다. 예를 들어 "Asian skills"는 agent skills로, "tan stack"은 TanStack으로 고쳤다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트가 한 번에 뽑은 소프트웨어는 <strong>돌아가지만 매일 쓰고 싶지는 않다.</strong> 발표자는 이 간극이 잘 이야기되지 않는다고 본다.</li>
+        <li>발표자는 Railway 마케팅팀이 쓰던 SaaS 여러 개를 <strong>에이전트로 만든 올인원 사내 도구</strong> 하나로 바꿨다.</li>
+        <li><strong>스택보다 구조가 중요하다.</strong> 추상화가 탄탄한 코드베이스를 주면 에이전트는 기존 패턴을 따라 일관된 기능을 만든다.</li>
+        <li>에이전트는 시키지 않으면 잘 안 하는 패턴이 있다. <strong>자동 저장, 낙관적 업데이트, 되돌리기, 보관, URL 상태, 무한 스크롤</strong>이다.</li>
+        <li>새 기능을 시킬 때는 <strong>기존 페이지를 기준으로</strong> 지정한다. 반복되는 취향은 <strong>에이전트 스킬</strong>로 묶는다.</li>
+        <li>가장 중요한 건 <strong>검증</strong>이다. "빌드·테스트 통과"에서 멈추지 말고, 에이전트가 기능을 실제로 끝까지 써 보게 한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="gap">
+        <header><span class="num">01</span><h2>돌아가는 것과 쓰고 싶은 것 <span class="ts">00:00</span></h2></header>
+        <p>"SaaS는 끝났다"는 말은 이제 새롭지도 않다. 에이전트에게 시키면 되는데 왜 남이 만든 도구에 돈을 내느냐는 주장이다.</p>
+        <p>발표자는 여기서 잘 언급되지 않는 조각 하나를 짚는다. <strong>한 번에 뽑아서 돌아가는 소프트웨어</strong>와 <strong>실제로 쓰고 싶은 소프트웨어</strong> 사이에는 큰 간극이 있다. 쓰고 싶은 쪽은 다듬어져 있고, 쓰는 느낌이 좋다. 발표자의 표현으로는 "기쁨을 주는<span class="en">sparks joy</span>" 소프트웨어다.</p>
+
+        <div class="shift" aria-label="한 번에 뽑은 소프트웨어에서 실제로 쓸 소프트웨어로">
+          <div><span class="tag">한 번에 뽑은 것 · one-shot</span><b>일단 돌아간다</b><span class="muted">폼을 제출하면 페이지가 다시 뜨는 화면. 에이전트가 기본으로 내놓는 모습</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">실제로 쓸 것 · polished</span><b>다듬어져 있고 쓰는 느낌이 좋다</b><span class="muted">매일 손이 가고, 쓸수록 편한 도구</span></div>
+        </div>
+
+        <h3>발표자가 만든 사내 도구 <span class="ts">00:20</span></h3>
+        <p>발표자는 Railway가 마케팅에 쓰던 SaaS 여러 개를 대신할 올인원 도구를 만들었다. 기능은 이렇다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>영역</th><th>기능</th></tr></thead>
+            <tbody>
+              <tr><td>콘텐츠</td><td>Railway 웹사이트, 변경 기록<span class="en">changelog</span>, 블로그 관리. 웹사이트 미디어 관리</td></tr>
+              <tr><td>내보내기</td><td>이메일 발송. 모든 소셜 채널에 동시에 게시</td></tr>
+              <tr><td>사람 관리</td><td>외부 크리에이터와의 협업을 기록하는 작은 CRM</td></tr>
+              <tr><td>일정</td><td>작업 관리, 출시 계획, 캘린더. 여러 일이 언제 나갈지 맞추는 용도</td></tr>
+              <tr><td>함께 쓰기</td><td>댓글, 실시간 공동 편집</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>모두 에이전트로 만들었다. 발표자는 GPT-6가 나왔을 때 돌파구를 느꼈다고 한다. 도구 전체가 Railway에서 돌고, 코드를 올리면 자동으로 배포된다. <span class="ts">01:00</span></p>
+        <p class="note">발표자는 이 발표가 2026년 10월 기준이라고 못 박는다. 이 분야는 빨리 바뀌어서 몇 달 안에 내용이 통째로 달라질 수 있다는 단서를 스스로 달았다. <span class="ts">01:50</span></p>
+      </section>
+
+      <!-- 2 -->
+      <section id="structure">
+        <header><span class="num">02</span><h2>스택보다 구조 <span class="ts">02:20</span></h2></header>
+        <p>흔히 이런 말을 한다. 어떤 언어나 프레임워크를 쓰든 상관없다. 에이전트에게 시키면 뭐든 만든다.</p>
+        <p>발표자는 일부만 동의한다. 실제로 쓸 도구를 만든다면 차이가 생긴다. <strong>추상화</strong><span class="en">abstraction</span>가 탄탄한 코드베이스를 주면, 새 기능을 만들 때마다 기존 것과 비슷하고 일관된 결과가 나온다.</p>
+        <ul class="plain">
+          <li>에이전트가 같은 바퀴를 매번 다시 만들 필요가 없다.</li>
+          <li>새 패턴을 들여오지 않는다.</li>
+          <li>이미 있는 패턴을 그대로 따른다.</li>
+        </ul>
+        <p>그래서 무엇을 고르느냐는 크게 중요하지 않다. <strong>코드베이스의 구조가 제대로 잡혀 있느냐</strong>가 중요하다.</p>
+        <div class="callout">
+          <span class="title">발표자의 선택 <span class="ts">03:20</span></span>
+          <span>웹에서 무언가를 만들 때는 TanStack 라이브러리를 쓴다. 콘텐츠를 다루는 일이라면 Payload를 권한다. 경험이 좋고 추상화가 훌륭하다는 이유다. 발표자는 CMS를 한참 비교해 봤다. 직접 만들 수는 있지만 그래야 한다고는 보지 않는다. 미래에는 바뀔 수도 있다고 덧붙인다.</span>
+        </div>
+        <p class="note">자막에는 이 항목 이름이 "texts don't matter"로 들린다. 앞뒤가 언어와 프레임워크 이야기라 "stacks don't matter"(추정)로 읽었다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="patterns">
+        <header><span class="num">03</span><h2>에이전트가 알아서 안 하는 것 <span class="ts">04:00</span></h2></header>
+        <p>매일 쓰는 SaaS를 쓸 때는 잘 못 느낀다. 막상 그 경험을 따라 만들어 보면, 흐름 하나하나에 얼마나 많은 공이 들었는지 금방 알게 된다.</p>
+        <p>이메일 보내기나 글 게시 같은 기능은 단순하다. 서버에서 그린 페이지에 폼을 제출하는 방식으로도 충분히 된다. 하지만 매일 손이 가는 도구라면 "이런 느낌이면 안 되는데" 싶어진다.</p>
+        <p>발표자는 <strong>에이전트가 명시적으로 요청받지 않으면 보통 하지 않는</strong> 패턴을 목록으로 정리했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>패턴</th><th>바꾸는 것</th><th>위치</th></tr></thead>
+            <tbody>
+              <tr><td>자동 저장</td><td>저장 버튼 대신 뒤에서 저장한다</td><td><span class="ts">04:50</span></td></tr>
+              <tr><td>낙관적 업데이트</td><td>로딩 스피너 대신 결과를 먼저 보여 준다</td><td><span class="ts">06:10</span></td></tr>
+              <tr><td>되돌리기</td><td>삭제 확인창 대신 몇 초의 유예를 준다</td><td><span class="ts">07:20</span></td></tr>
+              <tr><td>보관</td><td>지우지 않고 숨긴다</td><td><span class="ts">08:10</span></td></tr>
+              <tr><td>URL 상태</td><td>필터와 정렬을 링크로 공유한다</td><td><span class="ts">08:40</span></td></tr>
+              <tr><td>무한 스크롤</td><td>다음 페이지 버튼 없이 계속 내려 본다</td><td><span class="ts">09:10</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>에이전트가 만들기 어려운 게 아니다. 요청해야 하고, 정확히 무엇을 요청할지 알아야 한다.<cite>발표자의 말을 옮김 <span class="ts">07:10</span></cite></blockquote>
+      </section>
+
+      <!-- 4 -->
+      <section id="autosave">
+        <header><span class="num">04</span><h2>자동 저장과 실시간 편집 <span class="ts">04:50</span></h2></header>
+        <p>문서 편집기 같은 화면이라면 자동 저장<span class="en">autosave</span>은 있어야 할 기본 기능이다. 발표자는 이를 세 겹으로 쌓는다.</p>
+        <ol class="plain">
+          <li><strong>뒤에서 자동 저장한다.</strong> 저장 버튼을 누르지 않아도 진행 상황이 저장된다. 저장이 타이핑을 막지 않아야 한다. 이를 비차단<span class="en">non-blocking</span> 동작이라고 한다.</li>
+          <li><strong>탭 닫기를 막는다.</strong> 저장 안 된 변경이 있으면 브라우저 탭이 닫히지 않게 한다. <span class="ts">05:30</span></li>
+          <li><strong>실시간 공동 편집을 더한다.</strong> 여러 사람이 동시에 고칠 수 있다. 꼭 필요하지는 않은 한 걸음 더다. <span class="ts">05:40</span></li>
+        </ol>
+        <p>앞의 두 겹만으로도 작업한 내용이 사라지지 않는다는 보장이 생긴다.</p>
+        <p>실시간 편집은 에이전트가 전혀 어려워하지 않았다고 한다. 에이전트에게 물어보고, 어떻게 동작할지 검토한 뒤 맡겼다. 발표자는 여기에 "토큰 7억 개 뒤에" 실시간 편집이 생겼다고 농담처럼 덧붙인다.</p>
+        <p class="note">발표자는 자동 저장 같은 제품 경험을 에이전트가 잘 못 챙기는 첫 번째 예로 든다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="optimistic">
+        <header><span class="num">05</span><h2>낙관적 업데이트 <span class="ts">06:10</span></h2></header>
+        <p>에이전트가 자주 빠뜨리는 또 하나는 <strong>낙관적 업데이트</strong><span class="en">optimistic update</span>다. 사용자가 무언가 할 때마다 로딩 스피너를 보여 주지 않는다. 성공한 화면을 먼저 보여 주고, 실제 반영은 뒤에서 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">기본 흐름</span>
+            <ol class="plain">
+              <li>사용자가 버튼을 누른다</li>
+              <li>로딩 스피너가 돈다</li>
+              <li>서버 응답이 온다</li>
+              <li>화면이 바뀐다</li>
+            </ol>
+            <p class="verdict">누를 때마다 기다린다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">낙관적 업데이트</span>
+            <ol class="plain">
+              <li>사용자가 버튼을 누른다</li>
+              <li>화면이 바로 성공 상태로 바뀐다</li>
+              <li>뒤에서 서버와 맞춘다</li>
+              <li>실패하면 원래대로 되돌리고 실패했다고 알린다</li>
+            </ol>
+            <p class="verdict">앱이 <b>훨씬 빠르고 즉각적으로</b> 느껴진다.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <span class="title">모든 곳에 쓰지는 않는다 <span class="ts">06:40</span></span>
+          <span>결과가 제대로 됐는지 확인한 뒤에 보여 줘야 하는 경우가 있다. 그런 곳은 스피너를 보여 주고 기다리는 게 맞다.</span>
+        </div>
+        <p><strong>요청하는 법</strong> <span class="ts">07:00</span>: 발표자는 에이전트에게 이렇게 말하면 된다고 한다. "말이 되는 곳에 낙관적 업데이트를 넣고 싶다. 계획부터 세우자." 그러면 에이전트가 적용할 만한 곳을 짚어 준다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="undo">
+        <header><span class="num">06</span><h2>되돌리기와 보관 <span class="ts">07:20</span></h2></header>
+        <p>발표자는 되돌리기<span class="en">undo</span>를 낙관적 업데이트의 연장으로 본다. 삭제 기능을 예로 든다.</p>
+        <div class="shift" aria-label="삭제 흐름의 변화">
+          <div><span class="tag">에이전트가 보통 만드는 것</span><b>삭제 → 확인창 → 확인 → 삭제</b><span class="muted">삭제 버튼을 누르면 확인 대화상자가 뜨고, 확인을 눌러야 지워진다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">더 나은 방식</span><b>삭제 → 바로 사라짐 → 몇 초 유예</b><span class="muted">화면에서 바로 빼고 몇 초 동안 되돌릴 기회를 준다. 아무것도 안 하면 그때 실제로 지운다</span></div>
+        </div>
+        <p>되돌리기를 누르면 항목을 다시 살린다. 실제 삭제는 뒤에서, 조금 늦춰서 실행하는 셈이다.</p>
+
+        <h3>보관 <span class="ts">08:10</span></h3>
+        <p>지연 실행은 다음 항목인 보관<span class="en">archive</span>으로 이어진다. 에이전트에게 레코드를 보관하고 보관 해제하는 기능을 요청하라고 한다.</p>
+        <ul class="plain">
+          <li>어떤 항목은 화면이나 검색 결과에서 완전히 숨기고만 싶다.</li>
+          <li>"안 보고 싶으면 지워라"를 사용자에게 강요하면 안 된다.</li>
+          <li>보관할 수 있으면 지우지 않고도 숨길 수 있다.</li>
+        </ul>
+      </section>
+
+      <!-- 7 -->
+      <section id="url">
+        <header><span class="num">07</span><h2>URL 상태와 무한 스크롤 <span class="ts">08:40</span></h2></header>
+        <p>발표자가 크게 꼽는 것은 <strong>URL 상태</strong><span class="en">URL state</span>다. 말이 되는 곳이라면 화면 상태를 URL에 남기라고 에이전트에게 요청한다.</p>
+        <p>레코드 목록에 필터와 정렬 조건이 여러 개 걸려 있다고 하자. 이 조건이 URL에 있으면 링크 하나만 보내면 된다. 받은 동료는 보낸 사람이 보여 주려던 화면을 그대로 본다.</p>
+        <p class="note">예시: <code>/posts?status=draft&amp;sort=updated</code> 같은 주소를 보내면 받는 사람도 "초안만, 최근 수정순"으로 걸러진 목록을 바로 본다. 발표에 나온 주소는 아니다.</p>
+
+        <h3>무한 스크롤 <span class="ts">09:10</span></h3>
+        <p>에이전트가 기본으로 안 해 주는 작은 것이 하나 더 있다. 무한 스크롤<span class="en">infinite scroll</span>이다.</p>
+        <ul class="plain">
+          <li>"더 보기"나 "다음 페이지" 버튼을 계속 누르게 하지 않는다.</li>
+          <li>스크롤하면 데이터가 이어서 들어온다.</li>
+          <li>끝에 닿으면 끝이라고 보여 준다.</li>
+        </ul>
+        <p>아주 사소하다. 하지만 매일 쓰는 도구에서는 큰 차이를 만든다고 발표자는 말한다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="reference">
+        <header><span class="num">08</span><h2>기존 페이지를 기준으로 <span class="ts">09:30</span></h2></header>
+        <p>결과를 크게 좋게 만든 방법이 하나 있다. <strong>기존 페이지를 참고하라고 에이전트에게 명시적으로 말하는 것</strong>이다.</p>
+        <ul class="plain">
+          <li>UI를 맞춘다.</li>
+          <li>데이터를 가져오는 방식과 동작을 맞춘다.</li>
+          <li>전체 구조를 맞춘다.</li>
+        </ul>
+        <p>이렇게 하면 "좋은 모습"을 한 번만 정의하면 된다. 그다음 기능부터는 그 정의를 재사용한다.</p>
+        <div class="callout">
+          <span class="title">솔직한 단서 <span class="ts">10:00</span></span>
+          <span>"X 페이지를 참고하라"고 해도 안 따를 때가 있다. 발표자는 모델이 가끔 멍청해지는 건지 모르겠다고 말한다. 그래도 기준 페이지를 지정하면 성공률이 더 높다.</span>
+        </div>
+        <p><strong>일관성도 따라온다.</strong> <span class="ts">10:20</span> 앱을 쓰다 보면 "이건 저쪽 화면이랑 똑같네" 하고 느낀다. 같은 개념을 공유하는 두 화면은 거의 같아야 한다. 예를 들어 둘 다 레코드를 만들고, 고치고, 지우고, 목록으로 보는 화면이라면 거의 똑같이 생겨야 한다.</p>
+        <p>2장의 "탄탄한 구조"와 같은 이야기다. 에이전트가 따라갈 본보기가 있으면 결과가 일관된다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="skills">
+        <header><span class="num">09</span><h2>취향은 에이전트 스킬로 <span class="ts">10:40</span></h2></header>
+        <p>지금까지 본 목록처럼 무언가에 대한 의견이 있다면 <strong>에이전트 스킬</strong><span class="en">agent skills</span>로 묶으라고 한다. 에이전트 스킬은 에이전트가 작업할 때 읽고 따르는 지침 묶음이다. 묶어 두면 에이전트는 무언가를 만들 때 그 스킬을 꽤 충실히 따른다.</p>
+        <p>발표자가 사내 도구를 만들며 손이 간 스킬은 세 가지다. <span class="ts">11:00</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>스킬</th><th>도움 받은 것</th></tr></thead>
+            <tbody>
+              <tr><td>디자인 엔지니어링 1</td><td>더 나은 UI, 글꼴 배치<span class="en">typography</span>, 레이아웃, 에러 메시지</td></tr>
+              <tr><td>디자인 엔지니어링 2</td><td>더 나은 애니메이션 같은 것</td></tr>
+              <tr><td>Railway 에이전트 스킬</td><td>에이전트가 Railway를 다루고 모든 것을 배포하게 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자가 만든 사내 도구는 전부 Railway에서 돈다. 파일 저장소<span class="en">bucket</span>, 데이터베이스, 앱, 실시간 서버까지 그렇다. 스킬을 주자 에이전트가 배포까지 해냈다고 한다. <span class="ts">11:10</span></p>
+        <p class="note">발표자는 Railway 소속이다. 모든 것을 Railway에서 돌린다는 대목과 Railway 스킬 추천은 그 점을 감안해 읽자. 디자인 엔지니어링 스킬 두 개는 이름이 나오지 않았다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="verify">
+        <header><span class="num">10</span><h2>가장 중요한 단계: 검증 <span class="ts">11:40</span></h2></header>
+        <p>스킬까지 갖췄다면 마지막 단계가 남는다. 발표자는 이 단계가 <strong>가장 중요하다</strong>고 말한다.</p>
+        <p>에이전트는 무언가를 만들고 나면 보통 이렇게 보고한다. "기능 구현했습니다. 빌드 통과, 테스트 통과, 다 됐습니다." 막상 써 보면 경험이 완전히 망가져 있을 때가 있다.</p>
+        <p><strong>검증 루프</strong><span class="en">verification loop</span>를 두면 밤과 낮만큼 달라진다. 에이전트가 스스로 이렇게 움직이는 게 보인다.</p>
+        <ol class="plain">
+          <li>기능을 만든다.</li>
+          <li>직접 써 본다.</li>
+          <li>실패하면 고친다.</li>
+          <li>다시 써 본다. 될 때까지 반복한다.</li>
+          <li>"끝까지 다 테스트했다"고 보고한다.</li>
+        </ol>
+        <p>발표자가 이 돌파구를 느낀 건 <strong>컴퓨터 사용</strong><span class="en">computer use</span>이 정말 좋아졌을 때다. <span class="ts">12:20</span> 컴퓨터 사용은 AI가 화면을 보고 클릭과 입력을 하며 프로그램을 직접 조작하는 기능이다.</p>
+        <div class="callout">
+          <span class="title">발표자가 새 기능마다 마지막에 붙이는 지시</span>
+          <span>이 기능이 처음부터 끝까지<span class="en">end to end</span> 동작하는지 검증해라. 실제 인프라를 띄워서 직접 써 보고 확인해라.</span>
+        </div>
+        <p>에이전트는 이 일을 충분히 해낸다. 말해 주기만 하면 된다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="conclusion">
+        <header><span class="num">11</span><h2>회사의 SaaS 층이 되기 <span class="ts">12:50</span></h2></header>
+        <p>이 조각들이 다 모이면 빨리 만들 수 있고, 제대로 동작하고, 일관된 사내 도구가 나온다. 발표의 원칙을 순서대로 이으면 이렇다.</p>
+        <ol class="plain">
+          <li><strong>구조</strong>: 추상화가 탄탄한 코드베이스를 준다.</li>
+          <li><strong>패턴</strong>: 에이전트가 알아서 안 하는 UX 패턴을 콕 집어 요청한다.</li>
+          <li><strong>기준</strong>: 기존 페이지를 본보기로 지정한다.</li>
+          <li><strong>스킬</strong>: 반복되는 취향과 배포 방법을 스킬로 묶는다.</li>
+          <li><strong>검증</strong>: 실제로 끝까지 써 보게 한다.</li>
+        </ol>
+        <p>발표자의 바람은 각자 쓰기 좋고 다듬어진 사내 도구를 직접 만드는 것이다. 발표자는 이를 "회사의 SaaS 층<span class="en">SaaS layer</span>이 되라"는 말로 맺는다. <span class="ts">13:10</span></p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트가 한 번에 만든 소프트웨어는 돌아가지만, 매일 쓰고 싶은 수준과는 거리가 있다.</li>
+          <li>발표자는 Railway 마케팅팀이 쓰던 SaaS 여러 개를 에이전트로 만든 올인원 도구 하나로 바꿨다.</li>
+          <li><strong>스택보다 구조</strong>가 중요하다. 탄탄한 추상화가 있으면 에이전트는 기존 패턴을 따른다.</li>
+          <li>좋은 SaaS의 흐름에는 사용자가 못 느끼는 공이 많이 들어 있다. 에이전트는 시키지 않으면 그걸 하지 않는다.</li>
+          <li><strong>자동 저장</strong>과 <strong>탭 닫기 경고</strong>로 작업 유실을 막는다.</li>
+          <li><strong>낙관적 업데이트</strong>로 앱을 즉각적으로 느끼게 하되, 필요한 곳에만 쓴다.</li>
+          <li>삭제는 확인창 대신 <strong>되돌리기</strong>로 바꾸고, 삭제와 별개로 <strong>보관</strong>을 둔다.</li>
+          <li>필터와 정렬은 <strong>URL</strong>에 담고, 페이지 넘김은 <strong>무한 스크롤</strong>로 바꾼다.</li>
+          <li>새 기능은 <strong>기존 페이지를 기준으로</strong> 만들게 하고, 반복되는 취향은 <strong>에이전트 스킬</strong>로 묶는다.</li>
+          <li>가장 중요한 건 <strong>검증</strong>이다. 에이전트가 실제 인프라에서 기능을 끝까지 써 보게 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 "빈틈"은 무엇과 무엇 사이인가?</span></summary><div class="answer">한 번에 뽑아서 돌아가는 소프트웨어와, 다듬어져 있어 실제로 매일 쓰고 싶은 소프트웨어 사이다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>스택 선택에 대해 발표자는 어떤 입장인가?</span></summary><div class="answer">무엇을 고르느냐는 크게 중요하지 않다. 대신 추상화가 탄탄한 코드베이스가 중요하다. 그래야 에이전트가 기존 패턴을 따라 일관된 결과를 낸다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>작업 유실을 막는 자동 저장의 두 겹은?</span></summary><div class="answer">타이핑을 막지 않고 뒤에서 자동 저장하기. 그리고 저장 안 된 변경이 있으면 브라우저 탭 닫기를 막기.</div></details>
+          <details><summary><span class="qn">Q4</span><span>낙관적 업데이트는 어떻게 동작하고, 실패하면 어떻게 하나?</span></summary><div class="answer">성공한 화면을 먼저 보여 주고 실제 반영은 뒤에서 한다. 실패하면 원래대로 되돌리고 사용자에게 실패했다고 알린다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>낙관적 업데이트를 모든 곳에 쓰지 않는 이유와, 에이전트에게 요청하는 법은?</span></summary><div class="answer">결과를 확인한 뒤 보여 줘야 하는 경우가 있어서다. 그런 곳은 스피너를 보여 주고 기다린다. 에이전트에게는 "말이 되는 곳에 넣고 싶다, 계획부터 세우자"고 요청한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>되돌리기를 쓰면 삭제 흐름이 어떻게 바뀌나?</span></summary><div class="answer">확인창 없이 항목을 화면에서 바로 뺀다. 몇 초 동안 되돌릴 기회를 주고, 아무것도 안 하면 그때 실제로 지운다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>삭제가 있는데도 보관 기능이 필요한 이유는?</span></summary><div class="answer">화면이나 검색 결과에서 숨기고만 싶을 때가 있다. 안 보고 싶으면 지우라고 사용자에게 강요하면 안 된다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>필터와 정렬을 URL에 담으면 무엇이 좋은가?</span></summary><div class="answer">링크 하나만 보내면 동료가 같은 조건으로 걸러진 화면을 그대로 본다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>기존 페이지를 기준으로 지정하면 얻는 것 두 가지는?</span></summary><div class="answer">에이전트의 성공률이 올라간다. 그리고 같은 개념을 가진 화면들이 거의 똑같아져 앱 전체가 일관된다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>발표자가 쓴 에이전트 스킬 세 가지는?</span></summary><div class="answer">UI·글꼴·레이아웃·에러 메시지를 돕는 디자인 엔지니어링 스킬, 애니메이션을 돕는 디자인 엔지니어링 스킬, 배포를 돕는 Railway 에이전트 스킬.</div></details>
+          <details><summary><span class="qn">Q11</span><span>"빌드 통과, 테스트 통과"로 부족한 이유와 해결책은?</span></summary><div class="answer">실제로 써 보면 경험이 망가져 있을 때가 있다. 에이전트가 실제 인프라를 띄워 기능을 끝까지 써 보고, 실패하면 고치기를 반복하게 한다. 컴퓨터 사용이 좋아지면서 가능해졌다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 도구에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트에게 기능을 맡기기 전에 코드베이스의 기본 패턴을 먼저 잡는다<span class="how">확인: 새 기능이 기존 패턴을 따라가는가, 새 패턴을 들여오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>편집 화면에 자동 저장과 탭 닫기 경고를 넣는다<span class="how">확인: 저장 중에도 타이핑이 막히지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>"말이 되는 곳에 낙관적 업데이트를 넣자, 계획부터 세우자"고 요청한다<span class="how">확인: 실패하면 되돌리고 알리는가. 스피너가 필요한 곳은 남겼는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>삭제 확인창을 되돌리기로 바꾼다<span class="how">화면에서 바로 빼고 몇 초 뒤에 실제로 지운다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>삭제와 별도로 보관과 보관 해제를 둔다<span class="how">확인: 보관한 항목이 목록과 검색에서 빠지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>목록의 필터와 정렬을 URL에 담는다<span class="how">확인: 링크를 동료에게 보내면 같은 화면이 뜨는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>"더 보기"나 다음 페이지 버튼을 무한 스크롤로 바꾼다<span class="how">확인: 끝에 닿으면 끝이라고 보여 주는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>새 기능을 요청할 때 기준 페이지를 지정한다<span class="how">"X 페이지처럼 UI, 데이터 가져오기, 구조를 맞춰라"</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>반복해서 하는 요구를 에이전트 스킬로 묶는다<span class="how">예: UI·글꼴·에러 메시지 기준, 애니메이션 기준, 배포 방법</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>기능 요청의 마지막에 끝까지 검증하라는 지시를 붙인다<span class="how">"실제 인프라를 띄워서 이 기능이 처음부터 끝까지 동작하는지 직접 써 보고 확인해라"</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>SaaS</td><td>Software as a Service. 설치하지 않고 구독해서 웹으로 쓰는 소프트웨어</td></tr>
+              <tr><td>원샷</td><td>One-shot. 요청 한 번으로 결과물을 통째로 뽑는 것</td></tr>
+              <tr><td>스택</td><td>Stack. 프로젝트에 쓰는 언어, 프레임워크, 라이브러리의 조합</td></tr>
+              <tr><td>코드베이스</td><td>Codebase. 한 프로젝트의 소스 코드 전체</td></tr>
+              <tr><td>추상화</td><td>Abstraction. 반복되는 코드를 공통 틀로 묶어, 세부를 몰라도 쓸 수 있게 한 것</td></tr>
+              <tr><td>TanStack</td><td>웹 개발용 오픈소스 라이브러리 모음. Query, Router, Table 등이 있다</td></tr>
+              <tr><td>CMS</td><td>Content Management System. 웹사이트의 글과 이미지를 관리하는 시스템</td></tr>
+              <tr><td>Payload</td><td>TypeScript로 만든 오픈소스 CMS</td></tr>
+              <tr><td>CRM</td><td>Customer Relationship Management. 연락하는 사람과 진행 상황을 기록하는 도구</td></tr>
+              <tr><td>서버 사이드 렌더링</td><td>Server-side rendering. 서버가 완성된 페이지를 만들어 보내는 방식. 폼을 제출하면 페이지가 새로 뜬다</td></tr>
+              <tr><td>비차단</td><td>Non-blocking. 작업이 도는 동안 사용자가 기다리지 않고 계속 쓸 수 있는 것</td></tr>
+              <tr><td>낙관적 업데이트</td><td>Optimistic update. 성공할 거라 보고 화면을 먼저 바꾸고, 서버 반영은 뒤에서 하는 방식</td></tr>
+              <tr><td>롤백</td><td>Rollback. 실패한 변경을 원래 상태로 되돌리는 것</td></tr>
+              <tr><td>보관</td><td>Archive. 지우지 않고 목록과 검색에서 숨기는 것. 다시 꺼낼 수 있다</td></tr>
+              <tr><td>URL 상태</td><td>URL state. 필터, 정렬 같은 화면 상태를 주소에 담는 것</td></tr>
+              <tr><td>무한 스크롤</td><td>Infinite scroll. 스크롤이 끝에 가까워지면 다음 데이터를 자동으로 불러오는 방식</td></tr>
+              <tr><td>에이전트 스킬</td><td>Agent skills. 에이전트가 특정 작업을 할 때 읽고 따르는 지침 묶음</td></tr>
+              <tr><td>디자인 엔지니어링</td><td>Design engineering. 디자인 감각과 프런트엔드 구현을 함께 다루는 일</td></tr>
+              <tr><td>버킷</td><td>Bucket. 파일을 올려 두는 클라우드 저장 공간</td></tr>
+              <tr><td>검증 루프</td><td>Verification loop. 만들고, 써 보고, 고치기를 될 때까지 반복하는 흐름</td></tr>
+              <tr><td>컴퓨터 사용</td><td>Computer use. AI가 화면을 보고 클릭과 입력으로 프로그램을 직접 조작하는 기능</td></tr>
+              <tr><td>엔드 투 엔드</td><td>End to end. 사용자가 쓰는 처음부터 끝까지의 전체 흐름을 실제처럼 확인하는 것</td></tr>
+              <tr><td>토큰</td><td>Token. AI 모델이 글을 처리하는 단위. 사용량과 비용의 기준이 된다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>"SaaS는 끝났다"는 말과 빠진 조각</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>발표자가 만든 올인원 마케팅 도구</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>에이전트로 만들고 Railway에서 자동 배포</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>에든버러 야외 녹화, 2026년 10월 기준이라는 단서</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>스택보다 구조</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>TanStack과 Payload</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>좋은 SaaS의 흐름에 들어간 공</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>자동 저장과 탭 닫기 경고</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>실시간 공동 편집, "토큰 7억 개"</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>낙관적 업데이트</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>낙관적 업데이트를 쓰지 않을 때</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>되돌리기</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>보관</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>URL 상태</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>무한 스크롤</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>기존 페이지를 기준으로</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>기준을 안 따를 때도 있다</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>취향을 에이전트 스킬로 묶기</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>발표자가 쓴 스킬 세 가지</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>가장 중요한 단계: 검증</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>컴퓨터 사용이 가져온 돌파구</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>정리: 회사의 SaaS 층이 되기</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'oixzVKMAXG0:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

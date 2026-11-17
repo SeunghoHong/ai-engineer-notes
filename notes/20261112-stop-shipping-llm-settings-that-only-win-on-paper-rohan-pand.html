@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>서빙 설정 자동 튜닝</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#goal">무엇을 자동화하나</a></li>
+      <li><a href="#search">베이지안 최적화와 Optuna</a></li>
+      <li><a href="#regimes">네 가지 작업 유형</a></li>
+      <li><a href="#run">tuner.py 실행하기</a></li>
+      <li><a href="#results">결과 보고서와 수치</a></li>
+      <li><a href="#caveats">읽을 때 짚을 점</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 서빙 환경에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-12 · 5분 · 영어 발표 한글 정리</span>
+      <h1>서빙 설정을 에이전트에게 찾게 하기</h1>
+      <p class="lead">모델을 띄울 때 넣는 설정값은 손으로 찾으면 오래 걸린다. DigitalOcean 팀은 베이지안 최적화로 이 값을 자동으로 찾는 에이전트를 만들었다. 두 모델에서 처리량이 17.5%에서 두 배까지 늘었다고 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=cWrYEBlWpcY" target="_blank" rel="noopener">Stop Shipping LLM Settings That Only Win on Paper</a></span>
+        <span>발표: Rohan Pandey, Balaji Varadarajan (DigitalOcean)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막의 "VLM", "BLM"은 서빙 엔진 vLLM으로, "ISO OSL"은 ISL/OSL로 바로잡았다. 제목에는 두 사람이 있지만 자막에서 말하는 사람은 Rohan Pandey 한 명이다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>발표자 팀은 모델마다 <strong>가장 좋은 vLLM 서빙 설정을 찾아 주는 최적화 에이전트</strong>를 만들었다. 손으로 찾는 시간을 줄이는 게 목적이다.</li>
+        <li>탐색 전략은 <strong>베이지안 최적화</strong>다. 실제로 탐색을 돌리는 도구는 <strong>Optuna</strong>다.</li>
+        <li>설정마다 <strong>실제 쓰임을 닮은 네 가지 작업 유형</strong>(chat short, chat long, RAG, batch classify)으로 시험한다.</li>
+        <li><code>tuner.py</code>에 네 가지 값을 넣고 몇 시간 돌리면 <strong>HTML 보고서</strong>와 <strong>최적 설정 YAML</strong>이 나온다.</li>
+        <li>점수는 <strong>goodput</strong>이다. GPT-OSS 120B는 <strong>+17.5%</strong>, DeepSeek R1 Distill은 <strong>처리량 약 2배, 토큰 사이 지연 약 절반</strong>이었다.</li>
+        <li>자사 실험 두 번의 결과다. 어떤 설정값을 바꿨는지는 거의 보여 주지 않았다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="goal">
+        <header><span class="num">01</span><h2>무엇을 자동화하나 <span class="ts">00:20</span></h2></header>
+        <p>모델을 서비스하려면 vLLM 같은 <strong>서빙 엔진</strong><span class="en">serving engine</span>에 설정값을 넣어야 한다. 이 설정값 묶음을 발표자는 <strong>서빙 레시피</strong><span class="en">serving recipe</span>라고 부른다.</p>
+        <p>가장 좋은 값은 모델마다 다르다. 지금은 사람이 값을 바꿔 가며 직접 재서 찾는다. 이 일이 오래 걸린다.</p>
+        <p>발표자의 목표는 이 일을 에이전트에게 넘기는 것이다. 에이전트가 백그라운드에서 돌며 좋은 레시피를 사람보다 빨리 찾으면 시간을 많이 아낄 수 있다.</p>
+        <div class="shift" aria-label="설정 찾기 방식의 변화">
+          <div><span class="tag">지금까지</span><b>사람이 손으로 찾는다</b><span class="muted">값을 하나씩 바꿔 가며 서빙을 돌리고 결과를 잰다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이 에이전트</span><b>에이전트가 백그라운드에서 찾는다</b><span class="muted">시험을 반복하고, 끝나면 최적 레시피를 파일로 내놓는다</span></div>
+        </div>
+        <p class="note">발표자들은 DigitalOcean 소속이다. 이 에이전트와 데모에 쓴 서버(droplet)는 모두 그 회사의 것이다. 뒤에 나오는 개선 수치는 자사 도구를 자사 환경에서 돌린 결과이니 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="search">
+        <header><span class="num">02</span><h2>베이지안 최적화와 Optuna <span class="ts">00:50</span></h2></header>
+        <p>설정값 조합을 전부 시험하면 너무 오래 걸린다. 서빙 한 번을 돌려 재는 데만 시간이 들기 때문이다.</p>
+        <p><strong>베이지안 최적화</strong><span class="en">Bayesian optimization</span>는 지금까지 시험한 결과를 보고 다음에 시험할 만한 값을 고른다. 그래서 적은 시험으로 좋은 값에 다가간다.</p>
+        <p class="note">발표자는 베이지안 최적화가 "탐색 공간을 줄인다"고 표현했다. 엄밀히 말하면 시험할 수 있는 조합 전체(탐색 공간)는 그대로다. 줄어드는 것은 실제로 시험하는 횟수다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">전략</span>
+            <p><strong>베이지안 최적화</strong></p>
+            <p>어떤 값을 다음에 시험할지 정하는 수학적 방법이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">도구 <span class="ts">01:30</span></span>
+            <p><strong>Optuna</strong></p>
+            <p>이 전략으로 탐색 루프를 실제로 돌리는 오픈소스 라이브러리다.</p>
+          </div>
+        </div>
+
+        <h3>탐색 루프 한 바퀴 <span class="ts">01:40</span></h3>
+        <ol class="plain">
+          <li>시작 레시피를 넣는다.</li>
+          <li>그 레시피로 서빙을 돌린다. 이 한 번을 <strong>시험</strong><span class="en">trial</span>이라 부른다.</li>
+          <li>결과를 평가해 점수를 얻는다.</li>
+          <li>전략에 따라 레시피를 바꾼다.</li>
+          <li>정한 시험 횟수를 다 쓸 때까지 2~4를 반복한다.</li>
+        </ol>
+      </section>
+
+      <!-- 3 -->
+      <section id="regimes">
+        <header><span class="num">03</span><h2>네 가지 작업 유형 <span class="ts">02:20</span></h2></header>
+        <p>데모 서버에는 GPT-OSS 120B 모델이 올라가 있다. 시작 레시피를 열면 시험에 쓸 <strong>작업 유형</strong><span class="en">regime</span> 네 가지가 들어 있다.</p>
+        <p>유형마다 <strong>입력 토큰 길이</strong><span class="en">ISL</span>와 <strong>출력 토큰 길이</strong><span class="en">OSL</span>가 따로 정해져 있다. 구체적인 숫자는 자막에 나오지 않는다. 보고 싶은 상황에 맞춰 유형과 길이를 바꿀 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>작업 유형</th><th>흔히 떠올리는 요청 모양 (예시, 발표에 없음)</th></tr></thead>
+            <tbody>
+              <tr><td>chat short</td><td>짧은 질문에 짧게 답한다</td></tr>
+              <tr><td>chat long</td><td>긴 대화 기록을 넣거나 길게 답한다</td></tr>
+              <tr><td>RAG</td><td>검색한 문서를 길게 넣고 비교적 짧게 답한다</td></tr>
+              <tr><td>batch classify</td><td>많은 요청을 한꺼번에 넣고 짧은 분류 결과만 받는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>시작 레시피는 모델 가중치를 받을 때 함께 오는 기본 설정이다. 에이전트는 이 기본값에서 출발해 더 나은 값을 찾는다.</p>
+        <div class="callout">
+          <span class="title">왜 여러 유형으로 시험하나 (해석)</span>
+          <span>발표자가 직접 설명하지는 않았다. 한 가지 요청 모양에서만 빠른 설정은 다른 모양에서는 느릴 수 있다. 제목의 "서류상으로만 이기는 설정"과 가장 가까운 대목이 이 부분으로 보인다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="run">
+        <header><span class="num">04</span><h2>tuner.py 실행하기 <span class="ts">02:50</span></h2></header>
+        <p>먼저 DigitalOcean의 가상 서버인 <strong>droplet</strong>에 모델 가중치를 받아 둔다. 그다음 명령 하나를 붙여 넣는다. 이 명령은 세 가지를 한다.</p>
+        <ol class="plain">
+          <li>가중치가 어디 있는지 알려 준다.</li>
+          <li>Python 가상 환경을 켠다.</li>
+          <li><code>tuner.py</code> 스크립트를 실행한다.</li>
+        </ol>
+
+        <h3>tuner.py에 넣는 값 <span class="ts">03:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>입력</th><th>뜻</th><th>데모 값</th></tr></thead>
+            <tbody>
+              <tr><td>study 이름</td><td>이번 탐색의 이름. Optuna는 탐색 한 묶음을 study라 부른다</td><td class="muted">자막에 없음</td></tr>
+              <tr><td>시작 YAML</td><td>앞에서 본 시작 레시피 파일</td><td>기본 레시피</td></tr>
+              <tr><td>하드웨어</td><td>서빙이 돌아가는 하드웨어</td><td class="muted">자막에 없음</td></tr>
+              <tr><td>시험 횟수</td><td>몇 번 시험할지</td><td>24 (지난 실행 예: 9)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">걸리는 시간 <span class="ts">03:40</span></span>
+          <span>보통 몇 시간이 걸린다. GPT-OSS 120B는 약 4~5시간 걸렸다. 다른 모델도 몇 시간 걸렸다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="results">
+        <header><span class="num">05</span><h2>결과 보고서와 수치 <span class="ts">03:50</span></h2></header>
+        <p>실행이 끝나면 결과물 두 개가 나온다.</p>
+        <ul class="plain">
+          <li><strong>HTML 보고서</strong>: 시험마다 결과가 어땠는지, 전체 중 몇 번째 시험이 가장 좋았는지 보여 준다.</li>
+          <li><strong>최적 레시피 YAML</strong>: vLLM 서빙 레시피에 들어가는 값을 모두 담는다. 데모에서는 어떤 값이 256으로 정해졌다. 그게 어떤 설정인지는 자막에 나오지 않는다.</li>
+        </ul>
+
+        <h3>점수는 goodput <span class="ts">04:30</span></h3>
+        <p>에이전트는 <strong>goodput</strong> 토큰의 양으로 점수를 매긴다. goodput은 보통 정해 둔 지연 목표를 지킨 요청만 센 처리량을 뜻한다. 발표에서 정의를 따로 말하지는 않았다.</p>
+        <p class="note">발표자는 이 점수를 "accuracy(정확도)"라고 불렀다. 하지만 답의 품질을 재는 값이 아니다. 얼마나 빨리, 많이 만들어 내는지를 재는 속도 지표다.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>시험 횟수</th><th>가장 좋았던 시험</th><th>걸린 시간</th><th>처음 설정 대비 결과</th></tr></thead>
+            <tbody>
+              <tr><td>GPT-OSS 120B</td><td>50</td><td class="muted">자막에 없음</td><td>약 4~5시간</td><td>생성 토큰 +17.5%</td></tr>
+              <tr><td>DeepSeek R1 Distill</td><td>9</td><td>9번째 (마지막)</td><td>몇 시간</td><td>토큰 처리량 약 2배, ITL 약 절반</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <figure class="chart" aria-label="처음 설정을 100으로 놓은 처리량 비교: GPT-OSS 120B 117.5, DeepSeek R1 Distill 약 200">
+          <span class="chart-title">처음 설정 대비 처리량 (처음 설정 = 100, 높을수록 좋음)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>GPT-OSS 120B · 생성 토큰</span><span class="val">117.5 · +17.5%</span></div>
+              <div class="track"><div class="fill" style="width:58.75%" title="GPT-OSS 120B: 117.5 (+17.5%)"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>DeepSeek R1 Distill · 토큰 처리량</span><span class="val">약 200 · 약 2배</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="DeepSeek R1 Distill: 약 200 (약 2배)"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 처음 설정 (100)</span><span>200</span></div>
+          <span class="caption">두 모델은 잰 지표가 조금 다르다. GPT-OSS는 점수(goodput) 기준 생성 토큰, DeepSeek는 토큰 처리량이다. DeepSeek 막대는 "두 배"라는 말에 맞춰 200으로 그렸다.</span>
+        </figure>
+
+        <figure class="chart" aria-label="DeepSeek R1 Distill의 토큰 사이 지연: 처음 설정 100, 최적 설정 약 50">
+          <span class="chart-title">DeepSeek R1 Distill 토큰 사이 지연, ITL (처음 설정 = 100, 낮을수록 좋음)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>처음 설정</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="처음 설정: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>최적 설정</span><span class="val">약 50</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="최적 설정: 약 50"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자는 "거의 절반으로 줄었다"고만 했다. 그래서 50으로 근사해 그렸다.</span>
+        </figure>
+      </section>
+
+      <!-- 6 -->
+      <section id="caveats">
+        <header><span class="num">06</span><h2>읽을 때 짚을 점</h2></header>
+        <p>5분짜리 데모라 빠진 정보가 많다. 따라 하기 전에 아래를 알고 있으면 좋다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>짚을 점</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>무엇을 바꿨나</td><td>조정한 설정값 목록이 나오지 않는다. 256이라는 숫자 하나만 나온다. 따라 하려면 탐색할 설정과 범위를 직접 정해야 한다.</td></tr>
+              <tr><td>goodput 기준</td><td>goodput은 지연 목표가 있어야 셀 수 있다. 어떤 목표를 썼는지는 말하지 않았다.</td></tr>
+              <tr><td>시험 횟수</td><td>명령 예시는 24회인데 GPT-OSS 보고서는 50회다. 서로 다른 실행으로 보인다(추정).</td></tr>
+              <tr><td>마지막 시험이 최고</td><td>DeepSeek은 9회 중 9번째가 가장 좋았다. 탐색이 아직 끝나지 않았을 수 있다(추론). 횟수를 늘리면 더 나아질 여지가 있다.</td></tr>
+              <tr><td>반복 측정</td><td>모델마다 실행 한 번의 결과만 보여 줬다. 반복 측정이나 편차는 말하지 않았다.</td></tr>
+              <tr><td>제목과 내용</td><td>제목은 "서류상으로만 이기는 설정"을 경고한다. 발표 본문은 도구 데모이고, 그 경고를 따로 설명하지 않는다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="recap">
+        <header><span class="num">07</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>모델마다 가장 좋은 vLLM 서빙 설정을 손으로 찾는 일은 오래 걸린다. 발표자 팀은 이 일을 에이전트로 자동화했다.</li>
+          <li>탐색 전략은 <strong>베이지안 최적화</strong>, 탐색을 돌리는 도구는 <strong>Optuna</strong>다.</li>
+          <li>시험마다 레시피를 돌리고, 점수를 매기고, 레시피를 고쳐 다시 돌린다.</li>
+          <li>시험 조건은 chat short, chat long, RAG, batch classify 네 가지다. 유형마다 입력·출력 토큰 길이가 다르다.</li>
+          <li>출발점은 모델 가중치를 받을 때 함께 오는 기본 레시피다.</li>
+          <li><code>tuner.py</code>에 study 이름, 시작 YAML, 하드웨어, 시험 횟수를 넣는다.</li>
+          <li>한 번 돌리는 데 몇 시간 걸린다. GPT-OSS 120B는 약 4~5시간이었다.</li>
+          <li>결과물은 시험별 <strong>HTML 보고서</strong>와 <strong>최적 레시피 YAML</strong>이다.</li>
+          <li>점수는 <strong>goodput</strong>이다. 발표자는 accuracy라고 불렀지만 품질이 아닌 속도 지표다.</li>
+          <li>GPT-OSS 120B는 <strong>+17.5%</strong>, DeepSeek R1 Distill은 <strong>처리량 약 2배, ITL 약 절반</strong>이었다. 자사 실험 두 번의 결과다.</li>
+        </ol>
+      </section>
+
+      <!-- 8 -->
+      <section id="quiz">
+        <header><span class="num">08</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>이 에이전트는 무엇을 찾나? 왜 만들었나?</span></summary><div class="answer">모델마다 가장 좋은 vLLM 서빙 설정(레시피)을 찾는다. 사람이 손으로 찾는 시간을 줄이려고 만들었다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>베이지안 최적화와 Optuna는 어떤 관계인가?</span></summary><div class="answer">베이지안 최적화는 다음에 시험할 값을 고르는 전략이다. Optuna는 그 전략으로 탐색 루프를 실제로 돌리는 도구다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>"탐색 공간을 줄인다"는 발표자의 표현을 바로잡으면?</span></summary><div class="answer">시험할 수 있는 조합 전체는 그대로다. 지금까지의 결과로 유망한 값을 골라 실제로 시험하는 횟수를 줄인다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>시험(trial) 한 번 안에서는 무슨 일이 일어나나?</span></summary><div class="answer">레시피로 서빙을 돌리고, 결과를 평가해 점수를 얻는다. 그 점수를 보고 전략이 다음 레시피를 정한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>시험에 쓰는 네 가지 작업 유형은? 서로 무엇이 다른가?</span></summary><div class="answer">chat short, chat long, RAG, batch classify. 유형마다 입력 토큰 길이(ISL)와 출력 토큰 길이(OSL)가 다르다.</div></details>
+          <details><summary><span class="qn">Q6</span><span><code>tuner.py</code>에 넣는 값 네 가지는?</span></summary><div class="answer">study 이름, 시작 YAML 파일, 돌아가는 하드웨어, 시험 횟수.</div></details>
+          <details><summary><span class="qn">Q7</span><span>실행이 끝나면 받는 결과물 두 가지는?</span></summary><div class="answer">시험마다 결과와 최고 시험을 보여 주는 HTML 보고서, 그리고 최적 레시피를 담은 YAML 파일.</div></details>
+          <details><summary><span class="qn">Q8</span><span>에이전트가 점수로 쓰는 지표는? 발표자가 붙인 이름에서 조심할 점은?</span></summary><div class="answer">goodput 토큰의 양이다. 발표자는 accuracy라고 불렀지만 답의 품질이 아니라 속도를 재는 지표다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>두 모델의 결과는?</span></summary><div class="answer">GPT-OSS 120B는 시험 50회로 생성 토큰 +17.5%. DeepSeek R1 Distill은 시험 9회로 토큰 처리량 약 2배, ITL 약 절반.</div></details>
+          <details><summary><span class="qn">Q10</span><span>DeepSeek에서 9회 중 9번째 시험이 최고였다는 건 무엇을 시사하나?</span></summary><div class="answer">탐색이 아직 좋은 값에 다 다가가지 못했을 수 있다(추론). 시험 횟수를 늘리면 더 나은 값을 찾을 여지가 있다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>이 발표의 수치를 읽을 때 감안할 점은?</span></summary><div class="answer">DigitalOcean 팀이 자사 도구를 자사 환경에서 돌린 결과다. 모델마다 실행 한 번이고, 바꾼 설정값과 goodput의 지연 목표가 공개되지 않았다.</div></details>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="apply">
+        <header><span class="num">09</span><h2>내 서빙 환경에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>실제 트래픽을 몇 가지 작업 유형으로 나눈다<span class="how">유형마다 입력·출력 토큰 길이를 적는다. 발표의 네 유형을 출발점으로 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>점수 지표와 지연 목표를 정한다<span class="how">확인: goodput을 셀 지연 목표 숫자가 글로 적혀 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>기본 레시피로 기준점을 잰다<span class="how">확인: 개선 폭을 비교할 처음 값이 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>탐색할 설정값과 범위를 정한다<span class="how">발표에는 목록이 없다. 직접 정해 YAML에 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>시험 횟수와 시간 예산을 정한다<span class="how">발표 기준으로 한 번에 몇 시간 걸린다. 서버 비용도 함께 계산한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>최고 시험이 마지막 번호면 횟수를 늘려 다시 돌린다<span class="how">확인: 최고 점수가 후반 몇 회 동안 더 오르지 않았는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>하드웨어나 모델이 바뀌면 다시 돌린다<span class="how">tuner.py가 하드웨어를 입력으로 받는다. 최적값이 하드웨어마다 다르다는 뜻으로 읽힌다(추론)</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>찾은 YAML을 실제 트래픽에서 한 번 더 잰다<span class="how">발표에 없는 보충. 시험 조건에서만 이기는 설정을 거르려는 단계다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 10 -->
+      <section id="glossary">
+        <header><span class="num">10</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>서빙</td><td>Serving. 학습된 모델을 띄워 두고 요청을 받아 답을 내보내는 일</td></tr>
+              <tr><td>vLLM</td><td>LLM을 빠르게 서빙하는 오픈소스 엔진</td></tr>
+              <tr><td>서빙 레시피</td><td>Serving recipe / config. 모델을 띄울 때 엔진에 주는 설정값 묶음. 이 발표에서는 YAML 파일이다</td></tr>
+              <tr><td>YAML</td><td>사람이 읽기 쉽게 만든 설정 파일 형식</td></tr>
+              <tr><td>가중치</td><td>Weights. 학습으로 정해진 모델의 숫자들. 이걸 받아야 모델을 띄울 수 있다</td></tr>
+              <tr><td>베이지안 최적화</td><td>Bayesian optimization. 지금까지의 시험 결과로 다음에 시험할 만한 값을 골라, 적은 시험으로 좋은 값을 찾는 방법</td></tr>
+              <tr><td>탐색 공간</td><td>Search space. 시험해 볼 수 있는 설정값 조합 전체</td></tr>
+              <tr><td>Optuna</td><td>설정값 탐색을 자동으로 돌려 주는 오픈소스 Python 라이브러리</td></tr>
+              <tr><td>study / trial</td><td>Optuna 용어. 탐색 한 묶음이 study, 그 안의 시험 한 번이 trial이다</td></tr>
+              <tr><td>작업 유형</td><td>Regime. 시험에 쓰는 요청 패턴. 이 발표에서는 chat short, chat long, RAG, batch classify</td></tr>
+              <tr><td>ISL / OSL</td><td>Input / Output Sequence Length. 요청 하나의 입력 토큰 길이와 출력 토큰 길이</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 검색한 문서를 입력에 넣어 그 내용을 바탕으로 답하게 하는 방식</td></tr>
+              <tr><td>Droplet</td><td>DigitalOcean이 빌려주는 가상 서버</td></tr>
+              <tr><td>가상 환경</td><td>Virtual environment. 프로젝트마다 Python 패키지를 따로 설치해 쓰는 격리된 공간</td></tr>
+              <tr><td>처리량</td><td>Throughput. 일정 시간 동안 만들어 내는 토큰 수</td></tr>
+              <tr><td>goodput</td><td>지연 목표를 지킨 요청만 센 처리량. 발표에서 정의하지 않아 일반적인 뜻을 적었다</td></tr>
+              <tr><td>ITL</td><td>Inter-Token Latency. 토큰 하나가 나온 뒤 다음 토큰이 나오기까지 걸리는 시간. 낮을수록 좋다</td></tr>
+              <tr><td>GPT-OSS 120B</td><td>OpenAI가 가중치를 공개한 모델</td></tr>
+              <tr><td>DeepSeek R1 Distill</td><td>DeepSeek R1의 추론 능력을 더 작은 모델에 옮겨 담은(증류한) 모델. 발표에서 크기는 말하지 않았다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="timeline">
+        <header><span class="num">11</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>목표: 모델별 최적 vLLM 서빙 설정을 자동으로 찾기</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>전략: 베이지안 최적화</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>도구: Optuna</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>탐색 루프: 시험, 점수, 레시피 수정, 반복</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>데모: GPT-OSS 120B를 올린 droplet</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>시작 레시피와 네 가지 작업 유형</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>실행 명령과 tuner.py</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>tuner.py 입력 네 가지, 시험 24회 예시</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>시험 9회로 돌린 지난 실행</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>걸리는 시간: 몇 시간, GPT-OSS는 약 4~5시간</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>HTML 보고서: 가장 좋았던 시험</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>GPT-OSS 시험 50회, 최적 레시피 YAML</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>최적값 예: 256</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>점수는 goodput, 생성 토큰 +17.5%</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>DeepSeek R1 Distill: 9회 중 9번째가 최고</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>토큰 처리량 약 2배, ITL 약 절반</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>정리: HTML 보고서와 최적 YAML</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'cWrYEBlWpcY:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

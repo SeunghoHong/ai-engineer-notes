@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>코딩 에이전트 팀 설계</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#axis">팀이라는 새 축</a></li>
+      <li><a href="#society">풀어 두면 협업하지 않는다</a></li>
+      <li><a href="#design">팀 설계는 예산 배분이다</a></li>
+      <li><a href="#harness">실험 장치와 시험 문제</a></li>
+      <li><a href="#team-wins">팀은 이기지만 비싸다</a></li>
+      <li><a href="#prompt">프롬프트가 협업을 가르친다</a></li>
+      <li><a href="#stage">일꾼을 어느 단계에 둘까</a></li>
+      <li><a href="#why">계획이 이긴 이유, 구현이 진 이유</a></li>
+      <li><a href="#commit0">병목은 과제마다 다르다</a></li>
+      <li><a href="#models">리더는 강하게, 일꾼은 싸게</a></li>
+      <li><a href="#scale">계획 일꾼 16명과 70%</a></li>
+      <li><a href="#messages">일꾼끼리는 말하지 않는다</a></li>
+      <li><a href="#leaders">다른 모델은 잘 이끄나</a></li>
+      <li><a href="#conclusion">결론과 열린 질문</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-07 · 31분 · 영어 발표 한글 정리</span>
+      <h1>에이전트를 몇 명이 아니라 어디에 둘까</h1>
+      <p class="lead">코딩 에이전트를 팀으로 묶으면 혼자 할 때보다 점수가 오른다. 대신 비용이 몇 배로 뛴다. 발표자 팀은 일꾼을 병목 단계에만 두고, 리더는 강한 모델로, 일꾼은 싼 모델로 채웠다. 그러자 모든 단계에 강한 일꾼을 둔 팀보다 비용이 70% 줄었다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=maitMe9HCvw" target="_blank" rel="noopener">How to Get Frontier Coding Results at 70% Lower Cost</a></span>
+        <span>발표: Nouha Dziri (Cohere 선임 연구원, Mila 산업 협력 멤버, Allen Institute 겸임 PI)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고, 원 논문을 따로 확인하지는 않았다. 발표자 팀이 직접 한 연구의 결과라는 점도 감안해 읽자. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다. 나머지는 들린 대로 적고 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트를 <strong>팀으로 돌리는 것</strong>은 추론 연산을 늘리는 새 방법이다. 일꾼은 새 컨텍스트로 일하고 짧은 결과만 돌려준다.</li>
+        <li>팀은 혼자 일하는 에이전트보다 <strong>최대 약 10점</strong> 높았다. 비용은 <strong>4~7배</strong>였다.</li>
+        <li>일꾼은 <strong>병목 단계에만</strong> 둔다. ProgramBench에서는 계획(탐색) 단계였다. 같은 점수를 <strong>절반 비용</strong>에 냈다.</li>
+        <li>병목은 과제마다 다르다. 사양이 주어진 Commit0에서는 <strong>구현</strong> 단계가 병목이었다.</li>
+        <li><strong>리더는 강한 모델, 일꾼은 싼 모델</strong>이면 된다. 리더가 점수의 상한을, 일꾼이 가격을 정한다.</li>
+        <li>강한 리더 + 싼 계획 일꾼 16명은 모든 단계에 강한 일꾼을 둔 팀보다 <strong>70% 쌌다</strong>. 제목의 숫자다.</li>
+        <li>일꾼끼리 대화할 수 있게 해도 <strong>거의 하지 않았다</strong>(4%). 점수도 오르지 않았다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="axis">
+        <header><span class="num">01</span><h2>팀이라는 새 축 <span class="ts">00:20</span></h2></header>
+        <p>요즘 코딩 에이전트는 큰 저장소를 돌아다니며 코드를 고치고, 몇 시간씩 스스로 디버깅한다. 이런 에이전트를 더 강하게 만드는 방법은 지금까지 두 가지였다. 둘 다 <strong>추론 시점 연산</strong><span class="en">inference-time compute</span>, 즉 답을 만드는 동안 쓰는 계산을 늘리는 방법이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방법</th><th>하는 일</th><th>긴 작업에서의 한계</th></tr></thead>
+            <tbody>
+              <tr><td>더 오래 생각하기</td><td>한 번의 시도에서 추론을 길게 늘린다</td><td><strong>컨텍스트 창</strong><span class="en">context window</span>이 가득 찬다. 오래 돌릴수록 오래 기다린다</td></tr>
+              <tr><td>더 많이 시도하기</td><td>독립된 시도를 여러 번 동시에 돌리고 결과를 모은다</td><td>시도마다 여전히 전체 작업을 혼자 해야 한다</td></tr>
+              <tr><td>팀으로 나누기</td><td>리더가 작업을 쪼개 일꾼에게 맡긴다</td><td>일꾼이 늘수록 토큰 비용이 빠르게 커진다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>일을 나누면 생기는 일 <span class="ts">01:00</span></h3>
+        <ul class="plain">
+          <li><strong>리더</strong><span class="en">lead</span>는 전체 과제를 쥐고, 하위 작업을 나눠 준다.</li>
+          <li><strong>일꾼</strong><span class="en">worker</span>은 새 컨텍스트로 시작한다. 파일을 읽고, 테스트를 돌리고, 로그를 뒤진다.</li>
+          <li>일꾼은 짧게 요약한 결과만 돌려준다. 그래서 리더는 큰 그림을 잃지 않는다.</li>
+          <li>작업을 쪼갤 수 있고 조각이 서로 독립적이면 더 빨리 끝난다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">이 연구의 질문 <span class="ts">02:00</span></span>
+          <span>팀을 어떻게 짜야 <strong>효과적이면서 효율적일까?</strong> 효과적이라는 말은 과제를 더 많이 풀어 보상<span class="en">reward</span>이 높다는 뜻이다. 효율적이라는 말은 그 과정에서 예산을 태우지 않는다는 뜻이다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="society">
+        <header><span class="num">02</span><h2>풀어 두면 협업하지 않는다 <span class="ts">02:20</span></h2></header>
+        <p>발표자 팀은 먼저 아주 어려운 코딩 과제를 에이전트 여럿에게 던져 봤다. 모델이 충분히 강하니 알아서 협업할 거라 기대했다.</p>
+        <div class="shift" aria-label="기대와 실제">
+          <div><span class="tag">기대</span><b>알아서 팀이 된다</b><span class="muted">그룹을 만들고, 일을 깔끔하게 나누고, 잘 소통하며 함께 만든다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">실제</span><b>각자 혼자 푼다</b><span class="muted">각자 자기 버전을 만들었다. 소통하라고 시키면 중요하지 않은 이야기를 했다. 서로의 작업을 방해했다. 일꾼끼리보다 리더에게 보고하기를 좋아했다</span></div>
+        </div>
+        <p>그래서 팀이 저절로 굴러가길 기다리지 않고, 팀의 틀을 직접 설계해 하나씩 바꿔 보기로 했다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="design">
+        <header><span class="num">03</span><h2>팀 설계는 예산 배분이다 <span class="ts">03:20</span></h2></header>
+        <p>팀을 짤 때 정해야 할 것이 많다. 선택 하나하나가 점수와 비용을 함께 바꾼다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>선택지</th><th>질문</th></tr></thead>
+            <tbody>
+              <tr><td>조직</td><td>누가 이끄나? 팀 구조는 어떻게 짜나?</td></tr>
+              <tr><td>소통</td><td>일꾼끼리 직접 말하나, 리더에게만 보고하나?</td></tr>
+              <tr><td>팀 크기</td><td>일꾼은 몇 명이 적당한가? 1명, 2명, 16명, 100명?</td></tr>
+              <tr><td>모델</td><td>모든 역할에 강한 모델이 필요한가? 싼 모델로도 되나?</td></tr>
+              <tr><td>단계</td><td>계획, 구현, 검증 중 어디에 일꾼을 더 두나?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">효율 지표 <span class="ts">04:20</span></span>
+          <span>발표자 팀은 팀 설계를 <strong>연산 예산을 어디에 쓸지 정하는 문제</strong>로 봤다. 기준은 <strong>혼자 일하는 에이전트(솔로 <span class="en">solo agent</span>) 대비, 1달러를 더 쓸 때 보상이 얼마나 오르나</strong>다. 이 값을 효율<span class="en">efficiency</span>이라 불렀다. 효율은 네 가지에 따라 달라진다. 일꾼이 들어가는 단계, 일꾼 모델, 일꾼 수, 리더 모델이다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="harness">
+        <header><span class="num">04</span><h2>실험 장치와 시험 문제 <span class="ts">05:00</span></h2></header>
+        <p>발표자 팀은 일부러 단순한 <strong>하네스</strong><span class="en">harness</span>를 만들었다. 하네스는 모델을 감싸 도구와 규칙을 정해 주는 실행 틀이다. 자막에는 "mini suite agent"로 들린다. 최소 구성 코딩 에이전트인 mini-SWE-agent를 가리키는 것으로 보인다(추정).</p>
+        <p>구조는 위에서 아래로 내려가는 위계다. 하네스의 모든 부분을 바꿀 수 있게 열어 뒀다. 그래서 한 번에 선택 하나만 바꾸고 나머지는 고정한 채, 점수와 비용이 어떻게 움직이는지 볼 수 있다.</p>
+        <h3>팀이 일하는 방식 <span class="ts">05:40</span></h3>
+        <ul class="plain">
+          <li>모든 에이전트는 bash 도구로 일한다. 작업 공간은 하나를 함께 쓴다.</li>
+          <li>리더가 과제를 받고, "delegate agent"라는 도구로 일을 맡긴다. 이것을 <strong>위임</strong><span class="en">delegation</span>이라 한다.</li>
+          <li>일꾼은 자기 하위 작업만 보고, 리더에게 보고한다. 다른 일꾼에게 직접 말할 수도 있다.</li>
+          <li>리더는 일꾼을 몇 명 띄울지, 결과를 어떻게 합칠지 정한다.</li>
+          <li>리더는 일꾼을 다시 깨우거나 멈출 수 있다. 중간에 끼어들어 "여기 틀렸으니 고쳐라"고 감독할 수도 있다.</li>
+        </ul>
+        <h3>리더는 기다리는 동안 무엇을 하나 <span class="ts">06:30</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">블로킹 리더 · blocking lead</span>
+            <p>일을 나눠 준 뒤, 모든 일꾼이 보고할 때까지 기다린다. 그 사이에는 아무것도 하지 않는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">비동기 리더 · asynchronous lead</span>
+            <p>일꾼의 결과가 들어오는 동안에도 계속 일한다. 일꾼을 감독하고 피드백을 보낼 수 있다.</p>
+          </div>
+        </div>
+        <h3>시험 문제: ProgramBench <span class="ts">06:50</span></h3>
+        <p>ProgramBench는 <strong>역공학</strong><span class="en">reverse engineering</span> 과제다. 에이전트는 빈 작업 공간에서 시작한다.</p>
+        <ul class="plain">
+          <li>주어지는 것: 원래 프로그램의 실행 파일과 문서. 실행 파일은 돌려 볼 수 있지만 코드는 읽을 수 없다.</li>
+          <li>해야 할 일: 프로그램을 실행해 보며 인터페이스, <strong>엣지 케이스</strong><span class="en">edge case</span>, 동작을 알아낸다. 그리고 똑같이 동작하는 새 구현을 쓴다.</li>
+          <li>과제 예: SQLite, PHP 인터프리터, FFmpeg.</li>
+          <li>난도: 공식 순위표 기준으로 FFmpeg 과제에서는 가장 좋은 모델도 테스트의 10%만 통과한다.</li>
+        </ul>
+      </section>
+
+      <!-- 5 -->
+      <section id="team-wins">
+        <header><span class="num">05</span><h2>팀은 이기지만 몇 배 비싸다 <span class="ts">07:50</span></h2></header>
+        <p>첫 질문은 단순했다. 팀이 솔로를 이기나? 답은 "그렇다"다. 다만 비용이 4~7배다.</p>
+        <ul class="plain">
+          <li>최소한의 프롬프트에서, 블로킹 리더 팀은 솔로보다 <strong>거의 10점</strong> 높았다.</li>
+          <li>비용은 솔로의 <strong>약 4~7배</strong>였다.</li>
+          <li>블로킹 리더가 비동기 리더보다 점수가 높았다. 대신 비용이 더 들고, 끝나는 데도 더 오래 걸렸다.</li>
+        </ul>
+        <h3>비동기 리더는 기다릴 줄 모른다 <span class="ts">08:20</span></h3>
+        <div class="callout warn">
+          <span class="title">일꾼의 결과가 버려지는 과정</span>
+          <ol class="plain">
+            <li>일꾼이 아직 탐색 중인데, 리더가 자기 추측으로 먼저 만들기 시작한다.</li>
+            <li>보고가 도착할 때 리더는 이미 다른 일을 하고 있다. 보고를 무시하거나, 돌아가서 다시 한다.</li>
+            <li>일꾼이 아직 일하는 중인데 리더가 "끝났다"며 제출한다. 일꾼의 작업은 그대로 사라진다.</li>
+          </ol>
+        </div>
+        <p>블로킹 리더는 모든 보고를 받은 뒤 합쳐서 제출한다. 그래서 이 문제가 생기지 않는다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="prompt">
+        <header><span class="num">06</span><h2>프롬프트가 협업을 가르친다 <span class="ts">09:00</span></h2></header>
+        <p>발표자는 이 부분을 특히 강조했다. 에이전트는 프롬프트로 받은 지시대로 움직이기 때문이다. 앞의 결과는 최소한의 프롬프트로 낸 것이었다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">최소 프롬프트</span>
+            <ul>
+              <li>리더에게 과제를 알려 준다</li>
+              <li>일꾼을 만들고, 과제와 도구를 알려 주라고 한다</li>
+              <li>목적: 에이전트가 지시 없이 얼마나 하는지 본다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">무거운 프롬프트 · PIV</span>
+            <ul>
+              <li>따라야 할 계획을 정확히 적는다</li>
+              <li>탐색·계획부터 구현까지 전 과정에서 일꾼을 만들라고 한다</li>
+              <li>반대 입장에서 허점을 찾는 일꾼<span class="en">adversarial worker</span>과 검증 일꾼도 둔다</li>
+              <li>"서로 방해하지 마라", "이 폴더에만 써라" 같은 규칙을 준다</li>
+            </ul>
+          </div>
+        </div>
+        <p class="note">PIV는 계획(Planning)·구현(Implementation)·검증(Verification)의 머리글자로 보인다(추론). 뒤에 나오는 P, I, V 배치도 같은 뜻이다.</p>
+        <h3>결과 <span class="ts">10:20</span></h3>
+        <ul class="plain">
+          <li>솔로 에이전트도 지시만 좋아져서 <strong>거의 6점</strong> 올랐다.</li>
+          <li>블로킹 팀과 비동기 팀 모두 올랐다.</li>
+          <li><strong>비동기 리더가 블로킹 리더를 따라잡았다.</strong> 어떻게 협업할지 알려 주니 언제 기다릴지 알게 됐다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">남은 문제 두 가지 <span class="ts">11:00</span></span>
+          <span><strong>비용</strong>: 팀은 여전히 솔로의 6~7배였다.</span>
+          <span><strong>수고</strong>: 프롬프트를 다듬는 데 시간이 너무 많이 들었다. 발표자는 에이전트가 이 정도는 스스로 알아내야 한다고 본다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="stage">
+        <header><span class="num">07</span><h2>일꾼을 어느 단계에 둘까 <span class="ts">11:30</span></h2></header>
+        <p>팀이 솔로를 이기지만 비싸다. 그렇다면 다음 1달러는 어디에 써야 하나. 발표자 팀은 같은 리더에게 소프트웨어 개발의 <strong>한 단계에만</strong> 일꾼을 붙여 줬다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>배치</th><th>일꾼이 하는 일</th><th>리더가 하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>P · 계획</td><td>실행 파일을 돌려 보며 동작을 탐색하고, 계획을 보고한다</td><td>구현, 검증</td></tr>
+              <tr><td>I · 구현</td><td>나눠 받은 기능을 구현하고, 코드를 보고한다</td><td>계획, 작업 분배, 검증</td></tr>
+              <tr><td>V · 검증</td><td>만든 결과를 검증하고 보고한다</td><td>계획, 구현, 제출 결정</td></tr>
+              <tr><td>PIV · 전 단계</td><td>모든 단계에 일꾼이 들어간다</td><td>전체 지휘</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>계획 일꾼이 가장 남는다 <span class="ts">12:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>솔로 · 최소 → 솔로 · PIV</td><td>지시만 바꿔도 점수가 오른다</td></tr>
+              <tr><td>팀 · PIV</td><td>점수가 더 오른다. 비용은 솔로의 6~7배</td></tr>
+              <tr><td>팀 · P</td><td>PIV 팀과 <strong>거의 같은 점수를 절반 비용</strong>에 낸다</td></tr>
+              <tr><td>팀 · I 또는 V</td><td>비용만 늘고 점수는 솔로 수준이다. 일꾼을 두 배로 늘려도 마찬가지다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">계획에 쓴 1달러의 값 <span class="ts">13:40</span></span>
+          <span>발표자 팀은 앞에서 정의한 효율을 단계별로 계산했다. 계획 단계에 쓴 1달러는 다른 어떤 단계보다 <strong>약 1.6배의 보상</strong>을 샀다. 비용 대비 점수 그래프에서도 계획 팀이 PIV 팀보다 앞선 경계선, 즉 <strong>프런티어</strong><span class="en">frontier</span>에 있었다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="why">
+        <header><span class="num">08</span><h2>계획이 이긴 이유, 구현이 진 이유 <span class="ts">14:10</span></h2></header>
+        <p>ProgramBench는 안을 볼 수 없는 실행 파일만 준다. 코드를 쓰기 전에 프로그램이 정확히 무엇을 하는지부터 알아내야 한다. 그래서 <strong>탐색이 병목</strong>이다. 계획 일꾼은 이 탐색을 나눠서 동시에 한다.</p>
+        <div class="shift" aria-label="혼자 탐색과 나눠서 탐색의 차이">
+          <div><span class="tag">혼자 탐색</span><b>컨텍스트 하나로 다 뒤진다</b><span class="muted">에이전트 하나가 자기 컨텍스트 안에서 실행 파일을 두드려 본다. 그래도 엣지 케이스를 놓친다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">나눠서 탐색</span><b>각자 새 컨텍스트로 다른 부분을 본다</b><span class="muted">일꾼마다 짧은 보고만 리더에게 준다. 리더는 혼자일 때보다 더 많이 안다</span></div>
+        </div>
+
+        <h3>위임은 처음에 한 번 몰아서 <span class="ts">15:10</span></h3>
+        <p>발표자 팀은 리더가 언제 일을 맡기는지 그림으로 그렸다. 한 줄이 실행 한 번이고, 시간은 왼쪽에서 오른쪽으로 흐른다. 점 하나는 리더가 일꾼에게 일을 보낸 순간이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">계획 지시</span>
+            <p>모든 위임이 맨 처음에 한꺼번에 일어난다. 코드를 한 줄도 쓰기 전이다. 일꾼이 탐색해서 보고하면, 리더가 만든다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">PIV 지시 <span class="ts">16:10</span></span>
+            <p>처음에 같은 몰아치기가 있다. 그런데 리더가 끝까지 계속 위임한다. 이렇게 더해진 호출이 830번이었고, 점수는 오르지 않았다.</p>
+            <p class="verdict">보상은 같았다. 위임 1번당 보상은 <b>계획 지시 쪽이 2.4배</b>였다.</p>
+          </div>
+        </div>
+        <p class="note">발표자는 이 추가 호출의 비용을 "약 500달러"라고 했다. 무엇을 합한 금액인지는 자막만으로 분명하지 않다.</p>
+        <p>결국 효과를 내는 것은 <strong>초반에 한 번 몰아서 하는 탐색</strong>이다. 끝까지 계속 맡긴다고 더 나아지지 않는다.</p>
+
+        <h3>구현 일꾼이 실패한 이유 <span class="ts">16:40</span></h3>
+        <ol class="plain">
+          <li><strong>토대가 약했다.</strong> 리더 혼자 탐색해서 엣지 케이스와 전체 동작을 다 알아내지 못했다.</li>
+          <li><strong>일꾼마다 좁은 조각만 받았다.</strong> 전체를 볼 수 없어서 각자 기능을 만들며 실수했다.</li>
+          <li><strong>맥락을 더 주면 경계를 넘었다.</strong> 아무도 시키지 않은 기능까지 만들며 서로를 방해했다.</li>
+          <li><strong>일꾼끼리 맞추지 않았다.</strong> 누가 무엇을 하는지 정해야 충돌과 중복을 피하는데, 그러지 않았다. 메시지의 84%가 리더에게 바로 갔다. <span class="ts">17:50</span></li>
+          <li><strong>그 틈을 리더가 메웠다.</strong> 리더는 정보에 짓눌려 문제를 일꾼에게 잘 전하지 못했다. 중복된 작업을 정리하고 조각을 이어 붙이느라 시간이 늘었다. 점수는 떨어지고 비용은 올랐다.</li>
+        </ol>
+      </section>
+
+      <!-- 9 -->
+      <section id="commit0">
+        <header><span class="num">09</span><h2>병목은 과제마다 다르다 <span class="ts">18:30</span></h2></header>
+        <p>발표자 팀은 Commit0이라는 벤치마크에서도 같은 실험을 했다. 결과가 달랐다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">ProgramBench</span>
+            <ul>
+              <li>주어지는 것: 실행 파일과 문서</li>
+              <li>병목: 무엇을 만들지 알아내는 탐색과 계획</li>
+            </ul>
+            <p class="verdict"><b>계획 일꾼</b>을 늘릴 때 가장 남는다</p>
+          </div>
+          <div class="card">
+            <span class="tag">Commit0</span>
+            <ul>
+              <li>주어지는 것: 코드 뼈대, 문서, 단위 테스트. 계획이 사실상 주어진 셈이다</li>
+              <li>병목: 구현을 정확히 해내는 것</li>
+            </ul>
+            <p class="verdict"><b>구현 일꾼</b>을 두 배로 늘렸을 때 가장 크게 올랐다</p>
+          </div>
+        </div>
+        <p class="note">Commit0 결과는 발표에서 보여 주지 않았다. 논문 부록에 있다고 했다.</p>
+        <div class="callout">
+          <span class="title">결론</span>
+          <span>과제를 막고 있는 단계를 찾고, <strong>그 단계에 일꾼을 더 둔다.</strong></span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="models">
+        <header><span class="num">10</span><h2>리더는 강하게, 일꾼은 싸게 <span class="ts">19:30</span></h2></header>
+        <p>계획 일꾼만으로 같은 점수를 절반 비용에 냈다. 더 싸게 할 수 있을까. 발표자 팀은 GPT-5.6 계열의 세 모델을 썼다. 발표자는 이 모델들을 Luna, Terra, Sol이라고 불렀다. 이 순서로 성능도 가격도 올라간다.</p>
+
+        <h3>일꾼만 싼 모델로 <span class="ts">20:00</span></h3>
+        <p>앞의 계획 팀은 리더와 일꾼이 모두 Sol이었다. 팀 크기는 리더가 정하게 했고, 리더는 평균 5명의 일꾼을 띄웠다. 이 Sol 일꾼들을 Luna로 바꾸자 점수는 조금만 떨어지고 <strong>비용은 60% 줄었다.</strong></p>
+
+        <h3>리더도 싼 모델로? <span class="ts">21:00</span></h3>
+        <ul class="plain">
+          <li>솔로로 돌리면 Luna, Terra, Sol 순으로 점수도 비용도 오른다.</li>
+          <li>같은 모델끼리 짠 팀(Luna+Luna, Terra+Terra)도 모델이 강할수록 점수가 높다.</li>
+          <li>Sol 리더 + Luna 일꾼은 Sol 리더 + Sol 일꾼과 비슷한 점수를 <strong>훨씬 싸게</strong> 낸다.</li>
+          <li>반대로 <strong>약한 리더는 일꾼으로 메울 수 없다.</strong> <span class="ts">21:40</span></li>
+        </ul>
+
+        <figure class="chart" aria-label="보상 비교: Terra 리더와 Luna 일꾼 팀 51%, Sol 혼자 57%">
+          <span class="chart-title">약한 리더 팀 vs 강한 모델 혼자 (보상, %)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Terra 리더 + Luna 일꾼</span><span class="val">51</span></div>
+              <div class="track"><div class="fill" style="width:51%" title="Terra 리더 + Luna 일꾼: 51%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Sol 혼자</span><span class="val">57</span></div>
+              <div class="track"><div class="fill key" style="width:57%" title="Sol 혼자: 57%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">일꾼을 붙인 팀이 혼자 일하는 강한 모델보다 낮다. 발표자가 말한 수치다.</span>
+        </figure>
+
+        <blockquote>리더가 상한을 정하고, 일꾼이 가격을 정한다.<cite>발표자의 표현을 옮김 ("The lead sets the ceiling and the workers set the price.")</cite></blockquote>
+        <p>발표자는 이 결과가 최근 Meta의 <strong>메타 추론</strong><span class="en">meta-reasoning</span> 연구(추정)와도 맞는다고 했다. 더 나은 지휘 모델이 같은 일꾼들의 성과를 끌어올렸다는 내용이다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="scale">
+        <header><span class="num">11</span><h2>계획 일꾼 16명과 70% <span class="ts">22:10</span></h2></header>
+        <p>지금까지는 리더가 일꾼 수를 정했다. 이번에는 팀 크기를 직접 정해서 늘렸다. 리더는 Sol, 계획 일꾼은 Luna다. 앞에서 점수 대비 비용이 가장 좋았던 조합이다. 계획 일꾼을 2명에서 16명까지 늘렸다.</p>
+        <ul class="plain">
+          <li>16명 팀은 Sol 계획 팀(Sol 일꾼 평균 5명)보다 <strong>38% 쌌다.</strong> <span class="ts">22:40</span></li>
+          <li>모든 단계에 Sol 일꾼을 둔 PIV 팀보다는 <strong>70% 쌌다.</strong> 제목의 70%가 이 숫자다.</li>
+          <li>예산 때문에 16명보다 더 늘리지는 못했다. 발표자는 점수가 계속 오르는 추세였다고 했다. 물론 어딘가에 상한은 있다고 덧붙였다.</li>
+          <li>구현이나 검증 단계에서 팀 크기를 늘리는 실험은 전혀 도움이 되지 않았다.</li>
+        </ul>
+
+        <figure class="chart" aria-label="PIV 팀 비용을 100으로 놓은 상대 비용: PIV 팀 100, Sol 계획 팀 약 48, Sol 리더와 Luna 계획 일꾼 16명 30. 솔로 에이전트는 약 14에서 17">
+          <span class="chart-title">상대 비용 (모든 단계에 Sol 일꾼을 둔 PIV 팀 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>PIV 팀 · 모든 단계에 Sol 일꾼</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="PIV 팀: 100"></div><div class="baseline" style="left:15.4%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>계획 팀 · Sol 리더 + Sol 일꾼 평균 5명</span><span class="val">≈ 48</span></div>
+              <div class="track"><div class="fill" style="width:48.4%" title="Sol 계획 팀: 약 48"></div><div class="baseline" style="left:15.4%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>계획 팀 · Sol 리더 + Luna 일꾼 16명</span><span class="val">30</span></div>
+              <div class="track"><div class="fill key" style="width:30%" title="Sol 리더 + Luna 계획 일꾼 16명: 30"></div><div class="baseline" style="left:15.4%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 솔로 (약 14~17)</span><span>100</span></div>
+          <span class="caption">이 노트에서 계산한 값이다. 30은 "PIV 팀보다 70% 싸다"에서 나왔다. 48은 "16명 팀이 Sol 계획 팀보다 38% 싸다"에서 거꾸로 계산했다(30 ÷ 0.62). 앞에서 말한 "절반 비용"과도 맞는다. 솔로 위치는 "PIV 팀은 솔로의 6~7배"로 계산했다. 비용만 비교한 그래프이고 점수는 담지 않았다.</span>
+        </figure>
+
+        <p class="note">70%를 읽을 때 주의할 점: 비교 대상은 솔로 에이전트가 아니라 PIV 팀이다. PIV 팀이 솔로의 6~7배라면, 16명 팀은 솔로의 약 1.8~2.1배다(이 노트의 계산). 16명 팀의 정확한 점수는 발표에 나오지 않았다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="messages">
+        <header><span class="num">12</span><h2>일꾼끼리는 말하지 않는다 <span class="ts">23:30</span></h2></header>
+        <p>발표자 팀은 모든 에이전트에게 "send message" 도구를 줬다. 같은 샌드박스 안의 어떤 에이전트에게도 메시지를 보낼 수 있다. 궁금한 것은 두 가지였다. 일꾼끼리 직접 소통하나, 리더를 거치나? 소통하면 점수가 오르나?</p>
+
+        <h3>소통은 리더를 거친다 <span class="ts">24:00</span></h3>
+        <figure class="chart" aria-label="전체 메시지 중 비율: 일꾼에서 리더로 84%, 일꾼끼리 4%">
+          <span class="chart-title">누가 누구에게 보냈나 (전체 메시지 중 %)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>일꾼 → 리더</span><span class="val">84</span></div>
+              <div class="track"><div class="fill key" style="width:84%" title="일꾼에서 리더로: 84%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>일꾼 → 일꾼</span><span class="val">4</span></div>
+              <div class="track"><div class="fill" style="width:4%" title="일꾼끼리: 4%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">4%는 발표 끝(29:30)에서 말한 숫자다. 일꾼끼리 보낸 메시지는 과제당 1개도 안 됐다. 나머지 비율의 내역은 따로 말하지 않았다.</span>
+        </figure>
+        <p>서로 말할 수 있어도 위계처럼 움직였다. 자기 몫을 하고 위에 보고한다. 필요한 사람에게 전하는 건 리더의 몫으로 여겼다. 이 패턴은 모든 모델에서 같았다. Claude Opus 4.7과 Gemini에서도 리더가 일꾼에게 말하는 양이 일꾼끼리 말하는 양보다 훨씬 많았다.</p>
+
+        <h3>더 말해도 점수는 그대로 <span class="ts">24:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>관찰</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>Luna의 메시지</td><td>약 절반이 상대에게 닿지도 못했다. 형식이 틀려서<span class="en">malformed</span> 하네스가 거부했다</td></tr>
+              <tr><td>메시지 양</td><td>Sol은 Luna보다 3~4배 많은 글을 썼다. PIV 지시 아래에서는 강한 팀일수록 메시지를 많이 보냈다. 리더가 일꾼을 더 많이 이끌었다</td></tr>
+              <tr><td>점수 <span class="ts">25:30</span></td><td>Sol·Terra 팀은 메시지 기능을 더해도 오차 수준 이상의 변화가 없었다. Luna 팀은 <strong>4~7점 떨어졌다.</strong> 메시지가 방해가 된 것으로 보인다</td></tr>
+              <tr><td>메시지 내용</td><td>대부분 리더에게 보내는 진행 상황 보고였다. 리더는 어차피 일꾼의 결과를 받으므로 부담만 늘었다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">발표자의 단서 <span class="ts">25:50</span></span>
+          <span>일꾼끼리의 소통이 필요 없다는 뜻이 아니다. 에이전트가 많아질수록 서로 효율적으로 소통할 수 있어야 한다. 팀원과 일하려고 매번 관리자를 거치는 건 맞지 않는다.</span>
+          <span>이 결과는 하네스와 과제가 만든 것이다. 리더가 일을 서로 독립적으로 나눠 줬고, 일꾼은 샌드박스에 누가 있는지 볼 수 없었다. 메시지 게시판<span class="en">message board</span>(추정) 같은 것이 있었다면 소통할 이유가 생겼을 수 있다. 발표자는 이것을 다음 연구로 남겼다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="leaders">
+        <header><span class="num">13</span><h2>다른 모델은 잘 이끄나 <span class="ts">27:00</span></h2></header>
+        <p>같은 하네스와 같은 도구로, 다른 모델 계열 다섯 개를 리더로 돌렸다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>리더 모델</th><th>위임</th><th>솔로 대비 보상</th></tr></thead>
+            <tbody>
+              <tr><td>GPT-5.6</td><td>자주 맡긴다</td><td>최대 +7점</td></tr>
+              <tr><td>Claude (버전은 자막상 불분명)</td><td>GPT-5.6과 비슷하다</td><td>약 +6점</td></tr>
+              <tr><td>Claude Opus 4.7</td><td>거의 맡기지 않는다</td><td>아주 조금</td></tr>
+              <tr><td>"High crew"(자막 표기, 추정) · Gemini</td><td>GPT-5.6만큼 자주 맡긴다</td><td>오르지 않았다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">자막에서 모델 이름이 많이 뭉개져 있다("office 4.8.4.7.5"처럼 들린다). GPT-5.6, Opus 4.7, Gemini 외의 이름은 정확하지 않을 수 있다.</p>
+        <div class="callout">
+          <span class="title">리더에게 필요한 것</span>
+          <span>첫째, <strong>위임하기로 스스로 정해야 한다.</strong> 둘째, <strong>돌아온 결과를 실제로 써야 한다.</strong> 어느 단계에서 맡길지도 함께 맞아야 한다. 자주 맡기기만 하고 결과를 못 쓰면 점수는 오르지 않는다.</span>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="conclusion">
+        <header><span class="num">14</span><h2>결론과 열린 질문 <span class="ts">28:00</span></h2></header>
+        <h3>기억할 세 가지</h3>
+        <ol class="plain">
+          <li><strong>팀은 추론 연산을 늘리는 진짜 새 축이다.</strong> 최대 10점을 올렸다. 하지만 몇 배 비싸다.</li>
+          <li><strong>몇 명이냐보다 어디에 두느냐가 중요하다.</strong> 병목을 찾고, 거기서 팀을 키운다.</li>
+          <li><strong>모두 강할 필요는 없다.</strong> 강한 리더와 싼 일꾼으로 최고 수준에 가까운 결과를 훨씬 적은 비용에 낸다.</li>
+        </ol>
+        <h3>열린 질문 <span class="ts">29:00</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">위계 vs 자기 조직화</span>
+            <p>이번 실험은 리더-일꾼 위계에서 일꾼 16명까지였다. 에이전트 수천 개는 어떻게 조직하고, 소통하고, 연산을 나눠 써야 하나? 과제, 예산, 마감만 주면 에이전트가 팀을 스스로 설계할 수 있을까<span class="en">self-organization</span>? 발표자는 가능하다고 보지만 신중한 연구가 필요하다고 했다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">다른 소통 방식 <span class="ts">29:30</span></span>
+            <p>메시지의 84%가 리더에게 갔고, 일꾼끼리는 4%뿐이었다. 프로젝트가 리더 한 명으로 감당하지 못할 만큼 커지면 효과적인 소통이 저절로 생길까? 아니면 학습시켜야 할까?</p>
+          </div>
+          <div class="card">
+            <span class="tag">리더의 적응</span>
+            <p>과제마다 프롬프트를 오래 다듬는 방식은 확장되지 않는다. 리더가 과제에 맞춰 팀을 스스로 조직해야 한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">멀티 에이전트 안전 <span class="ts">30:20</span></span>
+            <p>에이전트 팀이 사람의 감독 없이 24시간 돌아간다. 이제는 에이전트 하나가 아니라 팀, 더 나아가 무리<span class="en">swarm</span>를 다룬다. 시스템과 인프라를 어떻게 지킬지, 모델을 어떻게 정렬<span class="en">alignment</span>할지 서둘러 찾아야 한다.</p>
+            <p class="verdict">발표자는 "Penny Lane 사건"(자막 표기, 추정)을 예로 들었지만 자세히 설명하지 않았다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="recap">
+        <header><span class="num">15</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>긴 작업에서는 더 오래 생각하기도, 더 많이 시도하기도 한계가 있다. <strong>팀으로 나누기</strong>가 세 번째 방법이다.</li>
+          <li>그냥 모아 둔 에이전트는 협업하지 않았다. 각자 자기 버전을 만들고 서로 방해했다.</li>
+          <li>팀 설계는 예산 배분 문제다. 기준은 <strong>솔로 대비 1달러를 더 쓸 때 오르는 보상</strong>이다.</li>
+          <li>팀은 솔로보다 최대 약 10점 높지만 비용은 4~7배다.</li>
+          <li>비동기 리더는 기다릴 줄 몰라 일꾼의 결과를 버렸다. 협업 방법을 프롬프트로 알려 주자 블로킹 리더를 따라잡았다.</li>
+          <li>ProgramBench에서는 <strong>계획 일꾼만 둔 팀</strong>이 PIV 팀과 같은 점수를 절반 비용에 냈다. 구현·검증 일꾼은 비용만 늘렸다.</li>
+          <li>위임은 <strong>초반에 한 번 몰아서</strong> 할 때 가장 남는다. 끝까지 계속 맡기면 호출만 늘어난다.</li>
+          <li>병목은 과제마다 다르다. 사양이 주어진 Commit0에서는 <strong>구현</strong>이 병목이었다.</li>
+          <li><strong>리더가 상한, 일꾼이 가격</strong>을 정한다. Sol 리더 + Luna 계획 일꾼 16명은 PIV 팀보다 70% 쌌다.</li>
+          <li>일꾼끼리의 메시지는 4%뿐이었고 점수를 올리지 못했다. 약한 모델에서는 오히려 떨어졌다.</li>
+        </ol>
+      </section>
+
+      <!-- 16 -->
+      <section id="quiz">
+        <header><span class="num">16</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>긴 코딩 작업에서 "더 오래 생각하기"와 "더 많이 시도하기"가 막히는 이유는?</span></summary><div class="answer">오래 생각하면 컨텍스트 창이 가득 차고, 기다리는 시간이 길어진다. 많이 시도해도 시도마다 전체 작업을 혼자 해야 한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>발표자 팀이 쓴 효율 지표는 무엇이고, 무엇에 따라 달라지나?</span></summary><div class="answer">솔로 에이전트 대비, 1달러를 더 썼을 때 오르는 보상이다. 일꾼이 들어가는 단계, 일꾼 모델, 일꾼 수, 리더 모델에 따라 달라진다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>비동기 리더가 일꾼의 결과를 버리게 되는 경우 두 가지는?</span></summary><div class="answer">일꾼의 보고가 오기 전에 자기 추측으로 진행해서, 보고를 무시하거나 다시 하는 경우. 일꾼이 아직 일하는데 끝났다며 제출해 버리는 경우.</div></details>
+          <details><summary><span class="qn">Q4</span><span>ProgramBench에서 에이전트에게 주어지는 것과 해야 할 일은?</span></summary><div class="answer">원래 프로그램의 실행 파일(실행만 되고 코드는 못 읽음)과 문서가 주어진다. 실행해 보며 인터페이스, 엣지 케이스, 동작을 알아내고 똑같이 동작하는 새 구현을 쓴다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>PIV 프롬프트가 가져온 변화와 남긴 문제는?</span></summary><div class="answer">솔로도 약 6점 올랐고, 비동기 리더가 블로킹 리더를 따라잡았다. 하지만 팀 비용은 솔로의 6~7배였고, 프롬프트를 다듬는 데 시간이 많이 들었다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>ProgramBench에서 일꾼을 계획 단계에만 둔 팀의 결과는?</span></summary><div class="answer">PIV 팀과 거의 같은 점수를 절반 비용에 냈다. 계획에 쓴 1달러는 다른 단계보다 약 1.6배의 보상을 샀다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>계획 지시와 PIV 지시에서 리더의 위임 패턴은 어떻게 달랐나?</span></summary><div class="answer">계획 지시에서는 코드를 쓰기 전 초반에 한 번 몰아서 위임했다. PIV 지시에서는 그 뒤로도 끝까지 위임해 830번을 더 불렀지만 점수는 같았다. 위임 1번당 보상은 계획 쪽이 2.4배였다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>구현 일꾼이 ProgramBench에서 실패한 이유를 세 가지 들어 보라.</span></summary><div class="answer">리더 혼자 탐색해서 토대가 약했다. 일꾼이 좁은 조각만 봐서 실수했고, 맥락을 더 주면 시키지 않은 기능까지 만들었다. 일꾼끼리 맞추지 않아 리더가 중복 작업을 이어 붙여야 했다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Commit0에서는 왜 병목이 구현이었나?</span></summary><div class="answer">코드 뼈대, 문서, 단위 테스트가 주어져 계획이 사실상 정해져 있었다. 그래서 구현을 정확히 하는 것이 점수를 좌우했다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>"리더가 상한, 일꾼이 가격"을 보여 주는 결과는?</span></summary><div class="answer">Sol 리더 + Luna 일꾼은 Sol 팀과 비슷한 점수를 훨씬 싸게 냈다. 반대로 Terra 리더 + Luna 일꾼은 51%로, Sol 혼자(57%)보다 낮았다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>제목의 "70% 낮은 비용"은 무엇과 비교한 숫자인가?</span></summary><div class="answer">모든 단계에 Sol 일꾼을 둔 PIV 팀과 비교한 것이다. 구성은 Sol 리더 + Luna 계획 일꾼 16명이다. 솔로와 비교하면 여전히 약 2배 비싸다(이 노트의 계산).</div></details>
+          <details><summary><span class="qn">Q12</span><span>일꾼끼리 메시지를 주고받게 했을 때 결과는?</span></summary><div class="answer">메시지의 84%가 일꾼에서 리더로 갔고, 일꾼끼리는 4%였다. Sol·Terra 팀은 점수 변화가 없었고 Luna 팀은 4~7점 떨어졌다. 메시지 대부분은 리더가 이미 받는 진행 보고였다.</div></details>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="apply">
+        <header><span class="num">17</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>과제의 병목 단계를 먼저 정한다<span class="how">무엇을 만들지 알아내야 하면 탐색·계획, 사양과 테스트가 주어졌으면 구현</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>일꾼은 병목 단계에만 둔다<span class="how">확인: 다른 단계에 일꾼을 늘렸을 때 비용만 늘지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>탐색 일꾼은 초반에 한 번 몰아서 띄운다<span class="how">확인: 리더가 끝까지 계속 위임하며 호출만 늘리고 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>리더는 강한 모델, 일꾼은 싼 모델로 시작한다<span class="how">확인: 같은 점수에서 비용이 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>리더 모델은 쉽게 낮추지 않는다<span class="how">약한 리더 팀은 강한 모델 혼자보다 낮았다(51% vs 57%)</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>리더가 일꾼의 결과를 기다리게 한다<span class="how">비동기 리더라면 언제 기다릴지 프롬프트에 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>일꾼마다 작업 범위와 쓸 폴더를 정해 준다<span class="how">시키지 않은 기능을 만들거나 서로의 작업을 덮어쓰지 않게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>일꾼 간 메시지가 실제로 점수를 올리는지 잰다<span class="how">약한 모델에서는 메시지가 오히려 4~7점을 깎았다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>팀 구성을 바꿀 때마다 점수와 비용을 함께 기록한다<span class="how">"솔로 대비 1달러를 더 쓸 때 오르는 보상"으로 비교한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>"몇 % 싸다"는 숫자를 보면 비교 대상부터 확인한다<span class="how">이 발표의 70%는 솔로가 아니라 전 단계 팀 대비다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 18 -->
+      <section id="glossary">
+        <header><span class="num">18</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>추론 시점 연산</td><td>Inference-time compute. 학습이 끝난 모델이 답을 만드는 동안 쓰는 계산량</td></tr>
+              <tr><td>컨텍스트 창</td><td>Context window. 모델이 한 번에 볼 수 있는 입력의 최대 길이</td></tr>
+              <tr><td>리더 / 일꾼</td><td>Lead / Worker. 리더는 과제를 쥐고 일을 나눠 주는 에이전트, 일꾼은 하위 작업을 맡는 에이전트</td></tr>
+              <tr><td>솔로 에이전트</td><td>Solo agent. 팀 없이 혼자 과제를 푸는 에이전트. 이 발표의 비교 기준</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>위임</td><td>Delegation. 리더가 일꾼에게 하위 작업을 맡기는 것</td></tr>
+              <tr><td>블로킹 리더</td><td>Blocking lead. 일을 나눠 준 뒤 모든 일꾼의 보고를 기다리는 리더</td></tr>
+              <tr><td>비동기 리더</td><td>Asynchronous lead. 일꾼이 일하는 동안에도 계속 일하는 리더</td></tr>
+              <tr><td>보상</td><td>Reward. 과제를 얼마나 잘 풀었는지 나타내는 점수. ProgramBench에서는 숨은 테스트 통과 비율로 보인다(추론)</td></tr>
+              <tr><td>효율</td><td>Efficiency. 솔로 대비 1달러를 더 쓸 때 오르는 보상</td></tr>
+              <tr><td>역공학</td><td>Reverse engineering. 내부를 보지 않고 겉으로 드러난 동작을 관찰해 구조를 알아내는 것</td></tr>
+              <tr><td>엣지 케이스</td><td>Edge case. 입력이 극단적이거나 드물어 평소와 다르게 동작하는 경우</td></tr>
+              <tr><td>ProgramBench</td><td>실행 파일과 문서만 보고 같은 동작의 프로그램을 다시 만드는 벤치마크</td></tr>
+              <tr><td>Commit0</td><td>코드 뼈대, 문서, 단위 테스트를 받고 구현을 채우는 벤치마크</td></tr>
+              <tr><td>PIV</td><td>계획·구현·검증 전 단계에 일꾼을 두도록 자세히 지시한 무거운 프롬프트. P, I, V는 각 단계에만 일꾼을 둔 배치</td></tr>
+              <tr><td>프런티어</td><td>Frontier. 비용 대비 점수 그래프에서, 같은 비용으로 더 높은 점수를 낸 구성이 없는 경계선</td></tr>
+              <tr><td>adversarial worker</td><td>일부러 반대 입장에서 결과의 허점을 찾는 일꾼</td></tr>
+              <tr><td>메타 추론</td><td>Meta-reasoning. 문제를 직접 풀기보다 어떻게 풀지, 누구에게 맡길지를 판단하는 추론</td></tr>
+              <tr><td>자기 조직화</td><td>Self-organization. 정해진 위계 없이 구성원이 스스로 역할과 구조를 정하는 것</td></tr>
+              <tr><td>정렬</td><td>Alignment. AI가 사람의 의도와 가치에 맞게 행동하도록 만드는 일</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 19 -->
+      <section id="timeline">
+        <header><span class="num">19</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>기존 확장 방법 두 가지와 한계</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>일을 나누기: 리더와 일꾼</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>팀이라는 새 축, 그리고 비용 문제</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>연구 질문: 효과적이면서 효율적인 팀</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>모아 둔 에이전트는 협업하지 않았다</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>팀 설계의 선택지</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>효율 지표: 1달러를 더 쓸 때의 보상</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>최소 하네스와 위계 구조</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>공유 작업 공간과 위임 도구</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>블로킹 리더와 비동기 리더</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>ProgramBench 소개</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>팀은 이기지만 4~7배 비싸다</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>비동기 리더가 실패하는 방식</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>최소 프롬프트와 PIV 프롬프트</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>솔로 +6점, 비동기 리더가 따라잡음</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>팀 비용은 솔로의 6~7배</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>일꾼을 한 단계에만 두는 실험</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>계획 일꾼: 같은 점수, 절반 비용</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>계획 1달러당 약 1.6배 보상</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>탐색이 병목인 이유</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>위임 시점 그림과 830번의 추가 호출</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>구현 일꾼이 실패한 이유</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>메시지 84%가 리더에게</td></tr>
+              <tr><td><span class="ts">18:30</span></td><td>Commit0: 병목은 구현</td></tr>
+              <tr><td><span class="ts">19:30</span></td><td>더 싸게: Luna, Terra, Sol</td></tr>
+              <tr><td><span class="ts">20:40</span></td><td>Luna 일꾼으로 비용 60% 감소</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>리더도 싼 모델로 바꿔 보기</td></tr>
+              <tr><td><span class="ts">21:40</span></td><td>리더가 상한, 일꾼이 가격: 51% vs 57%</td></tr>
+              <tr><td><span class="ts">22:10</span></td><td>계획 일꾼 2명에서 16명으로</td></tr>
+              <tr><td><span class="ts">22:40</span></td><td>38%, 70% 저렴</td></tr>
+              <tr><td><span class="ts">23:30</span></td><td>일꾼 간 메시지 실험</td></tr>
+              <tr><td><span class="ts">24:50</span></td><td>Luna 메시지 절반은 형식 오류</td></tr>
+              <tr><td><span class="ts">25:30</span></td><td>더 말해도 점수는 그대로</td></tr>
+              <tr><td><span class="ts">25:50</span></td><td>그래도 일꾼 간 소통은 필요하다</td></tr>
+              <tr><td><span class="ts">27:00</span></td><td>다른 모델의 리더 능력</td></tr>
+              <tr><td><span class="ts">28:00</span></td><td>기억할 세 가지</td></tr>
+              <tr><td><span class="ts">29:00</span></td><td>열린 질문: 자기 조직화, 소통 방식</td></tr>
+              <tr><td><span class="ts">30:20</span></td><td>멀티 에이전트 안전</td></tr>
+              <tr><td><span class="ts">31:00</span></td><td>감사 인사, 논문과 블로그 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'maitMe9HCvw:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>라즈베리 파이 에이전트 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#device">목에 건 Raspberry Pi</a></li>
+      <li><a href="#small">작은 클로가 좋은 이유</a></li>
+      <li><a href="#nanoclaw">OpenClaw 대신 NanoClaw</a></li>
+      <li><a href="#arch">두뇌는 클라우드에</a></li>
+      <li><a href="#graph">그래프 101과 첫 질문</a></li>
+      <li><a href="#memory">POLE+O로 만든 기억</a></li>
+      <li><a href="#voice">마이크와 버튼 달기</a></li>
+      <li><a href="#booths">부스를 돌며 기록하기</a></li>
+      <li><a href="#themes">클라우드에서 주제 찾기</a></li>
+      <li><a href="#agent-memory">대화 전체를 기억으로</a></li>
+      <li><a href="#choices">설계 선택 한눈에 보기</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">직접 만들어 보기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-03 · 20분 · 영어 발표 한글 정리</span>
+      <h1>라즈베리 파이로 만든 개인 에이전트</h1>
+      <p class="lead">발표자는 옷장에 있던 Raspberry Pi 4B에 작은 개인 AI 에이전트를 올렸다. 생각은 클라우드의 Claude가 하고, Pi는 메시지와 음성을 받아 기억을 그래프 데이터베이스에 쌓는다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=oUZEt4EiPbk" target="_blank" rel="noopener">I Built a Personal AI Agent on a Raspberry Pi</a></span>
+        <span>발표: Jeremy Adams (Neo4j)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 발표의 절반은 무대 위 라이브 데모라서, 화면에만 나온 쿼리와 그래프는 발표자가 말로 설명한 만큼만 옮겼다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고, 확실하지 않은 것에는 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>발표자는 개인 에이전트를 노트북에 두기 싫었다. <strong>싸고, 열려 있고, 고쳐 쓸 수 있고, 속을 이해할 수 있는 것</strong>을 원해서 옷장의 Raspberry Pi 4B를 꺼냈다.</li>
+        <li>OpenClaw 대신 <strong>NanoClaw</strong>를 골랐다. 소스 파일 15개 정도로 작고, 에이전트를 Docker 컨테이너 안에 가둬 돌린다.</li>
+        <li><strong>Pi는 추론을 하지 않는다.</strong> WhatsApp으로 받은 메시지를 클라우드의 Claude에 넘기고, MCP 서버로 Neo4j 그래프 DB를 조회한다.</li>
+        <li>기억은 <strong>POLE+O</strong>로 저장한다. 사람, 사물, 장소, 사건, 조직을 노드로 두고 관계로 잇는다. 이 기억 스킬도 비행기 안에서 에이전트에게 시켜 만들었다.</li>
+        <li>USB 마이크와 버튼을 달아 <strong>음성을 받아쓰게</strong> 했다. 그리고 행사장 부스를 돌며 각 부스의 메시지를 녹음했다.</li>
+        <li>행사장 Wi-Fi는 믿지 않았다. <strong>오프라인이면 정규식으로 부스 번호를 뽑아 Pi 안의 Neo4j에 저장</strong>한다.</li>
+        <li>모은 메모는 나중에 클라우드로 올려 <strong>주제 노드로 묶었다.</strong> WhatsApp 대화 전체도 기억으로 정리해, 같은 에이전트가 MCP로 다시 꺼내 쓴다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="device">
+        <header><span class="num">01</span><h2>목에 건 Raspberry Pi <span class="ts">02:00</span></h2></header>
+        <p>발표는 라이브 데모로 시작한다. 발표자는 목에 건 Raspberry Pi에 무대 위에서 부품을 하나씩 꽂았다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>부품</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>Raspberry Pi 4B</td><td>에이전트가 도는 본체. 최신 모델은 아니지만 쓸 만하다</td></tr>
+              <tr><td>무선 마이크와 USB 수신기</td><td>에이전트에게 말을 건다</td></tr>
+              <tr><td>HDMI 비디오 캡처 장치</td><td>Pi 화면을 노트북의 QuickTime으로 받아 청중에게 보여 준다</td></tr>
+              <tr><td>배터리</td><td>몸에 걸고 다닐 수 있게 전원을 댄다</td></tr>
+              <tr><td>블루투스 키보드</td><td>Pi를 직접 조작한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 이 보드에서 오랫동안 32비트 운영체제를 썼다. 64비트 ARM을 돌릴 수 있다는 건 나중에야 알았다. 모든 걸 돌릴 수는 없지만, 꽤 많은 걸 돌릴 수 있다.</p>
+        <p>Pi 안에는 세 가지가 들어 있다. 개인 에이전트 NanoClaw, 컨테이너를 돌리는 Docker, 그리고 Docker로 띄운 Neo4j 데이터베이스다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="small">
+        <header><span class="num">02</span><h2>작은 클로가 좋은 이유 <span class="ts">06:00</span></h2></header>
+        <p>"클로"<span class="en">claw</span>는 OpenClaw처럼 메시지 앱으로 부리는 개인 AI 에이전트를 통틀어 부르는 말이다. 발표자의 슬라이드 제목은 "작은 클로가 아름답다"<span class="en">small claws are beautiful</span>였다.</p>
+        <p>개인 에이전트 열풍은 지금도 뜨겁다. 그래도 발표자는 자기 노트북에 에이전트를 올리고 싶지 않았다. 시스템 관리자와 DevOps 출신이라, 이런 도구가 충분히 단단해질 때까지 기다리는 편이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">원한 것</span>
+            <ul>
+              <li>싸다</li>
+              <li>열려 있다</li>
+              <li>마음대로 고칠 수 있다 <span class="en">hackable</span></li>
+              <li>속에서 무슨 일이 일어나는지 이해할 수 있다</li>
+            </ul>
+            <p class="verdict">발표자에게는 기능이 많은 것보다 <b>이해할 수 있는 것</b>이 더 중요했다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">피한 것 <span class="ts">06:40</span></span>
+            <p>Portland의 Craigslist에 OpenClaw를 미리 깔아 둔 Mac Mini가 올라왔다.</p>
+            <ul>
+              <li>"미리 설치"라는 말부터 위험 신호였다</li>
+              <li>발표자에 따르면 최근 가격이 올라 Mac Mini는 이제 600달러로 살 수 없다</li>
+            </ul>
+            <p class="verdict">발표자 기준으로 이건 <b>작은 클로가 아니다.</b></p>
+          </div>
+        </div>
+
+        <h3>옷장 속 Pi <span class="ts">07:00</span></h3>
+        <p>그래서 옷장에 있던 Pi를 꺼냈다. 팬데믹 무렵에 쓰던 보드다. 싱크대에 쌓인 그릇의 무게를 재서 설거지할 때를 알려 주는 장난감 프로젝트에 썼다.</p>
+        <blockquote>이걸로 클로가 될까?<cite>발표자의 말 "Will it claw?"를 옮김</cite></blockquote>
+        <p>해 보니 잘 됐다. 예전에는 외부 모니터, 키보드, 마우스를 달아 썼다. 지금은 목에 걸 만큼 단출하다. Wi-Fi가 내장돼 있고 유선 연결도 된다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="nanoclaw">
+        <header><span class="num">03</span><h2>OpenClaw 대신 NanoClaw <span class="ts">08:00</span></h2></header>
+        <p>발표자는 OpenClaw를 쓰지 않았다. 취향에 더 맞는 NanoClaw를 찾았다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기준</th><th>NanoClaw</th></tr></thead>
+            <tbody>
+              <tr><td>크기</td><td>소스 파일 15개 정도. 코드 줄 수가 적다</td></tr>
+              <tr><td>격리</td><td>에이전트 프로세스를 Docker 컨테이너 안에서 돌린다. 에이전트가 시스템을 함부로 건드리지 못한다</td></tr>
+              <tr><td>바탕</td><td>Claude Agent SDK 위에 만들었다</td></tr>
+              <tr><td>고쳐 쓰기</td><td>프로젝트가 직접 고쳐 쓰라고 권한다. Claude Code와 스킬로 수정한다</td></tr>
+              <tr><td>대화 창구</td><td>Telegram 등도 된다. 발표자는 휴대폰에 이미 있던 WhatsApp을 골랐다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Linux에서 돌고, 이미 익숙한 Docker를 쓴다는 점도 발표자에게는 중요했다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="arch">
+        <header><span class="num">04</span><h2>두뇌는 클라우드에 <span class="ts">08:50</span></h2></header>
+        <p>처음 구조는 단순했다.</p>
+        <ol class="plain">
+          <li>iPhone이나 MacBook의 WhatsApp으로 메시지를 보낸다.</li>
+          <li>메시지는 WhatsApp 클라우드에 올라간다.</li>
+          <li>Pi의 NanoClaw가 그 메시지를 끌어온다. 처음 한 번 자격 증명을 받아 등록해 두면 된다.</li>
+          <li>NanoClaw는 Claude Agent SDK로 클라우드의 Claude에 일을 맡긴다.</li>
+          <li>답이 WhatsApp으로 돌아온다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">Pi는 생각하지 않는다</span>
+          <span>Pi에서는 LLM 추론<span class="en">inference</span>이 전혀 일어나지 않는다. 생각은 모두 클라우드의 Claude가 한다. Pi가 맡는 일은 메시지 받기, 도구 연결, 데이터 저장이다.</span>
+        </div>
+        <blockquote>큰 두뇌는 있다. 다만 선 너머 클라우드에 있다.<cite>발표자의 표현을 옮김</cite></blockquote>
+      </section>
+
+      <!-- 5 -->
+      <section id="graph">
+        <header><span class="num">05</span><h2>그래프 101과 첫 질문 <span class="ts">09:30</span></h2></header>
+        <p>클라우드에는 Neo4j 데이터베이스도 있다. Neo4j는 데이터를 그래프로 저장하는 그래프 데이터베이스다.</p>
+        <p>그래프는 두 가지로 이뤄진다. 동그라미로 그리는 노드<span class="en">node</span>, 그리고 노드 사이를 잇는 관계<span class="en">relationship, edge</span>다. 발표자가 든 예는 사람 노드 2개와 영화 노드 1개다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시작 노드</th><th>관계</th><th>끝 노드</th></tr></thead>
+            <tbody>
+              <tr><td>Tom Hanks (사람)</td><td>출연했다</td><td>Forrest Gump (영화)</td></tr>
+              <tr><td>Robert Zemeckis (사람)</td><td>감독했다</td><td>Forrest Gump (영화)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>WhatsApp으로 DB에 묻기 <span class="ts">10:00</span></h3>
+        <p>발표자는 영화 데이터를 DB에 채웠다. 그리고 WhatsApp으로 "Tom Hanks가 출연한 영화를 알려 줘"라고 물었다.</p>
+        <p>에이전트는 MCP 서버로 Neo4j에 접속했다. MCP<span class="en">Model Context Protocol</span>는 에이전트가 외부 도구와 데이터에 붙는 표준 방식이다.</p>
+        <p>첫 답은 "설정이 깨져 있다"였다. 발표자가 Pi에서 인증을 고치자 영화 목록이 돌아왔다. 데이터는 DB에서 나와 Claude Agent SDK를 거쳐 답이 되고, WhatsApp으로 돌아왔다.</p>
+        <p class="note">예시: 이 질문을 Neo4j의 질의 언어 Cypher로 쓰면 <code>MATCH (p:Person {name: 'Tom Hanks'})-[:ACTED_IN]-&gt;(m:Movie) RETURN m.title</code> 정도가 된다. 발표 화면에 나온 쿼리는 아니다.</p>
+        <div class="callout">
+          <span class="title">비행기에서도 된다 <span class="ts">10:40</span></span>
+          <span>발표자가 탄 비행기에서는 Wi-Fi를 결제하지 않아도 메시지 앱이 됐다. 그래서 비행 중에도 WhatsApp으로 에이전트와 대화할 수 있었다. 다음 단계인 기억도 비행기 안에서 만들었다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="memory">
+        <header><span class="num">06</span><h2>POLE+O로 만든 기억 <span class="ts">11:00</span></h2></header>
+        <p>비행기 안에서 다음 질문이 떠올랐다. 에이전트에게 기억<span class="en">memory</span>을 붙일 수 있을까? 원하는 모습이 뚜렷하지는 않았다. 마침 블로그 글에서 POLE+O라는 모델을 읽은 참이었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>글자</th><th>원어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>P</td><td>Person</td><td>사람</td></tr>
+              <tr><td>O</td><td>Object</td><td>사물</td></tr>
+              <tr><td>L</td><td>Location</td><td>장소</td></tr>
+              <tr><td>E</td><td>Event</td><td>사건</td></tr>
+              <tr><td>+O</td><td>Organization</td><td>조직</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 이 모델이 유럽의 경찰 수사에서 나왔다고 소개했다. 형사 드라마에서 벽에 사진을 붙이고 실로 잇는 장면을 떠올리면 된다. 그것도 그래프다.</p>
+        <p>발표자는 WhatsApp으로 에이전트에게 POLE+O로 기억 시스템을 만들 수 있냐고 물었다. 에이전트는 그 자리에서 기억 스킬<span class="en">skill</span>을 썼다. 저장 위치는 재부팅해도 지워지지 않는 마운트 지점<span class="en">mount point</span>이라고 했다.</p>
+        <p>스키마는 단순하다. 기억 노드가 있고, 거기에 관련된 것들이 연결된다. 발표자는 농담으로 "아주 고급 스키마"라고 불렀다. 시기로는 Obsidian보다 뒤, Karpathy의 위키 방식(추정)보다 앞이라고 했다.</p>
+
+        <h3>데모: 기억 그래프 <span class="ts">12:10</span></h3>
+        <p>발표자는 DevRel 행사를 다니며 에이전트에게 다닌 곳을 기록하게 했다. 무대에서는 Neo4j Aura에 접속해 그 기억들을 연결된 그래프로 띄웠다.</p>
+        <ul class="plain">
+          <li>Menlo Park의 Snowflake 사무실에 가서 누군가와 이야기한 기억</li>
+          <li>Menlo Park는 따로 장소 노드로 있다</li>
+          <li>어느 AI 밋업 행사</li>
+          <li>Rebecca, Jeremy 같은 사람 노드</li>
+        </ul>
+        <p>발표자도 이 DB가 잡동사니 창고 같다고 인정했다. 그래도 기억을 저장하는 용도로는 확실히 쓸 수 있었다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="voice">
+        <header><span class="num">07</span><h2>마이크와 버튼 달기 <span class="ts">13:20</span></h2></header>
+        <p>이번에는 Pi 자체에 무엇을 더 올릴 수 있을지 생각했다.</p>
+        <p>어떤 사람은 창밖에 마이크를 두고 뒷마당 새소리를 녹음했다. 그리고 BirdNET 모델로 어떤 새인지 알아냈다. 발표자는 이걸 보고 음성 받아쓰기<span class="en">voice-to-text</span>를 떠올렸다.</p>
+        <p>그래서 Pi에 USB 마이크를 달고 받아쓰기를 붙였다. Pi의 핀에 직접 연결한 버튼도 만들었다. 버튼을 누르면 받아쓰기 모델이 돌고, 녹음하는 동안 LED가 켜진다.</p>
+        <div class="callout">
+          <span class="title">무대 데모 <span class="ts">14:00</span></span>
+          <span>데모 직전에 버튼이 떨어져서 다시 꽂았다. 발표자는 "지금 AI Engineer 무대에서 준비한 발표를 하고 있다"고 녹음했다. LED가 켜졌으니 녹음은 됐다.</span>
+        </div>
+        <p class="note">녹음이 메시지로 잘 도착했는지는 발표 중에 확인하지 않았다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="booths">
+        <header><span class="num">08</span><h2>부스를 돌며 기록하기 <span class="ts">14:40</span></h2></header>
+        <p>발표자는 이 기기를 AI Engineer 행사에 걸고 다니고 싶었다. 무엇을 녹음할지 고민하다가 답을 정했다. 부스를 하나씩 돌며 각 부스가 내건 메시지를 녹음하는 것이다.</p>
+        <ol class="plain">
+          <li><strong>전시 업체 목록을 넣었다.</strong> 부스마다 번호와 이름이 있다. 업체끼리 연결도 없는 아주 단순한 모델이다. 데이터 정리도 좀 해야 했다.</li>
+          <li><strong>오프라인 모드를 만들었다.</strong> 행사장 Wi-Fi는 보통 형편없기 때문이다.</li>
+          <li><strong>Pi 안에도 Neo4j를 띄웠다.</strong> 연결이 끊겨도 기록을 저장할 곳이 필요했다.</li>
+        </ol>
+        <div class="shift" aria-label="평소 경로와 오프라인 경로">
+          <div><span class="tag">평소</span><b>클라우드에서 처리한다</b><span class="muted">클라우드의 Claude가 생각하고, 기억은 클라우드 Neo4j에 쌓는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">오프라인일 때</span><b>Pi 안에서 끝낸다</b><span class="muted">받아쓴 글에서 정규식<span class="en">regex</span>으로 부스 번호를 뽑는다. 그 번호로 쿼리를 만들어 Pi 안의 Neo4j에 넣는다</span></div>
+        </div>
+
+        <h3>Pi 안의 데이터 보기 <span class="ts">16:00</span></h3>
+        <p>발표자는 Cypher 셸 브라우저로 목에 건 Pi의 DB를 조회했다. 비싼 GUI 없이 Neo4j에 붙으려고 발표자가 직접 만든 작은 프로그램이다. Cypher는 Neo4j의 질의 언어다.</p>
+        <p>전시 업체를 모두 찾는 쿼리를 돌리자 Microsoft, MiniMax(추정) 같은 이름이 나왔다. 업체마다 "이 부스에서 이런 이야기를 들었다" 식의 원본 메모가 붙어 있다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="themes">
+        <header><span class="num">09</span><h2>클라우드에서 주제 찾기 <span class="ts">16:40</span></h2></header>
+        <p>원본 메모는 나중에 클라우드의 Neo4j로 올렸다. 클라우드에서는 데이터를 보강<span class="en">enrich</span>했다. 메모를 깨끗이 정리하고, 업체를 다른 노드에 연결했다.</p>
+        <p>업체에서 출발하는 경로를 찾는 쿼리를 돌리자, 업체들이 주제<span class="en">theme</span> 노드로 묶여 보였다. 예를 들어 "평가와 관측"<span class="en">evaluation and observability</span> 주제에는 Buildkite와 LangChain이 연결됐다.</p>
+        <p>발표자는 이걸 아마 아무도 갖고 있지 않은 새 지식이라고 불렀다. 행사장을 직접 걸어 다니며 모은 데이터에서 나왔기 때문이다.</p>
+        <p class="note">주제를 어떻게 뽑았는지는 발표에서 자세히 말하지 않았다.</p>
+        <p class="note">예시: 경로 질의는 Cypher로 <code>MATCH path = (e:Exhibitor)--(t:Theme) RETURN path</code>처럼 쓸 수 있다. 발표 화면에 나온 쿼리는 아니다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="agent-memory">
+        <header><span class="num">10</span><h2>대화 전체를 기억으로 <span class="ts">18:20</span></h2></header>
+        <p>발표 끝 무렵, 발표자는 그 뒤에 기억 시스템을 키운 이야기를 했다.</p>
+        <p>그동안 에이전트와 WhatsApp으로 나눈 대화가 꽤 쌓여 있었다. 발표자는 이 대화를 전부 Neo4j의 에이전트 메모리 서비스<span class="en">agent memory service</span>에 넣었다. 서비스는 대화에서 기억을 뽑아 정리했다<span class="en">distill</span>.</p>
+        <p>이제 사람, 장소, 개념별로 기억을 훑어볼 수 있다. 이 기억은 MCP 서버로 열려 있다. 그래서 목에 건 그 Pi의 에이전트가 기억을 다시 꺼내 쓴다.</p>
+        <div class="shift" aria-label="기억 시스템의 변화">
+          <div><span class="tag">처음</span><b>에이전트가 쓴 스킬이 기록한다</b><span class="muted">POLE+O 스킬이 그때그때 기억을 저장한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">지금</span><b>대화 전체에서 기억을 뽑는다</b><span class="muted">메모리 서비스가 기억을 정리하고, MCP로 에이전트에게 돌려준다</span></div>
+        </div>
+        <p class="note">발표자는 Neo4j 소속이다. 이 발표에 나온 그래프 DB, Aura, 에이전트 메모리 서비스, GraphAcademy는 모두 Neo4j 제품이다. 기억을 그래프로 저장하자는 방향도 그 점을 감안해 읽자.</p>
+        <p>발표는 Neo4j 부스 P3 안내와 무료 실습 강의 GraphAcademy 소개로 끝났다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="choices">
+        <header><span class="num">11</span><h2>설계 선택 한눈에 보기</h2></header>
+        <p>발표에 흩어져 있는 선택과 이유를 한 표로 모았다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>선택</th><th>발표자가 든 이유</th></tr></thead>
+            <tbody>
+              <tr><td>노트북 대신 Pi 4B</td><td>에이전트가 아직 충분히 단단하지 않다고 봐서 개인 노트북과 떼어 놓았다. 옷장에 있던 기기라 돈도 안 든다</td></tr>
+              <tr><td>OpenClaw 대신 NanoClaw</td><td>작아서 속을 이해할 수 있다. 직접 고쳐 쓰라고 권한다</td></tr>
+              <tr><td>Docker 컨테이너</td><td>에이전트가 시스템을 함부로 건드리지 못하게 한다</td></tr>
+              <tr><td>추론은 클라우드 Claude</td><td>작은 기기로도 큰 두뇌를 쓴다</td></tr>
+              <tr><td>WhatsApp</td><td>휴대폰에 이미 있었다. 기내에서도 메시지가 오갔다</td></tr>
+              <tr><td>POLE+O 그래프</td><td>사람, 사물, 장소, 사건, 조직과 그 관계로 기억을 남긴다</td></tr>
+              <tr><td>Pi 안의 Neo4j</td><td>행사장 Wi-Fi가 끊겨도 기록을 잃지 않는다</td></tr>
+              <tr><td>정규식</td><td>오프라인에서도 받아쓴 글에서 부스 번호를 뽑는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>발표자는 개인 에이전트를 노트북에서 떼어 옷장의 Raspberry Pi 4B에 올렸다.</li>
+          <li>기준은 <strong>싸고, 열려 있고, 고칠 수 있고, 이해할 수 있는가</strong>였다.</li>
+          <li>OpenClaw 대신 <strong>NanoClaw</strong>를 골랐다. 소스 파일 15개 정도로 작고, 에이전트를 Docker 컨테이너에 가둔다.</li>
+          <li><strong>Pi는 추론을 하지 않는다.</strong> 큰 두뇌는 클라우드의 Claude이고, Pi는 메시지와 도구와 데이터를 맡는다.</li>
+          <li>대화 창구는 WhatsApp이다. 기내 Wi-Fi를 사지 않아도 메시지가 오갔다.</li>
+          <li>에이전트는 <strong>MCP 서버</strong>로 Neo4j 그래프 DB에 묻고 답한다.</li>
+          <li>기억은 <strong>POLE+O</strong>로 저장한다. 이 기억 스킬도 에이전트가 직접 썼다.</li>
+          <li>USB 마이크, 버튼, LED를 달아 음성을 받아쓰게 했다.</li>
+          <li>행사장 Wi-Fi를 믿지 않고 <strong>오프라인 모드</strong>를 만들었다. 정규식으로 부스 번호를 뽑아 Pi 안의 Neo4j에 넣는다.</li>
+          <li>모은 메모는 클라우드에서 <strong>주제 노드</strong>로 묶었고, 대화 전체는 메모리 서비스로 정리해 MCP로 에이전트에게 돌려줬다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 개인 에이전트를 노트북에 올리지 않은 이유는?</span></summary><div class="answer">시스템 관리자와 DevOps 출신이라, 이런 도구가 충분히 단단해지기 전에는 노트북에 올리고 싶지 않았다. 대신 싸고, 열려 있고, 고칠 수 있고, 이해할 수 있는 걸 원했다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Craigslist의 Mac Mini를 사지 않은 이유 두 가지는?</span></summary><div class="answer">OpenClaw가 미리 깔려 있다는 점이 위험 신호였다. 그리고 가격이 올라 더는 600달러짜리 "작은 클로"가 아니었다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>NanoClaw를 고른 이유는?</span></summary><div class="answer">소스 파일 15개 정도로 작아 속을 이해하기 쉽다. 에이전트를 Docker 컨테이너에서 돌려 시스템을 함부로 못 건드리게 한다. Claude Agent SDK 위에 만들었고, 직접 고쳐 쓰라고 권한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>이 에이전트의 LLM 추론은 어디서 일어나나?</span></summary><div class="answer">Pi에서는 전혀 일어나지 않는다. 클라우드의 Claude가 한다. Pi는 메시지를 받고 도구와 DB를 잇는다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>"Tom Hanks가 출연한 영화" 질문은 어떤 길을 거쳐 답이 됐나?</span></summary><div class="answer">WhatsApp 메시지가 Pi의 NanoClaw로 온다. 에이전트가 MCP 서버로 Neo4j 영화 DB를 조회한다. Claude Agent SDK로 답을 만들어 WhatsApp으로 돌려준다. 처음에는 인증 설정이 깨져 있어 고쳐야 했다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>POLE+O의 다섯 글자는 각각 무엇인가?</span></summary><div class="answer">Person 사람, Object 사물, Location 장소, Event 사건, 그리고 더한 O는 Organization 조직이다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>발표자는 기억 스킬을 어떻게 만들었나?</span></summary><div class="answer">비행기 안에서 WhatsApp으로 에이전트에게 POLE+O 기억 시스템을 만들 수 있냐고 물었다. 에이전트가 직접 스킬을 썼고, 재부팅해도 남는 마운트 지점에 저장한다고 했다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Pi에 단 버튼과 LED는 각각 무슨 일을 하나?</span></summary><div class="answer">버튼은 받아쓰기 모델을 켠다. LED는 녹음 중임을 보여 준다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>오프라인 모드는 어떻게 동작하나?</span></summary><div class="answer">Pi 안에 Neo4j를 띄워 둔다. 받아쓴 글에서 정규식으로 부스 번호를 뽑고, 그걸로 쿼리를 만들어 로컬 DB에 넣는다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>클라우드로 올린 부스 데이터에서 무엇을 찾았나?</span></summary><div class="answer">업체들이 주제 노드로 묶였다. 예를 들어 "평가와 관측" 주제에 Buildkite와 LangChain이 연결됐다. 발표자는 이걸 직접 걸어 다니며 만든 새 지식이라고 했다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>기억 시스템을 키운 뒤, 에이전트는 기억을 어떻게 다시 쓰나?</span></summary><div class="answer">WhatsApp 대화 전체를 Neo4j 에이전트 메모리 서비스에 넣어 기억으로 정리했다. 그 기억이 MCP 서버로 열려 있어서 같은 Pi의 에이전트가 불러 쓴다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>직접 만들어 보기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>서랍 속 낡은 보드나 PC에 개인 에이전트를 올려 본다<span class="how">확인: 64비트 운영체제를 돌릴 수 있는가. 발표자는 32비트로 오래 쓰다가 늦게 알았다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>작은 에이전트 프레임워크를 골라 코드를 끝까지 읽는다<span class="how">기능 수보다 "속을 이해할 수 있는가"를 기준으로 고른다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트를 컨테이너 안에서 돌린다<span class="how">확인: 에이전트가 호스트 파일을 마음대로 건드리지 못하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>이미 쓰는 메시지 앱을 에이전트 창구로 연결한다<span class="how">휴대폰에서 바로 말을 걸 수 있으면 쓰게 된다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>MCP 서버로 그래프 DB 하나를 붙여 질문해 본다<span class="how">예: 영화 데이터를 넣고 "Tom Hanks가 출연한 영화"를 묻는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>기억 스키마를 POLE+O로 정해 본다<span class="how">사람, 사물, 장소, 사건, 조직 노드와 그 관계</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>네트워크가 끊겼을 때 쓸 로컬 저장소와 규칙 기반 대체 경로를 둔다<span class="how">확인: Wi-Fi를 끄고 기록해도 데이터가 남는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>쌓인 대화 기록을 기억으로 정리해 에이전트가 다시 쓰게 한다<span class="how">확인: 에이전트가 예전 대화에 나온 사람과 장소를 꺼내 쓰는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>클로</td><td>Claw. OpenClaw처럼 메시지 앱으로 부리는 개인 AI 에이전트를 통틀어 부르는 말</td></tr>
+              <tr><td>OpenClaw</td><td>개인 AI 에이전트 오픈소스 프로젝트</td></tr>
+              <tr><td>NanoClaw</td><td>소스 파일 15개 정도의 작은 개인 에이전트. 에이전트를 Docker 컨테이너에서 돌린다</td></tr>
+              <tr><td>엣지 기기</td><td>Edge device. 클라우드가 아니라 사용자 가까이에서 도는 작은 기기</td></tr>
+              <tr><td>Raspberry Pi</td><td>손바닥만 한 값싼 컴퓨터 보드</td></tr>
+              <tr><td>Docker 컨테이너</td><td>프로그램을 호스트 시스템과 떼어 놓고 돌리는 격리된 실행 공간</td></tr>
+              <tr><td>Claude Agent SDK</td><td>Anthropic이 낸 에이전트 개발 도구 모음. NanoClaw가 이걸 바탕으로 한다</td></tr>
+              <tr><td>추론</td><td>Inference. 학습된 모델이 입력을 받아 답을 만드는 일</td></tr>
+              <tr><td>그래프 데이터베이스</td><td>데이터를 노드와 관계로 저장하는 DB. Neo4j가 그 예다</td></tr>
+              <tr><td>노드 / 관계</td><td>노드는 대상(사람, 영화), 관계는 둘을 잇는 선(출연했다, 감독했다). 관계는 엣지라고도 부른다</td></tr>
+              <tr><td>Neo4j Aura</td><td>Neo4j의 클라우드 데이터베이스 서비스</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 에이전트가 외부 도구와 데이터에 붙는 표준 방식</td></tr>
+              <tr><td>Cypher</td><td>Neo4j에서 쓰는 질의 언어</td></tr>
+              <tr><td>POLE+O</td><td>Person, Object, Location, Event에 Organization을 더한 데이터 모델. 수사에서 쓰던 방식</td></tr>
+              <tr><td>스킬</td><td>Skill. 에이전트가 특정 일을 할 수 있게 묶어 둔 지시와 코드</td></tr>
+              <tr><td>마운트 지점</td><td>Mount point. 저장 공간이 연결된 폴더 경로. 컨테이너를 다시 띄워도 데이터가 남는다</td></tr>
+              <tr><td>BirdNET</td><td>새소리를 듣고 어떤 새인지 알아내는 모델</td></tr>
+              <tr><td>음성 받아쓰기</td><td>Voice-to-text. 말소리를 글자로 바꾸는 일</td></tr>
+              <tr><td>정규식</td><td>Regex. 글에서 정해진 모양의 문자열(예: 부스 번호)을 찾아내는 패턴</td></tr>
+              <tr><td>오프라인 모드</td><td>네트워크가 없어도 기기 안에서 처리와 저장을 끝내는 동작 방식</td></tr>
+              <tr><td>데이터 보강</td><td>Enrichment. 원본 데이터를 정리하고 다른 정보와 연결을 덧붙이는 일</td></tr>
+              <tr><td>에이전트 메모리 서비스</td><td>대화 기록에서 기억을 뽑아 정리하고, 에이전트가 다시 쓰게 해 주는 Neo4j의 서비스</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>인사, 청중 질문: OpenClaw·Hermes Agent, 엣지 기기, 그래프, 에이전트 기억</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>발표 주제: 하드웨어가 붙은 에이전트 기억 프로젝트</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>무대에서 장비 연결: 마이크, HDMI 캡처, 배터리</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>QuickTime으로 Pi 화면 띄우기, 부팅</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>Raspberry Pi 4B, 32비트에서 64비트로</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>Pi 안의 NanoClaw, Docker, Neo4j</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>작은 클로가 좋은 이유</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>OpenClaw가 깔린 Mac Mini는 위험 신호</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>옷장 속 Pi와 설거지 알림 프로젝트</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>NanoClaw를 고른 이유</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>첫 구조: WhatsApp, Pi, 클라우드 Claude</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>그래프 101: Tom Hanks와 Forrest Gump</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>WhatsApp으로 영화 DB에 질문, MCP 서버</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>비행기에서도 되는 WhatsApp</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>POLE+O 기억 시스템</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>단순한 기억 스키마</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>Neo4j Aura에서 기억 그래프 데모</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>BirdNET에서 얻은 생각, 음성 받아쓰기</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>버튼과 LED로 녹음 데모</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>부스를 돌며 녹음하기</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>전시 업체 데이터 모델</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>오프라인 모드: Pi 안의 Neo4j와 정규식</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>Cypher 셸 브라우저로 Pi 안의 데이터 조회</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>클라우드로 올려 데이터 보강</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>주제 노드: 평가와 관측</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>에이전트 메모리 서비스로 대화 전체 정리</td></tr>
+              <tr><td><span class="ts">19:20</span></td><td>MCP로 다시 쓰는 기억</td></tr>
+              <tr><td><span class="ts">19:30</span></td><td>부스 P3, GraphAcademy 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'oUZEt4EiPbk:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

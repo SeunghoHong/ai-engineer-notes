@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 글쓰기 슬롭 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#define">슬롭이란 무엇인가</a></li>
+      <li><a href="#why">왜 또 벤치마크인가</a></li>
+      <li><a href="#like-me">"나처럼 쓰는가"를 잰다</a></li>
+      <li><a href="#pipeline">평가가 돌아가는 방식</a></li>
+      <li><a href="#drafts">초안을 다섯 개 만드는 이유</a></li>
+      <li><a href="#metrics">무엇을 재나</a></li>
+      <li><a href="#judge">심판은 어떻게 채점하나</a></li>
+      <li><a href="#bias">심판도 편애한다</a></li>
+      <li><a href="#cost">만드는 데 든 비용</a></li>
+      <li><a href="#models">어떤 모델로 써야 하나</a></li>
+      <li><a href="#howto">AI로 덜 슬롭하게 쓰는 법</a></li>
+      <li><a href="#limits">이 벤치마크를 읽는 법</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 글쓰기에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-22 · 19분 · 영어 발표 한글 정리</span>
+      <h1>AI 글은 왜 아직 슬롭처럼 읽히나</h1>
+      <p class="lead">모델이 좋아져도 AI가 쓴 글은 여전히 기계처럼 읽힌다. 발표자는 이 현상을 재는 벤치마크 Tone-Bench를 만들었고, 그 과정에서 글쓰기 평가를 설계하는 법과 AI로 덜 슬롭하게 쓰는 법을 배웠다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=_dTF3NpPzGo" target="_blank" rel="noopener">Why AI Writing Still Reads Like Slop</a></span>
+        <span>발표: Louis-François Bouchard (Towards AI)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 순위는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 바로잡았고, 확실하지 않은 곳은 들린 대로 쓰고 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>슬롭</strong>은 AI가 쓴 티가 나는 글이다. 발표자는 과용 단어, 일반론, 빈말, 반복, 환각, 맞지 않는 톤의 여섯 가지로 정의한다.</li>
+        <li>모델이 좋아져도 슬롭은 줄지 않는다. 그래서 발표자는 <strong>재는 도구</strong>부터 만들었다. 그게 Tone-Bench다.</li>
+        <li>기준은 일부러 주관적이다. <strong>발표자가 소리 내어 읽어도 민망하지 않은가.</strong></li>
+        <li>모델마다 과제 10개에 초안을 5개씩 쓰게 하고, LLM 심판 4개가 9개 지표로 채점한다. 초안을 여러 개 받는 이유는 <strong>같은 모델 안의 편차</strong>를 보기 위해서다.</li>
+        <li>LLM 심판은 <strong>자기 계열 모델을 편애한다.</strong> 특히 OpenAI가 심했다. 심판은 여러 회사 모델로 섞어야 한다.</li>
+        <li>평가는 비싸다. 채점 방식을 한 줄 바꾸면 <strong>2,000달러 이상</strong>, 생성 프롬프트를 한 줄 바꾸면 <strong>4,000달러 이상</strong>이 든다.</li>
+        <li>교훈: <strong>한 번에 완벽한 글을 쓰는 모델은 없다.</strong> 긴 프롬프트와 예시, 1~3회 리뷰, 싼 모델 초안 여러 개 합치기, 마지막 사람 확인으로 가장 덜 귀찮은 길을 고른다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="define">
+        <header><span class="num">01</span><h2>슬롭이란 무엇인가 <span class="ts">00:00</span></h2></header>
+        <p>슬롭<span class="en">slop</span>은 AI가 대충 만들어 낸 티가 나는 글이다. 발표자에 따르면 Andrej Karpathy는 2026년에 '슬롭 대재앙'<span class="en">slop apocalypse</span>이 시작될 거라고 말했다. 발표자는 소셜 미디어에서 이미 그게 보인다고 한다.</p>
+        <p>전문가마다 정의는 다르다. 그래도 기계가 쓴 느낌이 나는 글을 읽기 괴롭다는 데는 다들 동의한다.</p>
+
+        <h3>모델이 좋아져도 줄지 않는다 <span class="ts">01:00</span></h3>
+        <p>Fable, GPT-6.1처럼 더 나은 모델이 나와도 슬롭은 사라지지 않는다. 오히려 양만 늘어난다. 모델을 더 학습시키는 것 말고 다른 방법이 필요하다. 고치려면 먼저 정의부터 해야 한다.</p>
+
+        <h3>슬롭의 여섯 가지 특징 <span class="ts">01:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>특징</th><th>모습</th></tr></thead>
+            <tbody>
+              <tr><td>1. 과용 단어</td><td>사람은 잘 안 쓰는데 모델은 자주 쓰는 단어. 대표적인 예가 "delve"다</td></tr>
+              <tr><td>2. 지나친 일반론</td><td>"대부분의 팀", "대부분의 프로젝트"처럼 말하고 구체적인 내용이 없다. 발표자는 자기도 LinkedIn에서 이렇게 쓴다며, 거기선 원래 그렇게들 쓴다고 농담했다</td></tr>
+              <tr><td>3. 빈말</td><td>듣기 좋은 단어를 이어 붙였을 뿐 아무 말도 하지 않는다</td></tr>
+              <tr><td>4. 반복</td><td>아무 말도 안 하면서 그 말을 여러 번 되풀이한다</td></tr>
+              <tr><td>5. 환각</td><td>사실이 아닌 내용을 지어낸다. 그래서 글을 온전히 믿을 수 없다</td></tr>
+              <tr><td>6. 톤이 없다</td><td>내 말투가 아니다. 톤이 아예 없거나, 모두의 톤이 한꺼번에 섞여 있다. 발표자는 이걸 가장 나쁜 점으로 꼽는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>단어가 아니라 글을 잰다 <span class="ts">02:40</span></h3>
+        <p>슬롭 단어를 세는 지표는 이미 있다. EQ-Bench의 슬롭 점수<span class="en">slop score</span>다. 발표자는 그걸 다시 만들 생각이 없다고 했다. 재고 싶은 건 <strong>글 전체가 얼마나 슬롭한가</strong>다.</p>
+        <div class="callout">
+          <span class="title">발표 당일 공개: Tone-Bench <span class="ts">03:00</span></span>
+          <span>모델이 창작 글쓰기를 잘하는지 재는 벤치마크다. 이름은 자막에 적힌 대로 썼다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="why">
+        <header><span class="num">02</span><h2>왜 또 벤치마크인가 <span class="ts">03:40</span></h2></header>
+        <p>발표자는 "자, delve in 해 봅시다"라는 말로 본론을 연다. 방금 대표적인 슬롭 단어로 꼽은 그 단어다. 그리고 벤치마크가 또 필요한 이유를 셋으로 든다.</p>
+        <ul class="plain">
+          <li><strong>세상의 필요</strong>: LinkedIn과 X 답글에 AI가 만든 글이 점점 늘어난다. 어차피 쓸 거라면 적어도 읽을 만해야 한다.</li>
+          <li><strong>회사의 필요</strong> <span class="ts">04:00</span>: Towards AI는 작은 팀이고, 한쪽에서 AI 엔지니어링 교육 콘텐츠를 만든다. 영상 수백 편, 글 수천 편, 책 한 권을 냈고 두 번째 책을 쓰는 중이다. 작업에 AI를 쓰다 보니 슬롭을 계속 검수하고 고치는 일이 몹시 성가셨다.</li>
+          <li><strong>반응</strong>: 만드는 과정을 X에 공유했고 반응이 좋았다. 이런 창작 글쓰기 벤치마크가 필요하다는 데 많은 사람이 동의했다.</li>
+        </ul>
+        <h3>이 팀이 만드는 이유 <span class="ts">05:00</span></h3>
+        <p>발표자는 석사와 박사 과정 때부터 AI 모델을 평가해 왔다. Towards AI는 고객사를 위한 평가 파이프라인을 만든다. AI 엔지니어 15명과 작가, 편집자가 함께 일한다.</p>
+        <p class="note">Tone-Bench는 발표자의 회사가 만든 벤치마크다. 발표자는 회사가 평가 파이프라인을 만들어 준다고 소개하고, 끝에서 도와줄 수 있다고도 말한다. 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="like-me">
+        <header><span class="num">03</span><h2>"나처럼 쓰는가"를 잰다 <span class="ts">05:40</span></h2></header>
+        <p>이 벤치마크는 일부러 아주 주관적이다. 재는 것은 하나다. 모델이 발표자처럼 쓸 수 있는가.</p>
+        <blockquote>지금처럼 소리 내어 읽었을 때, 내가 안 쓸 단어 때문에 민망해지지 않으면 된다.<cite>발표자가 말한 기준을 옮김</cite></blockquote>
+
+        <h3>평가 과정 <span class="ts">06:10</span></h3>
+        <ol class="plain">
+          <li>모델에게 브리프<span class="en">brief</span>와 리서치 자료를 담은 프롬프트를 준다.</li>
+          <li>모델이 영상 대본 한 편을 처음부터 끝까지 쓴다.</li>
+          <li>그 대본을 루브릭<span class="en">rubric</span>과 평가 파이프라인으로 채점한다.</li>
+        </ol>
+        <p>목표는 발표자가 직접 썼을 법한 대본이다. 실제로 그런 대본은 나오지 않는다. 발표자 말로는 대개 형편없다.</p>
+
+        <h3>모델이 받는 프롬프트 <span class="ts">06:40</span></h3>
+        <p>실제 프롬프트는 브리프 한 장보다 훨씬 길다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>들어가는 것</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>말투와 문체</td><td>발표자가 어떻게 말하고 어떻게 쓰는지에 대한 자세한 설명</td></tr>
+              <tr><td>과거 예시</td><td>발표자가 예전에 만든 영상과 콘텐츠 예시 다수</td></tr>
+              <tr><td>좋은 글쓰기</td><td>스토리텔링 전반, 능동문 쓰기, 글을 잘 쓰는 법</td></tr>
+              <tr><td>이번 과제</td><td>무엇을 만들고 어떻게 할지에 대한 지시</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="pipeline">
+        <header><span class="num">04</span><h2>평가가 돌아가는 방식 <span class="ts">07:10</span></h2></header>
+        <p>과제는 영상 대본 10개다. 팀이 공들여 기준 대본을 최대한 잘 만들었고, 대본마다 루브릭을 붙였다.</p>
+        <p>10개 중 일부는 이미 공개된 대본이고 일부는 아니다. 어느 것이 벤치마크에 들어갔는지는 밝히지 않는다. 오염<span class="en">contamination</span>을 확인하기 위해서다. 오염은 모델이 학습 중에 시험 문제를 미리 봤을 가능성을 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>한 일</th></tr></thead>
+            <tbody>
+              <tr><td>생성 <span class="ts">07:40</span></td><td>모델마다 과제 10개 각각에 초안 5개를 쓰게 한다</td></tr>
+              <tr><td>채점</td><td>서로 다른 LLM 심판<span class="en">LLM judge</span> 4개가 초안을 분석한다. 최근에는 "Jeff"(추정)를 시험 삼아 추가했다. 계속 쓸지는 아직 정하지 않았다</td></tr>
+              <tr><td>집계</td><td>리더보드에 올릴 최종 점수를 계산한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="drafts">
+        <header><span class="num">05</span><h2>초안을 다섯 개 만드는 이유 <span class="ts">08:20</span></h2></header>
+        <p>같은 모델 안의 편차<span class="en">intra-model variability</span>를 보기 위해서다. 같은 프롬프트를 줘도 매번 다른 글이 나온다. 창작 과제에서는 특히 그렇다.</p>
+        <p>예를 들어 Grok 4.7은 다섯 번 중 한 번은 Opus 5.5만큼 좋은 글을 썼다. 한 번만 생성해서 재면 이런 이상값<span class="en">outlier</span>에 속을 수 있다.</p>
+        <p>모델이 약할수록 편차가 컸다. 다섯 개는 실행 비용과 편차 측정 사이에서 찾은 적정선이다. <span class="ts">09:00</span></p>
+        <div class="callout">
+          <span class="title">내 평가에도 쓸 수 있는 요령</span>
+          <span>발표자는 직접 평가를 만들 때도 초안을 여러 개 뽑아 보라고 권한다. 창작 과제라면 더 그렇다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="metrics">
+        <header><span class="num">06</span><h2>무엇을 재나 <span class="ts">09:10</span></h2></header>
+        <p>글의 품질을 숫자로 바꾸는 게 가장 어려운 문제였다. 지표는 9개이고, 크게 다섯 가지 축으로 묶인다. 자세한 정의는 벤치마크 페이지에 공개돼 있다고 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>축</th><th>묻는 것</th></tr></thead>
+            <tbody>
+              <tr><td>톤</td><td>발표자처럼 들리는가. 모델이 특정 말투에 맞출 수 있는가. 가장 중요한 지표다</td></tr>
+              <tr><td>글쓰기</td><td>좋은 글인가. 훅<span class="en">hook</span>, 감정의 흐름 같은 좋은 이야기의 요소를 갖췄는가</td></tr>
+              <tr><td>지시 따르기</td><td>정해진 길이와 형식을 지켰는가. 이미지 같은 요소를 맞는 자리에 넣었는가</td></tr>
+              <tr><td>리서치 정확도</td><td>대본마다 붙은 리서치 자료를 제대로 썼는가. 지어낸 내용은 없는가</td></tr>
+              <tr><td>슬롭</td><td>EQ-Bench 슬롭 점수와 팀의 자체 측정</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="judge">
+        <header><span class="num">07</span><h2>심판은 어떻게 채점하나 <span class="ts">10:30</span></h2></header>
+        <p>심판 LLM이 받는 프롬프트에는 다음이 들어간다.</p>
+        <ul class="plain">
+          <li>지표마다 약 1,000단어 분량의 예시와 지시</li>
+          <li>채점할 대본</li>
+          <li>발표자가 직접 쓴 대본 (참고 기준)</li>
+          <li>브리프와 리서치 자료</li>
+        </ul>
+        <p>다 합치면 약 14,000 크기의 프롬프트가 심판마다 들어간다.</p>
+        <p class="note">발표자는 "14,000짜리 프롬프트"라고만 말했다. 단위가 토큰인지 단어인지는 자막에서 확인되지 않는다.</p>
+        <p>심판은 글의 품질만 본다. 길이는 보지 않는다. 어느 모델이 썼는지도 모른다. 길이 같은 항목은 나중에 코드로 따로 계산한다. <span class="ts">11:00</span></p>
+
+        <h3>범주 먼저, 점수는 그다음 <span class="ts">11:10</span></h3>
+        <p>가장 중요한 지표인 톤과 목소리<span class="en">tone and voice</span>를 예로 든다. 심판 프롬프트에는 발표자의 톤이 어떤지, 무엇을 기대하는지, 어떻게 분석할지가 자세히 적혀 있다.</p>
+        <ol class="plain">
+          <li>심판이 먼저 여섯 범주 중 하나를 고른다.</li>
+          <li>범주를 정한 뒤 점수를 준다.</li>
+        </ol>
+        <p>팀은 다른 방식도 시험했다. 보통 권장되는 예/아니오 판정<span class="en">binary</span>, 범주만 고르기, 바로 백분율 점수 주기다. 이런 정성적인 과제에는 "범주 먼저, 점수 나중"이 가장 잘 맞았다. 점수마다 어떤 글인지 보여 주는 예시도 많이 넣었다.</p>
+
+        <h3>심판이 돌려주는 것 <span class="ts">12:10</span></h3>
+        <p>9개 지표 각각의 점수, 그 점수를 준 근거, 근거가 된 대본 속 구체적인 예시다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="bias">
+        <header><span class="num">08</span><h2>심판도 편애한다 <span class="ts">12:20</span></h2></header>
+        <p>이 과정은 모두 자동이다. 사람이 다 읽을 수 있는 양이 아니기 때문이다.</p>
+        <div class="callout">
+          <span class="title">규모</span>
+          <span>모델 120개 × 과제 10개 × 초안 5개 = 대본 6,000편이다. 심판 4개가 각각 읽으면 채점은 24,000번이다. 발표자는 "수천 편"이라고만 말했고, 곱셈은 정리하며 계산했다.</span>
+        </div>
+        <p>LLM 심판에는 취향이 있다. 대부분의 모델이 자기 결과를 더 좋게 평가한다. 이를 자기 선호 편향<span class="en">self-preference bias</span>이라고 한다.</p>
+        <p>발표자가 본 가장 심한 경우는 OpenAI였다. 한 모델만이 아니라 OpenAI 모델 계열 전체를 편애했다. 발표자는 Anthropic과 OpenAI 모델이 서로를 싫어하도록 학습된 것 같다고 농담도 했다.</p>
+        <div class="callout">
+          <span class="title">교훈 <span class="ts">13:10</span></span>
+          <span>GPT 같은 모델을 심판으로 써서 내 작업에 맞는 모델을 고르려면 조심해야 한다. 심판은 여러 회사 계열의 모델로 섞는다.</span>
+        </div>
+
+        <h3>사람의 눈으로 확인 <span class="ts">13:30</span></h3>
+        <p>X에서는 "창작 과제는 사람이 평가해야 한다"는 의견이 나왔다. 이상적이지만 현실적이지 않다. 그래서 규모를 키울 수 있는 방식으로 시도했다.</p>
+        <p>발표자와 팀원 3명이 생성된 대본 1,000쌍을 직접 A/B 비교했다. 대본 전체가 아니라, 두 대본에서 서로 비교할 만한 부분을 잘라 봤다. 앞으로 비교를 더 늘리고 커뮤니티의 도움도 받을 계획이다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="cost">
+        <header><span class="num">09</span><h2>만드는 데 든 비용 <span class="ts">14:10</span></h2></header>
+        <ul class="plain">
+          <li><strong>시작 비용</strong>: 약 500시간. 대본 10개를 만들고, 루브릭을 정하고, 예시를 찾고, 품질을 숫자로 바꾸는 데 들었다.</li>
+          <li><strong>반복 개선</strong>: 발표자가 4개월 동안 "20X" 구독 4개로 직접 실험했다. 지표 비율 등을 계속 바꿨고, 수천 달러가 들었다.</li>
+        </ul>
+        <p>더 큰 비용은 다시 돌릴 때 나온다. <span class="ts">14:50</span></p>
+
+        <figure class="chart" aria-label="한 줄만 바꿨을 때 전체를 다시 돌리는 비용: 루브릭이나 채점 방식 2,000달러 이상, 생성 프롬프트 4,000달러 이상">
+          <span class="chart-title">한 줄만 바꿨을 때 전체를 다시 돌리는 비용 (달러)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>루브릭이나 채점 방식 한 줄</span><span class="val">2,000+</span></div>
+              <div class="track"><div class="fill" style="width:50%" title="루브릭이나 채점 방식 한 줄: 2,000달러 이상"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>모델에게 주는 생성 프롬프트 한 줄</span><span class="val">4,000+</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="생성 프롬프트 한 줄: 4,000달러 이상"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>2,000</span><span>4,000</span></div>
+          <span class="caption">둘 다 발표자가 "이상"이라고 말한 값이다. 생성 프롬프트를 바꾸면 대본을 모두 다시 쓰고 다시 채점해야 하니 더 비싼 것으로 보인다(정리하며 덧붙인 해석).</span>
+        </figure>
+        <p>그래서 프롬프트를 바꾸는 실험은 신중하게 해야 한다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="models">
+        <header><span class="num">10</span><h2>어떤 모델로 써야 하나 <span class="ts">15:20</span></h2></header>
+        <p>4개월 동안 배운 가장 큰 교훈은 이렇다. 한 번에 멋진 글을 써 주는 모델을 찾지 마라. 원하는 글까지 가는 길이 <strong>가장 덜 귀찮은 모델</strong>을 찾아라. 발표자는 당분간 완벽한 모델은 나오지 않을 거라고 본다.</p>
+
+        <h3>지금 벤치마크가 말하는 것 <span class="ts">16:00</span></h3>
+        <ul class="plain">
+          <li><strong>1위는 Opus 5.5 extra high</strong>다. 추론 강도를 max로 올린 것보다 2.5배 싸면서 결과는 같았다. 그래서 글쓰기에 max는 보통 필요 없다.</li>
+          <li><strong>GLM 5.3 Flash</strong>는 대량으로 쓸 때 매우 좋고 매우 싸다. 1위보다 50배 싸다.</li>
+        </ul>
+
+        <figure class="chart" aria-label="Opus 5.5 extra high를 100으로 놓은 상대 비용: Opus 5.5 max 250, Opus 5.5 extra high 100, GLM 5.3 Flash 2">
+          <span class="chart-title">상대 비용 (Opus 5.5 extra high = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Opus 5.5 · max</span><span class="val">250</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="Opus 5.5 max: 250"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Opus 5.5 · extra high (1위)</span><span class="val">100</span></div>
+              <div class="track"><div class="fill key" style="width:40%" title="Opus 5.5 extra high: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>GLM 5.3 Flash</span><span class="val">2</span></div>
+              <div class="track"><div class="fill key" style="width:0.8%" title="GLM 5.3 Flash: 2"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>125</span><span>250</span></div>
+          <span class="caption">발표자가 말한 배수로 그렸다. extra high는 max보다 2.5배 싸고, GLM 5.3 Flash는 extra high보다 50배 싸다. 같은 계산으로 GLM 5.3 Flash는 max보다 125배 싸다.</span>
+        </figure>
+      </section>
+
+      <!-- 11 -->
+      <section id="howto">
+        <header><span class="num">11</span><h2>AI로 덜 슬롭하게 쓰는 법 <span class="ts">16:20</span></h2></header>
+        <p>벤치마크를 만들며 얻은 글쓰기 요령이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 프롬프트는 길게</span>
+            <p>아주 길고 자세하게 쓴다. 너무 길어서 문제가 되는 일은 없다. 길수록 낫다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 예시는 전부</span>
+            <p>무엇을 어떻게 할지 보여 주는 좋은 예시를 생각나는 대로 다 넣는다. 싫어하는 것, 어색한 것, 쓰지 말았으면 하는 단어 같은 나쁜 예시도 넣는다. 뉴스레터를 쓴다면 통째로 넣어도 된다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 리뷰는 1~3번만 <span class="ts">17:00</span></span>
+            <p>추론 강도가 높은 다른 모델에게 같은 지시문을 주고 리뷰를 받는다. 그 피드백을 작성 모델에게 돌려준다.</p>
+            <p class="verdict"><b>주의</b>: 그 이상 반복하면 오히려 슬롭으로 빠진다. 숫자로 잰 결과는 없지만 효과가 크다고 발표자는 말한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">4 · 마지막은 사람 <span class="ts">18:00</span></span>
+            <p>사람의 리뷰는 피해 갈 수 없다.</p>
+          </div>
+        </div>
+
+        <h3>대량으로 쓸 때: 싼 초안 여러 개를 합친다 <span class="ts">17:20</span></h3>
+        <p>회사에서 API로 많은 글을 써야 할 때 발표자가 권하는 방식이다.</p>
+        <div class="shift" aria-label="대량 글쓰기 방식의 변화">
+          <div><span class="tag">흔한 방식</span><b>가장 좋은 모델로 한 번 쓴다</b><span class="muted">Opus 5.5로 한 편 생성</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자 제안</span><b>싼 모델 초안 10개 + 큰 모델이 골라 합치기</b><span class="muted">GLM 5.3 Flash 같은 모델로 초안을 여러 개 쓰고, 추론 강도가 높은 Opus 같은 모델이 각 초안의 좋은 부분을 골라 합친다</span></div>
+        </div>
+        <p>발표자는 이 방식이 Opus 5.5로 한 번 쓰는 것보다 훨씬 싸고, 결과도 더 좋을 거라고 본다.</p>
+        <p class="note">발표 수치로 계산하면 GLM 초안 10개는 Opus 5.5 extra high 한 번의 약 5분의 1 비용이다(10 × 1/50). 다만 고르고 합치는 단계도 큰 모델이 초안 10개를 읽고 글을 써야 한다. 그 비용까지 더하면 차이는 "훨씬 싸다"보다 작을 수 있다. 실제 비용은 직접 재 보는 게 좋다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="limits">
+        <header><span class="num">12</span><h2>이 벤치마크를 읽는 법 <span class="ts">18:00</span></h2></header>
+        <p>이 벤치마크가 재는 건 발표자 한 사람의 목소리다. 아주 주관적이다. 그래서 순위를 무조건 믿으면 안 된다.</p>
+        <p>Opus 5.5가 1위라고 해서 모든 글쓰기에 가장 좋은 모델이라는 뜻은 아니다. 다만 어떤 모델이 글을 잘 쓰고 덜 슬롭한지 보여 주는 강한 신호는 된다.</p>
+        <div class="callout">
+          <span class="title">발표자의 권고 <span class="ts">18:20</span></span>
+          <span>자기 글에 맞는 평가 파이프라인을 직접 만들어라. 벤치마크는 발표 당일 공개됐고, 웹사이트에 그래프, 모델 비교, 구현 세부, 전체 방법론이 있다.</span>
+        </div>
+        <p class="note">"도와줄 수 있다"는 마지막 말은 발표자 회사의 서비스 소개이기도 하다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>슬롭은 과용 단어, 일반론, 빈말, 반복, 환각, 맞지 않는 톤으로 이뤄진다. 가장 나쁜 건 톤이다.</li>
+          <li>모델이 좋아져도 슬롭은 줄지 않았다. 그래서 먼저 <strong>재는 도구</strong>를 만들었다.</li>
+          <li>Tone-Bench의 기준은 <strong>"발표자가 소리 내어 읽어도 민망하지 않은가"</strong>다. 일부러 주관적이다.</li>
+          <li>과제 10개 중 어느 것이 들어갔는지 숨겨 오염을 확인한다.</li>
+          <li>같은 모델도 매번 다르게 쓴다. <strong>초안 5개로 편차를 잰다.</strong> 약한 모델일수록 편차가 크다.</li>
+          <li>9개 지표는 톤, 글쓰기, 지시 따르기, 리서치 정확도, 슬롭의 다섯 축으로 묶인다.</li>
+          <li>심판은 작성 모델을 모른 채 채점하고, <strong>범주를 먼저 고른 뒤 점수를 준다.</strong></li>
+          <li>LLM 심판은 <strong>자기 계열을 편애한다.</strong> 심판은 여러 회사 모델로 섞고, 사람의 A/B 비교로 보완한다.</li>
+          <li>평가는 다시 돌리는 비용이 크다. 채점 방식 한 줄에 2,000달러 이상, 생성 프롬프트 한 줄에 4,000달러 이상.</li>
+          <li>완벽한 모델 대신 <strong>덜 귀찮은 길</strong>을 고른다. 긴 프롬프트와 예시, 1~3회 리뷰, 싼 초안 합치기, 마지막 사람 확인.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말한 슬롭의 여섯 가지 특징은?</span></summary><div class="answer">과용 단어, 지나친 일반론, 빈말, 반복, 환각, 맞지 않거나 없는 톤.</div></details>
+          <details><summary><span class="qn">Q2</span><span>발표자가 가장 나쁜 특징으로 꼽은 것은?</span></summary><div class="answer">톤. 글이 내 말투가 아니고, 톤이 아예 없거나 모두의 톤이 섞여 있다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>EQ-Bench 슬롭 점수가 이미 있는데 새 벤치마크를 만든 이유는?</span></summary><div class="answer">슬롭 단어를 세는 것만으로는 부족하다. 발표자는 글 전체가 얼마나 슬롭한지, 특히 특정 사람처럼 쓸 수 있는지를 재고 싶었다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Tone-Bench가 "잘 썼다"를 판단하는 기준은?</span></summary><div class="answer">발표자가 그 대본을 소리 내어 읽어도, 자기가 안 쓸 단어 때문에 민망하지 않은가.</div></details>
+          <details><summary><span class="qn">Q5</span><span>과제 10개 중 어느 것이 벤치마크에 들어갔는지 밝히지 않는 이유는?</span></summary><div class="answer">오염을 확인하기 위해서다. 모델이 학습 중에 공개된 대본을 미리 봤을 가능성을 가려낸다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>모델마다 초안을 다섯 개 만드는 이유는?</span></summary><div class="answer">같은 모델 안의 편차를 재기 위해서다. Grok 4.7은 다섯 번 중 한 번만 Opus 5.5만큼 잘 썼다. 한 번만 재면 이런 이상값에 속는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>9개 지표를 묶은 다섯 축은?</span></summary><div class="answer">톤, 글쓰기, 지시 따르기, 리서치 정확도, 슬롭.</div></details>
+          <details><summary><span class="qn">Q8</span><span>심판이 모르게 하거나 보지 않게 하는 것은?</span></summary><div class="answer">어느 모델이 썼는지 모르게 한다. 길이도 보지 않는다. 길이 같은 항목은 나중에 코드로 따로 계산한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>톤 지표에서 심판은 어떤 순서로 채점하나?</span></summary><div class="answer">먼저 여섯 범주 중 하나를 고르고, 그 뒤에 점수를 준다. 예/아니오, 범주만, 바로 백분율보다 이 방식이 가장 잘 맞았다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>LLM 심판의 편향은 무엇이고, 대책은?</span></summary><div class="answer">자기 결과와 같은 계열 모델을 더 좋게 평가한다. OpenAI가 특히 심했다. 심판을 여러 회사 계열로 섞고, 사람의 A/B 비교로 보완한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>글쓰기에 max 추론을 권하지 않는 이유는?</span></summary><div class="answer">Opus 5.5 extra high가 max보다 2.5배 싸면서 결과가 같았다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>고성능 리뷰어는 몇 번 붙이라고 했고, 넘으면 어떻게 되나?</span></summary><div class="answer">1~3번. 그 이상 반복하면 오히려 슬롭으로 빠진다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 글쓰기에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>내가 싫어하는 AI 글의 특징을 적어 본다<span class="how">여섯 특징으로 나눠 본다: 과용 단어, 일반론, 빈말, 반복, 환각, 톤</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>글쓰기 프롬프트에 내 말투 설명과 예전 글을 넣는다<span class="how">짧게 줄이지 말고 통째로 넣는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>쓰지 말았으면 하는 단어와 표현 목록을 나쁜 예시로 넣는다<span class="how">확인: 결과에서 그 단어가 사라졌는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>같은 프롬프트로 초안을 여러 개 뽑아 편차를 본다<span class="how">한 번 잘 나온 결과로 모델을 고르지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>다른 모델에게 같은 지시문으로 리뷰를 받고, 1~3번에서 멈춘다<span class="how">확인: 리뷰를 거듭할수록 글이 오히려 밋밋해지지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>대량 작업이면 "싼 모델 초안 여러 개 + 큰 모델이 합치기"를 시험한다<span class="how">합치는 단계까지 포함해 실제 비용을 잰다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>LLM 심판을 쓴다면 작성 모델과 다른 회사 모델로 정하고, 작성 모델 이름을 숨긴다<span class="how">자기 선호 편향을 줄인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>심판에게 범주를 먼저 고르게 한 뒤 점수를 주게 한다<span class="how">범주마다 어떤 글인지 예시를 붙인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>마지막에는 사람이 소리 내어 읽어 본다<span class="how">민망한 단어나 내 말투가 아닌 곳을 표시한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>슬롭</td><td>Slop. AI가 쓴 티가 나는 질 낮은 글. 이 발표에서는 여섯 특징으로 정의한다</td></tr>
+              <tr><td>벤치마크</td><td>여러 모델을 같은 과제로 시험해 비교하는 평가 세트</td></tr>
+              <tr><td>리더보드</td><td>벤치마크 점수로 모델 순위를 매긴 표</td></tr>
+              <tr><td>브리프</td><td>Brief. 무엇을 쓸지 정리한 짧은 작업 지시서</td></tr>
+              <tr><td>루브릭</td><td>Rubric. 무엇을 보고 몇 점을 줄지 정한 채점 기준표</td></tr>
+              <tr><td>LLM 심판</td><td>LLM judge. 다른 모델이 만든 결과를 채점하는 데 쓰는 LLM</td></tr>
+              <tr><td>모델 내 편차</td><td>Intra-model variability. 같은 모델과 같은 프롬프트에서도 생성할 때마다 품질이 달라지는 정도</td></tr>
+              <tr><td>이상값</td><td>Outlier. 다른 결과들과 동떨어지게 높거나 낮은 값</td></tr>
+              <tr><td>오염</td><td>Contamination. 벤치마크 문제가 모델 학습 자료에 들어가 점수가 부풀려지는 것</td></tr>
+              <tr><td>환각</td><td>Hallucination. 모델이 사실이 아닌 내용을 그럴듯하게 지어내는 것</td></tr>
+              <tr><td>지시 따르기</td><td>Instruction following. 길이, 형식 같은 요구 사항을 지키는 능력</td></tr>
+              <tr><td>훅</td><td>Hook. 글이나 영상 첫머리에서 관심을 붙잡는 장치</td></tr>
+              <tr><td>자기 선호 편향</td><td>Self-preference bias. 심판 모델이 자기나 같은 계열 모델의 결과를 더 좋게 평가하는 경향</td></tr>
+              <tr><td>A/B 비교</td><td>두 결과를 나란히 놓고 어느 쪽이 나은지 고르는 평가 방식</td></tr>
+              <tr><td>EQ-Bench 슬롭 점수</td><td>모델이 과하게 쓰는 단어를 바탕으로 슬롭을 재는 기존 지표</td></tr>
+              <tr><td>추론 강도</td><td>모델이 답하기 전에 얼마나 깊이 생각할지 정하는 설정. 이 발표에는 high, extra high, max가 나온다</td></tr>
+              <tr><td>원샷</td><td>One-shot. 한 번 생성해서 바로 끝내는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>소개: 슬롭과 '슬롭 대재앙'</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>슬롭부터 정의해야 한다</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>모델이 좋아져도 슬롭은 줄지 않는다</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>슬롭의 여섯 가지 특징</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>목표: 단어가 아니라 글의 슬롭을 잰다</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>Tone-Bench 공개와 발표 순서</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>왜 또 벤치마크인가</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>Towards AI의 콘텐츠 제작과 슬롭 검수</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>이 팀이 만드는 이유</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>"나처럼 쓰는가"라는 기준</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>평가 과정: 브리프에서 대본, 대본에서 루브릭으로</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>모델이 받는 프롬프트</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>과제 10개와 오염 확인</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>초안 5개, 심판 4개, 최종 점수</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>초안을 다섯 개 만드는 이유: Grok 4.7 사례</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>9개 지표와 다섯 가지 축</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>심판이 받는 프롬프트</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>범주 먼저, 점수 나중</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>심판의 답: 점수, 근거, 예시</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>자동화 규모와 심판의 자기 선호</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>사람의 A/B 비교 1,000쌍</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>제작 비용: 500시간, 4개월</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>다시 돌리는 비용: 2,000달러와 4,000달러</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>교훈: 가장 덜 귀찮은 모델을 고른다</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>GLM 5.3 Flash, Opus 5.5 extra high와 max</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>긴 프롬프트와 좋은 예시, 나쁜 예시</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>고성능 리뷰어는 1~3번만</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>대량 작업: 싼 초안 여러 개를 합치기</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>사람 리뷰와 벤치마크의 한계</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>직접 평가 파이프라인 만들기, 벤치마크 공개</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '_dTF3NpPzGo:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

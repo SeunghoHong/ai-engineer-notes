@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>완전 자동화 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#attention">흩어진 전문가의 주의</a></li>
+      <li><a href="#full">완전 자동화란</a></li>
+      <li><a href="#agents">기업에서 에이전트의 문제</a></li>
+      <li><a href="#escape">AI 재량은 비상구에</a></li>
+      <li><a href="#case">사례: 바이오제약 문서 색인</a></li>
+      <li><a href="#first">첫 시도: 83%와 평가 1,000개</a></li>
+      <li><a href="#buckets">평가에서 드러난 세 갈래</a></li>
+      <li><a href="#routing">사례 라우팅</a></li>
+      <li><a href="#climb">95%에서 99.95%까지</a></li>
+      <li><a href="#exhaust">자동화의 부산물</a></li>
+      <li><a href="#cost">비용과 쓸 곳 고르기</a></li>
+      <li><a href="#tricks">99.95%를 위한 요령</a></li>
+      <li><a href="#closing">주의력과 판단을 관리하는 회사</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-09 · 20분 · 영어 발표 한글 정리</span>
+      <h1>정상 경로에서는 AI의 재량을 빼라</h1>
+      <p class="lead">AI 덕분에 실행은 싸졌지만, 무엇을 할지 정하는 판단은 더 귀해졌다. 발표자는 정상 경로를 고정된 완전 자동화에 맡기고, 예외만 갈래별로 모아 전문가의 주의력을 되찾자고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=wWisOHEcMPE" target="_blank" rel="noopener">Engineering Agency out of the Happy Path</a></span>
+        <span>발표: Matthew Jewkes (Standard Cybernetics)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고, 확실하지 않은 것은 들린 대로 적고 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI로 실행 비용은 빠르게 떨어진다. 그만큼 <strong>무엇을 할지 정하는 판단</strong>이 더 귀해진다.</li>
+        <li>발표자의 처방은 <strong>완전 자동화</strong>다. 정상 경로에서 사람을 빼고, 사람은 예외만 맡는다.</li>
+        <li>AI의 재량은 <strong>입구의 거름망</strong>으로 쓴다. 정상 경로에 맞지 않는 입력은 빼고, 중요한 입력은 사람에게 넘긴다.</li>
+        <li>바이오제약 문서 색인 사례에서 첫 에이전트는 83%였다. 평가를 보니 사례가 <strong>미결정, 치명 오류, 예외</strong> 세 갈래로 나뉘었다.</li>
+        <li>사례를 갈래별로 나누는 데 성능 올리기만큼 시간을 썼다. 그 뒤 치명 구간을 <strong>95%에서 99.95%</strong>로 올렸다.</li>
+        <li>자동화가 남긴 사례를 갈래별로 모으면, 전문가가 <strong>얼릴 일과 투자할 일</strong>을 고를 수 있다.</li>
+        <li>규모와 매출이 있고 꼼꼼함이 핵심인 업무에 쓴다. 스타트업이나 주관적 판단이 많은 업무에는 맞지 않는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="attention">
+        <header><span class="num">01</span><h2>흩어진 전문가의 주의 <span class="ts">00:30</span></h2></header>
+        <p>발표자는 먼저 팀에서 가장 강한 도메인 전문가<span class="en">domain expert</span>를 떠올려 보라고 한다. 영업이 급한 기능을 요청하거나 긴급 고객 티켓이 들어오면 불려 나가는 사람이다. 작은 팀이나 핵심 업무 과정을 맡고 있는 경우가 많다.</p>
+        <p>발표자가 겪은 전문가들은 대부분 주의가 여러 일에 얇게 퍼져 있었다. 동시에 여러 일을 하고, 복잡한 상황을 떠안는다. 돌아보면 뻔했을 결정도 매번 새로 내린다. 사업을 앞으로 미는 데 쓰는 주의는 아주 일부만 남는다.</p>
+
+        <h3>실행이 싸지면 판단이 귀해진다 <span class="ts">01:20</span></h3>
+        <p>사무직 결과물을 만드는 비용은 빠르게 떨어지고 있다. 발표자는 행사에서 만난 사람들이 이 점에는 모두 동의했다고 전한다. 프런티어 모델<span class="en">frontier model</span>의 앞날을 어떻게 보든, 지금 있는 능력은 아주 싸진다는 것이다.</p>
+        <div class="callout">
+          <span class="title">발표자의 문제의식</span>
+          <span>실행이 싸지면 판단, 곧 무엇을 할지 정하는 일에 걸리는 부담이 커진다. 조직의 판단력은 원래도 모자랐다. 발표자는 이 문제가 아직 과소평가돼 있다고 본다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="full">
+        <header><span class="num">02</span><h2>완전 자동화란 <span class="ts">01:50</span></h2></header>
+        <p>발표자가 말하는 완전 자동화<span class="en">full automation</span>는 정상 경로<span class="en">happy path</span>에서 사람을 완전히 빼는 자동화다. 정상 경로는 예외 없이 평소대로 흘러가는 기본 처리 경로를 말한다.</p>
+        <p>사람은 예외를 맡을 수는 있다. 하지만 단계마다 사람이 확인하는 사람 개입형<span class="en">human-in-the-loop</span> 자동화와는 다르다.</p>
+        <ul class="plain">
+          <li><strong>마진이 좋아진다.</strong> 가장 뻔한 이점이다.</li>
+          <li><strong>사업이 단순해진다.</strong> 업무 한 덩어리를 통째로 감싸 버리기 때문이다.</li>
+          <li><strong>전문가의 판단을 되찾는다.</strong> 되찾은 판단은 더 중요한 문제로 돌린다.</li>
+        </ul>
+        <p>발표자는 이렇게 하는 열쇠가 발표 제목 그대로라고 말한다. 자동화의 정상 경로에서 에이전시<span class="en">agency</span>를 빼내는 것이다. 에이전시는 AI가 스스로 판단해 다음 행동을 고르는 재량을 말한다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="agents">
+        <header><span class="num">03</span><h2>기업에서 에이전트의 문제 <span class="ts">02:20</span></h2></header>
+        <p>발표자는 이 주장이 스스로 생각을 뒤집은 것이라고 말한다. 에이전트 덕분에 소프트웨어로 할 수 있는 일에 대한 생각이 영영 넓어졌기 때문이다. 그래도 기업 환경에서는 문제가 있다고 본다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">에이전트 · 기업 환경에서</span>
+            <ul>
+              <li>유지보수가 힘들다. 스킬과 하네스가 계속 바뀌면 더 그렇다.</li>
+              <li>기업이 다루기 어려운 낯선 모양으로 실패한다.</li>
+              <li>사람이 내려야 할 결정을 늘린다.</li>
+            </ul>
+            <p class="verdict">전문가나 리더가 휴대폰으로 에이전트 알림에 답하는 모습을 보면 발표자는 의심부터 든다고 한다. 그게 정말 귀한 시간과 주의를 가장 잘 쓰는 방법인가.</p>
+          </div>
+          <div class="card">
+            <span class="tag">완전 자동화 <span class="ts">03:00</span></span>
+            <ul>
+              <li>사람의 주의를 풀어 준다.</li>
+              <li>알아보기 쉽다<span class="en">legible</span>. 입력을 받아 출력을 내고, 그 사이의 복잡함은 감춘다.</li>
+              <li>조직에 익숙하다. 마케팅과 데브옵스는 수십 년, 산업 현장의 기계 자동화는 수백 년 동안 이렇게 해 왔다.</li>
+            </ul>
+            <p class="verdict"><b>완전 자동화는 사람 조직이 점점 더 큰 일을 해내게 하는 핵심 도구다.</b></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="escape">
+        <header><span class="num">04</span><h2>AI 재량은 비상구에 <span class="ts">03:20</span></h2></header>
+        <p>그렇다고 AI의 재량을 버리라는 말은 아니다. 발표자는 완전 자동화에 재량을 쓰기 좋은 자리 하나를 꼽는다. 시스템 전체에 비상구<span class="en">escape hatch</span>를 다는 것이다.</p>
+        <p>완전 자동화의 흔한 문제는 맞지 않는 입력까지 기계적으로 처리하는 것이다. 발표자가 든 예가 있다. 거래처로 가입했는데 고객용 마케팅 연속 메일<span class="en">drip email</span>이 줄줄이 날아오는 경우다.</p>
+        <p>AI는 입력이 자동화에 들어가기 전에 거르는 데 쓴다.</p>
+        <ul class="plain">
+          <li>이 작업이 자동화의 정상 경로에 맞는지 확인한다.</li>
+          <li>악의적인 입력<span class="en">adversarial</span>은 거절한다.</li>
+          <li>평소 업무가 아니고 사업상 중요해 보이면 사람에게 넘긴다<span class="en">escalate</span>.</li>
+        </ul>
+        <div class="shift" aria-label="AI 재량을 쓰는 위치의 이동">
+          <div><span class="tag">정상 경로 안의 재량</span><b>에이전트가 매 사례를 처리한다</b><span class="muted">사례마다 재량을 쓰고, 그 결정을 사람이 챙긴다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">입구의 재량</span><b>에이전트는 입구에서 거른다</b><span class="muted">정상 경로는 고정된 자동화가 처리한다. 맞지 않는 입력만 빼거나 사람에게 넘긴다</span></div>
+        </div>
+        <p>이렇게 하면 자동화의 결과가 덜 들쭉날쭉해진다. 변동이 줄면 자동화할 수 있는 범위가 넓어진다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="case">
+        <header><span class="num">05</span><h2>사례: 바이오제약 문서 색인 <span class="ts">04:10</span></h2></header>
+        <p>발표자는 대규모 바이오제약 데이터를 다뤄 왔다. Motion Hall(추정)이라는 회사를 운영하며 바이오제약 기업의 인수합병과 라이선스 거래를 도왔다. 이 회사는 2023년 생명과학 정보 회사 Clarivate에 팔렸다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Clarivate 데이터</th><th>규모 (발표자 인용)</th></tr></thead>
+            <tbody>
+              <tr><td>내용</td><td>신약 개발 산업 전체의 역사에 주석을 단 기록</td></tr>
+              <tr><td>문서</td><td>수천만 건 (발표자가 "수억 건"이라고 했다가 바로 고쳐 말했다)</td></tr>
+              <tr><td>편집</td><td>해마다 수십만 건</td></tr>
+              <tr><td>색인 방식</td><td>수만 가지. 이를 다루는 풍부한 온톨로지<span class="en">ontology</span>가 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>팀이 자동화한 일은 문서 색인<span class="en">indexing</span>과 문서 사이의 관계 연결이다. 문서가 새로 들어오거나 고쳐질 때마다 작업이 하나 생긴다. 이런 작업이 한 달에 수만 건이다.</p>
+        <div class="callout">
+          <span class="title">결과 <span class="ts">04:50</span></span>
+          <span>사업이 가장 중요하게 여기는 작업에서 "9 세 개 반"<span class="en">three and a half nines</span>, 곧 99.95% 정확도를 냈다. 만드는 데는 돈이 많이 들었다. 엔지니어가 싸지 않기 때문이다. 설비 투자<span class="en">CAPEX</span>처럼 처음에 크게 드는 비용이었다. 다 만든 뒤에는 운영비가 쌌다. 대체로 정해진 범위 안에서 안정적으로 돌았다.</span>
+        </div>
+        <p class="note">이 사례의 수치는 발표자 팀이 만든 시스템에 대해 발표자가 직접 보고한 것이다. 외부 검증 자료는 발표에 나오지 않았다. 자기 성과에 대한 주장이니 감안해 읽자.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="first">
+        <header><span class="num">06</span><h2>첫 시도: 83%와 평가 1,000개 <span class="ts">05:10</span></h2></header>
+        <p>2024년 무렵 팀은 GPT-4o와 o3에 들떠 있었다. 지금 말로 하면 자료를 조사하고 분류를 붙이는 에이전트<span class="en">research and assignment agent</span>에 가까운 것을 만들었다.</p>
+        <p>몇 번의 스프린트 만에 80~83%가 나왔다. 팀은 10년 동안 자연어 처리를 해 온 사람들이었다. 파이프라인의 부품 하나를 위해 BERT 모델을 몇 달씩 미세 조정하던 경험이 있어서, 이 숫자에 크게 들떴다.</p>
+
+        <h3>전문가에게 빈 표를 내밀지 않는다 <span class="ts">05:40</span></h3>
+        <p>팀은 평가<span class="en">eval</span> 1,000개를 모아 도메인 전문가와 마주 앉았다. 평가는 시스템 결과가 맞는지 재는 시험 문항 묶음이다.</p>
+        <p>발표자가 잘했다고 꼽는 점이 있다. 시스템이 이미 처리해 본 예시를 잔뜩 가져갔다는 것이다. 바쁜 전문가에게 빈 스프레드시트를 주고 "평가 100개 채워 주세요"라고 하면 일이 굴러가지 않는다.</p>
+        <ul class="plain">
+          <li>전문가가 무엇이 가능한지 바로 보고 합류했다.</li>
+          <li>전문가가 시스템이 실패한 곳에 관심을 쏟았다.</li>
+          <li>평가를 쓰는 일에는 기술이 필요하다. 예시가 출발점의 수준을 올려 준다.</li>
+        </ul>
+        <p>발표자는 대부분의 자동화가 도메인 전문가의 참여를 필요로 할 것이라고 본다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="buckets">
+        <header><span class="num">07</span><h2>평가에서 드러난 세 갈래 <span class="ts">06:30</span></h2></header>
+        <p>전문가와 평가를 같이 보니 틀린 답이 한 종류가 아니었다. 세 갈래가 뒤섞여 있었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>갈래</th><th>무엇인가</th><th>발표의 예</th></tr></thead>
+            <tbody>
+              <tr><td>미결정·논쟁 사례<br><span class="muted">큰 덩어리</span></td><td>전문가 두 명이 서로 다른 답을 자신 있게 내거나, 조직이 아직 답을 정하지 않은 사례</td><td>콜히친의 타깃</td></tr>
+              <tr><td>치명 오류<br><span class="muted">작은 덩어리</span></td><td>틀리면 주요 고객 계정이 위험해진다는 데 모두가 동의하는 사례</td><td>다단계 작업의 무작위 실패</td></tr>
+              <tr><td>예외·에스컬레이션<br><span class="muted">약 3~5%</span></td><td>답은 정할 수 있지만 사람의 주의가 더 필요한 사례</td><td>VERVE-102</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>치명 오류 <span class="ts">07:20</span></h3>
+        <p>최상위 모델도 여러 단계를 거치는 작업에서는 2~3% 실패한다. 규모가 커지면 이 실패가 눈에 띈다. 때로는 다시 재현조차 안 된다.</p>
+
+        <h3>미결정 사례: 콜히친 <span class="ts">07:30</span></h3>
+        <p>신약 개발자들은 타깃<span class="en">target</span>을 중요하게 본다. 타깃은 약이 실제로 작용하는 핵심 분자나 경로다.</p>
+        <ol class="plain">
+          <li>발표자의 설명으로는, 통풍은 인터류킨-1 베타<span class="en">IL-1β</span>가 지나치게 만들어져 생긴다.</li>
+          <li>콜히친은 연쇄 반응을 막아 IL-1β를 줄인다.</li>
+          <li>그런데 콜히친이 직접 붙는 단백질은 튜불린<span class="en">tubulin</span>이다.</li>
+          <li>질문: 콜히친의 타깃은 IL-1β인가?</li>
+        </ol>
+        <p>GPT-5.5에 물으면 "아니다"라고 할 때가 있다. Opus 4.8(추정)에 물으면 "그렇다"고 할 때가 있다. 두 모델 모두 답이 오락가락한다. 발표자는 이것을 모델의 실수가 아니라, 조직이 아직 정답을 정하지 않은 사례로 분류한다.</p>
+        <p class="note">발표자도 실제 상황을 단순화한 예라고 밝혔다. 일반적인 의학 설명에서 통풍은 관절에 요산 결정이 쌓여 생기는 염증이고, IL-1β는 그 염증을 키우는 신호 물질이다.</p>
+
+        <h3>예외: VERVE-102 <span class="ts">08:10</span></h3>
+        <p>VERVE-102는 심장병을 고칠 수도 있다고 기대받는 신약 후보다. 이 사례에는 정할 수 있는 답이 있다. 약의 작용 기전 여섯 가지를 색인하면 된다.</p>
+        <p>문제는 그중 네 가지가 몇 년 전에는 과학계에 없던 개념이라는 점이다. 기존 색인 체계에는 담을 자리가 없다. 사람이 색인 체계와 관계를 어떻게 고칠지 생각해야 한다. 그래서 사람에게 넘길 사례다.</p>
+        <p class="note">자막의 "verb 102"를 심장병 치료 후보 VERVE-102로 바로잡았다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="routing">
+        <header><span class="num">08</span><h2>사례 라우팅 <span class="ts">08:50</span></h2></header>
+        <p>세 갈래는 서로 다르게 다뤄야 한다. 치명 오류는 성능을 끝까지 올릴 수 있는 곳으로 모은다. 예외와 미결정 사례는 정상 경로 밖으로 뺀다. 둘 다 평소와 다른 처리가 필요하기 때문이다.</p>
+        <p>발표자는 돌아보면 사례를 갈래별로 보내는 라우팅<span class="en">case routing</span>에 최종 성능 올리기만큼 시간을 썼다고 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>순서</th><th>질문</th><th>그렇다면</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>AI가 상황을 헷갈려 하거나, 평소와 다른 사례인가?</td><td>멈춘다. AI가 무슨 상황인지 설명하고 분류한 뒤 파이프라인에서 뺀다</td></tr>
+              <tr><td>2</td><td>사업상 중요할 수 있는가?</td><td>평가 수천 개로 단단히 검증한 전용 파이프라인으로 보낸다. 대부분은 여기서 답이 나온다. 그래도 확신이 없으면 사람에게 예외로 넘긴다</td></tr>
+              <tr><td>3</td><td>조직이 답을 정하지 않은 사례인가?</td><td>이것도 따로 뺀다</td></tr>
+              <tr><td>4</td><td>어디에도 해당하지 않는가?</td><td>평소대로 처리해 내보낸다. 대부분의 사례가 여기에 속한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="climb">
+        <header><span class="num">09</span><h2>95%에서 99.95%까지 <span class="ts">10:00</span></h2></header>
+        <p>애매한 사례와 예외를 빼고 나니, 사업상 치명적인 작업은 표준 기법만으로 약 95%가 나왔다.</p>
+        <p>95%에서 99.95%로 가는 길은 힐 클라이밍<span class="en">hill climbing</span>이다. 평가를 많이 읽는다. LLM 성능을 짜내는 흔한 요령을 하나씩 써 본다. 그렇게 조금씩 올린다.</p>
+
+        <figure class="chart" aria-label="오류율 비교: 첫 에이전트 17%, 치명 구간 표준 기법 5%, 치명 구간 힐 클라이밍 뒤 0.05%">
+          <span class="chart-title">오류율로 본 정확도 변화 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>첫 에이전트 · 정확도 약 83%</span><span class="val">오류 17</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="첫 에이전트: 오류 17%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>치명 구간, 표준 기법 · 정확도 약 95%</span><span class="val">오류 5</span></div>
+              <div class="track"><div class="fill" style="width:29.4%" title="치명 구간 표준 기법: 오류 5%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>치명 구간, 힐 클라이밍 뒤 · 정확도 99.95%</span><span class="val">오류 0.05</span></div>
+              <div class="track"><div class="fill key" style="width:0.3%" title="치명 구간 힐 클라이밍 뒤: 오류 0.05%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>8.5</span><span>17</span></div>
+          <span class="caption">막대 길이는 오류율의 실제 비율이다. 마지막 막대는 첫 막대의 340분의 1이라 거의 보이지 않는다. 95%에서 99.95%로 가면 오류가 100분의 1로 준다. 83%는 첫 에이전트의 성능이고, 95%와 99.95%는 애매한 사례와 예외를 뺀 치명 구간의 정확도다. 같은 잣대로 잰 숫자가 아니다.</span>
+        </figure>
+
+        <p>발표자는 입력이 잘 구조화돼 있고, 사업에서 뽑아낸 구체적 사례만 다룬다면, 대부분의 자동화가 99.95%에 닿을 수 있다고 본다.</p>
+
+        <h3>사람보다 나을 때만 배포했다 <span class="ts">10:30</span></h3>
+        <p>팀은 무작위 표본을 뽑아 비교했다. 기존 사람의 작업보다 나을 때만 배포했다.</p>
+        <p>발표자는 이 시스템이 "규모에서는" 박사급 사람보다 낫다고 주장한다. 단서도 붙인다. 박사급 전문가가 한 사례를 앉아서 꼼꼼히 보면 사람이 이긴다. 하지만 주마다 수백 건을 보는 상황은 다르다. 지치고, 천 번에 한 번은 잘못 클릭하고, 시간에 쫓기고, 다른 일도 해야 한다. 이때는 시스템이 낫다는 것이다.</p>
+        <p class="note">계산: 천 번에 한 번 잘못 클릭하는 것만으로도 사람의 오류율은 0.1%다. 시스템의 오류율 0.05%의 두 배다. "박사급보다 낫다"는 발표자 팀의 결과에 대한 발표자 본인의 주장이다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="exhaust">
+        <header><span class="num">10</span><h2>자동화의 부산물 <span class="ts">11:10</span></h2></header>
+        <p>완전 자동화의 이점 두 가지는 앞에서 봤다. 시간을 아끼고, 중요한 작업의 결과가 좋아진다. 발표자는 세 번째 이점을 꼽는다. 자동화의 부산물<span class="en">exhaust</span>을 전문가가 주의를 쏟기 좋은 형태로 정리해 준다는 것이다.</p>
+        <p>처음의 그 전문가로 돌아가 보자. 일상 업무는 자동화가 가져갔다. 라우팅에 많이 투자했으니 남은 사례도 갈래별 더미로 정리돼 전문가 앞에 놓인다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>전문가 앞의 더미</th><th>전문가가 하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>자동화가 확신하지 못한 치명 사례</td><td>수가 아주 적다. 빨리 검토하고 내보낸다</td></tr>
+              <tr><td>조직이 답을 정하지 않은 사례</td><td>조직에 기준을 정하라고 요구한다. 또는 아예 얼리자고 제안한다</td></tr>
+              <tr><td>예외와 새로운 사례</td><td>모아 보며 패턴을 찾고, 투자할 곳을 제안한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>미결정 사례: 정하거나, 얼리거나 <span class="ts">12:00</span></h3>
+        <p>예를 들어 전체 작업의 20%를 조직이 어떻게 할지 정하지 못했다고 하자. 먼저 떠오르는 생각은 이걸 계기로 조직이 명세를 정하게 하는 것이다.</p>
+        <p>그럴 수도 있다. 하지만 이런 사례는 정하는 데 비용이 많이 든다. 아직 정해지지 않은 이유가 가치가 크지 않아서인 경우도 많다.</p>
+        <p>그래서 다른 길이 있다. 전문가가 쌓인 더미를 보고 "이 일은 영구히 얼리자"고 제안하는 것이다. 사업상 이유가 생길 때까지 다시 생각하지 않는다. 이것도 조직이 생각할 거리를 줄이는 방법이다. 줄어든 만큼 주의가 맞는 곳으로 간다.</p>
+
+        <h3>예외 사례: 시장의 선행 지표 <span class="ts">12:50</span></h3>
+        <p>발표자에 따르면 VERVE-102 같은 획기적인 연구는 신약 개발 작업의 약 3%뿐이다. 나머지는 대부분 익숙한 패턴을 따른다.</p>
+        <p>그래서 전문가는 이런 사례를 한두 주에 한 번 띄엄띄엄 본다. 이렇게 드물게 보면 감을 잡기 어렵다. 얼마나 중요한지, 해결에 얼마가 드는지, 누가 돈을 낼지 모른다.</p>
+        <p>사례를 모아 두면 다르다. 전문가가 두세 시간 앉아 한꺼번에 보면 패턴이 보인다. 조직에 제안할 투자 방향도 떠오른다. 그러다 실제 고객이 문제를 들고 오면 바로 대응할 수 있다.</p>
+        <div class="callout">
+          <span class="title">실제로 일어난 일 <span class="ts">13:40</span></span>
+          <span>발표자 팀에서는 매출 규모가 여덟 자리 숫자인 고객 계정에서 이런 일이 저절로 일어났다. 데이터가 정리돼 있던 덕분에, 전문가는 이미 어디에 투자할지 의견을 갖고 있었다.</span>
+        </div>
+        <p>발표자는 규모가 큰 업무 과정 대부분이 이렇다고 본다. 데이터를 모아 보면 시장 수요의 선행 지표<span class="en">leading indicator</span>가 쌓인다. 몇 년 전에는 없던 쪽으로 시장이 움직이는 곳이 보인다.</p>
+        <p>하지만 이런 신호는 예외처럼 보인다. 드물게 무작위로 나오면 우선순위를 매기기 어렵다. 이 신호를 정리해 두면 <strong>가장 뛰어난 사람이 그걸 두고 생각할 수 있다.</strong></p>
+      </section>
+
+      <!-- 11 -->
+      <section id="cost">
+        <header><span class="num">11</span><h2>비용과 쓸 곳 고르기 <span class="ts">14:30</span></h2></header>
+        <p>발표자는 지금까지의 이야기를 조직 리팩터링<span class="en">organizational refactoring</span>이라고 부른다. 코드를 다시 짜듯 조직의 일 흐름을 다시 짠다는 뜻이다.</p>
+        <ul class="plain">
+          <li>시간을 아낀다.</li>
+          <li>작업 하나하나의 결과가 좋아진다.</li>
+          <li>업무 덩어리를 감싸서 아무도 신경 쓰지 않아도 되게 한다. 조직이 단순해진다.</li>
+          <li>인재를 더 가치 있는 문제로 보낸다.</li>
+        </ul>
+
+        <h3>비싸다 <span class="ts">14:50</span></h3>
+        <p>박사급 전문가의 일을 대신할 만큼 높은 품질을 노리면 비싸다. AI 엔지니어가 비싸다. 그 엔지니어가 평가 스프레드시트를 몇 시간씩 읽는 것도 비싸다. 95%에서 99.95%로 가는 구간이 특히 비싸다.</p>
+        <p>엔지니어링이 아닌 업무 과정을 다시 짜면 조직 변화도 따른다. 신뢰를 쌓아야 하고, 담당이 바뀐다. 이만한 투자를 한다면 영업·마케팅 팀과 함께 매출로 연결할 방법도 찾아야 한다. 고객 만족을 높이거나 이웃 시장으로 넓히는 식이다.</p>
+
+        <h3>어디에 쓸까 <span class="ts">15:30</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">맞는 곳</span>
+            <ul>
+              <li>이미 규모가 있고, 투자 대비 효과<span class="en">ROI</span>가 뚜렷한 영역</li>
+              <li>일곱 자리(수백만 단위) 매출이 걸려 있고, 고객 티켓이 쌓인 업무. CFO도 이해하는 근거다</li>
+              <li>이미 돌아가는 업무 과정. 서면 명세가 있으면 더 좋다</li>
+              <li>복잡하고 꼼꼼함이 핵심인 전문가 업무. 박사급 지식이 드는 반복 업무</li>
+            </ul>
+            <p class="verdict"><b>명세의 품질은 크게 신경 쓰지 않는다.</b> 명세를 만들려는 움직임이 있었다는 것 자체가 신호다. 팀이 "이건 감으로 하는 판단이 아니라 정할 수 있는 일"이라고 믿는다는 뜻이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">맞지 않는 곳</span>
+            <ul>
+              <li>스타트업, 탐색 단계, 새 사업. 사람의 유연함을 남겨 둔다</li>
+              <li>주관적 판단이 많이 들어가는 업무</li>
+              <li>회사를 남과 다르게 만드는 핵심 업무 과정 자체. 발표자는 여기를 AI 자동화의 승부처로 보지 않는다</li>
+            </ul>
+            <p class="verdict">경계선은 <b>꼼꼼함이냐, 판단이냐</b>에 긋는다.</p>
+          </div>
+        </div>
+        <p>꼼꼼함이 핵심인 반복 업무가 좋은 이유가 있다. 기억과 주의가 많이 드는 반복 작업에서 사람은 규모가 커지면 실수한다. 박사급 반복 업무를 기계가 할 수 있게 된 것은 발표자가 보기에 아주 새로운 일이다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="tricks">
+        <header><span class="num">12</span><h2>99.95%를 위한 요령 <span class="ts">17:10</span></h2></header>
+        <p>발표자는 95%에서 99.95%로 가는 요령을 슬라이드 한 장에 모아 보여 줬다. 항목을 하나씩 설명하지는 않았다. 자막에서 확인되는 것은 발표자가 따로 짚은 두 가지다.</p>
+        <ol class="plain">
+          <li><strong>평가를 직접 읽고, 직접 쓴다.</strong></li>
+          <li><strong>평가를 1,000개 만들고, 그걸 읽는 데 시간이 든다고 각오한다.</strong></li>
+        </ol>
+        <div class="callout">
+          <span class="title">팀이 얻은 가장 큰 교훈 <span class="ts">17:50</span></span>
+          <span>모두가 평가 결과를 읽는 데 시간을 들여야 했다. AI가 이번에는 왜 기대한 대로 하지 않았는지 하나씩 찾는 일이다. 모델이 쓴 아첨<span class="en">sycophantic</span> 섞인 글을 읽으며 정확히 어디서 어긋났는지 짚어야 해서 몹시 지친다.</span>
+        </div>
+        <p>발표자는 모델이 어디서 실패하는지에 관심이 많다고 말한다. 실패하는 곳을 알면 다음에 무엇을 만들지 보이기 때문이다.</p>
+        <p class="note">발표자는 입력이 깔끔하고 과정이 정해져 있는데도 99.95%에 닿지 못하는 사례가 있으면 연락해 달라고 청했다. 발표자 본인의 사업과 이어질 수 있는 주제이니 감안해 읽자.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="closing">
+        <header><span class="num">13</span><h2>주의력과 판단을 관리하는 회사 <span class="ts">18:00</span></h2></header>
+        <blockquote>할 수 있게 되는 대로 네 일을 대신할 사람을 뽑아라. 그리고 발을 올리고 앉아, 회사가 돈을 더 벌 방법을 생각하라.<cite>발표자가 Rockefeller의 말이라며 바꿔 옮긴 것</cite></blockquote>
+        <p>발표자의 해석은 이렇다. 네 일을 명세로 정할 수 있다면 다른 사람에게 맡겨라. 너는 판단하고, 새 기회를 찾아라.</p>
+        <p>발표자는 시대를 타지 않는 좋은 조언이라고 본다. AI가 조직의 주의를 가장 가치 있는 곳으로 보내 준다면, 이 조언을 더 잘 따를 수 있다.</p>
+
+        <h3>발표자의 두 가지 전망 <span class="ts">18:40</span></h3>
+        <ul class="plain">
+          <li><strong>도구는 차별점이 되지 않는다.</strong> 오케스트레이션 계층과 하네스는 시장이 알아서 정리한다. 2026년에 어떤 AI 오케스트레이션 소프트웨어를 고르느냐로 큰 차이가 나지는 않는다.</li>
+          <li><strong>주의력과 판단이 차별점이 된다.</strong> AI로 가장 성공하는 회사는 조직 전체의 주의력과 판단을 가장 잘 관리하는 회사다. 사람의 판단이 값을 가지는 동안, 그 값은 계속 오른다.</li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>AI로 실행은 싸지고, 무엇을 할지 정하는 판단은 더 귀해진다. 발표자는 이 점이 아직 과소평가돼 있다고 본다.</li>
+          <li><strong>완전 자동화</strong>는 정상 경로에서 사람을 빼고, 사람은 예외에만 쓴다.</li>
+          <li>기업에서 에이전트는 유지보수가 어렵고, 낯설게 실패하고, 사람이 내릴 결정을 늘린다.</li>
+          <li>AI의 재량은 <strong>비상구</strong>에 쓴다. 입력이 정상 경로에 맞는지 먼저 거르고, 맞지 않으면 빼거나 사람에게 넘긴다.</li>
+          <li>전문가에게는 빈 표 대신 <strong>예시를 채운 평가</strong>를 가져간다.</li>
+          <li>평가를 보면 사례는 <strong>미결정, 치명 오류, 예외</strong> 세 갈래로 나뉜다. 갈래마다 처리가 다르다.</li>
+          <li>사례 라우팅에 성능 올리기만큼 시간이 들었다. 애매한 사례를 빼자 치명 구간은 95%가 됐고, 힐 클라이밍으로 99.95%까지 올렸다.</li>
+          <li>무작위 표본이 기존 사람 작업보다 나을 때만 배포했다.</li>
+          <li>자동화의 부산물을 갈래별로 모으면, 전문가가 <strong>얼릴 일과 투자할 일</strong>을 고른다. 예외는 시장 수요의 선행 지표다.</li>
+          <li>규모·매출·명세가 있고 꼼꼼함이 핵심인 업무에 쓴다. 이기는 회사는 <strong>주의력과 판단을 가장 잘 관리하는 회사</strong>다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 완전 자동화는 사람 개입형 자동화와 무엇이 다른가?</span></summary><div class="answer">정상 경로에서 사람을 완전히 뺀다. 사람은 단계마다 확인하지 않고 예외만 맡는다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>발표자가 기업 환경에서 에이전트의 문제로 꼽은 세 가지는?</span></summary><div class="answer">스킬과 하네스가 바뀌면 유지보수가 힘들다. 기업이 다루기 어려운 낯선 모양으로 실패한다. 사람이 내려야 할 결정을 늘린다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>완전 자동화의 "비상구"에서 AI는 무엇을 하나?</span></summary><div class="answer">입력을 미리 거른다. 정상 경로에 맞는지 확인하고, 악의적인 입력은 거절하고, 사업상 중요해 보이면 사람에게 넘긴다. 결과의 변동이 줄어 자동화 범위가 넓어진다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>전문가에게 빈 스프레드시트 대신 예시를 가져가면 무엇이 좋은가?</span></summary><div class="answer">전문가가 가능성을 바로 보고 합류한다. 실패한 곳에 관심을 쏟는다. 평가 쓰기는 기술이 필요한 일이라 예시가 출발점을 올려 준다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>평가에서 드러난 세 갈래는?</span></summary><div class="answer">조직이 답을 정하지 않은 미결정·논쟁 사례, 틀리면 주요 계정이 위험한 치명 오류, 사람의 주의가 더 필요한 예외(약 3~5%).</div></details>
+          <details><summary><span class="qn">Q6</span><span>콜히친 예는 왜 "미결정" 사례인가?</span></summary><div class="answer">콜히친은 IL-1β를 줄이지만 직접 붙는 것은 튜불린이다. 무엇을 타깃으로 칠지 정해지지 않아 최상위 모델들도 답이 오락가락한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>VERVE-102는 왜 사람에게 넘길 사례인가?</span></summary><div class="answer">답은 정할 수 있지만, 작용 기전 여섯 가지 중 네 가지가 과학에 새로운 개념이다. 사람이 색인 체계를 어떻게 고칠지 정해야 한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>"9 세 개 반"은 몇 %이고, 95%에서 거기까지 가면 오류는 어떻게 바뀌나?</span></summary><div class="answer">99.95%다. 오류율이 5%에서 0.05%로, 100분의 1이 된다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>"규모에서는 박사급보다 낫다"는 주장에 붙은 단서는?</span></summary><div class="answer">한 사례를 꼼꼼히 보면 사람이 이긴다. 주마다 수백 건을 보며 지치고, 가끔 잘못 클릭하고, 시간에 쫓기는 상황에서는 시스템이 낫다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>미결정 사례가 쌓였을 때 전문가가 고를 수 있는 두 길은?</span></summary><div class="answer">조직에 기준을 정하라고 요구한다. 또는 가치가 작으면 영구히 얼리고, 사업상 이유가 생길 때까지 다시 생각하지 않자고 제안한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>예외 사례를 모아 두면 왜 시장의 선행 지표가 되나?</span></summary><div class="answer">드물게 흩어져 보이면 신호가 약해 우선순위를 못 매긴다. 모아 보면 패턴이 보이고, 시장이 새로 움직이는 곳이 드러난다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 완전 자동화를 권하지 않는 곳은?</span></summary><div class="answer">스타트업, 탐색 단계, 새 사업, 주관적 판단이 많은 업무, 회사를 남과 다르게 만드는 핵심 과정 자체.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>핵심 전문가가 한 주 동안 주의를 어디에 쓰는지 적어 본다<span class="how">일상 결정, 예외 처리, 사업을 앞으로 미는 일로 나눈다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>이미 규모가 있고 매출과 연결된 업무에서 자동화 후보를 고른다<span class="how">걸린 매출 규모와 관련 고객 티켓 수를 함께 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>후보 업무가 판단보다 꼼꼼함이 핵심인지 확인한다<span class="how">주관적 판단이 많거나 회사의 핵심 차별 과정이면 뺀다. 서면 명세가 있으면 품질과 상관없이 좋은 신호다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>전문가에게 빈 표 대신 예시를 채운 평가 묶음을 가져간다<span class="how">확인: 전문가가 실패 사례에 관심을 보이는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>틀린 평가를 미결정, 치명 오류, 예외로 나눈다<span class="how">갈래마다 처리 경로를 따로 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>자동화 입구에 거름망을 둔다<span class="how">정상 경로에 맞는가, 악의적인가, 사업상 중요한가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>치명 구간만 떼어 전용 평가로 성능을 올린다<span class="how">확인: 무작위 표본에서 기존 사람 작업보다 나은가. 그 전에는 배포하지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>실패한 평가를 사람이 직접 읽는 시간을 일정에 넣는다<span class="how">AI가 왜 기대와 다르게 했는지 하나씩 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>미결정 사례 더미를 정기적으로 검토해 정하거나 얼린다<span class="how">얼린 항목은 다시 열 조건(사업상 이유)을 같이 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>예외 사례를 모아 전문가가 한꺼번에 보는 시간을 만든다<span class="how">확인: 패턴과 투자 제안이 나오는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>정상 경로</td><td>Happy path. 예외 없이 평소대로 흘러가는 기본 처리 경로</td></tr>
+              <tr><td>에이전시 (재량)</td><td>Agency. AI가 스스로 판단해 다음 행동을 고르는 성질</td></tr>
+              <tr><td>완전 자동화</td><td>Full automation. 정상 경로에서 사람을 완전히 빼고, 사람은 예외만 맡는 자동화</td></tr>
+              <tr><td>사람 개입형 자동화</td><td>Human-in-the-loop. 단계마다 사람이 확인하거나 승인하는 자동화</td></tr>
+              <tr><td>비상구</td><td>Escape hatch. 자동화에 맞지 않는 입력을 빼내거나 사람에게 넘기는 출구</td></tr>
+              <tr><td>에스컬레이션</td><td>Escalation. 자동으로 처리하지 않고 사람에게 넘기는 것</td></tr>
+              <tr><td>도메인 전문가</td><td>Domain expert. 특정 업무 분야를 깊이 아는 사람</td></tr>
+              <tr><td>평가 (eval)</td><td>시스템 결과가 맞는지 재는 시험 문항 묶음</td></tr>
+              <tr><td>9 세 개 반</td><td>Three and a half nines. 99.95%. 9 세 개 뒤에 5가 붙어 "반"이라고 부른다</td></tr>
+              <tr><td>힐 클라이밍</td><td>Hill climbing. 작은 개선을 하나씩 시험해 점수를 조금씩 올리는 방식</td></tr>
+              <tr><td>라우팅</td><td>Case routing. 사례를 종류별로 나눠 맞는 처리 경로로 보내는 것</td></tr>
+              <tr><td>색인</td><td>Indexing. 문서에 분류 꼬리표를 달아 찾을 수 있게 하는 일</td></tr>
+              <tr><td>온톨로지</td><td>Ontology. 개념과 개념 사이의 관계를 정해 둔 분류 체계</td></tr>
+              <tr><td>타깃</td><td>Target. 약이 실제로 작용하는 핵심 분자나 경로</td></tr>
+              <tr><td>CAPEX</td><td>설비 투자처럼 처음에 크게 드는 비용. 운영비(OPEX)와 대비된다</td></tr>
+              <tr><td>부산물</td><td>Exhaust. 자동화가 처리하지 않고 남긴 사례와 기록</td></tr>
+              <tr><td>선행 지표</td><td>Leading indicator. 앞으로 일어날 변화를 미리 보여 주는 신호</td></tr>
+              <tr><td>아첨</td><td>Sycophancy. 모델이 상대의 기대에 맞춰 듣기 좋은 답을 하는 경향</td></tr>
+              <tr><td>조직 리팩터링</td><td>Organizational refactoring. 코드를 다시 짜듯 조직의 일 흐름을 다시 짜는 것</td></tr>
+              <tr><td>오케스트레이션</td><td>Orchestration. 여러 모델, 도구, 에이전트를 엮어 순서대로 돌리는 계층</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙, 검사를 정해 주는 실행 틀</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>주제 소개: 성장 단계 회사의 엔지니어링 리더십</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>가장 강한 도메인 전문가의 한 주</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>사무직 결과물 비용의 하락과 판단 부담</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>완전 자동화의 정의와 이점</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>정상 경로에서 재량을 빼라: 기업에서 에이전트의 문제</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>완전 자동화의 장점</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>비상구: 입력 미리 거르기</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>사례 소개: Motion Hall(추정), Clarivate</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>한 달 수만 건, 99.95%</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>첫 시도: 에이전트로 80~83%</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>평가 1,000개와 도메인 전문가</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>세 갈래: 미결정, 치명 오류, 예외</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>치명 오류: 최상위 모델의 2~3% 실패</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>미결정 사례: 콜히친의 타깃</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>예외 사례: VERVE-102</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>세 갈래를 다루는 방향</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>라우팅에 든 시간과 라우팅 순서</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>치명 구간: 95%에서 99.95%로</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>무작위 표본 비교 후 배포, 박사급과의 비교</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>세 번째 이점: 부산물 정리</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>미결정 사례: 정하거나 얼리기</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>예외 사례: 3%의 획기적 연구</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>여덟 자리 매출 계정 사례, 선행 지표</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>요약: 조직 리팩터링</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>비용과 조직 변화</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>쓸 곳 고르기: 규모와 ROI</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>업무 고르기: 명세, 꼼꼼함, 판단</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>99.95%를 위한 요령</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>가장 큰 교훈: 평가를 직접 읽기</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>Rockefeller 인용</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>전망: 오케스트레이션과 판단 관리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'wWisOHEcMPE:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

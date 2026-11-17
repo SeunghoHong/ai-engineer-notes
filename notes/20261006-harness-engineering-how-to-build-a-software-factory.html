@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>소프트웨어 공장 만들기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#who">누구를 위한 발표인가</a></li>
+      <li><a href="#factory">소프트웨어 공장이란</a></li>
+      <li><a href="#metrics">세 가지 지표</a></li>
+      <li><a href="#why">왜 공장을 만드나</a></li>
+      <li><a href="#loops">하네스 엔지니어링과 세 가지 루프</a></li>
+      <li><a href="#hard">왜 어려운가</a></li>
+      <li><a href="#layers">작업할 세 층</a></li>
+      <li><a href="#tessl">Tessl이 돕는 방식</a></li>
+      <li><a href="#progress">진척을 재는 지표</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-06 · 21분 · 영어 발표 한글 정리</span>
+      <h1>하네스 엔지니어링으로 소프트웨어 공장 짓기</h1>
+      <p class="lead">소프트웨어 공장은 제품을 에이전트가 만들고 엔지니어는 그 공장을 만드는 체계다. 공장으로 가는 핵심 기술이 하네스 엔지니어링이다. 에이전트가 스스로 고치고, 사람 대신 검사하고, 실수를 다시 하지 않게 만드는 세 가지 루프를 짓는 일이다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=X6l4lpA0_NY" target="_blank" rel="noopener">Harness Engineering: How to Build a Software Factory</a></span>
+        <span>발표: Dru Knox (Tessl 제품·디자인 총괄)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 "Tesla", "Tessle"로 적힌 회사 이름은 Tessl로, "metal loop"는 meta loop로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>소프트웨어 공장</strong>은 사용자에게 나가는 결과물을 전부 에이전트가 만들고, 엔지니어는 그 공장을 더 자율적이고 자동화된 상태로 만드는 체계다.</li>
+        <li>공장의 세 지표는 <strong>자율성, 자동화, 품질</strong>이다. 자율성을 먼저 올리고, 그다음 자동화를 올린다. 품질은 그동안 일정하게 지킨다.</li>
+        <li>공장의 진짜 보상은 속도가 아니라 <strong>품질</strong>이다. 백로그가 사라져 테스트와 리팩터링에 쓸 여력이 생긴다.</li>
+        <li><strong>하네스 엔지니어링</strong>은 공장을 자동화하고 품질을 올리는 루프를 만드는 일이다. 루프는 안쪽, 바깥쪽, 메타 세 가지다.</li>
+        <li>어려운 이유는 셋이다. 지식이 매주 바뀌고, 계획에 없는 일이며, 필요한 신호가 로컬 로그와 사람 머릿속에 숨어 있다.</li>
+        <li>작업 순서는 <strong>제어면 → 에이전트 준비 → 개선 루프</strong>다. 시간은 개선 루프에 가장 많이 쓴다.</li>
+        <li>진척은 <strong>사람이 넘겨받은 횟수와 사람의 PR 댓글이 줄고, 사람 없이 시작된 PR이 느는지</strong>로 잰다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="who">
+        <header><span class="num">01</span><h2>누구를 위한 발표인가 <span class="ts">00:40</span></h2></header>
+        <p>발표자는 이 내용을 "조금 앞선 단계의 이야기"라고 못 박는다. 아직 코딩 에이전트를 쓰지 않는 팀이 시작할 지점은 아니다.</p>
+        <ul class="plain">
+          <li>코딩 에이전트 세션을 <strong>한 번에 두세 개</strong> 돌리는 데 익숙하다.</li>
+          <li>쉬운 일과 중간 난이도의 일은 에이전트가 <strong>대체로 알아서 맞게</strong> 해낸다.</li>
+        </ul>
+        <p>이 정도면 하네스 엔지니어링과 소프트웨어 공장을 생각하기 좋은 지점이다. 그 전이라도 내용은 적용되지만 효과는 이 지점에서 가장 크다.</p>
+        <p class="note">발표자는 Tessl 소속이고, 발표 후반은 Tessl 제품 소개다. 다만 앞부분의 개념은 어떤 도구를 쓰든 적용되는 기법이라고 발표자 스스로 밝혔다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="factory">
+        <header><span class="num">02</span><h2>소프트웨어 공장이란 <span class="ts">02:00</span></h2></header>
+        <p>엄밀한 정의는 없다. 발표자가 쓰는 뜻은 이렇다. <strong>사용자에게 나가는 결과물을 전부 에이전트가 만드는 체계</strong>다. 엔지니어링 팀은 제품을 직접 만들지 않고 그 공장을 만든다.</p>
+        <div class="shift" aria-label="엔지니어 역할의 이동">
+          <div><span class="tag">지금까지</span><b>엔지니어가 제품을 만든다</b><span class="muted">기능을 직접 구현하고 고친다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">공장</span><b>엔지니어가 공장을 만든다</b><span class="muted">모두가 내부 도구 제작자가 되고, 공장이 제품을 만든다</span></div>
+        </div>
+        <p>공장을 만든다는 말은 세 가지를 뜻한다. 공장을 더 자율적으로 만들고, 더 자동화하고, 산출물의 품질을 올리는 것이다. 이 셋이 다음 섹션의 세 지표다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="metrics">
+        <header><span class="num">03</span><h2>세 가지 지표: 자율성, 자동화, 품질 <span class="ts">03:00</span></h2></header>
+        <p>공장으로 가는 길의 기둥이자 순서다. 발표자는 설명 중에 앞 두 개가 슬라이드와 뒤바뀌었다고 바로잡았는데, 정리하면 아래와 같다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>묻는 질문</th><th>예</th></tr></thead>
+            <tbody>
+              <tr><td>자율성 <span class="en">autonomy</span></td><td>맞는 답에 이르기까지 사람이 얼마나 끼어들어야 하나</td><td>코드를 고쳐 준 횟수, 방향을 잡아 준 횟수</td></tr>
+              <tr><td>자동화 <span class="en">automation</span></td><td>사람이 검토하지 않고 얼마나 맡길 수 있나</td><td>결과를 받아들이기 전에 검토하고 신뢰를 쌓는 데 드는 일</td></tr>
+              <tr><td>품질 <span class="en">quality</span></td><td>사용자에게 나간 제품이 얼마나 좋은가</td><td>사용자 분석 지표, 테스트 품질, 테스트 커버리지</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">자율성과 자동화는 다르다</span>
+          <span>에이전트가 주어진 일을 한 번에 끝내는 경우가 많다면 자율성은 높다. 그래도 아직 믿지 못해 코드를 전부 직접 읽고 손으로 검증한다면 자동화는 낮다. 둘은 연결돼 있지만 같은 것이 아니다. <strong>자율성을 먼저 쌓아야 자동화로 넘어갈 수 있다.</strong></span>
+        </div>
+        <p>공장으로 가는 동안의 순서는 이렇다. 자율성을 올리고, 그다음 자동화를 올린다. 그동안 품질은 일정하게 지킨다. 공장이 완성되면 그때 품질을 올린다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="why">
+        <header><span class="num">04</span><h2>왜 공장을 만드나 <span class="ts">04:30</span></h2></header>
+        <p>많은 사람이 공장을 "더 빨리 출시하는 방법"으로 본다. 엉성한 코드가 조금 섞여도 기능이 훨씬 많이 나가니 남는 장사라는 식이다. 발표자는 이것을 <strong>단기 현상</strong>으로 본다.</p>
+        <ul class="plain">
+          <li>속도는 분명 오른다. 그런데 모든 팀에는 시간이 없어 못 하던 버그 수정, 개선, 탐색이 쌓여 있다.</li>
+          <li>공장이 있으면 <strong>백로그라는 개념이 사라진다.</strong> 테스트 품질 개선과 구조 리팩터링에 쓸 여력이 생긴다.</li>
+          <li>전환 초기에는 품질을 유지하거나 아주 조금 떨어뜨릴 수 있다. 그러나 최종 보상은 <strong>더 좋은 품질의 코드</strong>다.</li>
+          <li>협업 방식도 바뀐다. 기술 직군이 아닌 사람도 아이디어로 기여하기 쉬워진다. 엔지니어는 모두가 쓰는 밑바탕 체계에 집중한다.</li>
+        </ul>
+        <p class="note">"품질이 오른다"는 것은 Tessl이 믿는 바로 발표자가 밝힌 것이다. 데이터로 제시된 것은 아니다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="loops">
+        <header><span class="num">05</span><h2>하네스 엔지니어링과 세 가지 루프 <span class="ts">06:10</span></h2></header>
+        <p>공장으로 가는 핵심 기술이 <strong>하네스 엔지니어링</strong> <span class="en">harness engineering</span>이다. 최근 몇 주 사이 <strong>루프 엔지니어링</strong> <span class="en">loop engineering</span>이라고도 불리기 시작했다. 공장이 제품을 만든다면, 하네스 엔지니어링은 <strong>공장을 자동화하고 품질을 올리는 루프</strong>를 만드는 일이다.</p>
+        <p>루프는 세 가지다. 각각 개발의 한 단계에 대응하고, 각각 다른 지표를 끌어올린다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">안쪽 루프 <span class="en">inner loop</span> <span class="ts">06:50</span></span>
+            <p>에이전트가 PR을 올리기 전, 작업 중에 도는 루프다.</p>
+            <ul>
+              <li>빠르고 싸야 한다. 에이전트가 항상 돌린다고 가정한다.</li>
+              <li>사람이 끼어들지 않아도 에이전트의 실수를 잡아 바로잡는다.</li>
+            </ul>
+            <p class="verdict">올리는 지표: <b>자율성</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">바깥 루프 <span class="en">outer loop</span> <span class="ts">07:20</span></span>
+            <p>PR이 올라간 뒤 한 번 도는 루프다.</p>
+            <ul>
+              <li>비싸고 꼼꼼한 검사를 둔다. 반복 작업마다 돌리기엔 비싸지만, 사람이 확인해야 할 것을 대신한다.</li>
+              <li>예: 에이전트 QA, 테스트 묶음의 품질을 재는 변이 테스트.</li>
+              <li>결과를 보고 에이전트가 다시 고친다.</li>
+            </ul>
+            <p class="verdict">올리는 지표: <b>자동화</b> (사람의 검토 시간을 줄인다)</p>
+          </div>
+          <div class="card">
+            <span class="tag">메타 루프 <span class="en">meta loop</span> <span class="ts">08:00</span></span>
+            <p>개발 과정 바깥에서 전체를 지켜보는 루프다.</p>
+            <ul>
+              <li>코딩 에이전트 로그, PR, 이슈 트래커, 사용자 피드백을 본다.</li>
+              <li>사용자에게까지 새어 나간 실수, 사람이 손으로 바로잡은 실수를 찾는다.</li>
+              <li>그 결과를 안쪽 루프와 바깥 루프에 되먹여 같은 실수를 반복하지 않게 한다.</li>
+            </ul>
+            <p class="verdict">올리는 지표: <b>품질</b>. 세 루프의 바탕이 갖춰진 뒤에는 여기에 투자해야 "얼마나 AI 네이티브한가"가 올라간다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="hard">
+        <header><span class="num">06</span><h2>왜 어려운가 <span class="ts">09:00</span></h2></header>
+        <p>발표자는 도구 도움 없이 맨손으로 하는 하네스 엔지니어링이 어렵다고 먼저 털어놓는다. 이유는 셋이고 대부분 사람의 심리에서 나온다.</p>
+        <ol class="plain">
+          <li><strong>새 분야이고 매주 바뀐다.</strong> 따라가려면 AI 연구자가 되어야 한다. 논문을 읽고 블로그를 보며 세운 모범 사례가 다음 주에 낡고, 두 주 뒤에는 오히려 피해야 할 패턴이 된다. 이 지식을 따라갈 시간을 미리 확보할 방법이 필요하다. 이 문제는 시간이 지나면 줄어들 수 있다.</li>
+          <li><strong>계획에 없는 일이다.</strong> 기능을 만들다 보면 에이전트가 어디서 어떻게 실패할지, 고치는 데 얼마나 걸릴지 미리 알 수 없다. 에이전트를 고치는 일은 출시와 경쟁한다. 안 하면 에이전트가 영영 안 좋아지는 지점에 갇히고, 하면 마감을 놓친다. 그래서 아무도 안 한다. 발표자는 이 문제가 더 오래 남는다고 본다.</li>
+          <li><strong>필요한 정보가 손에 없다.</strong> 에이전트를 좋게 만들 신호가 로컬 로그, 누군가의 컴퓨터, 누군가의 머릿속에 흩어져 있다. 모든 것이 저장되고 나중에 꺼내 볼 수 있는 자리로 작업 흐름을 옮기는 일이 먼저다.</li>
+        </ol>
+      </section>
+
+      <!-- 7 -->
+      <section id="layers">
+        <header><span class="num">07</span><h2>작업할 세 층: 제어면, 에이전트 준비, 개선 루프 <span class="ts">11:20</span></h2></header>
+        <p>그러면 무엇을 만들어야 하나. 발표자는 세 층으로 나눈다. 표준 용어는 아니고 발표자가 붙인 이름이다. 순서도 이 순서다.</p>
+
+        <h3>1층. 제어면 <span class="en">control plane</span> <span class="ts">11:30</span></h3>
+        <p>에이전트와 닿는 모든 지점을 <strong>기록되고 읽을 수 있는 자리</strong>로 옮기는 일이다. Tessl의 예는 이렇다.</p>
+        <ol class="plain">
+          <li>모든 일은 이슈 트래커의 이슈로 시작한다.</li>
+          <li>이슈가 샌드박스에서 돌아가는 헤드리스 에이전트에게 전달된다.</li>
+          <li>에이전트가 PR을 올린다.</li>
+          <li>엔지니어는 PR 댓글로 바로잡는다.</li>
+        </ol>
+        <p>사람이 손으로 고치는 단계는 그대로다. 달라진 점은 그 모든 접점이 기록으로 남는다는 것이다. 그러면 도구를 붙여 그 기록을 끌어다 개선에 쓸 수 있다. 제어면을 만들 때 모두가 결국 갖추게 되는 세 가지가 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성 요소</th><th>역할</th><th>흔한 선택</th></tr></thead>
+            <tbody>
+              <tr><td>이슈 추적</td><td>이슈에서 에이전트 작업을 시작시킨다</td><td>이슈 트래커와 에이전트 연결</td></tr>
+              <tr><td>리뷰</td><td>에이전트 결과를 사람이 바로잡는 자리</td><td>GitHub PR 리뷰가 가장 쉽다</td></tr>
+              <tr><td>워크플로 배포</td><td>에이전트를 좋게 만드는 플레이북과 스킬을 표준화해 나눠 준다</td><td>스킬 레지스트리, 공유 GitHub 저장소</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>2층. 에이전트 준비 <span class="en">agent it</span> <span class="ts">12:50</span></h3>
+        <p>발표자가 "큰 잡동사니 주머니"라고 부르는 층이다. 로컬 설정이 많은 프로젝트를 남이 세팅할 수 있게 옮겨 본 사람이라면 안다. 깨끗이 분리됐다고 믿었던 의존성이 실은 아니었다는 것을 공포 속에 깨닫는다. 에이전트에게도 똑같은 일이 벌어진다.</p>
+        <ul class="plain">
+          <li>CLI 접근, API 접근, 에이전트가 제품을 직접 클릭해 볼 방법 등 "당연히 될 줄 알았던" 것들이 안 된다.</li>
+          <li>일을 어떻게 하는지, 워크플로가 무엇인지 회사 문서에 적어야 한다.</li>
+          <li>내부 서비스 접근을 줘야 하고, 거버넌스와 API 접근 권한 문제가 따라온다.</li>
+          <li>프로덕션 로그 접근이 필요하고, 규정 준수 입장을 정해야 한다.</li>
+          <li>에이전트가 코드를 실행할 환경이 필요하다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">"생각보다 훨씬 나쁘다"</span>
+          <span>"우리는 그렇게 어렵지 않을 것"이라고 들어와서 끝까지 그렇게 말한 사람은 없다고 발표자는 말한다. 가장 계획하기 어려운 층이다. 한두 주를 잡고 그냥 끝내는 쪽을 권한다. 에이전트가 사람 개입 없이 코드를 올리게 시도하다 보면 문제가 빠르게 드러난다.</span>
+        </div>
+
+        <h3>3층. 개선 루프 <span class="en">improvement loops</span> <span class="ts">14:20</span></h3>
+        <p>시간을 가장 많이 쓰게 되는 층이다. 앞에서 본 안쪽, 바깥, 메타 루프가 여기에 들어가고, 특히 메타 루프의 부품이 많다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>부품</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>저장소 유지보수</td><td>매일, 매일 밤, 매주 코드베이스를 훑어 문제를 찾는 작업</td></tr>
+              <tr><td>플레이북</td><td>흔한 개발 작업의 절차. 예: CLI에 기능을 추가하는 방법</td></tr>
+              <tr><td>반복 작업 자동화</td><td>반복되는 작업을 찾아 자동화한다. 빠르고 쉽지 않으면 아무도 안 한다</td></tr>
+              <tr><td>산출물 품질 점검</td><td>결과물의 품질을 꾸준히 보고, 배운 것을 코드베이스와 플레이북에 되돌린다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>예를 들어 에이전트가 어떤 실수를 했다면, CLI 기능 추가 플레이북을 고쳐 다음부터 그 실수를 하지 않게 한다. 이것이 메타 루프가 돌아가는 모습이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="tessl">
+        <header><span class="num">08</span><h2>Tessl이 돕는 방식 <span class="ts">15:20</span></h2></header>
+        <p class="note">이 섹션은 발표자 회사의 제품 소개다. 발표자도 "지금까지 말한 것은 모두 직접 할 수 있는 기법이고 도구도 많다"고 전제했다. 그 점을 감안해 읽자.</p>
+        <p>Tessl이 내세우는 네 가지 방향은 이렇다.</p>
+        <ul class="plain">
+          <li><strong>작은 걸음으로 최신을 따라간다.</strong> 한 번에 큰 전환이 아니라 작은 개선을 쌓는다.</li>
+          <li><strong>지식 격차를 대신 메운다.</strong> 하네스 엔지니어링의 모범 사례를 Tessl이 따라가고, 에이전트가 그것을 알고 있게 한다.</li>
+          <li><strong>모듈형이고 열려 있다.</strong> 공장의 모든 부품을 한 회사가 가장 잘 만들 수는 없다고 본다. 필요한 조각만 골라 쓸 수 있게 한다.</li>
+          <li><strong>쉽게 만든다.</strong> 자동 루프를 설치하고 제안된 변경에 반응만 하면 된다. 출시를 멈추지 않고 여섯 달 뒤 "공장의 40%쯤 왔다"가 되는 그림을 그린다.</li>
+        </ul>
+
+        <h3>제어면 <span class="ts">16:40</span></h3>
+        <ul class="plain">
+          <li><strong>스킬 레지스트리</strong>: 워크플로와 자동화를 올리고 버전을 관리한다. 보안 리뷰, 품질 리뷰, 누가 올리고 고칠 수 있는지 통제하는 거버넌스가 붙어 있다. 올라온 워크플로를 보안과 품질, 그리고 에이전트 결과를 얼마나 개선하는지로 검사하는 예를 보여 줬다.</li>
+          <li><strong>이슈 트래커 연결</strong>: 지금은 Linear에서 GitHub으로 연결한다. Linear 티켓을 만들면 GitHub 워크플로가 돈다. 다른 연결은 준비 중이다.</li>
+          <li><strong>코드 리뷰 도구</strong>: 에이전트 코드 리뷰 기준과 더 좁은 범위의 검사를 설정한다.</li>
+        </ul>
+
+        <h3>Tessl 에이전트와 개선 루프 <span class="ts">17:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기능</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>반복 작업 찾기</td><td>PR과 이슈를 뒤져 반복되는 일을 찾는다. 예: 매주 하는 불안정 테스트 사냥을 스킬로 만들고 GitHub Action에 올린다. 한 번에 워크플로 하나씩 자동화할 시간을 만들어 준다</td></tr>
+              <tr><td>기본 유지보수 작업</td><td>구조 품질, 코드 중복, 테스트 묶음 품질, 보안 취약점을 매주 훑는 작업을 한 번에 설치한다</td></tr>
+              <tr><td>스킬을 자동 워크플로로</td><td><code>tessl launch</code> 명령으로 워크플로를 담은 스킬을 고르고, 실행할 코딩 에이전트를 고른다. Tessl 에이전트도 되지만 대부분의 코딩 작업은 Codex, Claude Code, Gemini 같은 것을 권한다. 권한이 맞춰진 샌드박스에서 오래 돌 수 있고, GitHub 토큰으로 PR을 올리고 댓글에 답한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이것들을 합치면 흐름은 하나다. <strong>개선할 점 하나를 찾고, 워크플로로 만들고, 스킬로 바꿔 모두에게 배포하고, 개선 루프를 돌린다.</strong></p>
+      </section>
+
+      <!-- 9 -->
+      <section id="progress">
+        <header><span class="num">09</span><h2>진척을 재는 지표 <span class="ts">19:30</span></h2></header>
+        <p>공장까지 얼마나 왔는지 추적할 지표를 발표자는 이렇게 든다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>방향</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>사람이 넘겨받은 횟수</td><td>줄인다</td><td>에이전트 작업을 사람이 대신 맡은 횟수. 자율성</td></tr>
+              <tr><td>사람의 PR 댓글</td><td>줄인다</td><td>사람이 바로잡아야 했던 횟수. 자율성</td></tr>
+              <tr><td>사람 없이 시작된 PR</td><td>늘린다</td><td>자동화가 늘고 있다는 신호</td></tr>
+              <tr><td>품질</td><td>먼저 유지, 그다음 상승</td><td>전환 중에는 일정하게 지키고, 공장이 자리 잡으면 올린다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="recap">
+        <header><span class="num">10</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>소프트웨어 공장은 <strong>제품은 에이전트가, 공장은 엔지니어가</strong> 만드는 체계다. 모두가 내부 도구 제작자가 된다.</li>
+          <li>세 지표는 자율성(사람이 고친 횟수), 자동화(검토 없이 맡기는 정도), 품질이다.</li>
+          <li>순서는 <strong>자율성 → 자동화</strong>다. 자율성이 높아도 믿지 못하면 자동화는 낮다.</li>
+          <li>전환 중 품질은 유지하고, 공장이 완성되면 올린다. 공장의 보상은 속도가 아니라 <strong>품질</strong>이다.</li>
+          <li>하네스 엔지니어링(루프 엔지니어링)은 공장을 자동화하고 품질을 올리는 <strong>루프를 만드는 일</strong>이다.</li>
+          <li><strong>안쪽 루프</strong>는 PR 전에 싸고 빠르게 돌아 자율성을 올린다. <strong>바깥 루프</strong>는 PR 뒤에 비싼 검사를 한 번 돌려 사람의 검토를 대신한다. <strong>메타 루프</strong>는 바깥에서 실수를 찾아 두 루프에 되먹인다.</li>
+          <li>어려운 이유: 지식이 매주 바뀐다, 계획에 없는 일이라 출시와 경쟁한다, 신호가 로컬 로그와 머릿속에 숨어 있다.</li>
+          <li>작업 순서는 <strong>제어면 → 에이전트 준비 → 개선 루프</strong>다. 제어면은 접점을 기록되는 자리로 옮기는 일이다.</li>
+          <li>에이전트 준비는 생각보다 훨씬 힘들다. 한두 주 잡고 그냥 끝낸다.</li>
+          <li>진척 지표는 사람이 넘겨받은 횟수와 PR 댓글이 줄고, 사람 없이 시작된 PR이 느는 것이다.</li>
+        </ol>
+      </section>
+
+      <!-- 11 -->
+      <section id="quiz">
+        <header><span class="num">11</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 소프트웨어 공장의 정의는?</span></summary><div class="answer">사용자에게 나가는 결과물을 전부 에이전트가 만들고, 엔지니어링 팀은 그 공장을 더 자율적이고 자동화되고 품질 높게 만드는 데 집중하는 체계.</div></details>
+          <details><summary><span class="qn">Q2</span><span>자율성과 자동화는 어떻게 다른가?</span></summary><div class="answer">자율성은 맞는 답까지 사람이 얼마나 끼어들어야 하는가다. 자동화는 사람이 검토하지 않고 얼마나 맡길 수 있는가다. 에이전트가 한 번에 잘 끝내도 코드를 전부 직접 읽는다면 자율성은 높고 자동화는 낮다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>세 지표를 올리는 순서와 품질을 다루는 방식은?</span></summary><div class="answer">자율성을 먼저, 그다음 자동화. 그동안 품질은 일정하게 지키고, 공장이 완성되면 품질을 올린다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>"공장은 더 빨리 출시하려고 만든다"에 대한 발표자의 입장은?</span></summary><div class="answer">단기 현상이다. 백로그가 사라져 테스트와 리팩터링에 쓸 여력이 생기므로 진짜 보상은 품질이다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>안쪽 루프의 조건과 올리는 지표는?</span></summary><div class="answer">PR을 올리기 전 작업 중에 돌며, 빠르고 싸야 한다. 사람 개입 없이 실수를 잡아 자율성을 올린다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>바깥 루프에 두는 검사의 예 두 가지는?</span></summary><div class="answer">에이전트 QA, 테스트 묶음의 품질을 재는 변이 테스트. 비싸서 PR이 올라갈 때 한 번만 돌리고, 사람의 검토 시간을 대신한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>메타 루프는 무엇을 보고 어디에 되먹이나?</span></summary><div class="answer">코딩 에이전트 로그, PR, 이슈 트래커, 사용자 피드백을 본다. 새어 나간 실수와 사람이 손으로 고친 실수를 찾아 안쪽 루프와 바깥 루프에 되먹여 반복을 막는다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>하네스 엔지니어링이 어려운 세 가지 이유는?</span></summary><div class="answer">지식이 매주 바뀌어 AI 연구자가 되어야 한다. 계획에 없는 일이라 출시와 경쟁한다. 필요한 신호가 로컬 로그와 사람 머릿속에 숨어 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>제어면을 만든다는 것은 무엇을 하는 일인가? 세 구성 요소는?</span></summary><div class="answer">에이전트와 닿는 모든 접점을 기록되고 읽을 수 있는 자리로 옮기는 일이다. 구성 요소는 이슈 추적, 리뷰(GitHub PR), 워크플로 배포(스킬 레지스트리나 공유 저장소).</div></details>
+          <details><summary><span class="qn">Q10</span><span>"에이전트 준비" 층에 대한 발표자의 조언은?</span></summary><div class="answer">생각보다 훨씬 힘들고 계획하기 어렵다. 한두 주를 잡고 그냥 끝낸다. 에이전트가 사람 없이 코드를 올리게 시도하면 문제가 빠르게 드러난다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>공장까지 얼마나 왔는지 재는 지표 세 가지는?</span></summary><div class="answer">사람이 넘겨받은 횟수 감소, 사람의 PR 댓글 감소, 사람 없이 시작된 PR 증가. 품질은 유지한 뒤 상승.</div></details>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="apply">
+        <header><span class="num">12</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 팀이 전제 조건을 넘었는지 확인한다<span class="how">세션 두세 개를 동시에 돌리고, 쉬운 일과 중간 난이도 일은 에이전트가 대체로 맞게 하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트와 닿는 접점을 기록되는 자리로 옮긴다<span class="how">이슈 → 에이전트 → PR → 댓글. 로컬 터미널에서만 돌던 작업을 줄인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>스킬과 플레이북을 둘 공유 저장소를 정한다<span class="how">"CLI에 기능 추가하는 법" 같은 절차를 한 곳에 모은다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>에이전트 준비에 한두 주를 따로 잡는다<span class="how">CLI·API 접근, 내부 서비스 권한, 프로덕션 로그, 실행 환경. 생각보다 오래 걸린다고 가정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>안쪽 루프에 싸고 빠른 검사를 둔다<span class="how">확인: 에이전트가 사람 없이 자기 실수를 잡는 횟수가 늘었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>바깥 루프에 비싼 검사를 한 번만 돌리게 둔다<span class="how">에이전트 QA, 변이 테스트 등. 확인: 사람의 검토 시간이 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>매주 반복되는 작업 하나를 골라 스킬과 자동화로 바꾼다<span class="how">예: 불안정 테스트 사냥, 코드 중복 점검</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트의 실수를 플레이북에 되돌리는 메타 루프를 정한다<span class="how">실수 하나 → 어느 플레이북을 고칠지 → 고친 뒤 재발 여부 확인</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>진척 지표 세 개를 재기 시작한다<span class="how">사람이 넘겨받은 횟수, 사람의 PR 댓글 수, 사람 없이 시작된 PR 수</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 13 -->
+      <section id="glossary">
+        <header><span class="num">13</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>소프트웨어 공장</td><td>Software factory. 결과물은 에이전트가 만들고 엔지니어는 그 체계를 만드는 개발 방식</td></tr>
+              <tr><td>하네스 엔지니어링</td><td>Harness engineering. 에이전트를 감싸는 검사, 절차, 되먹임 루프를 만드는 일. 루프 엔지니어링이라고도 한다</td></tr>
+              <tr><td>하네스</td><td>모델을 감싸 도구, 순서, 규칙, 검사를 정해 주는 실행 틀</td></tr>
+              <tr><td>자율성</td><td>Autonomy. 맞는 답까지 사람이 얼마나 끼어들어야 하는가</td></tr>
+              <tr><td>자동화</td><td>Automation. 사람이 검토하지 않고 얼마나 맡길 수 있는가</td></tr>
+              <tr><td>안쪽 루프 / 바깥 루프 / 메타 루프</td><td>PR 전 빠른 검사 / PR 후 비싼 검사 / 바깥에서 실수를 찾아 두 루프에 되먹이는 검사</td></tr>
+              <tr><td>제어면</td><td>Control plane. 에이전트와의 모든 접점이 기록되고 읽히는 자리. 이슈 추적, 리뷰, 워크플로 배포로 이뤄진다</td></tr>
+              <tr><td>헤드리스 에이전트</td><td>Headless agent. 사람이 화면으로 조작하지 않고 자동으로 돌아가는 에이전트</td></tr>
+              <tr><td>샌드박스</td><td>권한을 제한한 격리 실행 환경</td></tr>
+              <tr><td>스킬</td><td>Skill. 에이전트가 따를 워크플로나 절차를 담은 파일</td></tr>
+              <tr><td>스킬 레지스트리</td><td>스킬을 올리고 버전과 권한을 관리하는 저장소</td></tr>
+              <tr><td>플레이북</td><td>Playbook. 흔한 작업을 어떻게 하는지 적은 절차서</td></tr>
+              <tr><td>에이전트 QA</td><td>에이전트가 제품을 직접 써 보며 품질을 검사하는 것</td></tr>
+              <tr><td>변이 테스트</td><td>Mutation testing. 코드를 일부러 망가뜨려 테스트가 잡아내는지 보고, 테스트 묶음의 품질을 재는 방법</td></tr>
+              <tr><td>불안정 테스트</td><td>Flaky test. 코드가 같아도 통과했다 실패했다 하는 테스트</td></tr>
+              <tr><td>사람이 넘겨받기</td><td>Manual takeover. 에이전트가 하던 일을 사람이 대신 맡는 것</td></tr>
+              <tr><td>국소 최대</td><td>Local maxima. 더 나아질 수 있는데 지금 자리에 갇혀 멈춘 상태</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="timeline">
+        <header><span class="num">14</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, Tessl은 에이전트 활성화 플랫폼</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>전제 조건: 이미 코딩 에이전트를 쓰는 팀</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>발표 순서</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>소프트웨어 공장의 정의</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>세 지표: 자율성, 자동화, 품질</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>자율성과 자동화의 차이</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>왜 공장인가: 속도가 아니라 품질</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>비기술 직군의 기여</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>하네스 엔지니어링, 루프 엔지니어링</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>안쪽 루프</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>바깥 루프: 에이전트 QA, 변이 테스트</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>메타 루프</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>어려운 이유 1: 매주 바뀌는 지식</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>어려운 이유 2: 계획에 없는 일</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>어려운 이유 3: 숨어 있는 신호</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>세 층 소개, 제어면</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>제어면의 세 구성 요소</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>에이전트 준비</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>개선 루프의 부품</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>Tessl 소개와 네 가지 방향</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>Tessl 제어면: 레지스트리, 연결, 리뷰</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>Tessl 에이전트: 반복 작업 찾기</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>기본 유지보수 작업</td></tr>
+              <tr><td><span class="ts">18:50</span></td><td>스킬을 자동 워크플로로 바꾸는 명령</td></tr>
+              <tr><td><span class="ts">19:30</span></td><td>진척 지표</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'X6l4lpA0_NY:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

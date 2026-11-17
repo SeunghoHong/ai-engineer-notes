@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 코드 검증 워크숍</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#problem">누가 에이전트의 코드를 검증하나</a></li>
+      <li><a href="#product">Gitar가 내세우는 것</a></li>
+      <li><a href="#setup">워크숍 준비</a></li>
+      <li><a href="#layers">정적 분석과 의도 검증</a></li>
+      <li><a href="#pr1">실습 1: diff 밖의 버그</a></li>
+      <li><a href="#pr2">실습 2: 코드에 없는 규칙</a></li>
+      <li><a href="#pr3">실습 3: CI 실패와 자동 머지</a></li>
+      <li><a href="#more">더 나아간 기능</a></li>
+      <li><a href="#qa">질의응답</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-29 · 38분 · 영어 발표 한글 정리</span>
+      <h1>리뷰가 놓치는 버그를 잡는 법</h1>
+      <p class="lead">에이전트가 쓴 코드는 테스트를 통과해도 기존 기능을 깨뜨리거나 팀 규칙을 어길 수 있다. 이 워크숍은 Sonar의 코드 변경 검증 에이전트 Gitar로 PR 세 개를 직접 검증하며, 그런 버그를 어떻게 잡고 고치는지 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=wP3P89YB9fA" target="_blank" rel="noopener">Catch the Bugs Your Code Review Misses</a></span>
+        <span>발표: Killian Carlsen-Phelan, Taylor Luttrell-Williams (Sonar 개발자 콘텐츠 팀)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 제품 이름은 자막에서 Guitar, Git Guardian, Git Tarr, Gittar, Git Tower 등으로 뭉개졌다. 발표에 나온 설정 폴더 이름 <code>.gitar/</code>를 근거로 Gitar로 통일했다. 수치와 주장은 모두 발표자가 말한 것이고 따로 확인하지 않았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트는 사람이 읽을 수 있는 것보다 많은 코드를 빠르게 낸다. 그 결과 <strong>리뷰 대기열이 쌓이고 프로덕션 장애가 늘었다</strong>고 발표자는 말한다.</li>
+        <li>정적 분석은 SQL 인젝션 같은 문제를 잘 잡는다. 하지만 <strong>코드의 의도와 비즈니스 로직이 맞는지는 판단하지 못한다.</strong> 두 층을 함께 써야 한다.</li>
+        <li>실습 1: 티켓 양도 기능은 테스트를 통과했다. 그런데 <strong>원래 구매자가 환불하면 친구의 티켓까지 무효가 되는</strong> 버그가 diff 밖 <code>orders.py</code>에 숨어 있었다.</li>
+        <li>실습 2: "보여 주는 가격은 항상 총액"이라는 회사 규칙을 <strong><code>.gitar/</code> 폴더의 문서와 규칙</strong>으로 알려 주면, 리뷰가 그 규칙을 어긴 변경을 찾는다.</li>
+        <li>실습 3: CI가 실패한 PR에서 Gitar가 <strong>로그를 읽고 원인을 찾고, 고친 뒤, 테스트가 통과하면 자동으로 머지</strong>한다.</li>
+        <li>그 밖에 Jira·Linear 티켓과 대조하기, 피드백에서 팀 관례 배우기, <strong>여러 저장소·여러 PR 사이의 충돌</strong> 찾기를 소개했다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="problem">
+        <header><span class="num">01</span><h2>누가 에이전트의 코드를 검증하나 <span class="ts">04:10</span></h2></header>
+        <p>AI 코딩 에이전트는 코드를 빠르게, 많이 쓴다. Taylor는 여기서 질문을 던진다. 에이전트가 내보내는 코드를 실제로 누가, 혹은 무엇이 검증하고 있나.</p>
+        <p>검증할 것은 보안, 유지보수성, 신뢰성만이 아니다. 기능이 돌아가는 것을 넘어 <strong>실제로 맞는 일을 하는지</strong>도 봐야 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">문제 1 · 리뷰 병목 <span class="ts">05:20</span></span>
+            <p>팀 인원은 그대로인데 에이전트가 만든 변경은 계속 늘어난다.</p>
+            <ul>
+              <li>리뷰 대기열이 길어진다</li>
+              <li>머지를 기다리는 PR이 방치된다</li>
+              <li>리뷰는 아무도 맡고 싶지 않고, 맡을 시간도 없는 일이 된다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">문제 2 · 프로덕션 장애 증가 <span class="ts">05:50</span></span>
+            <p>장애는 변경 속도에 비례해 늘어난다.</p>
+            <ul>
+              <li>에이전트는 팀이 설계한 아키텍처를 늘 지키지는 않는다</li>
+              <li>회사의 코딩 표준과 가이드라인을 모른다</li>
+              <li>필요한 맥락이 없기 때문이다</li>
+            </ul>
+          </div>
+        </div>
+        <p>Taylor의 결론은 이렇다. 해법은 사람보다 빠르고, 사람의 리뷰보다 나아야 한다. 그래야 에이전트가 들여오는 변경 속도를 따라갈 수 있다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="product">
+        <header><span class="num">02</span><h2>Gitar가 내세우는 것 <span class="ts">06:40</span></h2></header>
+        <p>Taylor는 Gitar를 <strong>코드 변경 검증 에이전트</strong><span class="en">code change verification agent</span>라고 소개한다. 대상은 에이전트 수준의 양과 속도로 코드를 내보내야 하는 플랫폼·엔지니어링 팀이다. 정적 분석 도구 SonarQube에 변경의 맥락과 의도를 이해하는 층을 더하는 제품이라고 설명한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>내세운 특징</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>신호 대 잡음비</td><td>거짓 경보를 줄여 실제로 고쳐지는 비율을 높이고 토큰 비용도 줄인다</td></tr>
+              <tr><td>CI 실패 진단</td><td>진짜 고장과, 가끔 실패하는 테스트나 인프라 문제로 생긴 잡음을 구분한다</td></tr>
+              <tr><td>자동 수정</td><td>찾은 문제를 직접 고친다. 자동화 수준과 사람의 개입 정도는 팀이 정한다</td></tr>
+              <tr><td>반복</td><td>모든 변경이 CI를 통과할 때까지 고치고 다시 확인한다</td></tr>
+              <tr><td>투명성</td><td>리뷰 과정과 CI를 분석 대시보드로 보여 준다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>리뷰가 쓰는 맥락 <span class="ts">08:30</span></h3>
+        <ul class="plain">
+          <li>PR의 diff, 설명, 댓글</li>
+          <li>CI 로그</li>
+          <li>프로젝트별 지시 문서</li>
+          <li>저장소에 직접 써 둔 규칙</li>
+        </ul>
+
+        <h3>동작 흐름 <span class="ts">09:40</span></h3>
+        <ol class="plain">
+          <li>PR이 열리면 리뷰 엔진이 시작된다.</li>
+          <li>위의 맥락을 모아 문제를 찾는다.</li>
+          <li>찾은 문제와 수정안을 PR 댓글로 남긴다.</li>
+          <li>사람이 댓글로 답하며 처리한다. 설정을 켜 두면 자동으로 고치고 머지한다.</li>
+        </ol>
+
+        <blockquote>모든 거짓 경보는 토큰을 쓰고, 의도치 않은 변경을 낼 위험이 있는 수정 시도 하나다.<cite>Taylor Luttrell-Williams, 09:10 (뜻을 옮김)</cite></blockquote>
+        <p class="note">발표자 두 사람은 Gitar를 파는 Sonar 소속이다. "신호가 높다", "PR당 추가 비용 없이 반복한다" 같은 주장은 제품 홍보라는 점을 감안해 읽자. 워크숍 내내 수치로 된 근거는 나오지 않았다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="setup">
+        <header><span class="num">03</span><h2>워크숍 준비 <span class="ts">10:30</span></h2></header>
+        <p>모든 실습은 브라우저에서 한다. GitHub 계정과 Gitar 접근 권한만 있으면 된다. 참가자에게는 Pro 14일 무료 체험이 제공됐다.</p>
+        <ol class="plain">
+          <li><code>app.gitar.ai</code>에 로그인하고 GitHub 앱으로 설치한다.</li>
+          <li>워크숍 저장소를 포크한다. 자막상 주소는 <code>github.com/sonarsamples/aie-new-york-workshop-guitar</code>다(추정, 철자 확인 필요). 소유자는 Gitar 앱을 설치한 조직으로 고른다.</li>
+          <li>포크할 때 <strong>"main 브랜치만 복사"를 꼭 끈다.</strong> 실습마다 브랜치가 따로 있다.</li>
+          <li>포크한 저장소의 Actions 탭에서 워크플로를 켠다. GitHub는 포크의 워크플로를 기본으로 꺼 둔다.</li>
+          <li>Gitar 대시보드의 Settings → Configurations → Repositories에서 포크가 보이는지 확인한다.</li>
+        </ol>
+
+        <h3>예제 앱: Box Office <span class="ts">12:40</span></h3>
+        <p>작은 공연장의 가짜 티켓 판매 API다. Python으로 만든 단순한 프로젝트다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>파일</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td><code>orders.py</code></td><td>티켓 구매, 취소와 환불</td></tr>
+              <tr><td><code>checkin.py</code></td><td>입장할 때 QR 코드를 스캔하는 로직</td></tr>
+              <tr><td>테스트</td><td>기존 기능을 모두 덮는다. PR이 열릴 때마다 실행된다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Gitar 리뷰는 몇 분씩 걸린다. 그래서 stage 1, 2, 3 브랜치로 PR 세 개를 한꺼번에 먼저 연다. 이때 PR의 기준 저장소가 원본이 아니라 <strong>내 포크</strong>인지 확인한다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="layers">
+        <header><span class="num">04</span><h2>정적 분석과 의도 검증 <span class="ts">16:40</span></h2></header>
+        <p>Killian은 첫 리뷰를 기다리는 동안 두 종류의 검사를 구분한다.</p>
+        <div class="shift" aria-label="두 검사 층의 역할">
+          <div><span class="tag">정적 분석 · SonarQube</span><b>코드가 안전하고 올바른가</b><span class="muted">파일과 함수 20개를 거쳐 흘러가는 입력도 추적해, DB에 닿기 전에 SQL 인젝션을 찾는다</span></div>
+          <span class="arrow" aria-hidden="true">+</span>
+          <div class="to"><span class="tag">의도 검증 · Gitar</span><b>이 변경이 하려는 일이 맞게 됐나</b><span class="muted">PR 제목·설명·기존 코드를 새 기능과 비교해 비즈니스 로직이 어긋나는지 본다</span></div>
+        </div>
+        <p>정적 분석은 의도를 추론하지 못한다. 두 층은 잘하는 일이 달라서 서로를 보완한다. Killian은 코드 양과 속도가 커지는데 검증이 따라가지 못하면 장애는 거의 확실하다고 말한다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="pr1">
+        <header><span class="num">05</span><h2>실습 1: diff 밖의 버그 <span class="ts">15:40</span></h2></header>
+        <p>첫 PR은 아무 설정 없이 Gitar의 기본 리뷰만 본다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">변경 내용</span>
+            <p>티켓을 산 사람이 친구에게 양도하는 기능을 더한다. 두 장을 사서 한 장을 보내면 둘 다 입장할 수 있어야 한다.</p>
+            <ul>
+              <li>없는 티켓은 양도할 수 없다</li>
+              <li>이메일 주소가 올바르지 않으면 안 된다</li>
+              <li>무효가 된 티켓은 양도할 수 없다</li>
+              <li>테스트도 함께 넣었고, CI는 초록이다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">Gitar가 찾은 것 <span class="ts">18:00</span></span>
+            <p><strong>원래 구매자가 양도한 뒤에도 환불하고 티켓을 무효로 만들 수 있다.</strong> 구매자가 주문을 취소하면 친구가 받은 티켓도 같이 취소된다.</p>
+            <p class="verdict"><b>왜 놓치기 쉬운가</b>: "무효 티켓은 양도 못 한다"는 테스트는 있었지만, 반대 방향(양도 후 취소)은 없었다. 문제의 위치도 PR이 고친 파일이 아니라 기존 <code>orders.py</code>다.</p>
+          </div>
+        </div>
+        <p>diff만 보는 리뷰어는 새 코드에서 잘못을 찾을 수 없다. 기존 취소 기능이 어떻게 동작하는지 알아야 무엇이 깨지는지 보인다. Killian은 에이전트로 코드를 쓸수록 앱이 커져서, 모든 함수의 동작을 사람이 기억하기는 거의 불가능하다고 말한다. 그래서 새 기능을 기존 기능과 비교해 보는 리뷰어가 필요하다는 주장이다.</p>
+
+        <h3>고치는 방법 <span class="ts">20:00</span></h3>
+        <ol class="plain">
+          <li>리뷰 댓글의 <strong>Apply fix</strong> 버튼을 누르거나, PR에 <code>gitar fix</code>라고 댓글을 단다.</li>
+          <li>Gitar가 PR에 새 커밋을 올린다.</li>
+          <li>새 커밋을 다시 검증한다. 워크플로에서 부작용이 생기면 초록이 될 때까지 계속 고친다.</li>
+        </ol>
+        <p>결과 <span class="ts">26:10</span>: Gitar는 <code>orders.py</code>에 양도된 티켓을 막는 검사를 하나 더했다. 검증을 마치고 PR을 승인했다.</p>
+        <p class="note">Killian은 이 반복이 "PR당 추가 비용 없이" 이뤄진다고 말했다. 요금 체계에 대한 제품 회사 쪽의 설명이다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="pr2">
+        <header><span class="num">06</span><h2>실습 2: 코드에 없는 규칙 <span class="ts">22:00</span></h2></header>
+        <p>팀마다 코드에 드러나지 않는 규칙이 있다. 시니어 엔지니어의 머릿속, 위키, Confluence 페이지에 있다. 이런 규칙은 코드가 올바른지와는 관계가 없다.</p>
+        <p>두 번째 PR은 티켓마다 3.50달러의 서비스 수수료를 붙인다. 50달러짜리 티켓이면 결제할 때 53.50달러가 된다. 그런데 이 가상 회사에는 <strong>"고객에게 보여 주는 가격은 모두 총액이다"</strong>라는 규칙이 있다.</p>
+
+        <figure class="chart" aria-label="표시 가격과 실제 결제 금액 비교: 워크숍 예제 50달러와 53.50달러, Killian의 경험담 30달러와 70달러">
+          <span class="chart-title">처음 보이는 가격과 실제로 내는 가격 (달러)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>워크숍 예제 · 표시 가격</span><span class="val">50.00</span></div>
+              <div class="track"><div class="fill" style="width:71.4%" title="워크숍 예제 표시 가격: 50달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>워크숍 예제 · 수수료 포함</span><span class="val">53.50</span></div>
+              <div class="track"><div class="fill key" style="width:76.4%" title="워크숍 예제 수수료 포함: 53.50달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Killian의 경험담 · 표시 가격</span><span class="val">약 30</span></div>
+              <div class="track"><div class="fill" style="width:42.9%" title="경험담 표시 가격: 약 30달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Killian의 경험담 · 수수료 포함</span><span class="val">약 70</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="경험담 수수료 포함: 약 70달러"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>35</span><span>70</span></div>
+          <span class="caption">경험담 숫자는 Killian이 "30달러쯤인데 수수료를 붙이면 70달러쯤"이라고 어림으로 말한 것이다. 이런 경험 때문에 총액 표시 규칙이 고객 경험에 중요하다는 설명이다.</span>
+        </figure>
+
+        <h3>규칙을 리뷰에 알려 주는 두 폴더 <span class="ts">23:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>폴더</th><th>하는 일</th><th>예</th></tr></thead>
+            <tbody>
+              <tr><td><code>.gitar/review</code></td><td>Markdown 문서로 원하는 만큼 맥락과 비즈니스 로직을 넣는다. Gitar가 이 내용에 맞춰 리뷰 방향을 잡는다</td><td>"모든 가격은 총액으로 보여 준다"</td></tr>
+              <tr><td><code>.gitar/rules</code></td><td>PR이 어떤 조건을 만족하면 규칙이 발동해 정해진 동작을 한다</td><td>가격 관련 파일이 바뀌면, 바뀐 고객 노출 필드를 나열하고 각각 총액인지 알려 준다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">폴더 이름은 자막에 들린 대로 적었다. 정확한 이름은 워크숍 저장소에서 확인하자.</p>
+        <div class="callout">
+          <span class="title">Killian이 즐겨 쓰는 규칙 예 <span class="ts">24:40</span></span>
+          <span>동료와 Slack에서 새 기능을 논의했다고 하자. "PR 설명에 Slack 링크를 붙이면, 그 대화를 읽고 내 코드가 논의 내용과 맞는지 확인하라"는 규칙을 만들어 둘 수 있다. 링크를 붙일 때마다 규칙이 발동한다.</span>
+        </div>
+        <p>결과 <span class="ts">25:10</span>: Gitar는 규칙대로 가격 필드를 나열하고, 각 필드가 총액인지 아닌지 표시하고, 위반을 찾아냈다. Killian은 이것이 엔지니어링 버그는 아니라고 강조한다. <strong>코드만 보면 틀린 곳이 없다. 이 회사의 규칙에 비춰 볼 때만 문제다.</strong> 이 PR은 머지하지 않고 둔다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="pr3">
+        <header><span class="num">07</span><h2>실습 3: CI 실패와 자동 머지 <span class="ts">26:30</span></h2></header>
+        <p>세 번째 실습은 PR을 연 순간부터 머지까지 전 과정을 자동으로 돌린다. 저장소 README에 같은 설정 방법이 적혀 있다.</p>
+
+        <h3>GitHub 설정 <span class="ts">27:00</span></h3>
+        <ol class="plain">
+          <li>저장소 설정에서 <strong>Allow auto-merge</strong>를 켠다. GitHub의 자동 머지 기능을 쓸 수 있게 된다.</li>
+          <li>Rulesets에서 새 브랜치 규칙 묶음을 만든다. 이름은 자유롭게 짓고, 상태를 Active로 둔다.</li>
+          <li>대상은 기본 브랜치로 정한다.</li>
+          <li><strong>Require status checks to pass</strong>를 켜고 검사 항목에 <code>test</code>를 넣는다. 테스트가 통과해야만 자동 머지가 된다.</li>
+        </ol>
+
+        <h3>실패한 PR <span class="ts">28:30</span></h3>
+        <p>이 PR은 티켓 스캔 방식을 리팩터링한다. 티켓이 티켓 페이지 URL을 가리키게 바꾸고 기존 로직을 조금 정리했다. 그런데 테스트 하나가 실패했다.</p>
+        <div class="callout warn">
+          <span class="title">실패한 테스트: 티켓은 두 번 스캔할 수 없다</span>
+          <span>리팩터링 중에 이 검사가 빠졌다. 한 번 쓴 티켓을 다시 스캔해도 200(성공)이 돌아온다. 그러면 친구들이 같은 티켓으로 줄줄이 들어올 수 있다. 단순하지만 놓치기 쉬운 실수다.</span>
+        </div>
+        <p>Gitar의 리뷰는 CI 결과를 직접 읽는다 <span class="ts">29:20</span>. "CI 실패. 체크인 게이트에서 테스트 하나가 실패. 이미 쓴 티켓을 다시 스캔하면 200을 돌려줌"이라고 원인을 짚는다.</p>
+        <p>Killian은 이 과정이 개발자에게 가장 귀찮은 일 중 하나라고 말한다. 로그를 열어 무엇이 실패했는지 보고, 원인을 찾고, 로컬에서 고치고, 푸시하고, 긴 파이프라인을 기다린다. 또 실패하면 처음부터 다시 한다. 다른 엔지니어에게 리뷰를 계속 재촉해야 할 때도 있다.</p>
+
+        <h3>자동 적용과 자동 머지 <span class="ts">30:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>PR 댓글</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td><code>gitar auto apply on</code></td><td>사람이 매번 승인하지 않아도 Gitar가 수정을 계속 푸시한다</td></tr>
+              <tr><td><code>gitar auto merge on</code></td><td>더 찾을 문제가 없고 파이프라인이 모두 통과하면 머지한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이후 Gitar는 수정을 푸시하고, 검증하고, 머지까지 몇 분 안에 마친다고 Killian은 설명한다. 워크숍에서는 머지가 끝나는 장면까지 보여 주지 않았다.</p>
+        <p>댓글로 켠 것은 워크숍용이다. 다른 PR까지 자동 머지되지 않게 하려는 것이다. 실제로는 Gitar 대시보드에서 <strong>저장소별로</strong> 자동 승인과 자동 머지를 켠다. 테스트와 안전장치가 잘 갖춰진 저장소일수록 자동화를 넓게 열어도 된다는 것이 Killian의 설명이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="more">
+        <header><span class="num">08</span><h2>더 나아간 기능 <span class="ts">33:20</span></h2></header>
+        <p>Taylor가 워크숍 범위 밖의 기능을 짧게 소개했다. 저장소 README 끝의 "Take it further" 절에서 이어서 해 볼 수 있다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">기능 검증 <span class="ts">34:00</span></span>
+            <p>PR을 그 PR이 구현하는 티켓과 대조한다. 변경이 깔끔한지만이 아니라 <strong>맞고 빠짐없는지</strong> 확인한다.</p>
+            <ul>
+              <li>Jira, Linear 티켓</li>
+              <li>Slack 메시지</li>
+              <li>대시보드의 Settings → Integrations에서 연결</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">Knowledge <span class="ts">34:40</span></span>
+            <p>사람이 남긴 피드백에서 팀 관례와 거짓 경보를 배운다.</p>
+            <ul>
+              <li>피드백은 리뷰어의 연차에 따라 가중치를 둔다</li>
+              <li>각 리뷰 뒤에 어떤 규칙이 있고, 어디서 왔고, 왜 적용됐는지 보여 준다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">저장소 간 분석 <span class="ts">35:10</span></span>
+            <p>혼자서는 깔끔하게 머지되지만 <strong>다른 저장소의 코드를 깨뜨리는</strong> PR을 찾는다. Taylor는 분석하는 저장소 수에 제한이 없다고 말했다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">PR 간 분석 <span class="ts">35:30</span></span>
+            <p>동시에 열려 있는 PR끼리 비교한다. 두 PR이 각각은 통과해도 함께 머지되면 프로덕션을 깨뜨릴 수 있다. 에이전트를 늘릴수록 커지는 위험이다.</p>
+          </div>
+        </div>
+        <p>대시보드에서 찾은 문제 하나를 열면 <span class="ts">36:00</span> 수정 방법, 문제가 생기는 위치, 그리고 <strong>왜 중요한지</strong>를 함께 보여 준다.</p>
+        <p class="note">Taylor는 일부 기능은 엔터프라이즈 요금제에 있고 나머지는 Pro에 포함된다고 했다. 어느 기능이 어느 쪽인지는 자막에 나오지 않는다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="qa">
+        <header><span class="num">09</span><h2>질의응답 <span class="ts">37:00</span></h2></header>
+        <p>질문은 자막에 잡히지 않았다. 답변으로 보아 외부 문서나 가이드라인을 리뷰에 넣는 방법을 물은 것으로 보인다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>개념</th><th>답변 내용</th></tr></thead>
+            <tbody>
+              <tr><td>MCP 연결</td><td>Gitar는 MCP로 외부 맥락을 받아들일 수 있고, 통합을 직접 구성할 수 있다</td></tr>
+              <tr><td>Context</td><td>아키텍처 가이드라인 같은 기준에 맞춰 코드를 리뷰하게 하는 기능</td></tr>
+              <tr><td>Knowledge</td><td>Gitar 자신의 리뷰와 수정 방식을 조정하는 기능. "우리는 보통 이런 식으로 고친다"고 답하면 다음 수정에 반영한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Knowledge에 외부 자료를 넣는 구체적인 방법은 발표자가 따로 확인해 알려 주겠다고 했다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="recap">
+        <header><span class="num">10</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트가 코드를 쏟아내면서 리뷰 병목과 프로덕션 장애가 함께 늘었다고 발표자는 진단한다.</li>
+          <li>에이전트는 팀의 아키텍처, 코딩 표준, 가이드라인을 모른다. 맥락이 없기 때문이다.</li>
+          <li>정적 분석은 보안 문제를 잡고, 의도 검증은 비즈니스 로직의 어긋남을 잡는다. <strong>둘은 서로를 대신하지 않는다.</strong></li>
+          <li>테스트가 초록이어도 <strong>기존 기능과 새 기능이 부딪치는 버그</strong>는 남는다. 그 버그는 diff 밖에 있을 수 있다.</li>
+          <li>테스트는 한 방향만 덮기 쉽다. "무효 티켓은 양도 불가"는 있었지만 "양도 후 취소"는 없었다.</li>
+          <li>코드에 없는 회사 규칙은 문서(<code>.gitar/review</code>)와 조건부 규칙(<code>.gitar/rules</code>)으로 리뷰에 알려 준다.</li>
+          <li>규칙 위반은 코드 오류가 아니어도 리뷰에서 걸러야 할 문제다. 총액 표시 규칙이 그 예다.</li>
+          <li>CI 실패는 로그를 읽고, 고치고, 다시 돌리는 반복이다. Gitar는 이 반복을 자동으로 돈다고 주장한다.</li>
+          <li>자동 머지는 <strong>기본 브랜치의 필수 상태 검사</strong> 위에서만 안전하다. 자동화 수준은 저장소별로 정한다.</li>
+          <li>에이전트가 늘수록 PR 하나가 아니라 <strong>PR끼리, 저장소끼리의 충돌</strong>을 봐야 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 11 -->
+      <section id="quiz">
+        <header><span class="num">11</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 꼽은, 에이전트 코드가 늘면서 생긴 두 문제는?</span></summary><div class="answer">리뷰 병목(인원은 그대로인데 변경이 늘어 대기열이 쌓인다)과 프로덕션 장애 증가(에이전트가 아키텍처와 표준을 모른다).</div></details>
+          <details><summary><span class="qn">Q2</span><span>SonarQube 같은 정적 분석이 잘하는 것과 못하는 것은?</span></summary><div class="answer">여러 파일을 거치는 입력 흐름을 추적해 SQL 인젝션 같은 보안 문제를 잡는다. 하지만 PR의 의도를 추론해 비즈니스 로직이 맞는지는 판단하지 못한다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>실습 1에서 Gitar가 찾은 버그는?</span></summary><div class="answer">티켓을 친구에게 양도한 뒤에도 원래 구매자가 주문을 취소·환불할 수 있었다. 그러면 친구의 티켓도 무효가 된다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>그 버그를 diff만 보는 리뷰어가 놓치기 쉬운 이유는?</span></summary><div class="answer">문제가 PR이 고친 코드가 아니라 기존 <code>orders.py</code>의 취소 로직에 있었다. 기존 기능의 동작을 알아야만 보인다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>Gitar에게 수정을 맡기는 두 가지 방법은?</span></summary><div class="answer">리뷰 댓글의 Apply fix 버튼을 누르거나, PR에 <code>gitar fix</code> 댓글을 단다.</div></details>
+          <details><summary><span class="qn">Q6</span><span><code>.gitar/review</code>와 <code>.gitar/rules</code>는 어떻게 다른가?</span></summary><div class="answer">review는 Markdown 문서로 맥락을 주어 리뷰 방향을 잡는다. rules는 PR이 조건을 만족할 때 발동해 정해진 동작을 한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>실습 2의 지적을 "엔지니어링 버그가 아니다"라고 한 이유는?</span></summary><div class="answer">수수료를 더하는 코드 자체는 틀리지 않았다. "보여 주는 가격은 총액"이라는 회사 규칙에 비춰 볼 때만 문제가 된다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>자동 머지를 위해 GitHub에서 켠 설정 두 가지는?</span></summary><div class="answer">저장소의 Allow auto-merge, 그리고 기본 브랜치를 대상으로 <code>test</code> 상태 검사 통과를 요구하는 ruleset.</div></details>
+          <details><summary><span class="qn">Q9</span><span>auto apply와 auto merge의 차이는?</span></summary><div class="answer">auto apply는 사람의 승인 없이 수정을 계속 푸시하게 한다. auto merge는 남은 문제가 없고 파이프라인이 통과하면 머지까지 한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>실습 3에서 리팩터링이 빠뜨린 검사는?</span></summary><div class="answer">한 번 쓴 티켓은 다시 스캔할 수 없다는 검사. 빠지면 두 번째 스캔도 200(성공)을 돌려준다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>저장소 간 분석과 PR 간 분석은 각각 무엇을 찾나?</span></summary><div class="answer">저장소 간 분석은 혼자서는 깔끔히 머지되지만 다른 저장소를 깨뜨리는 PR을 찾는다. PR 간 분석은 동시에 열린 PR들이 함께 머지될 때의 충돌을 찾는다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>왜 거짓 경보를 줄이는 것이 중요하다고 했나?</span></summary><div class="answer">거짓 경보 하나는 토큰을 쓰고, 의도치 않은 변경을 낼 수 있는 수정 시도로 이어진다. 리뷰 과정에 잡음과 판단 부담만 더한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="apply">
+        <header><span class="num">12</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. Gitar가 아닌 다른 리뷰 도구에도 쓸 수 있다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>머릿속이나 위키에만 있는 비즈니스 규칙을 리뷰 에이전트가 읽는 문서로 옮긴다<span class="how">예: "고객에게 보여 주는 가격은 모두 총액"</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>특정 파일이 바뀌면 발동하는 조건부 리뷰 규칙을 하나 만든다<span class="how">확인: 가격·결제처럼 민감한 파일이 바뀔 때 체크 목록이 나오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>새 기능이 기존 기능과 부딪치는 반대 방향 경우를 테스트로 덮는다<span class="how">예: "무효 티켓은 양도 불가"가 있다면 "양도 후 원구매자 취소"도</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>정적 분석과 의도 검증을 둘 다 PR 파이프라인에 둔다<span class="how">확인: 보안 문제와 비즈니스 로직 문제를 각각 누가 잡는지 정해져 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>기본 브랜치에 필수 상태 검사를 건다<span class="how">자동 머지를 켜기 전의 전제 조건이다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>자동 수정·자동 머지는 테스트와 안전장치가 탄탄한 저장소부터 켠다<span class="how">저장소별로 자동화 수준을 따로 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>PR 설명에 관련 티켓이나 논의 링크를 붙인다<span class="how">리뷰가 코드만이 아니라 원래 의도와도 비교할 수 있게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>리뷰 지적이 틀렸을 때 그냥 넘기지 말고 피드백을 남긴다<span class="how">확인: 같은 거짓 경보가 반복되지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>동시에 열린 PR끼리 충돌하는지 확인하는 단계를 둔다<span class="how">에이전트를 여러 개 돌리는 팀일수록 필요하다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 13 -->
+      <section id="glossary">
+        <header><span class="num">13</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>코드 변경 검증</td><td>Code change verification. 변경이 안전한지에 더해 의도대로 맞게 동작하는지까지 확인하는 일</td></tr>
+              <tr><td>정적 분석</td><td>Static analysis. 코드를 실행하지 않고 읽어서 결함과 보안 문제를 찾는 방법</td></tr>
+              <tr><td>SQL 인젝션</td><td>입력값에 SQL 구문을 섞어 데이터베이스 명령을 조작하는 공격</td></tr>
+              <tr><td>diff</td><td>바뀐 코드 부분만 모은 것</td></tr>
+              <tr><td>CI</td><td>Continuous integration. 변경을 올릴 때마다 빌드와 테스트를 자동으로 돌리는 과정</td></tr>
+              <tr><td>flaky 테스트</td><td>코드가 그대로여도 가끔 실패하는 불안정한 테스트</td></tr>
+              <tr><td>거짓 경보</td><td>False positive. 멀쩡한 코드를 문제라고 잘못 지적하는 것</td></tr>
+              <tr><td>신호 대 잡음비</td><td>Signal-to-noise ratio. 쓸모 있는 지적과 쓸모없는 지적의 비율</td></tr>
+              <tr><td>포크</td><td>Fork. 남의 저장소를 내 계정이나 조직으로 복사한 것</td></tr>
+              <tr><td>Ruleset</td><td>GitHub에서 브랜치에 거는 보호 규칙 묶음</td></tr>
+              <tr><td>상태 검사</td><td>Status check. 머지 전에 통과해야 하는 CI 결과</td></tr>
+              <tr><td>자동 머지</td><td>Auto-merge. 조건이 모두 충족되면 사람 없이 PR을 합치는 기능</td></tr>
+              <tr><td>총액 표시</td><td>All-in price. 수수료를 포함한 최종 금액을 처음부터 보여 주는 방식</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. AI 도구가 외부 데이터와 도구에 연결하는 표준 방식</td></tr>
+              <tr><td>동시에 열린 PR</td><td>In-flight PR. 아직 머지되지 않고 함께 리뷰 중인 PR들</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="timeline">
+        <header><span class="num">14</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 무료 체험 안내</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>워크숍 저장소 안내, 브라우저만으로 진행</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>워크숍 순서: 설치, PR 세 개, 설정, CI 실패 진단</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>문제 제기: 에이전트 코드를 누가 검증하나</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>리뷰 병목과 프로덕션 장애 증가</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>Gitar 소개: 신호, CI 진단, 자동 수정</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>리뷰가 쓰는 맥락</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>거짓 경보의 비용</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>리뷰 엔진의 동작 흐름</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>실습 시작: 앱 설치, 저장소 포크</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>포크의 Actions 켜기, 대시보드 확인</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>예제 앱 Box Office</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>PR 세 개 한꺼번에 열기</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>실습 1: 티켓 양도 PR</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>정적 분석과 의도 검증의 차이</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>지적: 양도 후 환불로 친구 티켓 무효</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>Apply fix와 <code>gitar fix</code></td></tr>
+              <tr><td><span class="ts">22:00</span></td><td>실습 2: 서비스 수수료와 총액 규칙</td></tr>
+              <tr><td><span class="ts">23:20</span></td><td><code>.gitar/review</code>와 <code>.gitar/rules</code></td></tr>
+              <tr><td><span class="ts">24:40</span></td><td>Slack 링크 규칙 예</td></tr>
+              <tr><td><span class="ts">25:10</span></td><td>규칙 위반 지적</td></tr>
+              <tr><td><span class="ts">26:10</span></td><td>실습 1 수정 결과 확인</td></tr>
+              <tr><td><span class="ts">26:30</span></td><td>실습 3: 자동 머지 설정</td></tr>
+              <tr><td><span class="ts">28:30</span></td><td>실패한 테스트: 티켓 중복 스캔</td></tr>
+              <tr><td><span class="ts">29:20</span></td><td>Gitar의 CI 로그 분석</td></tr>
+              <tr><td><span class="ts">30:30</span></td><td>auto apply, auto merge 켜기</td></tr>
+              <tr><td><span class="ts">31:40</span></td><td>대시보드에서 저장소별 자동화 설정</td></tr>
+              <tr><td><span class="ts">33:20</span></td><td>더 나아간 기능 소개</td></tr>
+              <tr><td><span class="ts">34:00</span></td><td>티켓 대조 기능 검증</td></tr>
+              <tr><td><span class="ts">34:40</span></td><td>Knowledge</td></tr>
+              <tr><td><span class="ts">35:10</span></td><td>저장소 간 분석, PR 간 분석</td></tr>
+              <tr><td><span class="ts">36:00</span></td><td>대시보드의 지적 상세 화면</td></tr>
+              <tr><td><span class="ts">37:00</span></td><td>질의응답: MCP, Knowledge와 Context</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'wP3P89YB9fA:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

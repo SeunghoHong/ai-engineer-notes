@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>모델을 고르는 하네스</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#bill">토큰 청구서가 터졌다</a></li>
+      <li><a href="#rationing">토큰 배급은 답이 아니다</a></li>
+      <li><a href="#per-task">토큰값과 과제값은 다르다</a></li>
+      <li><a href="#harness">모델을 고르는 하네스</a></li>
+      <li><a href="#results">3개월 써 본 결과</a></li>
+      <li><a href="#switch">하네스는 빨리 갈아탄다</a></li>
+      <li><a href="#ferment">자체 하네스와 Ferment</a></li>
+      <li><a href="#loop">빌드하고, 확인하고, 다시 한다</a></li>
+      <li><a href="#staging">지금은 스테이징까지</a></li>
+      <li><a href="#intent">코드만 읽어서는 부족하다</a></li>
+      <li><a href="#teleport">Teleport: 노트북을 닫아도</a></li>
+      <li><a href="#studio">Studio: 팀이 같이 보는 보드</a></li>
+      <li><a href="#open">공개 범위와 설치</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-02 · 18분 · 영어 발표 한글 정리</span>
+      <h1>토큰을 아끼지 말고, 모델은 하네스가 고르게</h1>
+      <p class="lead">토큰 비용이 치솟자 많은 회사가 개발자의 토큰 사용을 제한한다. Cast AI는 반대로 간다. 하네스가 과제 결과를 보고 같은 품질을 가장 싸게 내는 모델을 그때그때 고른다. 개발자는 토큰을 마음껏 쓰고, 회사는 돈을 덜 낸다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=48YUYDjwfYY" target="_blank" rel="noopener">Stop Rationing Tokens: Let the Harness Pick the Model — Kimchi by Cast AI</a></span>
+        <span>발표: Laurent Gil (Cast AI 공동 창업자·사장), Zilvinas(추정) (Kimchi 코딩 플랫폼 엔지니어링 총괄)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 두 발표자는 Kimchi를 만든 Cast AI 사람이고, 발표 전체가 자사 제품 소개다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다(Castai → Cast AI, cloud code → Claude Code). 확실하지 않은 이름에는 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>토큰 비용은 이미 기업의 문제다. 흔한 대응은 토큰 제한이지만, 발표자는 이것이 <strong>개발자의 손을 묶는 잘못된 답</strong>이라고 본다.</li>
+        <li>모델 비용은 <strong>토큰당이 아니라 과제당</strong>으로 비교해야 한다. 토큰값이 절반 이하인 모델이 같은 과제에는 2배 가까이 들 수 있다.</li>
+        <li>Kimchi 하네스는 <strong>과제 결과를 보고 모델을 자동으로 고른다.</strong> 비싼 독점 모델은 까다로운 경우에만 쓰고, 나머지는 오픈소스 모델에 맡긴다.</li>
+        <li>Cast AI 내부 3개월 사용 결과, <strong>토큰은 1.5배 늘고 비용은 1.5배 줄었다</strong>고 발표자는 말한다. 자사 수치다.</li>
+        <li>새 모델이 나오면 하네스는 <strong>몇 주 만에 주력 모델을 바꾼다.</strong> 사람은 이 속도로 시험하고 갈아타지 못한다.</li>
+        <li>Ferment는 <strong>2시간 넘게 혼자 도는 작업</strong>이다. 빌드·확인·재시도를 반복하고, 점수가 B 이상이어야 끝난다.</li>
+        <li>Teleport는 세션을 원격 샌드박스로 옮겨 <strong>노트북을 닫아도 계속 돌게</strong> 한다. Studio는 그 세션을 팀이 함께 보는 칸반 보드로 만든다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="bill">
+        <header><span class="num">01</span><h2>토큰 청구서가 터졌다 <span class="ts">00:50</span></h2></header>
+        <p>Laurent Gil은 최근 몇 주 사이 뉴스에 나온 사례 두 개로 시작한다.</p>
+        <ul class="plain">
+          <li>인도의 한 회사가 <strong>한 달에 Anthropic에만 5억 달러</strong>를 썼다.</li>
+          <li>Uber CTO가 <strong>지난 4개월 동안 1년치 Anthropic 예산을 다 썼다</strong>는 트윗을 올렸다.</li>
+        </ul>
+        <p>토큰 비용이 기업에서 실제 문제가 됐다는 뜻이다. 발표의 메시지도 여기서 나온다. <strong>비싼 독점 모델<span class="en">proprietary model</span>은 까다로운 경우에만 쓰고, 나머지는 오픈소스 모델에 맡기자.</strong></p>
+        <p class="note">두 사례 모두 발표자가 인용한 것이다. 인도 회사의 이름과 원 출처는 발표에 나오지 않았다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="rationing">
+        <header><span class="num">02</span><h2>토큰 배급은 답이 아니다 <span class="ts">01:30</span></h2></header>
+        <p>많은 회사가 토큰 사용량에 한도를 두는 것으로 대응했다. 발표자는 개발자 입장에서 이게 어떤 느낌인지 비유로 설명한다.</p>
+        <div class="callout">
+          <span class="title">발표자의 비유</span>
+          <span>노트북은 쓰게 해 준다. 그런데 배터리는 1시간짜리고, 충전은 하루에 한 번만 된다.</span>
+        </div>
+        <p>Kimchi 팀은 이 방식이 틀렸다고 본다. 관리자의 일은 토큰을 막는 것이 아니다. <strong>토큰을 무제한이고 싸게 만드는 것</strong>이다. 개발자가 원하는 만큼, 원하는 시간 동안 코딩 에이전트를 쓰게 하는 것이 목표다.</p>
+        <blockquote>우리의 일은 개발자가 코딩 에이전트를 못 쓰게 막는 것이 아니다.<cite>Laurent Gil의 말을 옮김 · 02:10</cite></blockquote>
+        <div class="shift" aria-label="토큰 비용 대응 방식의 변화">
+          <div><span class="tag">흔한 대응</span><b>토큰 사용량을 제한한다</b><span class="muted">비용은 줄지만 개발자가 에이전트를 덜 쓴다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Kimchi의 대응</span><b>같은 결과를 더 싼 모델로 낸다</b><span class="muted">토큰은 사실상 무제한, 비용은 하네스가 줄인다</span></div>
+        </div>
+
+        <h3>실험 대상: Cast AI 자신 <span class="ts">02:30</span></h3>
+        <p>Cast AI 직원은 300명이다. 그중 3분의 2가 개발자다. 이 사람들이 지난 3개월 동안 Kimchi를 썼다. 뒤에 나오는 결과는 이 내부 사용 기록이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="per-task">
+        <header><span class="num">03</span><h2>토큰값과 과제값은 다르다 <span class="ts">03:00</span></h2></header>
+        <p>발표자는 한 대학의 연구 결과를 보여 준다. 논문 이름은 밝히지 않았다. 이 연구는 모델마다 비용 두 가지를 나란히 놓았다.</p>
+        <ul class="plain">
+          <li><strong>토큰당 비용</strong><span class="en">cost per token</span>: 100만 토큰당 가격.</li>
+          <li><strong>과제당 비용</strong><span class="en">cost per task</span>: 같은 과제를 같은 품질로 끝내는 데 실제로 든 돈.</li>
+        </ul>
+        <p>"같은 품질"이 핵심이다. 품질이 다르면 비교할 수 없다.</p>
+
+        <div class="pair">
+          <figure class="chart" aria-label="100만 토큰당 가격: Gemini 3 Flash 3.5달러, MiniMax 2.7 1.5달러">
+            <span class="chart-title">100만 토큰당 가격 (달러, 혼합 평균)</span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>Gemini 3 Flash</span><span class="val">3.5</span></div>
+                <div class="track"><div class="fill" style="width:100%" title="Gemini 3 Flash: 100만 토큰당 3.5달러"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>MiniMax 2.7</span><span class="val">1.5</span></div>
+                <div class="track"><div class="fill key" style="width:42.9%" title="MiniMax 2.7: 100만 토큰당 1.5달러"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>1.75</span><span>3.5</span></div>
+          </figure>
+          <figure class="chart" aria-label="같은 과제를 끝낸 비용: Gemini 3 Flash 75달러, MiniMax 2.7 148달러">
+            <span class="chart-title">같은 과제를 끝낸 비용 (달러)</span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>Gemini 3 Flash</span><span class="val">75</span></div>
+                <div class="track"><div class="fill" style="width:50.7%" title="Gemini 3 Flash: 과제당 75달러"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>MiniMax 2.7</span><span class="val">148</span></div>
+                <div class="track"><div class="fill key" style="width:100%" title="MiniMax 2.7: 과제당 148달러"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>74</span><span>148</span></div>
+          </figure>
+        </div>
+        <p class="note">두 차트는 눈금이 다르다. 각 차트 안에서만 막대 길이를 비교한다. Gemini 3 Flash의 과제 비용은 발표자가 "305"라고 했다가 75달러로 고쳐 말했다. 토큰 단가는 연구 당시의 혼합 평균이라고 했다.</p>
+
+        <p>토큰값만 보면 MiniMax 2.7이 절반 이하로 싸다. 그런데 과제를 끝내는 데는 Gemini 3 Flash의 약 2배가 들었다. 모델은 토큰값도 다르고 과제값도 다르다. <strong>그리고 두 순위는 뒤집힐 수 있다.</strong></p>
+        <div class="callout">
+          <span class="title">어림 계산 (예시, 발표에 없음)</span>
+          <span>과제 비용을 토큰 단가로 나누면 쓴 토큰 양을 짐작할 수 있다. MiniMax 2.7은 약 9,900만 토큰(148 ÷ 1.5), Gemini 3 Flash는 약 2,100만 토큰(75 ÷ 3.5)이다. 같은 일에 토큰을 4.6배쯤 더 쓴 셈이다. 단가가 입력·출력을 섞은 평균이라 대략적인 값이다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="harness">
+        <header><span class="num">04</span><h2>결과를 보고 모델을 고르는 하네스 <span class="ts">04:20</span></h2></header>
+        <p>그래서 Cast AI는 코딩 에이전트를 직접 만들었다. 핵심 아이디어는 하나다. <strong>하네스</strong><span class="en">harness</span>가 모델을 고른다. 하네스는 모델을 감싸 도구, 순서, 검사를 정해 주는 실행 틀이다.</p>
+        <ul class="plain">
+          <li><strong>무엇을 보고 고르나</strong>: 과제의 결과. 같은 결과를 가장 싸게 내는 모델을 찾는다.</li>
+          <li><strong>언제 고르나</strong>: 과제마다, 그때그때.</li>
+          <li><strong>사람이 하나</strong>: 아니다. 자동으로 고른다.</li>
+        </ul>
+        <p>Laurent Gil은 이것을 Zilvinas(추정)와 엔지니어링 팀이 만든 Kimchi Coding이라고 소개한다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="results">
+        <header><span class="num">05</span><h2>3개월 써 본 결과 <span class="ts">04:40</span></h2></header>
+        <p>Laurent Gil이 내부 3개월 사용 결과를 보여 준다. 화면의 그래프는 하루 단위 비용이다. 위쪽 보라색 선은 기존 방식으로 썼다면 냈을 비용이다. 아래 파란 선은 실제로 낸 비용이다. 결과물은 같다고 했다.</p>
+
+        <div class="pair">
+          <figure class="chart" aria-label="같은 결과에 든 비용: 기존 방식 2.5, 실제 1">
+            <span class="chart-title">같은 결과에 든 비용 (실제 낸 비용 = 1)</span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>기존 방식으로 냈을 비용</span><span class="val">2.5</span></div>
+                <div class="track"><div class="fill" style="width:100%" title="기존 방식으로 냈을 비용: 2.5"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>Kimchi로 실제 낸 비용</span><span class="val">1</span></div>
+                <div class="track"><div class="fill key" style="width:40%" title="실제 낸 비용: 1"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>1.25</span><span>2.5</span></div>
+            <span class="caption">발표자 표현은 "기간 동안 2.5배 절감". 자막의 "cloud bill"은 앞뒤 맥락상 Claude 청구서로 읽었다(추정).</span>
+          </figure>
+          <figure class="chart" aria-label="3개월 동안의 변화, 시작 시점 100 기준: 토큰 사용량 150, 비용 67">
+            <span class="chart-title">3개월 동안의 변화 (시작 시점 = 100)</span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>토큰 사용량</span><span class="val">150 · 1.5배</span></div>
+                <div class="track"><div class="fill" style="width:100%" title="토큰 사용량: 150 (1.5배 증가)"></div><div class="baseline" style="left:66.7%"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>비용</span><span class="val">67 · 1/1.5</span></div>
+                <div class="track"><div class="fill key" style="width:44.4%" title="비용: 약 67 (1.5배 감소)"></div><div class="baseline" style="left:66.7%"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>점선 = 시작 (100)</span><span>150</span></div>
+            <span class="caption">"1.5배 줄었다"를 100 ÷ 1.5 ≈ 67로 그렸다.</span>
+          </figure>
+        </div>
+
+        <p>토큰은 더 쓰는데 돈은 덜 낸다. 발표자는 이것이 관리자가 할 일이라고 말한다. <strong>개발자에게 사실상 무제한인 코딩 에이전트를 주는 것</strong>이다.</p>
+        <p class="note">계산 바로잡기: 토큰이 1.5배 늘고 비용이 1.5배 줄었다면, 토큰 하나당 비용은 1.5 × 1.5 = 약 2.25배 줄어든 셈이다. 발표자는 비용이 토큰보다 "3배, 아니 2.5배" 덜 늘었다고 말했다. 자막에 나온 숫자로 계산하면 2.25배다.</p>
+        <p class="note">이 수치는 Kimchi를 파는 Cast AI가 자사 내부 사용에서 낸 것이다. "같은 결과"를 어떻게 쟀는지, 비교 기준이 정확히 무엇인지는 발표에서 자세히 설명하지 않았다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="switch">
+        <header><span class="num">06</span><h2>하네스는 사람보다 빨리 갈아탄다 <span class="ts">05:50</span></h2></header>
+        <p>다음 그래프는 하네스가 날마다 어떤 모델을 골랐는지 색으로 보여 준다. 6월 초에는 주황색이 많고, 6월 말에는 노란색이 많다. 6월 12일쯤 선택이 통째로 바뀌었다.</p>
+        <div class="shift" aria-label="하네스가 가장 많이 고른 모델의 변화">
+          <div><span class="tag">6월 3일</span><b>Kimi 2.6(추정)</b><span class="muted">하네스가 가장 많이 고른 모델</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">6월 21일</span><b>MiniMax 3(추정)</b><span class="muted">하네스가 가장 많이 고른 모델</span></div>
+        </div>
+        <p>새 모델이 나오면 사람은 찾아보고, 시험하고, 믿을 만하다고 느낄 때까지 시간이 걸린다. 발표자는 사람이 이걸 매번 따라가지 못한다고 말한다. <strong>비용에 집착하는 자동 하네스는 바로 그 일을 한다.</strong></p>
+        <p>발표자는 같은 결과를 가장 낮은 비용으로 주는 것이 관리자의 책임이라고 다시 강조한다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="ferment">
+        <header><span class="num">07</span><h2>자체 하네스와 Ferment <span class="ts">07:30</span></h2></header>
+        <p>여기서 Kimchi 엔지니어링을 이끄는 Zilvinas(추정)가 설명을 이어받는다. 반년쯤 전 Cast AI는 Claude Code에 너무 많은 돈을 쓰고 있었다. 청구서가 치솟자 자체 하네스를 만들기 시작했다.</p>
+        <ul class="plain">
+          <li>내부적으로는 pono SDK(추정)를 쓴다.</li>
+          <li>오픈소스에서 가져온 만큼 돌려준다. 하네스의 구성 요소를 오픈소스로 공개한다.</li>
+        </ul>
+
+        <h3>Ferment: 2시간 넘게 혼자 도는 작업 <span class="ts">08:10</span></h3>
+        <p>Ferment(발효)는 김치라는 이름에 맞춘 기능이다. 오래 걸리는 작업을 위한 것이다. 팀의 추정으로는 이런 작업에서 사람이 끼어들 일은 2~3시간에 한 번쯤이다.</p>
+        <ol class="plain">
+          <li>Ferment를 시작하면 먼저 질문을 몇 개 던진다.</li>
+          <li>작업을 마일스톤<span class="en">milestone</span>, 즉 중간 목표로 쪼갠다.</li>
+          <li>2시간 넘게 스스로 코딩한다.</li>
+          <li>끝나면 결과물에 점수를 매긴다.</li>
+        </ol>
+        <p>점수는 앞의 모델 선택과 이어진다. 하네스가 어떤 모델을 고르든 결과가 충분히 좋다는 걸 점수로 보여 주려는 것이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="loop">
+        <header><span class="num">08</span><h2>빌드하고, 확인하고, 다시 한다 <span class="ts">09:00</span></h2></header>
+        <p>Kimchi는 코딩 하네스에서 멈추지 않고 소프트웨어 개발 전 과정을 맡으려 한다. Ferment 과정은 이렇게 돈다.</p>
+        <ol class="plain">
+          <li>코드를 바꾼다.</li>
+          <li>빌드한다.</li>
+          <li>깨진 곳이 있는지 확인한다.</li>
+          <li>깨졌으면 1번으로 돌아간다.</li>
+          <li>다 통과하면 스테이징 환경에 배포한다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">Laurent Gil의 정리 <span class="ts">09:30</span></span>
+          <span>하네스는 모델을 고른다. Ferment는 코드 품질을 계속 확인한다. 품질이 모자라면 더 상위의 모델이 "다시 하라"고 돌려보낸다. 결과 품질을 기준으로 토큰을 최적화한다는 말이 이 뜻이다.</span>
+        </div>
+
+        <h3>B 이상이어야 끝난다 <span class="ts">10:00</span></h3>
+        <p>결과물은 점수가 <strong>B 이상</strong>일 때만 완료로 친다. 점수가 마음에 안 들면 에이전트에게 다시 고치라고 할 수 있다. 그러면 에이전트는 A를 목표로 다시 작업한다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="staging">
+        <header><span class="num">09</span><h2>지금은 스테이징까지 <span class="ts">10:20</span></h2></header>
+        <p>스테이징<span class="en">staging</span>은 실제 서비스 전에 돌려 보는 시험 환경이다. Kimchi가 여기서 멈추는 건 일부러 그렇게 설계한 것이다. 프로덕션에 가기 전에 지금은 사람이 한 번 봐야 한다고 본다.</p>
+        <p>다음 목표는 프로덕션까지 자동으로 가는 것이다. 그러려면 배포 전에 이런 것들을 확인해야 한다고 했다.</p>
+        <ul class="plain">
+          <li>메트릭과 관측 데이터<span class="en">observability</span></li>
+          <li>SLO 지표(추정)</li>
+          <li>Kubernetes를 쓴다면 파드<span class="en">pod</span>가 죽지 않는지</li>
+          <li>애플리케이션 헬스 체크가 통과하는지</li>
+        </ul>
+        <p>이 확인을 모두 거쳐 자동으로 프로덕션에 내보내는 기능을 준비 중이라고 했다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="intent">
+        <header><span class="num">10</span><h2>코드만 읽어서는 부족하다 <span class="ts">11:00</span></h2></header>
+        <p>에이전트로 개발할수록 한 번에 바뀌는 코드가 많아진다. 사람이 다 읽기 버거워진다.</p>
+        <p>개발자가 아닌 사람이 코딩에 들어오면 더 그렇다. 발표의 예는 이렇다. 제품 매니저나 Laurent Gil이 코딩을 시작하더니 2,000줄짜리 PR을 들고 온다.</p>
+        <p>이때 리뷰할 것은 바뀐 코드만이 아니다. <strong>작성자가 이루려던 의도</strong>와 <strong>코딩 에이전트에게 준 명세</strong><span class="en">specification</span>까지 봐야 한다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="teleport">
+        <header><span class="num">11</span><h2>Teleport: 노트북을 닫아도 계속 <span class="ts">11:50</span></h2></header>
+        <p>Kimchi Teleport는 원격 환경에 안전한 샌드박스<span class="en">sandbox</span>를 띄우고 에이전트 세션을 그리로 옮긴다. 노트북을 닫아도 작업이 이어진다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>어디서 도나</td><td>Cast AI의 SaaS, 또는 고객의 온프레미스. 금융 회사처럼 외부에 못 두는 곳을 위한 선택지다</td></tr>
+              <tr><td>누가 관리하나</td><td>Kimchi가 세션이 계속 돌도록 관리한다. 크기와 보안 요건도 맞춘다</td></tr>
+              <tr><td>어디서 보나</td><td>노트북과 모바일 기기</td></tr>
+              <tr><td>언제 멈추나</td><td>작업이 끝나거나 사람이 필요할 때. 명세 확인이 필요하면 알림을 보낸다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Ferment에서 말한 "사람은 2~3시간에 한 번"과 이어지는 기능이다.</p>
+
+        <h3>비행기에서 나간 배터리 <span class="ts">12:50</span></h3>
+        <p>Laurent Gil은 Teleport가 아주 단순한 아이디어에서 나왔다고 말한다. 팀원 한 명이 비행기에서 코딩하다 노트북 배터리가 나갔다. 에이전트가 노트북 안에서 돌고 있었으니 작업도 같이 멈췄다.</p>
+        <p>Teleport는 로컬 환경 전체를 하이퍼스케일러<span class="en">hyperscaler</span>의 컨테이너와 동기화한다. Cast AI는 Google을 쓴다. 노트북에서 쓰는 것과 똑같이 느껴진다. 실제로는 Google의 Kubernetes 클러스터 안 컨테이너에서 돈다.</p>
+        <div class="callout">
+          <span class="title">엔지니어의 62% <span class="ts">14:00</span></span>
+          <span>발표자가 마지막으로 확인한 수치로는, Cast AI 엔지니어의 62%가 이제 코딩할 때 Teleport만 쓴다. 퇴근해도, 이동 중에도, 휴가 중에도 작업은 이어진다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="studio">
+        <header><span class="num">12</span><h2>Studio: 팀이 같이 보는 보드 <span class="ts">14:20</span></h2></header>
+        <p>Teleport가 개인용이라면 Kimchi Studio는 팀과 기업을 위한 Teleport다. Studio도 Teleport 샌드박스 위에서 돈다.</p>
+        <p>핵심은 공유다. Kimchi 하네스가 오픈소스 모델이나 독점 모델로 만든 작업, 진행 상황, 계획을 팀과 나눈다.</p>
+        <ul class="plain">
+          <li>엔지니어가 에이전트에게 계획을 받으면, 동료 엔지니어나 제품 매니저가 그 계획을 바로 검토할 수 있다.</li>
+          <li>프롬프트 하나로 프로덕션까지 갔다가 명세가 틀렸다는 걸 뒤늦게 아는 일을 줄인다.</li>
+        </ul>
+
+        <h3>터미널을 어떻게 나누나 <span class="ts">15:30</span></h3>
+        <p>Laurent Gil의 설명은 이렇다. CLI는 내 컴퓨터 안에 있어서 남과 나누기 어렵다. 나누려면 먼저 다른 곳에 있어야 한다. 그래서 Teleport가 Studio의 바탕이다.</p>
+        <p>Studio는 브라우저에서 보는 그래픽 화면이다. 돌아가는 세션을 칸반<span class="en">kanban</span> 방식으로 보여 준다.</p>
+        <ol class="plain">
+          <li>새 작업은 백로그에서 시작한다.</li>
+          <li>에이전트가 일하는 동안 세션은 "진행 중"에 있다.</li>
+          <li>사람의 답이 필요하면 "리뷰 요청"으로 옮겨진다.</li>
+          <li>팀원 누구든 그 세션을 맡아 답한다.</li>
+          <li>세션은 다시 "진행 중"으로 돌아간다.</li>
+        </ol>
+        <p>5~10명의 피자 팀이 이런 세션을 여러 개 함께 굴린다. Cast AI도 원래 자기들이 쓰려고 만들었다가 제품으로 내놓았다고 했다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="open">
+        <header><span class="num">13</span><h2>공개 범위와 설치 <span class="ts">17:10</span></h2></header>
+        <ul class="plain">
+          <li><strong>하네스</strong>는 전부 오픈소스다.</li>
+          <li><strong>Teleport와 Studio</strong>는 Google 계정이 필요하다. 설치는 5분쯤 걸린다고 했다.</li>
+          <li>설치하면 내 Google 계정 안에 세션을 원하는 만큼 띄우고, Studio로 동료와 나눌 수 있다.</li>
+        </ul>
+        <p class="note">발표 전체가 Cast AI의 제품 소개이고, 끝부분은 부스 안내로 마무리된다. 절감 효과와 사용률 수치는 자사 내부 기록이므로 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>토큰 비용은 이미 기업의 문제다. 흔한 대응인 토큰 제한은 개발자의 손을 묶는다.</li>
+          <li>발표자는 관리자의 일이 <strong>토큰을 무제한이고 싸게 만드는 것</strong>이라고 본다.</li>
+          <li>모델 비용은 <strong>같은 품질의 과제당 비용</strong>으로 비교해야 한다.</li>
+          <li>토큰값이 싼 모델이 과제값은 더 비쌀 수 있다. MiniMax 2.7은 토큰값이 Gemini 3 Flash의 절반 이하였지만 과제값은 약 2배였다.</li>
+          <li>Kimchi 하네스는 <strong>과제 결과를 보고 모델을 자동으로 고른다.</strong> 독점 모델은 까다로운 경우에만 쓴다.</li>
+          <li>Cast AI 내부 3개월: 토큰 1.5배 증가, 비용 1.5배 감소. 이를 합치면 토큰당 비용은 약 2.25배 줄었다. 자사 수치다.</li>
+          <li>새 모델이 나오면 하네스는 <strong>몇 주 만에 주력 모델을 바꾼다.</strong> 사람은 이 속도를 못 따라간다.</li>
+          <li>Ferment는 2시간 넘게 혼자 돌며 빌드·확인·재시도를 반복한다. <strong>점수 B 이상</strong>이어야 끝나고, 지금은 스테이징까지만 자동이다.</li>
+          <li>변경이 커질수록 바뀐 코드보다 <strong>의도와 명세</strong>를 리뷰해야 한다.</li>
+          <li>Teleport는 세션을 원격 샌드박스로 옮겨 노트북을 닫아도 돌게 한다. Studio는 그 세션을 팀의 칸반 보드로 나눈다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자는 토큰 사용량 제한을 왜 잘못된 대응이라고 보나?</span></summary><div class="answer">개발자가 코딩 에이전트를 마음껏 쓰지 못하게 되기 때문이다. 배터리 1시간짜리 노트북을 하루 한 번만 충전하게 하는 것과 같다. 관리자의 일은 토큰을 막는 게 아니라 무제한이고 싸게 만드는 것이라고 본다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>토큰당 비용과 과제당 비용은 각각 무엇을 재나?</span></summary><div class="answer">토큰당 비용은 100만 토큰당 가격이다. 과제당 비용은 같은 과제를 같은 품질로 끝내는 데 실제로 든 돈이다. 품질이 같아야 비교가 된다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Gemini 3 Flash와 MiniMax 2.7 비교에서 무엇이 뒤집혔나?</span></summary><div class="answer">토큰값은 MiniMax 2.7이 1.5달러로 Gemini 3 Flash(3.5달러)보다 쌌다. 과제값은 MiniMax 2.7이 148달러로 Gemini 3 Flash(75달러)의 약 2배였다. 토큰값 순위와 과제값 순위가 뒤집혔다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Kimchi 하네스는 무엇을 기준으로 모델을 고르나?</span></summary><div class="answer">과제의 결과다. 같은 결과를 가장 싸게 내는 모델을 과제마다 자동으로 고른다. 비싼 독점 모델은 까다로운 경우에만 쓴다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>3개월 결과로 발표자가 든 숫자와, 그 숫자를 계산하면 나오는 값은?</span></summary><div class="answer">토큰은 1.5배 늘고 비용은 1.5배 줄었다. 기존 방식 대비 2.5배 절감이라고도 했다. 앞의 두 숫자를 합치면 토큰당 비용은 약 2.25배 줄어든 셈이다. 발표자가 말한 "2.5배"와는 조금 다르다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>6월의 모델 선택 변화는 무엇을 보여 주나?</span></summary><div class="answer">6월 3일에는 Kimi 2.6(추정), 6월 21일에는 MiniMax 3(추정)이 가장 많이 선택됐다. 새 모델이 나오면 비용에 집착하는 하네스는 몇 주 만에 갈아탄다. 사람은 시험하고 믿기까지 이렇게 빨리 움직이지 못한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>Ferment는 어떤 작업을 위한 것이고, 어떤 순서로 도나?</span></summary><div class="answer">사람이 2~3시간에 한 번쯤 끼어드는 긴 작업을 위한 것이다. 질문 몇 개를 던지고, 마일스톤으로 쪼개고, 2시간 넘게 스스로 코딩한 뒤 점수를 매긴다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Ferment에서 결과물이 "완료"가 되는 조건은?</span></summary><div class="answer">빌드와 확인을 통과하고, 점수가 B 이상이어야 한다. 품질이 모자라면 상위 모델이 다시 하라고 돌려보낸다. 사용자가 원하면 A를 목표로 다시 시킬 수 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Kimchi가 지금 스테이징에서 멈추는 이유와, 프로덕션까지 가려면 확인할 것은?</span></summary><div class="answer">프로덕션 전에 사람이 한 번 봐야 한다고 보기 때문이다. 자동으로 가려면 메트릭, 관측 데이터, SLO 지표, 파드가 죽지 않는지, 헬스 체크 통과를 확인해야 한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>"코드만 읽어서는 부족하다"는 무슨 뜻인가?</span></summary><div class="answer">에이전트로 만든 변경은 크고, 비개발자도 2,000줄짜리 PR을 올린다. 바뀐 코드만 읽어서는 판단이 안 된다. 작성자의 의도와 에이전트에게 준 명세까지 리뷰해야 한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>Teleport는 어떤 문제에서 시작했고, 어떻게 동작하나?</span></summary><div class="answer">비행기에서 코딩하다 배터리가 나가 작업이 멈춘 일에서 시작했다. 로컬 환경을 Google Kubernetes 클러스터의 컨테이너와 동기화해, 노트북을 닫아도 작업이 이어지게 한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>Studio는 Teleport와 무엇이 다른가?</span></summary><div class="answer">Teleport는 개인용이고 Studio는 팀용이다. Studio는 Teleport 위에서 세션을 브라우저 칸반 보드로 보여 준다. 리뷰를 요청한 세션을 팀원 누구나 맡아 답할 수 있다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>모델 비용을 토큰당이 아니라 과제당으로 잰다<span class="how">예시: 자주 하는 과제 하나를 두 모델로 돌려 총 비용과 결과 품질을 나란히 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>토큰 한도를 걸기 전에, 같은 결과를 더 싸게 내는 모델이 있는지 먼저 본다<span class="how">확인: 비용 문제를 사용량 제한 말고 모델 선택으로 풀 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>비싼 독점 모델을 쓰는 경우를 정한다<span class="how">까다로운 경우에만 쓰고, 나머지는 더 싼 모델로 보낸다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>새 모델이 나올 때 다시 비교하는 절차를 둔다<span class="how">확인: 몇 주 안에 주력 모델을 바꿀 수 있는 구조인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트 작업에 완료 기준을 정한다<span class="how">예: 빌드 통과, 확인 통과, 품질 점수 B 이상</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>사람이 반드시 끼는 지점을 정한다<span class="how">Kimchi는 지금 스테이징 다음, 프로덕션 전에 사람이 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>큰 PR은 바뀐 코드와 함께 의도와 명세를 같이 리뷰한다<span class="how">확인: 에이전트에게 준 명세가 PR에 남아 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>긴 에이전트 작업을 노트북 밖에서 돌릴 수 있게 한다<span class="how">확인: 노트북을 닫아도 작업이 이어지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>에이전트의 계획을 팀이 함께 보는 자리를 만든다<span class="how">실행 전에 동료나 제품 매니저가 계획을 검토하게 한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>토큰</td><td>Token. 모델이 글을 읽고 쓰는 단위. 사용료가 토큰 수로 매겨진다</td></tr>
+              <tr><td>토큰 배급</td><td>Rationing tokens. 개발자별 토큰 사용량에 한도를 두는 것</td></tr>
+              <tr><td>토큰 맥싱</td><td>Token maxing. 토큰을 아끼지 않고 최대한 많이 쓰는 것</td></tr>
+              <tr><td>독점 모델</td><td>Proprietary model. 가중치를 공개하지 않고 API로만 파는 모델</td></tr>
+              <tr><td>오픈소스 모델</td><td>가중치를 공개해 누구나 받아서 돌릴 수 있는 모델</td></tr>
+              <tr><td>토큰당 비용</td><td>Cost per token. 보통 100만 토큰당 가격으로 표시한다</td></tr>
+              <tr><td>과제당 비용</td><td>Cost per task. 같은 과제를 같은 품질로 끝내는 데 실제로 든 돈</td></tr>
+              <tr><td>혼합 평균 단가</td><td>Blended price. 입력 토큰과 출력 토큰 가격을 섞어 하나로 낸 평균값</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙, 검사를 정해 주는 실행 틀</td></tr>
+              <tr><td>Ferment</td><td>Kimchi의 장시간 작업 기능. 질문, 마일스톤 분할, 자율 코딩, 점수 매기기 순서로 돈다</td></tr>
+              <tr><td>마일스톤</td><td>Milestone. 큰 작업을 나눈 중간 목표</td></tr>
+              <tr><td>스테이징</td><td>Staging. 실제 서비스 전에 돌려 보는 시험 환경</td></tr>
+              <tr><td>프로덕션</td><td>Production. 실제 사용자가 쓰는 운영 환경</td></tr>
+              <tr><td>관측 데이터</td><td>Observability. 로그, 메트릭, 추적처럼 시스템 내부 상태를 밖에서 볼 수 있게 하는 데이터</td></tr>
+              <tr><td>SLO</td><td>Service Level Objective. 서비스가 지키기로 한 목표 수준</td></tr>
+              <tr><td>파드</td><td>Pod. Kubernetes에서 컨테이너를 돌리는 가장 작은 단위</td></tr>
+              <tr><td>헬스 체크</td><td>Health check. 애플리케이션이 정상인지 주기적으로 확인하는 검사</td></tr>
+              <tr><td>샌드박스</td><td>Sandbox. 다른 시스템과 격리된 안전한 실행 환경</td></tr>
+              <tr><td>온프레미스</td><td>On-premise. 고객 회사가 자기 서버에 직접 설치해 운영하는 방식</td></tr>
+              <tr><td>하이퍼스케일러</td><td>Hyperscaler. Google, AWS, Azure 같은 대형 클라우드 사업자</td></tr>
+              <tr><td>칸반</td><td>Kanban. 작업을 상태별 열로 나눠 보여 주는 보드</td></tr>
+              <tr><td>피자 팀</td><td>피자 몇 판으로 다 같이 먹을 수 있는 작은 팀. 발표에서는 5~10명</td></tr>
+              <tr><td>명세</td><td>Specification. 무엇을 만들어야 하는지 적은 요구 사항</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 주제: 독점 모델은 까다로운 경우에만</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>토큰 비용 폭증 사례: 인도 회사, Uber CTO</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>토큰 제한의 문제: 배터리 비유</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>관리자의 일: 토큰을 무제한이고 싸게</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>Cast AI 300명, 3개월 사용</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>토큰당 비용과 과제당 비용 연구</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>Gemini 3 Flash와 MiniMax 2.7 비교</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>결과를 보고 모델을 고르는 하네스</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>3개월 결과: 2.5배 절감</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>토큰 1.5배 증가, 비용 1.5배 감소</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>하네스의 모델 선택 변화</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>Kimi 2.6에서 MiniMax 3으로</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>Zilvinas: Claude Code 비용과 자체 하네스</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>오픈소스 기여와 Ferment</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>마일스톤과 점수</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>개발 전 과정: 빌드, 확인, 재시도, 스테이징</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>상위 모델이 품질을 검사한다</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>B 이상이면 완료</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>스테이징에서 멈추는 이유, 프로덕션 계획</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>코드만 읽어서는 부족하다</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>Kimchi Teleport</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>Teleport가 나온 배경: 비행기와 배터리</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>엔지니어 62%가 Teleport 사용</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>Kimchi Studio</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>CLI를 팀과 나누는 법</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>칸반 흐름: 리뷰 요청, 진행 중, 백로그</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>부스 안내, 오픈소스 범위, 설치</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '48YUYDjwfYY:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

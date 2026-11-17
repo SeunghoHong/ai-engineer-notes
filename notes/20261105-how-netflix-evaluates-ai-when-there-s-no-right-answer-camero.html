@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>정답 없는 AI 평가</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- pipeline (added for this note: the multi-step evaluation loop) ---------- */
+.pipeline { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(8.5rem, 100%), 1fr)); gap: 8px; counter-reset: step; }
+.pipeline li { counter-increment: step; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.pipeline li::before { content: counter(step, decimal-leading-zero); font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent); }
+.pipeline li.back { border-style: dashed; border-color: var(--accent); }
+.pipeline .muted { font-size: var(--step--1); line-height: 1.6; }
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#noise">평가를 흐리는 잡음</a></li>
+      <li><a href="#subjective">함수로 채점할 수 없는 과제</a></li>
+      <li><a href="#framework">세 부분으로 된 평가 틀</a></li>
+      <li><a href="#guidelines">사람 평가: 품질 기준 쓰기</a></li>
+      <li><a href="#calibration">사람끼리 맞추기: 보정</a></li>
+      <li><a href="#sampling">데이터를 얼마나, 어떤 것으로</a></li>
+      <li><a href="#offline">자동 평가: 판정자와 루브릭</a></li>
+      <li><a href="#meta">판정자를 평가하기</a></li>
+      <li><a href="#stats">잡음을 줄이는 통계 도구</a></li>
+      <li><a href="#production">프로덕션에서 확인하기</a></li>
+      <li><a href="#cycle">끝나지 않는 순환</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">적용 체크리스트</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-05 · 18분 · 영어 발표 한글 정리</span>
+      <h1>정답이 없을 때 AI를 평가하는 법</h1>
+      <p class="lead">창작 글쓰기처럼 정답이 하나로 정해지지 않는 과제는 채점까지 흔들려서 평가 결과에 잡음이 많다. 발표자는 사람 평가를 기준점으로 세우고, 그 기준에 맞춘 자동 평가로 실험을 늘리고, 프로덕션 지표로 마지막 확인을 하라고 제안한다. 모든 단계에서 통계로 잡음을 줄인다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=zLc8zeGeNaY" target="_blank" rel="noopener">How Netflix Evaluates AI When There's No Right Answer</a></span>
+        <span>발표: Cameron Wolfe (Netflix 스태프 리서치 사이언티스트, 뉴스레터 Deep (Learning) Focus 작성자)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 사례는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름(DR Tulu)은 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>평가가 어려운 가장 큰 이유는 <strong>잡음</strong>이다. 에이전트는 같은 과제도 매번 다르게 풀고, 비용 때문에 과제 수는 적다.</li>
+        <li>주관적인 과제는 함수로 채점할 수 없어 <strong>채점기까지 LLM으로 바뀐다.</strong> 흔들리는 부품이 하나 더 생긴다.</li>
+        <li>먼저 <strong>사람 평가를 북극성으로</strong> 세운다. 전문가와 품질 가이드라인을 쓰고, 평가자끼리 일치할 때까지 고친다.</li>
+        <li>평가 데이터의 양은 <strong>검정력 분석</strong>으로 정한다. 데이터는 실제 사용을 닮고, 모델 차이를 드러내고, 정확해야 한다.</li>
+        <li>사람 평가는 느리다. 그래서 <strong>LLM 판정자나 루브릭</strong>으로 자동 평가를 만들고, 사람이 만든 골든 데이터와 얼마나 일치하는지로 검증한다. 목표는 사람끼리의 일치도만큼이다.</li>
+        <li>점수만 보고하지 않는다. <strong>오차 막대를 붙이고, 여러 번 돌려 분산을 줄인다.</strong></li>
+        <li>배포 전에 <strong>A/B 테스트</strong>로 프로덕션 지표를 보고, 배포 뒤에도 감시한다. 찾은 실패는 앞 단계 평가로 돌려보낸다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="noise">
+        <header><span class="num">01</span><h2>평가를 흐리는 잡음 <span class="ts">00:50</span></h2></header>
+        <p>AI 연구계에서는 벤치마크 이야기가 끊이지 않는다. 새 평가와 그 개정판이 거의 매일 나온다. 평가가 어려운 이유는 여럿이지만, 발표자는 그중 <strong>잡음</strong><span class="en">noise</span>에 집중한다.</p>
+        <p>잡음은 평가 과정에 결과가 매번 달라지는 부품이 들어 있어서 생긴다. 이런 부품을 비결정적<span class="en">non-deterministic</span>이라고 부른다. 결과가 흔들리면 점수 차이를 보고 결론을 내리기 어렵다.</p>
+
+        <h3>평가 한 번은 이렇게 돌아간다 <span class="ts">01:30</span></h3>
+        <ol class="plain">
+          <li>평가 묶음<span class="en">evaluation suite</span>에서 과제를 꺼낸다.</li>
+          <li>에이전트가 과제를 푼다. 푸는 과정 전체를 롤아웃<span class="en">rollout</span>이라고 한다. 같은 과제도 매번 다르게 푼다.</li>
+          <li>채점기<span class="en">grader</span>가 답을 보고 통과나 실패를 매긴다.</li>
+        </ol>
+        <p>비용도 문제다. 발표자에 따르면 최근 벤치마크 일부는 한 번 돌리는 데 5만~10만 달러가 든다. 그래서 과제 수를 크게 늘리기 어렵다. <span class="ts">02:00</span> 과제는 적고 에이전트는 흔들리니 결과를 믿기가 더 어려워진다.</p>
+        <p class="note">자막에는 "50, 100,000 dollars"로 들린다. 5만~10만 달러라는 뜻으로 읽었다(추정).</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="subjective">
+        <header><span class="num">02</span><h2>함수로 채점할 수 없는 과제 <span class="ts">02:20</span></h2></header>
+        <p>지금 나오는 평가는 대부분 검증 가능한 과제<span class="en">verifiable task</span>를 다룬다. 채점기가 정해진 규칙으로 답을 확인할 수 있는 과제다. 문자열 비교, 기호 수식 검증, 테스트 케이스 같은 방법을 쓴다.</p>
+        <p>하지만 에이전트가 실제로 하는 일은 검증하기 쉬운 것부터 어려운 것까지 넓게 퍼져 있다. 발표자는 이를 검증 가능성의 스펙트럼이라고 부른다. <span class="ts">02:50</span></p>
+        <div class="shift" aria-label="검증 가능성의 스펙트럼">
+          <div><span class="tag">검증하기 쉬운 쪽</span><b>수학</b><span class="muted">정답을 규칙으로 확인한다. 문자열 비교, 기호 검증으로 끝난다.</span></div>
+          <span class="arrow" aria-hidden="true">↔</span>
+          <div class="to"><span class="tag">검증하기 어려운 쪽</span><b>창작 글쓰기</b><span class="muted">통과 기준부터 주관적이다. 사람끼리도 판단이 갈린다.</span></div>
+        </div>
+        <p>주관적인 과제는 함수로 채점할 수 없다. 그래서 LLM 판정자<span class="en">LLM judge</span>나 루브릭<span class="en">rubric</span>을 쓴다. 그러면 원래 결과가 고정돼 있던 채점기가 또 하나의 비결정적 부품이 된다. <span class="ts">03:20</span></p>
+        <div class="callout">
+          <span class="title">잡음이 두 겹이 된다</span>
+          <span>검증 가능한 과제에서 흔들리는 부품은 에이전트 하나다. 주관적인 과제에서는 에이전트와 채점기가 둘 다 흔들린다. 원래도 어려운 평가에 잡음과 주관이 더해져, 에이전트가 잘하고 있는지 알 수 없게 된다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="framework">
+        <header><span class="num">03</span><h2>세 부분으로 된 평가 틀 <span class="ts">03:50</span></h2></header>
+        <p>발표자는 주관적인 과제를 평가하는 틀을 세 부분으로 나눈다. 한 번 만들고 끝내는 게 아니라 되풀이해 쓰는 틀이다. 각 부분의 좋은 관행은 주관적이지 않은 과제의 평가에도 그대로 쓸 수 있다고 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">사람 평가 · human evaluation</span>
+            <p>품질을 정의하고 재는 기준점이다. 발표자는 이를 북극성이라고 부른다.</p>
+            <p class="verdict"><b>역할</b>: "좋은 답"이 무엇인지 정한다</p>
+          </div>
+          <div class="card">
+            <span class="tag">오프라인 평가 · offline evaluation</span>
+            <p>사람 평가를 흉내 내는 자동 평가다. 실험을 빠르게, 많이 돌린다.</p>
+            <p class="verdict"><b>역할</b>: 실험 규모를 키운다</p>
+          </div>
+          <div class="card">
+            <span class="tag">프로덕션 모니터링 · production monitoring</span>
+            <p>실제 사용 데이터로 확인한다. A/B 테스트와 배포 뒤 감시를 포함한다.</p>
+            <p class="verdict"><b>역할</b>: 평가를 현실에 맞춘다</p>
+          </div>
+        </div>
+        <p>발표에서 세 부분을 소개할 때는 오프라인 평가를 먼저 말한다. 하지만 실제 설명은 사람 평가부터 시작한다. 주관적인 과제에서는 사람 평가를 세우는 것이 첫 단계라고 한다. <span class="ts">04:20</span></p>
+      </section>
+
+      <!-- 4 -->
+      <section id="guidelines">
+        <header><span class="num">04</span><h2>사람 평가: 품질 기준 쓰기 <span class="ts">04:20</span></h2></header>
+        <p>사람 평가는 과제의 품질을 정의하고, 재고, 시간이 지나며 개선하는 기준점이다. 발표자는 이를 북극성<span class="en">North Star</span>이라고 부른다.</p>
+        <p>사람 평가를 하려면 먼저 "좋다"가 무슨 뜻인지 글로 정해야 한다. 보통 소수의 주제 전문가<span class="en">subject matter expert</span>와 함께 품질 가이드라인<span class="en">quality guidelines</span>을 쓴다. <span class="ts">04:40</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>가이드라인에 들어가는 것</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>기준</td><td>답에 꼭 있어야 할 것을 적은 작은 기준 목록</td></tr>
+              <tr><td>점수 방식</td><td>이진(통과/실패) 점수나 리커트 척도<span class="en">Likert scale</span></td></tr>
+              <tr><td>자세한 설명</td><td>기준마다 뜻을 풀어 쓰고, 점수를 매기는 구체적 예시를 붙인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>목표는 평가자에게 정보를 최대한 많이 줘서 <strong>사람 평가의 주관을 줄이는 것</strong>이다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="calibration">
+        <header><span class="num">05</span><h2>사람끼리 맞추기: 보정 <span class="ts">05:20</span></h2></header>
+        <p>가이드라인을 아무리 잘 써도 사람 평가가 믿을 만하다고 가정하면 안 된다. 보정<span class="en">calibration</span>을 충분히 해야 한다.</p>
+        <ol class="plain">
+          <li>같은 데이터를 여러 사람이 각자 평가한다.</li>
+          <li>평가자 사이의 일치도<span class="en">agreement</span>를 본다.</li>
+          <li>의견이 갈린 곳에서 평가자와 직접 이야기한다. 가이드라인이 애매해서 갈렸는지 확인한다.</li>
+          <li>가이드라인을 고치고 다시 평가한다.</li>
+        </ol>
+        <p>이 과정을 되풀이해 가이드라인을 최대한 분명하게 만든다. 잘 끝나면 <strong>보정된 사람 평가 과정</strong>과 <strong>아주 명확한 품질 가이드라인</strong>이 남는다. <span class="ts">05:50</span></p>
+      </section>
+
+      <!-- 6 -->
+      <section id="sampling">
+        <header><span class="num">06</span><h2>데이터를 얼마나, 어떤 것으로 <span class="ts">06:00</span></h2></header>
+        <p>보정된 사람 평가로 바로 평가를 시작할 수는 있다. 하지만 믿을 만한 결론을 내리려면 데이터를 어떻게 뽑을지도 정해야 한다. 정할 것은 양과 종류 두 가지다.</p>
+
+        <h3>얼마나: 검정력 분석 <span class="ts">06:20</span></h3>
+        <p>검정력 분석<span class="en">power analysis</span>은 두 모델의 성능 차이를 믿고 말하려면 데이터가 얼마나 필요한지 추정하는 통계 방법이다. 세 가지를 넣어 계산한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>넣는 값</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>효과 크기<br><span class="en">effect size</span></td><td>잡아내고 싶은 성능 차이의 크기</td></tr>
+              <tr><td>잡음 수준</td><td>평가 결과가 흔들리는 정도. 같은 입력으로 모델의 답을 여러 번 다시 뽑아 추정한다</td></tr>
+              <tr><td>유의 수준<br><span class="en">significance level</span></td><td>두 모델의 차이가 잡음이 아니라 진짜라고 얼마나 확신하고 싶은가</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">일반적인 통계 성질로는, 잡고 싶은 차이가 작을수록, 잡음이 클수록, 더 확신하고 싶을수록 데이터가 더 많이 필요하다. 발표에서 따로 말한 내용은 아니다.</p>
+
+        <h3>어떤 것으로: 실제처럼, 어렵게, 정확하게 <span class="ts">07:10</span></h3>
+        <p>발표자는 여러 벤치마크 보고서가 공통으로 다양성과 현실성을 중시한다고 정리한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>조건</th><th>뜻</th><th>확인 방법</th></tr></thead>
+            <tbody>
+              <tr><td>다양하고 현실적</td><td>에이전트가 프로덕션에서 실제로 푸는 과제를 닮았다</td><td>발표에서 따로 말하지 않음</td></tr>
+              <tr><td>어렵고 판별력 있음<br><span class="en">discriminative</span></td><td>모델 사이의 능력 차이를 드러낸다</td><td>프로파일링: 롤아웃을 뽑아 모델이 풀 수 있는 문제와 못 푸는 문제를 본다</td></tr>
+              <tr><td>정확함</td><td>문제와 정답 자체가 맞다</td><td>모델로 거르는 필터링과 사람이 거르는 필터링을 섞어 계속 다듬는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 원칙은 사람 평가에만 쓰는 것이 아니다. 뒤에 나오는 오프라인 평가에서도 같은 방식으로 데이터를 뽑는다. <span class="ts">07:50</span></p>
+      </section>
+
+      <!-- 7 -->
+      <section id="offline">
+        <header><span class="num">07</span><h2>자동 평가: 판정자와 루브릭 <span class="ts">08:00</span></h2></header>
+        <p>새 모델이나 에이전트마다 사람 평가를 하면 금방 병목이 된다. 실험을 빨리 반복할 수 없다.</p>
+        <p>그래서 오프라인 평가, 곧 자동 평가에 투자한다. 사람 대신 답의 품질을 재 줄 자동 대리 지표<span class="en">proxy</span>를 찾는 일이다. 보통 LLM 판정자나 루브릭을 쓴다. <span class="ts">08:20</span></p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">LLM 판정자 · LLM judge <span class="ts">08:30</span></span>
+            <p>사람이 평가하는 방식과 비슷하다. 높은 수준의 품질 가이드라인을 받고, 답이 그것을 지키는지 본다.</p>
+            <ul>
+              <li>모든 과제에 같은 가이드라인을 쓴다</li>
+            </ul>
+            <p class="verdict"><b>성격</b>: 과제 공통 기준, 사람 평가와 닮음</p>
+          </div>
+          <div class="card">
+            <span class="tag">루브릭 · rubric <span class="ts">08:50</span></span>
+            <p>과제마다 따로 만든 체크리스트다. 항목 하나하나를 LLM 판정자가 따로 확인한다.</p>
+            <ul>
+              <li>과제마다 항목이 다르다</li>
+            </ul>
+            <p class="verdict"><b>성격</b>: 과제별 기준, 더 객관적</p>
+          </div>
+        </div>
+
+        <h3>루브릭의 예: DR Tulu 논문 <span class="ts">09:00</span></h3>
+        <p>발표자가 고른 예는 DR Tulu 논문에 나온 것이다. 책 한 권을 다른 문화권에 맞게 각색해 Netflix 영화로 만드는 과제다. 아주 주관적인 과제다.</p>
+        <p>이 루브릭은 "좋은 각색인가" 같은 큰 기준을 묻지 않는다. 답에 꼭 있어야 할 구체적인 항목을 나열하고, 판정자가 각 항목을 따로 확인한다. 이렇게 쪼개면 평가가 훨씬 객관적이 된다.</p>
+        <p class="note">실제 루브릭 항목은 슬라이드에만 있었고 자막에는 나오지 않는다. 아래 표는 이해를 돕기 위해 만든 예시다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>예시 (발표에 없음)</th><th>판정자가 받는 질문</th></tr></thead>
+            <tbody>
+              <tr><td>LLM 판정자</td><td>이 각색안은 원작을 존중하면서 새 문화권 관객에게 자연스러운가? (1~5점)</td></tr>
+              <tr><td>루브릭</td><td>배경을 새 문화권으로 옮겼는가? (예/아니오)<br>원작의 핵심 갈등이 남아 있는가? (예/아니오)<br>인물의 이름과 관습이 새 문화권에 맞는가? (예/아니오)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="meta">
+        <header><span class="num">08</span><h2>판정자를 평가하기 <span class="ts">09:40</span></h2></header>
+        <p>자동 지표는 대리 지표일 뿐이라 완벽하지 않다. 그래서 판정자가 정확한지 확인하는 메타 평가<span class="en">meta-evaluation</span>가 필요하다.</p>
+        <ol class="plain">
+          <li>사람 평가에서 품질을 믿을 수 있는 예제를 모은다. 이를 골든 데이터<span class="en">golden data</span>라고 한다. <span class="ts">10:00</span></li>
+          <li>같은 예제를 판정자나 루브릭으로도 채점한다.</li>
+          <li>두 결과의 일치도를 잰다. 상관 계수<span class="en">correlation</span>, 이진 정확도<span class="en">binary accuracy</span> 같은 기본 지표를 쓴다.</li>
+        </ol>
+
+        <h3>Netflix 사례: 판정 점수와 시청 이탈 <span class="ts">10:20</span></h3>
+        <p>메타 평가에는 이 밖에도 방법이 많다. 발표자가 Netflix에서 맡은 프로젝트에서는 LLM 판정자의 점수가 시청 이탈<span class="en">abandonment</span> 같은 핵심 스트리밍 지표와 인과적으로 이어져 있음을 보였다고 한다. 판정자가 나쁘다고 한 작품은 시청자가 보다가 그만둘 가능성이 높다는 뜻이다.</p>
+        <p class="note">발표자 본인의 Netflix 프로젝트이고, 방법과 수치는 발표에서 밝히지 않았다. 발표자는 "causally correlated"라고 표현했는데, 상관과 인과는 다른 개념이고 인과를 어떻게 보였는지는 나오지 않는다. 이 점을 감안해 읽자.</p>
+
+        <h3>일치도는 얼마면 충분한가 <span class="ts">10:50</span></h3>
+        <p>과제마다 다르다. 주관적인 과제일수록 도달할 수 있는 일치도가 낮다.</p>
+        <div class="callout">
+          <span class="title">기준은 사람끼리의 일치도</span>
+          <span>같은 과제를 평가한 사람들끼리 얼마나 일치하는지 먼저 잰다. 판정자와 사람의 일치도가 그 수준과 비슷하면 된다. 예시: 사람끼리도 70%만 일치하는 과제라면, 판정자에게 95% 일치를 요구할 이유가 없다. (70%, 95%는 이해를 돕기 위한 예시 숫자다.)</span>
+        </div>
+        <p>이렇게 검증된 자동 판정자가 생기면 그 위에 벤치마크를 만든다. <span class="ts">11:20</span> 방법은 사람 평가와 비슷하다. 앞의 방식으로 데이터를 뽑고, 판정자나 루브릭으로 채점하고, 데이터를 계속 고쳐 나간다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="stats">
+        <header><span class="num">09</span><h2>잡음을 줄이는 통계 도구 <span class="ts">11:40</span></h2></header>
+        <p>사람 평가에서 흔들리는 부품은 모델 하나였다. 오프라인 평가에서는 모델과 판정자가 둘 다 흔들린다. 잡음이 더 크다.</p>
+        <p>발표자는 쓸 수 있는 통계 기법을 모두 동원해 결과에 신뢰 구간을 붙이라고 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기법</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>검정력 분석</td><td>벤치마크에 과제가 몇 개 있어야 하는지 정한다</td></tr>
+              <tr><td>오차 막대<br><span class="en">error bars</span></td><td>점수마다 흔들림의 범위를 함께 보고한다</td></tr>
+              <tr><td>리샘플링<br><span class="en">resampling</span></td><td>모델의 답이나 판정자의 채점을 여러 번 뽑아 분산을 줄인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>핵심은 점수만 보고하지 않는 것이다. <strong>점수와 함께 확신의 정도를 보고하고, 그 범위를 최대한 좁히려고 손을 쓴다.</strong> <span class="ts">12:20</span> 그래야 한 점수가 더 높을 때, 모델이 정말 나아진 것인지 잡음 때문인지 가릴 수 있다.</p>
+        <div class="callout">
+          <span class="title">예시 (발표에 없음): 오차 막대가 있을 때와 없을 때</span>
+          <span>"B가 A보다 0.9점 높다"만 쓰면 개선처럼 보인다. "A 72.1 ± 1.8, B 73.0 ± 1.9"로 쓰면 두 범위가 크게 겹친다. 이 차이를 개선이라고 단정하기 어렵다는 것이 바로 보인다.</span>
+        </div>
+
+        <h3>오프라인에서 사람 평가로 <span class="ts">12:50</span></h3>
+        <p>보정된 사람 평가와 보정된 판정자가 갖춰지면, 오프라인 평가를 자동으로 여러 번 돌릴 수 있다. 많은 아이디어를 시험해 실험 규모를 키운다. 잘된 것만 다시 사람 평가로 보내 정말 좋은지 확인한다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="production">
+        <header><span class="num">10</span><h2>프로덕션에서 확인하기 <span class="ts">13:10</span></h2></header>
+        <p>사람 평가까지 통과하면 바로 배포하고 싶어진다. 발표자는 여기서 배포하면 중요한 단계 하나를 건너뛰게 된다고 말한다. 바로 프로덕션 모니터링이다. <span class="ts">13:20</span></p>
+        <p>에이전트가 실제로 쓰이는 모습을 또 하나의 평가 수단으로 삼는다. 에이전트가 잘하는지와 관련 있는 지표를 정하고 추적한다. <span class="ts">13:40</span></p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">명시적 지표 · explicit</span>
+            <p>사용자가 직접 남기는 평가다.</p>
+            <ul>
+              <li>좋아요/싫어요</li>
+              <li>두 답 중 더 나은 것 고르기 같은 선호 피드백</li>
+            </ul>
+            <p class="verdict">챗봇에서 흔히 본다</p>
+          </div>
+          <div class="card">
+            <span class="tag">암묵적 지표 · implicit</span>
+            <p>사용자의 행동에서 나오는 신호다.</p>
+            <ul>
+              <li>세션 길이</li>
+              <li>이탈률</li>
+            </ul>
+            <p class="verdict">사용자가 따로 평가하지 않아도 모인다</p>
+          </div>
+        </div>
+
+        <h3>A/B 테스트는 부드러운 배포다 <span class="ts">14:10</span></h3>
+        <p>이 지표를 A/B 테스트로 잰다. 지금 쓰는 것과 새 에이전트를 나란히 놓고, 새 에이전트가 상대적으로 나은지 본다. 테스트를 얼마나 오래 돌릴지도 검정력 분석 같은 통계 기법으로 정한다.</p>
+        <p>발표자는 A/B 테스트를 부드러운 배포<span class="en">soft deployment</span>로 쓰라고 한다. 모두에게 한 번에 내보내지 않는다. 프로덕션에서 품질을 먼저 확인한 뒤 전체 배포<span class="en">full rollout</span>로 간다. <span class="ts">14:30</span></p>
+
+        <h3>배포 뒤에도 계속 본다 <span class="ts">14:40</span></h3>
+        <ul class="plain">
+          <li>성능이 나빠지는 추세를 찾는다.</li>
+          <li>에이전트가 실패하는 사례를 찾는다.</li>
+          <li>예상하지 못한 새 사용 방식을 찾는다.</li>
+        </ul>
+        <p>찾은 것은 다른 평가 단계로 돌려보낸다. 그러면 나머지 평가가 실제 사용과 동떨어지지 않는다. 프로덕션 모니터링은 평가를 넓히고 새 실패 사례를 찾는 데 특히 쓸모가 크다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="cycle">
+        <header><span class="num">11</span><h2>끝나지 않는 순환 <span class="ts">15:10</span></h2></header>
+        <p>평가의 모든 부분은 계속 더 좋아질 수 있다. 발표자가 든 방법은 이렇다. <span class="ts">15:20</span></p>
+        <ul class="plain">
+          <li>품질 기준을 새로 만들거나 다듬는다.</li>
+          <li>사람 평가자나 판정자의 보정을 높인다.</li>
+          <li>프로덕션에서 찾은 오류 사례를 오프라인 평가에 넣는다.</li>
+          <li>전체 과정을 새 영역에서 되풀이해 완전히 새 평가를 만든다.</li>
+        </ul>
+
+        <h3>전체 흐름 한눈에 보기 <span class="ts">16:50</span></h3>
+        <ol class="pipeline" aria-label="여러 단계로 된 평가 과정">
+          <li><b>오프라인 평가</b><span class="muted">많이 돌려 될 만한 것을 고른다</span></li>
+          <li><b>사람 평가</b><span class="muted">고른 것만 더 정밀하게 본다</span></li>
+          <li><b>A/B 테스트</b><span class="muted">프로덕션에서 반응을 시험한다</span></li>
+          <li><b>전체 배포</b><span class="muted">모든 사용자에게 내보낸다</span></li>
+          <li class="back"><b>계속 감시</b><span class="muted">실패 사례를 찾아 앞 단계로 돌려보낸다</span></li>
+        </ol>
+        <div class="callout">
+          <span class="title">모든 단계에서 잡음과 싸운다 <span class="ts">16:30</span></span>
+          <span>주관적인 평가는 잡음이 많을 수밖에 없다. 그러니 평가 결과를 의심하며 읽는다. 검정력 분석, 신뢰 구간, 리샘플링으로 분산을 줄이고, 결과를 얼마나 믿어도 되는지를 함께 보여 준다.</span>
+        </div>
+        <p>발표 끝에는 다룬 개념마다 더 읽을 자료를 모은 목록을 보여 줬다. 발표자 본인의 글과 다른 사람의 글이 섞여 있다. 슬라이드는 발표 첫머리에 QR 코드로 공유했다. <span class="ts">17:20</span></p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>평가가 어려운 가장 큰 이유는 <strong>잡음</strong>이다. 에이전트는 매번 다르게 답하고, 비용 때문에 과제 수는 적다.</li>
+          <li>주관적인 과제는 함수로 채점할 수 없다. 채점기를 LLM으로 바꾸면 <strong>잡음이 한 겹 더</strong> 생긴다.</li>
+          <li>평가 틀은 <strong>사람 평가, 오프라인 평가, 프로덕션 모니터링</strong> 세 부분이다.</li>
+          <li>사람 평가가 북극성이다. 주제 전문가와 품질 가이드라인을 쓰고, <strong>평가자끼리 일치할 때까지 보정</strong>한다.</li>
+          <li>데이터 양은 <strong>검정력 분석</strong>으로 정한다. 효과 크기, 잡음 수준, 유의 수준을 넣는다.</li>
+          <li>평가 데이터는 실제 사용을 닮고, 모델 차이를 드러내고, 정확해야 한다.</li>
+          <li>LLM 판정자는 공통 가이드라인으로, 루브릭은 과제별 체크리스트로 채점한다. <strong>루브릭이 더 객관적</strong>이다.</li>
+          <li>판정자는 골든 데이터와의 일치도로 검증한다. 목표는 <strong>사람끼리의 일치도 수준</strong>이다.</li>
+          <li>점수에는 <strong>오차 막대</strong>를 붙이고, 리샘플링으로 분산을 줄인다.</li>
+          <li><strong>A/B 테스트로 부드럽게 배포</strong>하고, 배포 뒤 찾은 실패를 다른 단계로 돌려보낸다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>평가 결과에 잡음이 생기는 이유를 두 가지 들면?</span></summary><div class="answer">에이전트가 비결정적이라 같은 과제도 매번 다르게 푼다. 평가 비용이 커서 과제 수가 적다. 주관적인 과제라면 채점기까지 흔들린다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>수학과 창작 글쓰기는 채점 방식이 어떻게 다른가?</span></summary><div class="answer">수학은 문자열 비교나 기호 검증 같은 정해진 규칙으로 채점한다. 창작 글쓰기는 통과 기준부터 주관적이라 LLM 판정자나 루브릭이 필요하다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>평가 틀의 세 부분과 각각의 역할은?</span></summary><div class="answer">사람 평가는 품질을 정의하는 북극성이다. 오프라인 평가는 실험 규모를 키운다. 프로덕션 모니터링은 실제 사용으로 확인한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>품질 가이드라인에 들어가는 세 가지는?</span></summary><div class="answer">답에 있어야 할 기준 목록, 점수 방식(이진 또는 리커트 척도), 기준마다의 자세한 설명과 점수 예시.</div></details>
+          <details><summary><span class="qn">Q5</span><span>사람 평가를 보정하는 방법은?</span></summary><div class="answer">같은 데이터를 여러 사람이 평가하게 하고 일치도를 본다. 의견이 갈린 원인을 찾아 가이드라인을 고치고 다시 평가한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>검정력 분석에 넣는 세 가지 값은?</span></summary><div class="answer">잡고 싶은 차이의 크기(효과 크기), 결과가 흔들리는 정도(잡음 수준), 차이가 진짜라고 얼마나 확신하고 싶은가(유의 수준).</div></details>
+          <details><summary><span class="qn">Q7</span><span>"판별력 있는" 평가 데이터란 무엇이고, 어떻게 확인하나?</span></summary><div class="answer">모델 사이의 능력 차이를 드러내는 데이터다. 롤아웃을 뽑아 모델이 풀 수 있는 문제와 못 푸는 문제를 보는 프로파일링으로 확인한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>LLM 판정자와 루브릭의 차이는?</span></summary><div class="answer">LLM 판정자는 모든 과제에 같은 품질 가이드라인을 쓴다. 루브릭은 과제마다 체크리스트를 따로 만들고 항목마다 따로 확인해서 더 객관적이다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>판정자의 일치도는 어느 수준을 목표로 하나?</span></summary><div class="answer">같은 과제를 평가한 사람끼리의 일치도와 비슷한 수준. 주관적인 과제일수록 그 수준이 낮다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>오프라인 평가가 사람 평가보다 잡음이 큰 이유와 대처법은?</span></summary><div class="answer">모델과 판정자가 둘 다 비결정적이다. 검정력 분석으로 크기를 정하고, 오차 막대를 붙이고, 리샘플링으로 분산을 줄인다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>A/B 테스트를 "부드러운 배포"로 쓴다는 것은 무슨 뜻인가?</span></summary><div class="answer">모두에게 한 번에 내보내지 않고, 프로덕션에서 기존 것과 비교해 품질을 확인한 뒤에 전체 배포로 간다는 뜻이다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>명시적 지표와 암묵적 지표의 예를 하나씩 들면?</span></summary><div class="answer">명시적: 좋아요/싫어요, 선호 피드백. 암묵적: 세션 길이, 이탈률.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>적용 체크리스트</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>내 과제가 검증 가능성 스펙트럼의 어디쯤인지 정한다<span class="how">확인: 함수로 채점할 수 있는가, 판정자가 필요한가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>주제 전문가와 품질 가이드라인을 쓴다<span class="how">기준 몇 개, 점수 방식(이진/리커트), 기준마다 점수 예시</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>같은 샘플을 여러 사람이 평가하게 하고 일치도를 잰다<span class="how">의견이 갈린 원인을 가이드라인에 반영하고 다시 잰다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>평가셋 크기를 검정력 분석으로 정한다<span class="how">효과 크기, 잡음 수준(답을 여러 번 다시 뽑아 추정), 유의 수준</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>평가 데이터가 실제 사용을 닮았고 모델 차이를 드러내는지 본다<span class="how">프로파일링: 모델이 풀고 못 푸는 문제를 나눠 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>LLM 판정자나 루브릭을 골든 데이터와 비교한다<span class="how">확인: 판정자와 사람의 일치도가 사람끼리의 일치도와 비슷한가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>평가 점수에 오차 막대를 붙여 보고한다<span class="how">답과 채점을 여러 번 뽑아 분산을 줄인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>배포 전에 A/B 테스트를 돌린다<span class="how">명시적 지표와 암묵적 지표를 미리 정하고, 기간은 통계로 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>프로덕션에서 찾은 실패 사례를 오프라인 평가셋에 넣는다<span class="how">확인: 새 실패 사례가 평가셋에 들어가는 경로가 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>잡음</td><td>Noise. 같은 조건에서도 평가 결과가 매번 달라지는 흔들림</td></tr>
+              <tr><td>비결정적</td><td>Non-deterministic. 같은 입력에도 출력이 매번 달라질 수 있는 성질</td></tr>
+              <tr><td>롤아웃</td><td>Rollout. 에이전트가 과제를 푸는 과정 한 번 전체</td></tr>
+              <tr><td>채점기</td><td>Grader. 답을 보고 통과나 실패를 매기는 부품</td></tr>
+              <tr><td>검증 가능한 과제</td><td>Verifiable task. 정해진 규칙이나 함수로 정답 여부를 확인할 수 있는 과제</td></tr>
+              <tr><td>LLM 판정자</td><td>LLM judge. 품질 가이드라인을 받고 답을 채점하는 언어 모델</td></tr>
+              <tr><td>루브릭</td><td>Rubric. 과제마다 만든 채점 체크리스트. 항목마다 따로 확인한다</td></tr>
+              <tr><td>품질 가이드라인</td><td>Quality guidelines. "좋은 답"의 기준, 점수 방식, 예시를 적은 문서</td></tr>
+              <tr><td>주제 전문가</td><td>Subject matter expert. 해당 분야를 깊이 아는 사람</td></tr>
+              <tr><td>리커트 척도</td><td>Likert scale. "매우 그렇다~전혀 아니다"처럼 몇 단계로 매기는 점수</td></tr>
+              <tr><td>보정</td><td>Calibration. 평가자(사람이나 판정자)의 판단이 기준과 일치하도록 맞추는 일</td></tr>
+              <tr><td>일치도</td><td>Agreement. 여러 평가자가 같은 대상에 같은 판단을 내리는 정도</td></tr>
+              <tr><td>검정력 분석</td><td>Power analysis. 원하는 차이를 믿고 말하는 데 필요한 데이터 양을 추정하는 통계 방법</td></tr>
+              <tr><td>효과 크기</td><td>Effect size. 잡아내고 싶은 차이의 크기</td></tr>
+              <tr><td>유의 수준</td><td>Significance level. 차이가 우연이 아니라고 판단하는 엄격함의 기준</td></tr>
+              <tr><td>판별력</td><td>Discriminative. 평가 데이터가 모델 사이의 능력 차이를 드러내는 정도</td></tr>
+              <tr><td>대리 지표</td><td>Proxy. 재고 싶은 것을 직접 못 재서 대신 쓰는 지표</td></tr>
+              <tr><td>메타 평가</td><td>Meta-evaluation. 평가 도구(판정자, 루브릭) 자체가 정확한지 평가하는 일</td></tr>
+              <tr><td>골든 데이터</td><td>Golden data. 사람 평가 중 품질을 믿을 수 있는 정답 예제 묶음</td></tr>
+              <tr><td>오차 막대 / 신뢰 구간</td><td>Error bars / Confidence interval. 점수가 흔들릴 수 있는 범위를 함께 보여 주는 표시</td></tr>
+              <tr><td>리샘플링</td><td>Resampling. 답이나 채점을 여러 번 다시 뽑아 평균을 내 분산을 줄이는 방법</td></tr>
+              <tr><td>A/B 테스트</td><td>사용자를 나눠 기존 것과 새것을 동시에 보여 주고 지표를 비교하는 실험</td></tr>
+              <tr><td>이탈</td><td>Abandonment. 사용자가 보던 작품이나 쓰던 기능을 중간에 그만두는 것</td></tr>
+              <tr><td>부드러운 배포</td><td>Soft deployment. 전체 배포 전에 일부에게만 내보내 품질을 확인하는 방식</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, 슬라이드 QR 코드</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>평가는 어렵다: 잡음</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>평가 한 번의 구조: 과제 → 에이전트 → 채점기</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>평가 비용과 적은 과제 수</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>검증 가능한 과제 위주의 평가</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>검증 가능성 스펙트럼: 수학 ↔ 창작 글쓰기</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>채점기도 비결정적이 된다</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>세 부분으로 된 평가 틀</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>사람 평가: 북극성</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>주제 전문가와 품질 가이드라인</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>사람 평가 보정</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>데이터 뽑기: 양과 종류</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>검정력 분석</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>현실성, 판별력, 정확성</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>사람 평가는 병목: 오프라인 평가로</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>LLM 판정자와 루브릭</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>DR Tulu 루브릭 예</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>메타 평가와 골든 데이터</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>Netflix: 판정 점수와 시청 이탈</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>적정 일치도: 사람끼리의 일치도</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>판정자로 벤치마크 만들기</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>두 겹의 잡음과 통계 도구</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>오프라인 평가 → 사람 평가</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>프로덕션 모니터링</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>명시적 지표와 암묵적 지표</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>A/B 테스트와 부드러운 배포</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>배포 뒤 감시와 되먹임</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>모든 부분을 계속 고치기</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>전체 요약</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>더 읽을 자료 목록</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'zLc8zeGeNaY:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

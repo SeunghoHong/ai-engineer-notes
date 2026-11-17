@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 평가 입문</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#basics">평가는 테스트, 트레이스는 로그</a></li>
+      <li><a href="#vibes">세 번 돌려 보고 배포하는 문제</a></li>
+      <li><a href="#types">평가의 세 종류</a></li>
+      <li><a href="#agents">에이전트는 왜 더 어려운가</a></li>
+      <li><a href="#tracing">트레이싱 설정과 에이전트 만들기</a></li>
+      <li><a href="#read">평가를 쓰기 전에 트레이스를 읽는다</a></li>
+      <li><a href="#code-eval">코드 평가: 티커가 들어 있나</a></li>
+      <li><a href="#builtin">내장 LLM 평가: 정확성과 충실성</a></li>
+      <li><a href="#rubric">나만의 루브릭 쓰기</a></li>
+      <li><a href="#antipatterns">피해야 할 세 가지</a></li>
+      <li><a href="#meta">판정자를 판정하기</a></li>
+      <li><a href="#experiments">데이터셋과 실험으로 고치기</a></li>
+      <li><a href="#production">프로덕션에서 루프 닫기</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-05 · 1시간 51분 · 영어 발표 한글 정리</span>
+      <h1>바이브에서 프로덕션으로: 에이전트 평가 입문</h1>
+      <p class="lead">"돌려 보니 괜찮던데"로 배포한 AI 에이전트는 안 본 입력에서 깨진다. 이 워크숍은 트레이스를 모으고, 직접 읽고, 코드 평가와 LLM 판정자를 만들고, 판정자까지 검증한 뒤, 실패 데이터셋과 실험으로 에이전트를 고치는 전체 루프를 두 시간에 걸쳐 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=qZj7sqmidqA" target="_blank" rel="noopener">From Vibes to Production: Evaluating and Shipping AI Agents That Work 101</a></span>
+        <span>발표: Laurie Voss (Arize AI 개발자 관계 총괄, npm 공동 창업자)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 경우에만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 관측·평가 플랫폼 Arize AX를 만드는 Arize AI 소속이고, 실습 전체가 그 제품 위에서 진행된다. 도구 선택에 관한 대목은 그 점을 감안해 읽자. 원리 자체는 다른 도구에도 그대로 적용된다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>평가는 AI의 테스트, 트레이스는 AI의 로그다.</strong> 트레이스는 무슨 일이 있었는지 알려주고, 평가는 그게 괜찮았는지 알려준다.</li>
+        <li>출력이 매번 달라서 단위 테스트가 안 먹힌다. 그래서 "세 번 돌려 보고 배포"가 흔한데, <strong>세 번은 테스트 묶음이 아니다.</strong></li>
+        <li>평가는 세 종류다. <strong>코드 평가</strong>(결정적, 공짜), <strong>LLM 판정자</strong>(의미 이해, 비용과 오판 있음), <strong>사람 평가</strong>(기준이지만 느리다). 셋을 겹쳐 쓴다.</li>
+        <li>에이전트는 단계마다 틀릴 기회가 늘어난다. 중간 단계도 봐야 하고, <strong>창의적으로 맞은 답을 틀렸다고 채점하는 일</strong>도 막아야 한다.</li>
+        <li><strong>평가를 쓰기 전에 트레이스를 읽는다.</strong> 열 몇 개를 끝까지 읽고 실패를 분류하면, 그 분류가 곧 루브릭의 기준이 된다.</li>
+        <li>실습 결과: 티커 검사는 13개 중 12개 통과, 정확성 판정은 13개 중 0개(판정자의 지식이 낡아서), 충실성 판정은 13개 중 6개 통과.</li>
+        <li><strong>판정자도 분류기다.</strong> 사람 라벨과 비교해 일치율을 재고, 안 맞으면 루브릭의 애매한 부분을 조인다.</li>
+        <li>실패한 트레이스를 데이터셋으로 저장하고, 판정자의 설명을 코딩 에이전트에 넘겨 프롬프트를 고치고, 실험으로 전후를 비교한다. <strong>이 루프를 프로덕션에서도 계속 돌린다.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="basics">
+        <header><span class="num">01</span><h2>평가는 테스트, 트레이스는 로그 <span class="ts">07:30</span></h2></header>
+        <p>발표자는 하나의 비유로 시작한다. 보통 코드에 테스트를 쓰듯 AI 출력에는 평가 <span class="en">eval</span>를 쓴다. 서버 로그처럼 AI가 실행 중에 무엇을 했는지 기록한 것이 트레이스 <span class="en">trace</span>다. 둘 다 새 이름을 붙였을 뿐 낯선 개념은 아니다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>개념</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>트레이스</td><td>에이전트 호출, 도구 호출, LLM 호출을 입력과 출력까지 단계별로 기록한 것</td></tr>
+              <tr><td>스팬 <span class="en">span</span></td><td>트레이스를 이루는 한 단계. LLM 호출 하나, 도구 호출 하나가 각각 스팬이다. 에이전트 한 턴은 여러 스팬을 품은 스팬이다</td></tr>
+              <tr><td>스팬에 담기는 것</td><td>입력, 출력, 걸린 시간, 토큰 수, 메타데이터</td></tr>
+              <tr><td>평가</td><td>"이 입력에 이 출력을 기대한다"를 AI 출력에 적용한 것. 단, 출력이 매번 달라진다는 점이 다르다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>트레이스는 무슨 일이 있었는지 알려주고, 평가는 그게 괜찮았는지 알려준다.<cite>발표자의 표현을 옮김</cite></blockquote>
+      </section>
+
+      <!-- 2 -->
+      <section id="vibes">
+        <header><span class="num">02</span><h2>세 번 돌려 보고 배포하는 문제 <span class="ts">08:50</span></h2></header>
+        <p>지금 가장 흔한 AI 기능 출시 방법은 이렇다. 기능을 만든다. 질문 몇 개를 넣어 본다. "괜찮아 보이네" 하고 배포한다. 그러면 테스트하지 않은 입력에서 깨진다. 발표자는 이것을 바이브 문제 <span class="en">the vibes problem</span>라고 부른다.</p>
+        <p>단위 테스트가 안 먹히는 이유는 출력이 비결정적이기 때문이다. 같은 프롬프트가 매번 다른 문장을 만든다. 서로 다른 두 답이 모두 맞을 수 있다. 그래서 비교할 기대 문자열이 없다. 팀은 사람이 보고 넘기는 방식으로 후퇴하는데, 이 방식은 확장이 안 되고, 회귀를 못 잡고, CI에서 돌지 않는다.</p>
+        <h3>평가가 없으면 못 하는 일 <span class="ts">09:50</span></h3>
+        <ul class="plain">
+          <li><strong>프롬프트 고치기.</strong> 말투를 고치려고 시스템 프롬프트를 바꿨는데 제품 기능을 지어내기 시작한다. 프롬프트는 커다란 텍스트 덩어리라 한 곳을 바꾸면 전혀 다른 곳이 영향을 받는다. 평가 없이는 두더지 잡기가 된다.</li>
+          <li><strong>모델 바꾸기.</strong> 새 모델이 몇 달마다 나온다. 평가가 없으면 모델 교체는 몇 주짜리 수동 테스트다. 평가가 있으면 몇 시간 안에 점수를 비교한다.</li>
+        </ul>
+        <p>발표자는 이것을 "감으로 나는 것과 계기판을 보고 나는 것의 차이"라고 했다. Descript, Bolt, Anthropic의 Claude Code 팀 모두 바이브로 출시했다가 평가를 세운 같은 궤적을 밟았다고 발표자는 말한다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="types">
+        <header><span class="num">03</span><h2>평가의 세 종류 <span class="ts">11:20</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">코드 평가 <span class="en">code eval</span></span>
+            <p>결정적인 함수다. 밀리초에 끝나고 비용이 없다. JSON으로 파싱되나, 500토큰 이하인가, 물어본 것을 언급했나.</p>
+            <ul>
+              <li>장점: 빠르고 싸고 같은 입력에 같은 답</li>
+              <li>단점: 단위 테스트처럼 깨지기 쉽다. 맞는 답 두 개가 전혀 다른 문장일 수 있다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">LLM 판정자 <span class="en">LLM as a judge</span></span>
+            <p>두 번째 LLM이 루브릭에 따라 출력을 채점한다. 루브릭은 "무엇이 좋은 답인가"를 적은 규칙이다.</p>
+            <ul>
+              <li>장점: 의미를 이해한다. 사실인가, 출처에 충실한가, 말투가 맞나</li>
+              <li>단점: 돈이 들고 판정자 자신도 비결정적이라 틀릴 수 있다. 사람 판단과 맞춰 보정해야 한다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">사람 평가 <span class="en">human evaluation</span></span>
+            <p>도메인 전문가가 읽고 채점한다. 품질의 기준점이다.</p>
+            <ul>
+              <li>단점: 느리고 비싸고 지친다</li>
+              <li>발표자가 인용한 수치: 사람 주석자는 피로 때문에 결함의 최대 50%를 놓친다</li>
+            </ul>
+            <p class="verdict">LLM 판정자가 가끔 놓친다고 실망하기 전에, 사람도 놓친다는 점을 기억하라는 뜻이다.</p>
+          </div>
+        </div>
+        <h3>언제 무엇을 쓰나 <span class="ts">13:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>상황</th><th>쓰는 것</th></tr></thead>
+            <tbody>
+              <tr><td>답이 결정적일 때</td><td>코드 평가. 형식 검사, 길이 제한, 금지 문구, 필수 필드</td></tr>
+              <tr><td>의미를 이해해야 할 때</td><td>LLM 판정자. 정확성, 출처 충실성</td></tr>
+              <tr><td>처음 보는 실패 유형, 판정자 검증</td><td>사람. 판정자가 제대로 판정하는지 확인하는 것도 사람 몫이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="agents">
+        <header><span class="num">04</span><h2>에이전트는 왜 더 어려운가 <span class="ts">14:20</span></h2></header>
+        <p>복잡도에는 사다리가 있다. LLM 호출 하나는 입력과 출력만 보면 된다. 에이전트는 도구 호출과 결정을 연달아 하므로 단계마다 틀릴 확률이 쌓인다. 그래서 중간 단계도 채점해야 한다. 올바른 도구를 골랐나, 인자를 제대로 넘겼나, 언제 멈출지 알았나. 루프에 갇히는 것은 실제로 흔한 실패다. 여러 에이전트가 일을 넘기는 시스템이면 인계 <span class="en">handoff</span>라는 실패 층이 하나 더 생긴다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">연쇄 실패의 예 <span class="ts">15:30</span></span>
+            <p>자동차 회사 Tesla를 물었다. 에이전트가 웹을 검색해 18세기 발명가 Tesla 정보를 찾는다. 그 정보로 잘 짜인 보고서를 써서 상사에게 보낸다.</p>
+            <p class="verdict">어느 단계도 혼자 보면 틀리지 않았다. 입력과 출력을 직접 읽지 않으면 잡을 수 없는 실패다. 어떤 단위 테스트도 이것을 잡지 못한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">반대 경우: 창의적으로 맞았는데 틀렸다고 채점 <span class="ts">16:20</span></span>
+            <p>Anthropic이 고객 응대 벤치마크 τ²-bench를 돌렸을 때의 일이라고 발표자는 소개한다. 이코노미 항공권 일정 변경은 불가능하도록 과제를 설계했다. 에이전트는 정책상 허용된 일등석 업그레이드를 먼저 하고, 일등석은 변경이 되므로 일정을 바꿨다.</p>
+            <p class="verdict">에이전트는 과제를 해냈지만 테스트는 실패로 채점했다. "창의적으로 맞음"과 "틀림"을 구분해야 한다. 이 이야기는 판정자 검증 대목에서 다시 나온다.</p>
+          </div>
+        </div>
+
+        <h3>역량 평가와 회귀 평가 <span class="ts">17:20</span></h3>
+        <div class="shift" aria-label="역량 평가가 회귀 평가로 바뀌는 흐름">
+          <div><span class="tag">역량 평가 <span class="en">capability eval</span></span><b>"이걸 할 수 있나?"</b><span class="muted">대부분 실패하는 게 정상이다. 오를 언덕을 준다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">회귀 평가 <span class="en">regression eval</span></span><b>"여전히 되나?"</b><span class="muted">언덕을 다 오르면 거의 매번 통과해야 하는 평가로 바뀐다. 계속 돌려 예전 동작이 무너지지 않았는지 본다</span></div>
+        </div>
+
+        <h3>평가 결과에 담기는 세 가지 <span class="ts">18:10</span></h3>
+        <ul class="plain">
+          <li><strong>점수.</strong> 대개 0 아니면 1이다. 이진 점수는 LLM이 가장 잘 다룬다.</li>
+          <li><strong>라벨.</strong> correct / incorrect처럼 사람이 읽는 이름.</li>
+          <li><strong>설명.</strong> LLM 판정자만 준다. 왜 그렇게 판단했는지 적는다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">설명이 평가를 점수판에서 디버깅 도구로 바꾼다</span>
+          <span>여행 계획 에이전트 예시에서 판정자는 "틀림"만 말하지 않는다. "사용자는 저예산 여행을 물었는데 비용 추정이 하나도 없다"고 적는다. 그러면 프롬프트에서 무엇을 고칠지 바로 안다. 같은 설명이 트레이스 50개에서 반복되면 한 번 생긴 예외가 아니라 구조적 문제다. 그리고 이 설명 뭉치를 코딩 에이전트에 넘기면 "이게 네가 틀린 이유들이다, 어떻게 하면 나아지겠나"라고 물을 수 있다. 이것이 오늘 실습의 마지막 단계다.</span>
+        </div>
+        <p>설명은 자연어라 그대로 세기 어렵다. 그래서 설명을 실패 유형으로 분류해 개수를 센다. 질적 연구에서는 이 분류 작업을 코딩 <span class="en">coding</span>이라 부른다. 이것도 결국 또 다른 LLM에게 시키게 된다.</p>
+        <p>오늘 만들 전체 루프는 <strong>계측 → 트레이스 → 평가 → 반복</strong>이다. 전통 소프트웨어도 같은 루프를 도는데, AI에서는 "측정" 단계에서 대부분의 팀이 넘어진다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="tracing">
+        <header><span class="num">05</span><h2>트레이싱 설정과 에이전트 만들기 <span class="ts">21:10</span></h2></header>
+        <p>관측할 수 없는 것은 평가할 수 없다. 그래서 관측이 먼저다. 실습은 Google Colab 노트북에서 진행하고, Anthropic API 키와 Arize AX 계정이 필요하다.</p>
+        <h3>두 줄로 계측하기 <span class="ts">25:30</span></h3>
+        <p>Arize 쪽 사람은 누구나 "두 줄만 넣으면 된다"고 말한다고 발표자는 농담한다. 그 두 줄이 하는 일은 이렇다.</p>
+        <ul class="plain">
+          <li><strong>register 호출.</strong> OpenTelemetry를 설정한다. OpenTelemetry는 애플리케이션 관측의 업계 표준이고, 그 위에 OpenInference라는 층이 프롬프트 텍스트, 완성 텍스트, 토큰 수, 호출한 모델과 도구 같은 LLM 전용 속성을 더한다. 노트북에서는 <code>batch=False</code>로 둬서 텔레메트리를 즉시 보낸다. 프로덕션에서는 효율을 위해 모아서 보낸다.</li>
+          <li><strong>Claude Agent SDK 계측 호출.</strong> SDK가 LLM 호출이나 도구 호출을 할 때마다 스팬을 보내게 한다.</li>
+        </ul>
+        <p>코드가 이렇게 적은 이유는 OpenTelemetry가 거의 모두가 쓰는 공개 표준이기 때문이다. Claude SDK, OpenAI SDK, LangChain 저자들이 이미 자기 SDK 안에 전송 코드를 써 두었다. 사용자는 "수집기는 여기 있다, 보내라"고만 하면 된다. CrewAI, LangChain, Mastra 같은 프레임워크도 같은 방식으로 지원된다.</p>
+        <p class="note">발표자는 오늘 모든 것을 손으로 하지만, Arize가 공개한 스킬 묶음을 설치하면 코딩 에이전트가 계측, 평가 실행, 데이터셋 생성을 대신한다고 소개한다. 손으로 하는 이유는 원리를 이해해서 "바이브로 성공"하지 않기 위해서다.</p>
+
+        <h3>실습용 에이전트: 금융 분석 챗봇 <span class="ts">28:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>입력</td><td>주식 티커와 관심 주제. 예: Tesla의 재무 성과와 성장 전망</td></tr>
+              <tr><td>1턴: 조사</td><td>웹 검색 도구로 최신 재무 정보를 모은다. 몇 번 검색할지는 에이전트가 정한다</td></tr>
+              <tr><td>2턴: 작성</td><td>모은 자료로 읽기 좋은 보고서를 쓴다</td></tr>
+              <tr><td>모델</td><td>Claude Haiku. 유능하지만 실수를 한다. 실수가 있어야 고칠 게 있고, 빠르고 싸다</td></tr>
+              <tr><td>프롬프트</td><td>일부러 아주 단순하게 썼다. 나중에 평가로 잡아낼 오류를 만들기 위해서다</td></tr>
+              <tr><td>스팬 묶기</td><td>두 턴을 OpenTelemetry 스팬 하나로 감싼다. 안 그러면 UI에서 두 개의 별개 트레이스로 보인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>실행 경로는 설계상 비결정적이다. 같은 입력을 다시 넣어도 검색어가 다르고 결과가 다르고 보고서가 다르다. 둘 다 좋을 수도, 하나만 좋을 수도 있다. 입력만 보고 출력을 예측할 수 없으므로 평가가 필요하다.</p>
+        <div class="callout warn">
+          <span class="title">숨겨 둔 함정: 디스크에 쓰려는 에이전트 <span class="ts">34:10</span></span>
+          <span>트레이스를 보니 에이전트가 보고서를 마크다운 파일로 디스크에 쓰려고 했다. Colab에는 쓸 파일 시스템이 없어 쓰기가 조용히 실패한다. 그런데 에이전트는 출력을 주고 "파일로 저장했다"고 말한다. 도움이 되려다 틀린 행동이고, 조용히 실패한다. 이런 것을 잡으려면 평가가 필요하다.</span>
+        </div>
+        <h3>테스트 데이터 만들기 <span class="ts">36:20</span></h3>
+        <p>트레이스 하나로는 평가를 못 한다. 노트북에는 서로 다른 티커와 분석 유형을 다루는 질문 12개가 들어 있다. 핵심은 다양성이다. Apple과 Microsoft를 비교하라는 두 티커 질문, 같은 Amazon을 다른 각도로 묻는 질문 두 개, 공개 자료가 적은 Rivian, 성장주와 전혀 다른 Coca-Cola 배당 수익률 질문을 섞었다. 실제 사용자는 예측 못 할 이상한 질문을 하므로 이것도 평가가 필요한 이유다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="read">
+        <header><span class="num">06</span><h2>평가를 쓰기 전에 트레이스를 읽는다 <span class="ts">38:50</span></h2></header>
+        <p>발표자가 "이 워크숍에서 가장 중요한 습관"이라고 부른 단계다. 지시는 한 줄이다. <strong>평가를 쓰기 전에 트레이스를 읽어라.</strong> 열 몇 개를 처음부터 끝까지 읽고, 특히 뭔가 잘못된 것에 집중한다. 입력은 무엇이었나, 출력은 무엇이었나, 정확히 무엇이 깨졌나.</p>
+        <p>구식으로 들리지만 에이전트 개발에서 가장 값진 활동 중 하나다. 발표자에 따르면 Anthropic은 평가 기록을 보는 도구에 따로 투자했고, 그 팀은 매일 많은 시간을 기록을 읽는 데 쓴다. 트레이스를 읽어야 에이전트가 진짜 실수했는지, 아니면 채점기가 맞는 답을 거부했는지 알 수 있다. 이해하기 전에 자동화하면 <strong>중요한 것 대신 재기 쉬운 것을 재는 평가</strong>를 만들게 된다.</p>
+
+        <h3>먼저 "좋다"를 정의한다 <span class="ts">39:50</span></h3>
+        <p>"안 된다"고 말하려면 "된다"가 무엇인지 정해야 한다. 금융 분석 에이전트의 좋은 보고서는 이렇다. 올바른 티커를 언급한다. 최근의 실제 재무 데이터를 담는다. 실행 가능한 추천을 준다. 미래 전망과 과거 요약을 구분한다. 적어 놓으면 당연해 보이지만 많은 팀이 적지 않고 배포한 뒤 불만에 반응한다.</p>
+        <div class="callout">
+          <span class="title">"좋다"의 정의는 엔지니어 혼자 못 쓴다 <span class="ts">40:40</span></span>
+          <span>좋은 답의 정의는 도메인 지식에 있고, 도메인 지식은 회사가 흔히 "비기술직"이라 부르는 사람들에게 있다. 제품 관리자, QA, 고객 지원이 실패가 어떤 모습일지 안다. 발표자는 OpenAI의 말을 빌린다. "사람 관리 기술이 AI 기술이다." 명확한 목표, 직접적인 피드백, 가치 제안을 아는 것이 확률적 시스템에서 더 중요해진다.</span>
+        </div>
+
+        <h3>아직 트래픽이 없다면 <span class="ts">41:30</span></h3>
+        <ul class="plain">
+          <li>LLM에게 예상 카테고리별로 다양한 질문을 만들게 한다. "Tesla 재무 성과 조사해 줘", "Tesla 주식 요즘 어때", "야 Tesla 지금 사도 돼" 는 같은 의도의 다른 표현이다.</li>
+          <li>LLM이 만든 질문은 뻔한 표현에 몰린다. 도메인 전문가가 검토해 실제 사용자가 쓰는 이상한 질문을 보충한다.</li>
+          <li>없는 티커, 여러 질문이 섞인 입력, 탈옥 시도 같은 경계 사례를 넣는다. 트래픽의 1%지만 언론에 나는 1%다.</li>
+          <li>테스트 데이터는 바라는 프로덕션이 아니라 실제 프로덕션처럼 생겨야 한다. 실제 데이터가 생기면 그것으로 갈아탄다.</li>
+        </ul>
+
+        <h3>실습 트레이스 13개에서 본 것 <span class="ts">42:50</span></h3>
+        <ul class="plain">
+          <li>대부분은 3,000~7,000자짜리 구조화된 보고서를 인라인으로 냈다. 요약, 가치평가 표, 매수·보유 추천이 들어 있다.</li>
+          <li>13개 중 3개는 출력이 짧았다. "디스크에 저장했다"는 요약만 있고 본문은 존재하지 않는 파일로 갔다.</li>
+          <li>Microsoft 질문 하나는 웹 검색을 끝없이 반복하며 루프에 갇혔다.</li>
+          <li>Rivian 보고서는 확인할 수 없는 정보를 매우 자신 있게 적었다. 환각일 수도 아닐 수도 있는데, 아직 아무것도 확인하지 않았다. 나중에 충실성 평가로 본다.</li>
+        </ul>
+
+        <h3>읽은 것을 분류하는 법: 오픈 코딩과 축 코딩 <span class="ts">45:30</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1단계 · 오픈 코딩 <span class="en">open coding</span></span>
+            <p>트레이스마다 본 것을 자연어로 적는다. "추천이 모호함", "숫자를 지어냄", "다른 티커 이야기함".</p>
+            <p class="verdict">깔끔하게 하려 하지 않는다. 프로그래머는 미리 카테고리를 정하고 싶어 하는데, 이 단계에서는 참는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2단계 · 축 코딩 <span class="en">axial coding</span></span>
+            <p>오픈 코드를 모아 놓고 비슷한 것끼리 묶어 카테고리를 만든다. 이때 "왜 실패했나"를 묻는다.</p>
+            <p class="verdict">"답이 틀렸다"는 증상이다. 검색 결과가 나빴으면 검색 실패, 자료는 맞는데 결론이 틀렸으면 추론 오류, 주가를 지어냈으면 환각, 영역 밖 답은 범위 위반. 원인마다 고치는 방법이 다르다.</p>
+          </div>
+        </div>
+        <p class="note">발표자는 실습 표의 축 코드를 실제로 다 읽고 붙인 게 아니라 무작위로 넣었다고 고백했다. 표의 형태만 참고하자. 카테고리 예: 괜찮음, 환각 의심, 추론 공백, 확인 불가 데이터, 추천 누락.</p>
+        <div class="callout">
+          <span class="title">빈도 × 심각도로 고칠 순서를 정한다 <span class="ts">47:50</span></span>
+          <span>가장 많이 나온 카테고리를 먼저 고치고 싶어진다. 하지만 100번에 한 번 재무 보고서 대신 폭탄 제조법을 알려준다면 그것이 1순위다. 심각도에 빈도를 곱해 우선순위를 정한다. 데이터를 먼저 보는 이유가 이것이다.</span>
+        </div>
+        <h3>스위스 치즈 모델 <span class="ts">48:30</span></h3>
+        <p>안전공학에서 온 개념이다. 방어층 하나하나는 구멍 난 치즈 조각이다. 여러 조각을 겹치면 구멍이 안 겹쳐서 한 층을 통과한 문제를 다음 층이 잡는다. 코드 평가는 형식 문제를 잡지만 의미는 못 본다. LLM 판정자는 추론 공백을 잡지만 미묘한 환각을 놓친다. 사람은 미묘한 것을 잡지만 모든 트레이스를 못 본다. 어느 하나도 다 잡지 못하고, 조합이 범위를 만든다. 발표자의 말로는 "치즈를 쌓아라".</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="code-eval">
+        <header><span class="num">07</span><h2>코드 평가: 티커가 들어 있나 <span class="ts">49:10</span></h2></header>
+        <p>모델 설정도 API 호출도 없다. 그냥 Python이다. 에이전트는 특정 티커를 분석해야 하니, 보고서에 그 티커가 실제로 나오는지 검사한다. 발표자가 데모를 만들다 여러 번 실패한 바로 그 테스트다. 특정 문자열을 찾는 일에 LLM 판정자는 과하다.</p>
+        <p>함수 내용은 단순하다. 대문자 단어를 전부 뽑고, 이미 아는 약어를 빼고, 남은 것 중에 찾는 티커가 있는지 본다. 결과는 라벨과 점수가 담긴 평가 결과 객체다. 많은 코드 평가는 이보다 짧다. "500자 이하인가", "JSON으로 파싱되나" 정도다.</p>
+        <p>Arize AX에서는 모든 것을 두 방식으로 할 수 있다. 코드로 하거나 UI로 한다. UI에서는 평가자를 추가하고, Python을 붙여 넣고, 트레이스 하나를 열어 "이 부분이 query, 이 부분이 report"라고 클릭으로 변수를 매핑한다. 평가 단위를 스팬이 아니라 트레이스로 바꿔야 이 UI가 나온다.</p>
+        <p class="note">노트북에서 평가를 돌릴 때 트레이싱 억제 <span class="en">suppress tracing</span>로 감싸는 이유는 평가 자체가 SDK 호출이라 트레이스로 저장되기 때문이다. "트레이싱의 트레이스"는 너무 메타라 끈다.</p>
+
+        <h3>결과: 13개 중 12개 통과 <span class="ts">54:20</span></h3>
+        <p>실패한 하나는 Amazon이다. Amazon 질문은 둘이었다. 하나는 Amazon 수익성, 하나는 AWS 수익성이다. AWS 질문의 보고서는 AWS 사업부 이야기만 하고 Amazon 회사 전체는 다루지 않아 AMZN 티커가 아예 안 나왔다. 조사는 많이 했는데 회사 전체를 생각하지 않은 미묘한 실패다. 결과는 AX에서 각 트레이스 옆에 주석으로 붙고, 실패한 것만 필터링할 수 있다.</p>
+        <p>왜 중요한가. 사용자가 Tesla를 물었는데 Microsoft 보고서를 아름답게 쓰면, 그 실제로 발표자에게 일어난 일인데, 아무리 유려해도 답은 틀렸다. 이것을 Python 다섯 줄로 잡는다. 코드 평가는 장난감이 아니다. JSON 형식, 길이 제한, "AI 언어 모델로서" 같은 금지 문구는 프로덕션에서 꼭 필요한 검사다. 데이터베이스를 조회하거나 API로 실제 주가를 받아 비교해도 된다. 같은 입력에 늘 같은 답이면 코드 평가다.</p>
+        <div class="callout">
+          <span class="title">결과를 채점하고, 경로는 채점하지 않는다 <span class="ts">57:20</span></span>
+          <span>"이 도구를 먼저 부르고 저 도구를 다음에 불렀나"를 검사하고 싶어진다. 실무에서는 너무 경직된 것으로 드러났다. 에이전트는 설계자가 예상 못 한 유효한 방법을 자주 찾는다. 경로를 채점하면 창의성을 벌한다. 출력에 올바른 정보가 있는지, 최종 상태가 원하는 것인지를 본다. 티커 검사는 에이전트가 어떻게 찾았는지 신경 쓰지 않는다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="builtin">
+        <header><span class="num">08</span><h2>내장 LLM 평가: 정확성과 충실성 <span class="ts">58:10</span></h2></header>
+        <p>코드는 티커가 있는지는 보지만 분석이 좋은지는 못 본다. 재무 데이터가 정확한가, 보고서가 완전한가, 추천의 근거가 탄탄한가. 의미에 관한 질문에는 판정자가 필요하다.</p>
+        <h3>LLM 판정자의 세 부품</h3>
+        <ul class="plain">
+          <li><strong>판정 모델.</strong> 채점하는 LLM. 보통 일하는 모델보다 크고 느린 모델을 고른다. 실습에서는 Haiku가 일하고 Sonnet 4.6이 판정한다.</li>
+          <li><strong>프롬프트 템플릿, 곧 루브릭.</strong> 무엇이 좋은지 정한 기준.</li>
+          <li><strong>데이터.</strong> 채점할 사례들.</li>
+        </ul>
+        <p>AX는 셋을 분리해 둔다. 같은 기준을 다른 판정 모델로, 같은 모델을 다른 기준으로 섞어 볼 수 있다. 정확성, 충실성, 도구 선택, 도구 호출 인자, 문서 관련성, 거부 감지처럼 자주 쓰는 평가는 프롬프트가 미리 만들어져 있다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">정확성 <span class="en">correctness</span> · 13개 중 0개 통과 <span class="ts">59:50</span></span>
+            <p>발표자가 예고한 대로 실패했다. 정확성 판정은 LLM 자신이 아는 "사실"을 기준으로 삼는다. 즉 훈련 데이터에 기댄다.</p>
+            <p class="verdict">에이전트는 실시간 웹 검색으로 2026년 일을 이야기하는데, 판정 모델의 지식은 1월에 멈춰 있다. 설명을 읽으면 "미래의 일이라 알 수 없다"는 불평뿐이다. 이 사용 사례에 맞지 않는 평가였다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">충실성 <span class="en">faithfulness</span> · 13개 중 6개 통과 <span class="ts">1:02:10</span></span>
+            <p>판정자에게 에이전트가 모은 자료를 함께 준다. "같은 자료를 보고, 보고서가 그 자료에 충실했나"를 묻는다. 일하는 모델과 판정 모델이 같은 정보를 갖는 공정한 조건이다.</p>
+            <p class="verdict">실습에서는 1턴의 조사 출력을 꺼내 모든 스팬에 컨텍스트 열로 붙이고 돌렸다. 결과는 불충실 7, 충실 6. 단순한 프롬프트로 만든 보고서가 절반쯤은 자료에 없는 내용을 지어낸다는 뜻이다. 오를 언덕이 생겼으니 좋은 역량 평가다.</p>
+          </div>
+        </div>
+
+        <figure class="chart" aria-label="트레이스 13개 중 통과한 수: 티커 검사 12, 충실성 6, 정확성 0">
+          <span class="chart-title">실습 트레이스 13개 중 통과한 수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>티커 검사 (코드 평가)</span><span class="val">12 / 13</span></div>
+              <div class="track"><div class="fill" style="width:92.3%" title="티커 검사: 12개 통과"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>충실성 (LLM 판정)</span><span class="val">6 / 13</span></div>
+              <div class="track"><div class="fill key" style="width:46.2%" title="충실성: 6개 통과"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>정확성 (LLM 판정)</span><span class="val">0 / 13</span></div>
+              <div class="track"><div class="fill" style="width:0%" title="정확성: 0개 통과"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>13</span></div>
+          <span class="caption">정확성 0은 에이전트가 나빠서가 아니라 판정자의 지식이 낡아서다. 평가가 "어떤 질문을 하는지"를 알아야 한다.</span>
+        </figure>
+
+        <p>교훈은 한 평가가 다른 평가보다 낫다는 게 아니다. 사용 사례가 다르다는 것이다. 정확성 평가가 잘 맞는 경우도 많다. 실시간 조사라는 이 사례에 안 맞았을 뿐이다. 내장 평가는 프롬프트를 쓰지 않고도 바로 신호를 주는 출발점이다. 하지만 "실행 가능한 추천을 하는가"처럼 도메인에 고유한 기준은 어떤 내장 템플릿도 검사하지 않는다. 진짜 평가를 쓴다면 반드시 나만의 평가를 쓰게 된다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="rubric">
+        <header><span class="num">09</span><h2>나만의 루브릭 쓰기 <span class="ts">1:06:20</span></h2></header>
+        <p>Arize가 권하는 루브릭 구성은 네 부분이다. 발표자는 여기에 논쟁이 있는 다섯 번째를 더한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>부분</th><th>내용</th><th>요점</th></tr></thead>
+            <tbody>
+              <tr><td>1. 역할</td><td>"당신은 전문 금융 분석 평가자다"</td><td>"전문가" 표현은 효과가 아주 작다. 중요한 것은 맥락이다. 금융 보고서를 보고 있고, 실행 가능한 분석을 기대한다는 것</td></tr>
+              <tr><td>2. 통과·실패 기준</td><td>관찰 가능한 기준 목록</td><td>가장 많이 소홀히 하는 부분. "좋은 답"은 바람이지 기준이 아니다. "도움이 되고 정확하다"도 LLM에게는 똑같이 모호하다</td></tr>
+              <tr><td>3. XML 태그</td><td>입력은 user_query, 출력은 financial_report 태그로 감싼다</td><td>지시문과 데이터의 경계를 분명히 한다. Anthropic 모델은 XML을 특히 잘 읽는다. 예시도 태그로 감싸지 않으면 예시를 그대로 베껴 낸다</td></tr>
+              <tr><td>4. 출력 선택지</td><td>프롬프트 밖에서 정의한다</td><td>"correct 또는 incorrect를 출력하라"고 쓰지 않는다. 내부적으로 판정자는 도구 호출로 라벨을 내므로 문자열 출력을 요구하면 오히려 헷갈린다</td></tr>
+              <tr><td>5. 예시 (발표자 추가)</td><td>좋은 출력과 나쁜 출력의 예</td><td>일부 실무자는 과적합을 우려한다. 발표자 의견으로는 품질을 가장 많이 올리는 부분이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>기준은 관찰 가능해야 한다 <span class="ts">1:07:50</span></h3>
+        <p>사람이 보고서를 보고 "있다, 없다"로 답할 수 있는 것이 기준이다. "구체적 추천이 있다"는 예·아니오로 답할 수 있다. "과거 데이터만이 아니라 미래 전망이 있다"도 그렇다. 중요한 점은 이 기준 하나하나가 트레이스를 읽으며 본 실패에서 나왔다는 것이다. <strong>오류 분석이 루브릭의 기준을 알려준다.</strong> 머리에서 지어내면 떠오르지 않는다. 구체적 기준은 일관된 판정을 만들고, 모호한 기준은 동전 던지기를 만든다.</p>
+
+        <h3>예시의 힘과 위험 <span class="ts">1:10:00</span></h3>
+        <p>LLM은 지시를 따르는 데는 그럭저럭이지만, 주어진 예시를 베끼며 상황에 맞는 부분만 바꾸는 데는 아주 능하다. 예시가 너무 경직되면 늘 같은 보고서를 내고 창의성이 줄어든다. 반대로 출력이 너무 제멋대로면 예시가 기대치를 고정해 준다. 실습 템플릿의 "실행 가능" 예시에는 매출 성장률, PER, 숫자로 뒷받침된 구체적 위험, 명확한 추천이 들어 있다. "실행 불가" 예시는 틀린 말은 없지만 "투자자는 여러 요인을 고려해야 한다" 같은 말뿐이다. 경계 사례에서 판정의 일관성이 크게 좋아진다.</p>
+
+        <h3>라벨은 둘로, 생각은 먼저 <span class="ts">1:12:20</span></h3>
+        <ul class="plain">
+          <li><strong>이진이 최선이다.</strong> 1~5점 척도는 끌리지만 LLM이 못 한다. 3점과 4점의 차이를 알려면 규칙을 잔뜩 써야 한다. 꼭 필요하면 0.5점 같은 부분 점수를 두되 기본은 0 아니면 1이다.</li>
+          <li><strong>판정 전에 생각하게 한다.</strong> 점수를 내기 전에 이유를 설명하게 하면 정확도가 측정 가능하게 오른다. 왜 실행 가능한지 말로 풀어야 하면 실수가 줄어든다. 그 설명은 사람에게도 유용하다.</li>
+        </ul>
+
+        <h3>UI에서 온라인 평가로 만들기 <span class="ts">1:14:00</span></h3>
+        <p>같은 템플릿을 UI에서 온라인 평가자로 등록할 수 있다. 트레이스 범위를 고르고, 판정용 LLM과 API 키를 넣고, 트레이스 하나에서 입력과 출력을 클릭으로 매핑한다. 온라인 평가는 새로 들어오는 트레이스에 계속 돌릴 수 있다. 비용이 걱정되면 샘플링 비율을 둬서 트래픽의 1%만 채점해도 충분한 평가 데이터가 쌓인다.</p>
+        <p>코드로는 분류 평가자를 만들어 이름, LLM, 템플릿, 선택지를 주고 돌린다. 결과는 AX에서 "실행 가능 / 불가" 라벨과 설명으로 보인다. 많은 보고서가 통과했지만 몇 개는 실패했고, 이것은 또 하나의 오를 언덕이다. 이제 스팬마다 티커 검사, 정확성, 충실성, 실행 가능성 점수가 다 붙어 있고, <code>eval.actionability.label = not actionable</code> 같은 필터로 실패 집합만 뽑아 데이터셋으로 만들 수 있다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="antipatterns">
+        <header><span class="num">10</span><h2>피해야 할 세 가지 <span class="ts">1:17:40</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 평가 프롬프트를 코드처럼 다루지 않기</span>
+            <p>평가 프롬프트는 표현에 아주 민감하다. 작은 어구 변화가 결과를 크게 바꾼다.</p>
+            <p class="verdict">버전을 관리하고, 답을 아는 사례로 테스트한다. 판정자가 사람 라벨과 40% 어긋나면 결과가 틀린 게 아니라 평가를 잘못 쓴 것이다. AX의 프롬프트 플레이그라운드는 코드를 건드리지 않고 루브릭을 고치는 곳이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 신 평가자 <span class="en">god evaluator</span></span>
+            <p>정확성, 말투, 완전성, 정책 준수, 형식을 한 프롬프트에서 다 검사하는 거대 평가자.</p>
+            <p class="verdict">보정이 악몽이다. "실패"가 나오면 다섯 차원 중 무엇이 실패했는지 모른다. 라벨을 늘리면 15개가 되어 더 복잡해진다. 차원마다 평가자 하나. 루브릭에 "해야 할 것" 여섯 개를 적고 있다면 그것은 평가자 여섯 개다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 가드레일과 북극성을 구분하지 않기</span>
+            <p>주가를 지어내면 출시 차단이다. "보완 투자처도 추천"은 있으면 좋은 것이다.</p>
+            <p class="verdict">어느 평가가 어느 쪽인지 알아야 결과에 어떻게 대응할지, 나중에 프로덕션 모니터를 어떻게 둘지 정해진다. 가드레일 회귀는 한밤중에 사람을 깨우고, 북극성 하락은 주간 보고서에서 본다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="meta">
+        <header><span class="num">11</span><h2>판정자를 판정하기 <span class="ts">1:20:00</span></h2></header>
+        <p>판정자가 "실행 불가"라고 했다. 믿어도 되나. 핵심 모델은 <strong>판정자는 분류기</strong>라는 것이다. 보고서를 받아 실행 가능 여부를 예측한다. 예측은 맞거나 틀린다. 그러니 다른 분류기처럼 정답, 즉 사람의 판단과 비교해 성능을 잴 수 있다. 이 과정을 메타 평가 <span class="en">meta evaluation</span>라 부른다.</p>
+        <h3>사람 라벨 붙이기 <span class="ts">1:21:10</span></h3>
+        <p>라벨링은 양이 많다. 출력을 전부 읽고 생각해서 라벨을 붙여야 한다. AX에서는 스팬을 열어 주석 설정을 만들고 "사람 판단: 실행 가능 / 불가"를 클릭한 뒤 화살표로 다음 트레이스로 넘어간다. 코드 없이 되므로 비기술 직원에게 맡길 수 있는 일이다. 도메인 지식만 있으면 된다. 이렇게 쌓인 라벨이 골든 데이터셋 <span class="en">golden dataset</span>이다. 라벨을 붙일 때도 LLM에게 요구한 것처럼 구체적 기준을 지킨다. "좋음, 나쁨"이 아니라 "이게 있어야 하는데 없다"로 적는다. 지쳐서 대충 하게 되는 틈을 없앤다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>골든 데이터셋 원칙</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>과제는 명확하게</td><td>에이전트가 계속 0%면 거의 항상 과제나 루브릭이 깨진 것이다. 사람만 할 수 있거나 아무도 못 하는 과제를 낸 것이다</td></tr>
+              <tr><td>참조 답안</td><td>과제마다 모든 채점기를 통과하는 답을 하나 만든다. 과제가 풀 수 있는 것임을 증명한다</td></tr>
+              <tr><td>양방향 테스트</td><td>"웹을 검색했나"만 재면 늘 검색하는 에이전트가 된다. "뻔한 질문에는 검색하지 않았나"도 잰다</td></tr>
+              <tr><td>개발용 / 테스트용 분리</td><td>라벨의 75%로 루브릭을 고치고, 25%는 남겨 두었다가 판정자가 새 사례에도 맞는지 본다. 머신러닝의 훈련·테스트 분리와 같은 원리다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>실습 결과: 일치율 46% <span class="ts">1:25:00</span></h3>
+        <p>판정자와 사람 라벨이 13개 중 6개에서 일치했다. 발표자는 불일치를 많이 보여 주려고 사람 라벨을 무작위로 찍었다고 밝혔다. 실제로는 Sonnet이 이 일을 꽤 잘한다. 실제 상황에서는 바로 이 지점을 파고든다. 루브릭이 틀렸나, 사람 라벨이 틀렸나. 판정자의 설명을 읽고 누가 맞는지 판단한다. 이것이 메타 평가의 가장 값진 산출물이고, 대개 규칙의 애매한 곳을 드러낸다.</p>
+        <div class="callout">
+          <span class="title">루브릭 조이기의 예 <span class="ts">1:25:50</span></span>
+          <span>"미래 전망을 포함한다"를 "구체적 추천이나 지침이 있는 미래 전망을 포함한다"로 바꾼다. 미래 이야기는 하는데 무엇을 하라는 말은 없는 경우를 배제한다. 같은 사례로 판정자를 다시 돌려 불일치가 사라지는지 본다. 평가 프롬프트도 하나의 LLM 애플리케이션이라 에이전트처럼 테스트와 반복이 필요하다. "평가를 코드처럼 다루라"는 말의 뜻이다.</span>
+        </div>
+
+        <h3>정밀도와 재현율 <span class="ts">1:26:30</span></h3>
+        <ul class="plain">
+          <li><strong>정밀도 <span class="en">precision</span>.</strong> 판정자가 "실행 불가"라고 했을 때 실제로 불가인 비율.</li>
+          <li><strong>재현율 <span class="en">recall</span>.</strong> 실제로 불가인 보고서 중 판정자가 잡아낸 비율.</li>
+        </ul>
+        <p>12개 정도의 표본에서는 숫자가 크게 흔들리지만, 판정자가 대략 맞는지 완전히 빗나갔는지는 보인다. 둘은 서로 당긴다. 대부분의 경우 재현율을 우선한다. 멀쩡한 것을 문제라고 하는 거짓 경보가 생기지만, 문제를 놓쳐 내보내는 것보다 훨씬 낫다. 맞을 때는 확실히 맞아야 하고 놓치는 건 괜찮은 도메인도 있는데, 그때는 정밀도를 택한다.</p>
+
+        <h3>판정자의 알려진 편향 <span class="ts">1:27:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>편향</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>위치 편향</td><td>두 답을 비교시키면 먼저 온 것을 선호한다. 모델에 따라 뒤를 선호하기도 하지만 어쨌든 위치에 취향이 있다</td></tr>
+              <tr><td>길이 편향</td><td>긴 답을 더 좋다고 본다. 늘어난 부분이 군더더기여도 그렇다</td></tr>
+              <tr><td>자신감 편향</td><td>자신 있는 말투에 속는다. 사람과 똑같다. 틀린 말도 당당하게 하면 믿을 확률이 오른다</td></tr>
+              <tr><td>자기 선호 편향</td><td>생성과 판정에 같은 모델을 쓰면 자기 출력을 좋아한다. 실습에서 Haiku의 출력을 Sonnet이 판정한 이유다. 아예 다른 회사 모델을 쓰면 더 좋다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>기준은 사람의 수준이다 <span class="ts">1:29:00</span></h3>
+        <p>사람도 실행 가능 여부를 꽤 자주 틀린다. 목표는 사람의 판단에 합리적으로 가까운 평가다. 사람끼리도 갈린다. 같은 출력과 같은 규칙으로 두 전문가가 판정해도 일치도가 0.2~0.3에 그치는 일이 흔하다고 발표자는 말한다. 판정자가 그보다 일관되면 사람보다 잘하는 것이다. 판정자가 가끔 나와 다른 것은 불신할 이유가 아니다. <strong>늘 나와 다른 판정자가 위험 신호다.</strong> 가끔 다른 판정자는 진짜로 애매한 과제를 제대로 다루고 있는 것이다.</p>
+        <blockquote>실패는 공정해 보여야 한다. 실패한 트레이스를 보고 "이 답 괜찮아 보이는데" 싶으면, 문제는 에이전트가 아니라 평가일 가능성이 높다.<cite>발표자가 Anthropic 평가 팀의 원칙으로 소개</cite></blockquote>
+      </section>
+
+      <!-- 12 -->
+      <section id="experiments">
+        <header><span class="num">12</span><h2>데이터셋과 실험으로 고치기 <span class="ts">1:30:20</span></h2></header>
+        <p>실패를 찾았고 설명을 읽었고 무엇을 고칠지 안다. 프롬프트를 바꿨다. 그다음은? 고친 게 효과가 있었는지, 되던 것을 망가뜨리지 않았는지 어떻게 아나. 예시 두어 개를 다시 돌려 눈으로 보면 바이브로 돌아간 것이다. 전후를 구조적으로 비교해야 한다. 그것이 실험 <span class="en">experiment</span>이다.</p>
+        <h3>실패 데이터셋과 회귀 데이터셋 <span class="ts">1:31:00</span></h3>
+        <ul class="plain">
+          <li>실패한 트레이스만 필터링해 전부 선택하고 "데이터셋에 추가"를 누른다. 실습에서는 실행 불가 판정을 받은 것들로 실패 데이터셋을 만들었다. 작은 집합이라 바뀐 프롬프트를 빠르고 싸게 돌려 볼 수 있다.</li>
+          <li>통과한 것들도 따로 데이터셋으로 저장한다. 덜 자주 돌리되, 고친 뒤에 전에 되던 곳이 망가지지 않았는지 본다. 이것이 회귀 테스트 집합이다.</li>
+          <li>데이터셋은 고정이 아니다. 출시 전에는 합성 질문으로 시작해도 된다. 실제 트래픽이 들어오면 상상한 실패를 실제 실패로 바꾼다. 실패 사례와 통과 사례를 합친 것이 골든 데이터셋이다.</li>
+        </ul>
+
+        <h3>고치는 건 손이 아니라 Claude Code <span class="ts">1:32:40</span></h3>
+        <p>2026년이니 모두가 코딩 에이전트를 쓴다고 발표자는 가정한다. 그러면 프롬프트를 손으로 고칠 이유가 없다. Claude가 실패한 트레이스를 내려받고, 판정자의 설명을 전부 읽고, 설명을 코드베이스에 대한 행동으로 바꾼다. 중요한 점은 <strong>아무것도 추측하지 않는다</strong>는 것이다. "더 잘해"라고 한 게 아니다. 제안하는 모든 변경이 특정 실패 설명으로 거슬러 올라간다. 판정자가 "구체적 추천이 없다"고 했으면 그렇게 되도록 프롬프트를 고치고, "근거 없이 위험을 나열했다"고 했으면 그것도 고친다. 데이터 기반 프롬프트 엔지니어링을 자동화한 것이다.</p>
+        <p>실습에서는 요구사항과 개선 지시 프롬프트를 함께 넘기고, 돌아온 추천으로 더 나은 조사 프롬프트와 작성 프롬프트를 쓰게 한 뒤 에이전트에 다시 넣었다. 발표자는 이것도 또 하나의 비결정적 LLM 애플리케이션이라 원칙적으로는 "메타 평가자의 메타 평가"가 필요하다고 짚었다. 시간상 생략했지만, 좋은 요구사항이 Claude를 붙들어 준다.</p>
+
+        <h3>실험 돌리기 <span class="ts">1:35:20</span></h3>
+        <p>실험은 데이터셋, 과제 <span class="en">task</span>, 평가자로 이루어진다. 과제는 데이터셋의 예시 하나를 받아 무엇이든 실행하고 출력을 돌려주는 Python 함수다. 실습에서는 새 프롬프트로 전체 에이전트를 처음부터 끝까지 돌렸지만, 도구 호출 하나만 떼어 돌려도 되고 API 하나를 불러도 된다. AX는 과제 안에서 무슨 일이 일어나는지 신경 쓰지 않는다.</p>
+        <p>실험의 힘은 통제된 비교다. 같은 입력, 같은 평가자, 바뀐 것은 프롬프트뿐이다. 그러면 점수 차이가 변경 때문이라고 말할 수 있다. 웹 검색이 우연히 더 좋은 결과를 낸 건 아닌지 완전히 배제하지는 못한다. 에이전트는 여전히 비결정적이라 검색을 5번 대신 10번 했을 수도 있다. 하지만 테스트 사례라는 큰 변동 요인 하나는 없앴다.</p>
+        <p>실습 결과는 실패 데이터셋의 보고서들이 새 프롬프트로 전부 실행 가능 판정을 받았다. 발표자는 "연습을 많이 해서 한 번에 맞췄다"고 했다. 실제 반복은 이렇게 매끄럽지 않다. 그래서 결과가 그래프다. 실험을 거듭 돌리며 그래프가 천천히 오르는 것을 본다. 그것이 오르는 언덕이다.</p>
+        <p class="note">발표에서는 "50% 틀리던 것이 100% 맞게 됐다"고 말했다. 50%는 전체 13개 중 실행 불가였던 비율에 가깝고, 실험 데이터셋은 실패한 것만 모은 집합이라 그 안에서는 0%에서 100%로 오른 것이다. 두 숫자의 기준 집합이 다르다는 점만 알아 두자.</p>
+        <p>점수 자체보다 사이클에 가치가 있다. 평가를 돌리고, 실패를 보고, 설명을 읽고, 패턴을 찾고, 프롬프트를 고친다. "나아졌나"는 평가만이 답할 수 있는 질문이다. "되는 것 같다"에서 "된다는 걸 증명할 수 있다"로 옮겨 가는 것이다.</p>
+
+        <h3>표본은 몇 개면 되나 <span class="ts">1:39:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>목적</th><th>표본 수</th></tr></thead>
+            <tbody>
+              <tr><td>워크숍 규모, 방향만 보기</td><td>12~20개</td></tr>
+              <tr><td>실제 출시 결정</td><td>200~400개. 몇 주면 사람 손으로 모을 수 있는 크기다. ML 모델 훈련처럼 수만, 수백만 개가 아니다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>수확 체감이 있다. 오차 범위를 절반으로 줄이려면 표본을 네 배로 늘려야 한다. 어느 시점부터는 충분한 신호가 나온다.</p>
+
+        <h3>어디에 투자하나 <span class="ts">1:40:30</span></h3>
+        <ol class="plain">
+          <li><strong>데이터 품질.</strong> 가장 효과가 크다. 잘못된 출처를 검색하거나 지식 베이스가 낡았으면 프롬프트를 아무리 고쳐도 소용없다.</li>
+          <li><strong>프롬프트.</strong> 예시, 명시적 지시, 해야 할 것과 하지 말아야 할 것의 제약. 투자 대비 효과가 가장 높은 경우가 많다.</li>
+          <li><strong>모델 선택.</strong> 더 유능한 모델이 프롬프트로 안 되는 것을 풀기도 한다. 더 비싸고 느리다.</li>
+          <li><strong>하이퍼파라미터.</strong> temperature, top p. 손대기 쉬워 끌리지만 큰 변화를 만드는 일이 드물다. 맨 마지막에 시도한다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">평가 주도 개발 <span class="en">eval-driven development</span> <span class="ts">1:41:30</span></span>
+          <span>기능을 만들기 전에 평가를 쓴다. 환불 처리 전에 반드시 고객 신원을 확인하게 하고 싶으면, 그것을 검사하는 평가를 먼저 쓴다. "완료"의 측정 가능한 정의가 생기고, 평가가 통과할 때까지 기능을 만든다. 테스트 주도 개발과 같은 철학이다. 요구사항에 가장 가까운 사람, 즉 제품 관리자, 고객 서비스, 영업 담당이 코드 없이 자연어로 "좋은 것"을 설명하면 그것을 루브릭으로 끓여 낼 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="production">
+        <header><span class="num">13</span><h2>프로덕션에서 루프 닫기 <span class="ts">1:42:30</span></h2></header>
+        <p>개발 실험이 통과했다고 끝이 아니다. 한 번도 못 본 트래픽에서 에이전트가 계속 잘할 때 끝난다.</p>
+        <h3>온라인 평가 <span class="ts">1:42:50</span></h3>
+        <ul class="plain">
+          <li>오늘 쓴 평가자(티커 검사, 충실성, 실행 가능성)를 들어오는 프로덕션 트레이스에 자동으로 돌린다. 같은 평가를 새 데이터에 적용하는 것이다.</li>
+          <li>범위를 고른다. 스팬 단위로 특정 LLM 호출이나 도구 호출마다 돌리거나, 트레이스 단위로 전체 트리를 보고 처음부터 끝까지 평가한다. 묻는 질문에 맞는 범위를 택한다.</li>
+          <li>모든 트레이스에 돌릴 필요는 없다. LLM 판정은 돈이 들고 규모가 커지면 쌓인다. 트래픽의 10%나 1%만 채점해도 방향은 보인다.</li>
+          <li>AX 안에는 Alyx(자막은 Alex, 추정)라는 에이전트가 있어 평가를 평문으로 설명하면 UI를 조작해 루브릭을 쓰고 설정을 맞춰 준다고 발표자는 소개한다. 비기술 동료가 "좋은 것"의 정의를 말로 하면 된다.</li>
+        </ul>
+        <h3>프로덕션의 전체 루프 <span class="ts">1:44:40</span></h3>
+        <ol class="plain">
+          <li>애플리케이션이 트레이스를 만든다.</li>
+          <li>온라인 평가가 트레이스를 채점해 라벨과 설명을 만든다.</li>
+          <li>라벨이 모니터로 들어가 문제가 생기면 팀에 알린다. 모니터는 오늘 다루지 않았다.</li>
+          <li>팀이 실패한 트레이스를 찾아 회귀 데이터셋으로 저장한다.</li>
+          <li>에이전트를 고치고 실험으로 확인한 뒤 배포한다.</li>
+          <li>새 트래픽이 쌓이면 새 실패 유형과 경계 사례가 나오고 루프가 다시 돈다.</li>
+        </ol>
+        <p>이 보상은 복리로 쌓인다. 온라인 평가가 잡은 실패 하나하나가 다음 변경의 회귀 테스트가 된다. 시간이 지나면 내 애플리케이션, 내 사용자, 내 품질 기준에만 있는 데이터셋이 생긴다. 아무도 그 데이터를 갖고 있지 않고, 에이전트가 돌 때마다 커지는 경쟁 우위다.</p>
+
+        <h3>가장 강력한 패턴: 실패 트레이스를 코딩 에이전트에 통째로 <span class="ts">1:45:50</span></h3>
+        <p>오늘은 가장 단순한 버전을 했다. 판정자 설명을 Claude에 넘겨 프롬프트 두 개를 다시 쓰게 했다. 실제 시스템은 프롬프트 두 개가 아니다. 여러 파일에 흩어진 프롬프트, 검색 설정, 도구 정의가 얽혀 있다. 그것을 고치는 일은 API 호출 하나가 아니라 저장소 전체를 보는 코딩 에이전트의 일이다. 실패 트레이스를 설명과 함께 내보내 Claude Code나 Cursor에 컨텍스트로 넘긴다. 발표자는 Arize 스킬 플러그인을 쓰면 API를 몰라도 "트레이스 내려받아서 뭐가 문제인지 보고 고쳐 줘"로 끝난다고 소개한다.</p>
+        <div class="callout warn">
+          <span class="title">이 패턴의 가드레일 두 가지 <span class="ts">1:47:00</span></span>
+          <span><strong>첫째, 실패 설명만 주지 말고 요구사항도 준다.</strong> 목표가 "평가 통과"가 되면 에이전트는 속인다. 테스트 데이터를 평가에 집어넣어 전부 통과시킨다. "평가를 통과시켜라"가 아니라 "이 일을 제대로 해라, 그러면 평가가 통과된다"고 분명히 한다. <strong>둘째, 개별 실패를 쫓지 말고 주제를 찾게 한다.</strong> 실패 트레이스 하나를 보고 그것만 고치는 코드를 잔뜩 쓰기 쉽다. 실제로는 같은 원인의 실패가 열 개 있을 때가 많고, 그 원인에 집중해야 한다.</span>
+        </div>
+        <p>전체 모양을 보면 이렇다. 프로덕션이 트레이스를 만들고, 온라인 평가가 설명을 만들고, 코딩 에이전트가 설명을 읽고 수정을 제안하고, 실험이 수정을 검증하고, 배포한다. 돌아온 트래픽은 처음 루프를 시작한 같은 온라인 평가가 채점한다. 소프트웨어 개발 수명주기가 자기 자신으로 닫히는 것이다. 발표자는 AX가 이 모든 것을 잇는 기반이라고 말하는데, 이 대목은 자사 제품 이야기다.</p>
+
+        <h3>한꺼번에 다 하지 않아도 된다 <span class="ts">1:49:10</span></h3>
+        <ol class="plain">
+          <li><strong>트레이스를 읽는다.</strong> 두 줄을 넣고 보기 시작하면 에이전트가 뭘 하는지 몰랐던 것을 바로 알게 된다. 실제 출력을 15분 읽는 것이 대시보드를 한 시간 만드는 것보다 애플리케이션을 더 가르쳐 준다.</li>
+          <li><strong>코드 평가 하나를 쓴다.</strong> LLM 평가보다 쉽고 빠르고 싸다. 가장 중요한 것 하나를 고른다.</li>
+          <li>돌리고, 결과를 보고, 패턴을 찾고, 거기서 쌓아 올린다.</li>
+        </ol>
+        <blockquote>평가는 인프라다. 나중에 붙이는 것이 아니다. 단위 테스트만큼 일상이어야 하고, 가치는 계속 투자할 때만 복리로 쌓인다. 훌륭해지기를 바라지 말고, 명세하고 측정하고 그쪽으로 개선해서 체계적으로 훌륭해져라.<cite>발표자의 맺음말을 옮김</cite></blockquote>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>평가는 AI의 테스트, 트레이스는 AI의 로그다. 트레이스는 무슨 일이 있었는지, 평가는 그게 괜찮았는지 알려준다.</li>
+          <li>출력이 매번 달라 단위 테스트가 안 먹힌다. "세 번 돌려 보고 배포"는 테스트가 아니다. 평가가 있어야 프롬프트와 모델을 바꿀 수 있다.</li>
+          <li>코드 평가(결정적, 공짜), LLM 판정자(의미 이해, 보정 필요), 사람 평가(기준이지만 느림)를 스위스 치즈처럼 겹친다.</li>
+          <li>에이전트는 단계마다 틀릴 기회가 쌓인다. 중간 단계도 보되, <strong>경로가 아니라 결과를 채점</strong>해 창의적 해법을 벌하지 않는다.</li>
+          <li><strong>평가를 쓰기 전에 트레이스를 읽는다.</strong> 오픈 코딩으로 본 것을 적고, 축 코딩으로 원인별로 묶고, 빈도 × 심각도로 고칠 순서를 정한다. 그 분류가 루브릭의 기준이 된다.</li>
+          <li>"좋다"의 정의는 엔지니어 혼자 못 쓴다. 제품, QA, 고객 지원이 함께 쓴다.</li>
+          <li>내장 평가는 출발점이다. 정확성 판정은 판정자의 낡은 지식 때문에 13개 중 0개였고, 자료를 함께 준 충실성 판정은 13개 중 6개였다. 평가가 어떤 질문을 하는지 알아야 한다.</li>
+          <li>루브릭은 역할, 관찰 가능한 통과·실패 기준, XML 태그, 프롬프트 밖의 출력 선택지, 예시로 쓴다. 라벨은 둘로, 판정 전에 생각하게 한다. 차원마다 평가자 하나.</li>
+          <li><strong>판정자도 분류기다.</strong> 사람 라벨과 비교해 일치율, 정밀도, 재현율을 재고, 불일치의 설명을 읽어 루브릭의 애매한 곳을 조인다. 늘 나와 다른 판정자만 위험 신호다.</li>
+          <li>실패를 데이터셋으로 저장하고, 설명과 요구사항을 코딩 에이전트에 넘겨 고치고, 실험으로 전후를 비교하고, 프로덕션에서 온라인 평가로 같은 루프를 계속 돌린다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>단위 테스트가 AI 출력에 안 먹히는 이유는?</span></summary><div class="answer">출력이 비결정적이다. 같은 프롬프트가 매번 다른 문장을 만들고, 서로 다른 두 답이 모두 맞을 수 있어 비교할 기대 문자열이 없다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>코드 평가와 LLM 판정자는 각각 언제 쓰나?</span></summary><div class="answer">답이 결정적일 때(형식, 길이, 금지 문구, 필수 필드)는 코드 평가. 의미를 이해해야 할 때(정확성, 출처 충실성, 말투)는 LLM 판정자. 처음 보는 실패와 판정자 검증에는 사람.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Tesla 연쇄 실패 예시에서 왜 어떤 단위 테스트도 잡지 못하나?</span></summary><div class="answer">검색, 수집, 작성 어느 단계도 혼자 보면 틀리지 않았다. 자동차 회사가 아니라 발명가 Tesla였다는 것은 입력과 출력을 사람이 읽어야만 보인다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>역량 평가와 회귀 평가의 차이는?</span></summary><div class="answer">역량 평가는 "할 수 있나"를 묻고 대부분 실패하는 게 정상이다. 언덕을 다 오르면 "여전히 되나"를 묻는 회귀 평가로 바뀌어 거의 매번 통과해야 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>실습 에이전트가 조용히 실패한 방식은?</span></summary><div class="answer">보고서를 디스크에 파일로 쓰려 했는데 Colab에는 파일 시스템이 없어 쓰기가 실패했다. 그런데도 "저장했다"고 말하고 요약만 출력했다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>오픈 코딩과 축 코딩은 무엇이고 왜 순서가 중요한가?</span></summary><div class="answer">오픈 코딩은 트레이스마다 본 것을 자연어로 적는 것, 축 코딩은 그것을 모아 원인별 카테고리로 묶는 것이다. 미리 카테고리를 정하면 실제 실패를 놓치므로 오픈 코딩을 먼저 한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>정확성 평가가 13개 중 0개였던 이유와 충실성 평가가 더 맞았던 이유는?</span></summary><div class="answer">정확성은 판정 모델의 훈련 데이터를 기준으로 삼는데 에이전트는 2026년 실시간 정보를 다뤘다. 충실성은 에이전트가 모은 자료를 판정자에게 함께 줘서 같은 정보로 비교한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>루브릭에서 "좋은 답은 도움이 되고 정확하다"가 왜 기준이 아닌가?</span></summary><div class="answer">LLM에게는 여전히 모호하다. 기준은 사람이 보고 "있다, 없다"로 답할 수 있어야 한다. 예: "구체적 추천이 있다", "과거 요약만이 아니라 미래 전망이 있다".</div></details>
+          <details><summary><span class="qn">Q9</span><span>1~5점 척도 대신 이진 라벨을 권하는 이유는?</span></summary><div class="answer">LLM은 3점과 4점의 차이를 모른다. 그 차이를 알려면 규칙을 잔뜩 써야 한다. 통과·실패는 잘 가린다. 꼭 필요하면 0.5 같은 부분 점수만 둔다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>신 평가자가 왜 문제인가?</span></summary><div class="answer">한 프롬프트에서 다섯 차원을 다 검사하면 "실패"가 나와도 무엇이 실패했는지 모르고 보정할 수 없다. 차원마다 평가자 하나로 쪼갠다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>"판정자는 분류기다"가 뜻하는 것은?</span></summary><div class="answer">판정자의 라벨은 예측이고 맞거나 틀린다. 그러니 사람 라벨을 정답으로 두고 일치율, 정밀도, 재현율로 성능을 잴 수 있다. 라벨의 75%로 루브릭을 고치고 25%는 남겨 일반화를 확인한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>판정자가 나와 가끔 다르면 어떻게 봐야 하나?</span></summary><div class="answer">불신할 이유가 아니다. 사람끼리도 일치도가 0.2~0.3에 그치는 일이 흔하다. 늘 나와 다른 판정자가 위험 신호다. 불일치의 설명을 읽어 루브릭의 애매한 곳을 조인다.</div></details>
+          <details><summary><span class="qn">Q13</span><span>실패 트레이스를 코딩 에이전트에 넘길 때의 가드레일 두 가지는?</span></summary><div class="answer">실패 설명만이 아니라 요구사항도 줘서 "평가 통과"가 목표가 되지 않게 한다. 안 그러면 테스트 데이터를 평가에 넣어 속인다. 그리고 개별 실패가 아니라 공통 원인인 주제를 찾게 한다.</div></details>
+          <details><summary><span class="qn">Q14</span><span>개선 투자의 우선순위는?</span></summary><div class="answer">데이터 품질 → 프롬프트 → 모델 선택 → 하이퍼파라미터. temperature 같은 것은 손대기 쉽지만 효과가 작아 맨 마지막이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트에 트레이싱을 켜고 트레이스를 열 몇 개 끝까지 읽는다<span class="how">실제 출력 15분 읽기가 대시보드 한 시간보다 낫다. 뭔가 잘못된 것에 집중한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>"좋은 출력"의 정의를 제품, QA, 고객 지원과 함께 글로 쓴다<span class="how">사람이 보고 "있다, 없다"로 답할 수 있는 기준으로</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>본 것을 오픈 코딩으로 적고 축 코딩으로 원인별로 묶는다<span class="how">빈도 × 심각도로 고칠 순서를 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>가장 중요한 것 하나로 코드 평가를 쓴다<span class="how">형식, 길이, 필수 언급, 금지 문구. 경로가 아니라 결과를 채점한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>LLM 판정자를 차원마다 하나씩 만든다<span class="how">역할, 관찰 가능한 기준, XML 태그, 프롬프트 밖 선택지, 예시. 이진 라벨, 판정 전 설명. 일하는 모델과 다른 모델로</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>사람 라벨을 붙여 판정자와 일치율을 잰다<span class="how">75%로 루브릭을 고치고 25%는 남긴다. 불일치의 설명을 읽고 기준을 조인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>가드레일 평가와 북극성 평가를 구분한다<span class="how">가드레일 회귀는 알림, 북극성 하락은 주간 보고</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>실패 트레이스와 통과 트레이스를 각각 데이터셋으로 저장한다<span class="how">실패 집합으로 빠르게 고치고, 통과 집합으로 회귀를 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>프롬프트 변경은 실험으로 전후를 비교한 뒤 배포한다<span class="how">출시 결정에는 200~400개 표본을 목표로</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>프로덕션 트래픽에 온라인 평가를 샘플링으로 돌린다<span class="how">잡힌 실패를 회귀 데이터셋에 추가해 루프를 계속 돌린다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>평가 (eval)</td><td>AI 출력의 품질을 재는 테스트. 출력이 매번 달라진다는 점이 보통 테스트와 다르다</td></tr>
+              <tr><td>트레이스</td><td>Trace. AI가 실행 중 한 일을 단계별로 입력과 출력까지 기록한 것</td></tr>
+              <tr><td>스팬</td><td>Span. 트레이스를 이루는 한 단계. LLM 호출 하나, 도구 호출 하나</td></tr>
+              <tr><td>OpenTelemetry</td><td>애플리케이션 관측 데이터를 모으는 업계 표준</td></tr>
+              <tr><td>OpenInference</td><td>OpenTelemetry 위에 프롬프트, 토큰 수, 모델 같은 LLM 전용 속성을 더한 규약</td></tr>
+              <tr><td>코드 평가</td><td>Code eval. 같은 입력에 늘 같은 답을 주는 결정적 검사 함수</td></tr>
+              <tr><td>LLM 판정자</td><td>LLM as a judge. 두 번째 LLM이 루브릭에 따라 출력을 채점하는 것</td></tr>
+              <tr><td>루브릭</td><td>Rubric. 무엇이 좋은 답인지 적은 규칙. 판정자 프롬프트의 핵심</td></tr>
+              <tr><td>정확성 평가</td><td>Correctness. 판정 모델이 아는 사실을 기준으로 출력이 맞는지 본다</td></tr>
+              <tr><td>충실성 평가</td><td>Faithfulness. 주어진 출처 자료에 출력이 충실한지, 지어낸 것은 없는지 본다</td></tr>
+              <tr><td>환각</td><td>Hallucination. 근거 없는 내용을 사실처럼 만들어 내는 것</td></tr>
+              <tr><td>역량 평가 / 회귀 평가</td><td>Capability eval은 "할 수 있나", regression eval은 "여전히 되나"</td></tr>
+              <tr><td>오픈 코딩 / 축 코딩</td><td>Open coding은 본 것을 자연어로 적기, axial coding은 그것을 원인별 카테고리로 묶기. 질적 연구 용어</td></tr>
+              <tr><td>스위스 치즈 모델</td><td>구멍 난 방어층을 여러 겹 쌓아 한 층을 통과한 문제를 다음 층이 잡게 하는 안전공학 개념</td></tr>
+              <tr><td>메타 평가</td><td>Meta evaluation. 판정자가 제대로 판정하는지 사람 라벨과 비교해 검증하는 것</td></tr>
+              <tr><td>골든 데이터셋</td><td>Golden dataset. 사람이 라벨을 붙여 정답으로 믿는 사례 모음</td></tr>
+              <tr><td>정밀도 / 재현율</td><td>Precision은 "문제라고 한 것 중 진짜 문제" 비율, recall은 "진짜 문제 중 잡아낸" 비율</td></tr>
+              <tr><td>거짓 경보</td><td>False positive. 멀쩡한 것을 문제라고 잘못 판정하는 것</td></tr>
+              <tr><td>가드레일 / 북극성</td><td>Guardrail은 출시를 막는 필수 기준, north star는 있으면 좋은 지향 지표</td></tr>
+              <tr><td>온라인 평가</td><td>Online eval. 프로덕션에 들어오는 트레이스에 자동으로 돌리는 평가</td></tr>
+              <tr><td>샘플링 비율</td><td>비용을 아끼려고 트래픽의 일부(예: 1%)만 평가하는 비율</td></tr>
+              <tr><td>실험</td><td>Experiment. 같은 데이터셋과 평가자로 변경 전후를 통제 비교하는 것</td></tr>
+              <tr><td>과제 (task)</td><td>실험에서 데이터셋 예시 하나를 받아 실행하고 출력을 돌려주는 함수</td></tr>
+              <tr><td>평가 주도 개발</td><td>Eval-driven development. 기능보다 평가를 먼저 쓰고 통과할 때까지 만드는 방식</td></tr>
+              <tr><td>τ²-bench</td><td>여러 턴의 고객 응대 과제를 흉내 내는 에이전트 벤치마크</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개와 워크숍 개요</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>노트북, API 키, Arize 계정 준비</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>평가는 테스트, 트레이스는 로그. 스팬</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>바이브 문제. 평가 없이 못 하는 일</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>코드 평가, LLM 판정자, 사람 평가</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>에이전트의 복잡도 사다리. Tesla 연쇄 실패</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>창의적으로 맞은 답: τ²-bench 항공권</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>역량 평가와 회귀 평가</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>점수, 라벨, 설명. 설명을 코딩 에이전트에</td></tr>
+              <tr><td><span class="ts">21:10</span></td><td>의존성 설치와 키 설정</td></tr>
+              <tr><td><span class="ts">25:30</span></td><td>두 줄 계측. OpenTelemetry와 OpenInference</td></tr>
+              <tr><td><span class="ts">28:00</span></td><td>Arize 스킬 소개</td></tr>
+              <tr><td><span class="ts">28:50</span></td><td>금융 분석 에이전트 구조</td></tr>
+              <tr><td><span class="ts">32:00</span></td><td>에이전트 실행과 트레이스 보기</td></tr>
+              <tr><td><span class="ts">34:10</span></td><td>디스크에 쓰려는 에이전트</td></tr>
+              <tr><td><span class="ts">36:20</span></td><td>테스트 질문 12개와 다양성</td></tr>
+              <tr><td><span class="ts">38:50</span></td><td>평가 전에 트레이스를 읽어라</td></tr>
+              <tr><td><span class="ts">39:50</span></td><td>"좋다"의 정의. 비기술 팀원의 역할</td></tr>
+              <tr><td><span class="ts">41:30</span></td><td>합성 데이터와 경계 사례</td></tr>
+              <tr><td><span class="ts">42:50</span></td><td>실습 트레이스 13개 살펴보기</td></tr>
+              <tr><td><span class="ts">45:30</span></td><td>오픈 코딩과 축 코딩</td></tr>
+              <tr><td><span class="ts">47:50</span></td><td>빈도 × 심각도. 스위스 치즈</td></tr>
+              <tr><td><span class="ts">49:10</span></td><td>코드 평가: 티커 검사</td></tr>
+              <tr><td><span class="ts">54:20</span></td><td>결과 12/13. Amazon과 AWS</td></tr>
+              <tr><td><span class="ts">57:20</span></td><td>결과를 채점하고 경로는 채점하지 않기</td></tr>
+              <tr><td><span class="ts">58:10</span></td><td>LLM 판정자의 세 부품. 내장 평가</td></tr>
+              <tr><td><span class="ts">59:50</span></td><td>정확성 평가 실패 (0/13)</td></tr>
+              <tr><td><span class="ts">1:02:10</span></td><td>충실성 평가 (6/13)</td></tr>
+              <tr><td><span class="ts">1:06:20</span></td><td>루브릭의 네 부분과 예시</td></tr>
+              <tr><td><span class="ts">1:12:20</span></td><td>이진 라벨, 생각 먼저</td></tr>
+              <tr><td><span class="ts">1:14:00</span></td><td>온라인 평가자와 샘플링</td></tr>
+              <tr><td><span class="ts">1:17:40</span></td><td>안티패턴 세 가지</td></tr>
+              <tr><td><span class="ts">1:20:00</span></td><td>판정자는 분류기. 사람 주석</td></tr>
+              <tr><td><span class="ts">1:23:20</span></td><td>골든 데이터셋 원칙. 75/25 분리</td></tr>
+              <tr><td><span class="ts">1:25:00</span></td><td>일치율 46%. 루브릭 조이기</td></tr>
+              <tr><td><span class="ts">1:26:30</span></td><td>정밀도와 재현율</td></tr>
+              <tr><td><span class="ts">1:27:40</span></td><td>판정자의 편향 네 가지</td></tr>
+              <tr><td><span class="ts">1:29:00</span></td><td>기준은 사람. 실패는 공정해 보여야</td></tr>
+              <tr><td><span class="ts">1:30:20</span></td><td>실패 데이터셋과 회귀 데이터셋</td></tr>
+              <tr><td><span class="ts">1:32:40</span></td><td>Claude가 프롬프트를 고친다</td></tr>
+              <tr><td><span class="ts">1:35:20</span></td><td>실험 돌리기와 결과</td></tr>
+              <tr><td><span class="ts">1:39:50</span></td><td>표본 수. 투자 우선순위. 평가 주도 개발</td></tr>
+              <tr><td><span class="ts">1:42:30</span></td><td>온라인 평가와 프로덕션 루프</td></tr>
+              <tr><td><span class="ts">1:45:50</span></td><td>실패 트레이스를 코딩 에이전트에. 가드레일 둘</td></tr>
+              <tr><td><span class="ts">1:48:30</span></td><td>전체 요약. 작게 시작하기. 평가는 인프라</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'qZj7sqmidqA:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

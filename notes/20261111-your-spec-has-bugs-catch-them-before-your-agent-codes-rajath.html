@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>스펙 버그 미리 잡기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- code block (SMT-LIB example) ---------- */
+pre {
+  margin: 0; padding: 14px 16px; overflow-x: auto; max-width: 100%;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: var(--step--1); line-height: 1.6;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#conflict-example">하나씩은 맞고 함께는 틀린 규칙</a></li>
+      <li><a href="#why">왜 스펙부터 봐야 하나</a></li>
+      <li><a href="#where">스펙 버그가 숨는 곳</a></li>
+      <li><a href="#pipeline">세 단계 검사</a></li>
+      <li><a href="#sampling">같은 문장을 여러 번 옮기기</a></li>
+      <li><a href="#ask">도구가 사람에게 묻는 것</a></li>
+      <li><a href="#limits">도구가 못 하는 것</a></li>
+      <li><a href="#takeaways">옮기고, 확인하고, 정한다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">적용 체크리스트</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-11 · 8분 · 영어 발표 한글 정리</span>
+      <h1>에이전트가 코딩하기 전에 스펙의 버그를 잡는다</h1>
+      <p class="lead">스펙의 규칙은 하나씩 읽으면 멀쩡해도 함께 읽으면 서로 부딪힐 수 있다. AWS 자동 추론 그룹은 LLM이 스펙을 논리식으로 옮기고, 솔버가 모순을 찾고, 사람이 결정하는 방식으로 이 버그를 코딩 전에 잡는다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=0EnLxIbAvYk" target="_blank" rel="noopener">Your Spec Has Bugs. Catch Them Before Your Agent Codes.</a></span>
+        <span>발표: Rajath Mahendrappa Kotyal (AWS 자동 추론 그룹)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 슬라이드는 보지 못해서, 화면에만 나온 내용은 빠져 있다. 자막에서 뭉개진 이름은 들린 대로 적고 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>스펙의 규칙은 하나씩 맞아도 <strong>함께 읽으면 충돌</strong>할 수 있다. "재고가 없으면 백오더로 둔다"와 "어떤 주문도 백오더로 두지 않는다"가 그 예다.</li>
+        <li>발표자가 인용한 연구에 따르면, 모호한 프롬프트는 코드 정확도를 <strong>20~40%</strong> 떨어뜨리고 배포 후 회귀를 <strong>2배</strong>로 늘린다.</li>
+        <li>스펙 버그는 <strong>문장 안</strong>(모호함, 잘못된 표현, 맞지 않는 상세 수준)과 <strong>문장 사이</strong>(충돌, 빈틈)에 숨는다.</li>
+        <li>검사는 세 단계다. LLM이 먼저 다듬고, 안 되면 <strong>SMT 논리식</strong>으로 옮겨 솔버가 판정하고, 문제가 나오면 LLM이 그 문장을 다시 본다.</li>
+        <li>같은 문장을 <strong>7~10번</strong> 옮기게 하고 <strong>논리적으로 같은 것끼리 묶는다</strong>. 묶음이 여러 개면 그 문장은 여러 뜻으로 읽힌다.</li>
+        <li>최종 결정은 <strong>사람</strong>이 한다. 도구는 선택지를 주고, 답이 없으면 LLM 판정에 맡기거나 그 부분을 구현하지 않는다.</li>
+        <li>오늘 할 일: <strong>에이전트에게 넘기기 전에 스펙을 반드시 점검한다.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="conflict-example">
+        <header><span class="num">01</span><h2>하나씩은 맞고 함께는 틀린 규칙 <span class="ts">00:30</span></h2></header>
+        <p>발표자는 AWS 자동 추론 그룹<span class="en">Automated Reasoning Group</span> 소속이다. 최근 팀에서 만든 스펙 분석 도구를 소개한다. 도구 이름은 자막에 "Keto Specification Analyzer"로 들린다(추정). AWS의 스펙 기반 코딩 도구 Kiro를 가리킬 수도 있지만, 자막만으로는 확실하지 않다.</p>
+        <p>이 도구는 형식 기법<span class="en">formal methods</span>과 자동 추론<span class="en">automated reasoning</span>을 쓴다. 형식 기법은 수학적 논리로 무언가가 맞는지 따지는 방법이다. 목표는 코딩 에이전트가 코드를 쓰기 전에, 에이전트에게 줄 스펙을 먼저 검증하는 것이다.</p>
+        <p class="note">발표자는 소개한 도구를 만든 AWS 팀 소속이다. 도구의 효과에 대한 주장은 그 점을 감안해 읽자.</p>
+
+        <h3>예시 버그: 백오더 규칙</h3>
+        <p>일반 쇼핑몰의 스펙 일부다. 한 스펙 파일에 이런 두 규칙이 들어 있다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">규칙 2</span>
+            <p>주문이 들어왔는데 재고가 없으면, 그 주문을 백오더<span class="en">back order</span>로 둔다.</p>
+            <p class="verdict">따로 읽으면 말이 된다. 백오더는 재고가 들어오면 보내 주기로 하고 받아 두는 주문이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">같은 파일의 다른 규칙</span>
+            <p>어떤 주문도 백오더로 두지 않는다.</p>
+            <p class="verdict">이것도 따로 읽으면 말이 된다.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <span class="title">함께 읽으면</span>
+          <span>재고 없는 주문이 들어오는 순간 두 규칙을 동시에 지킬 수 없다. LLM은 스펙을 읽을 때 두 규칙을 함께 본다. 그래서 이 모호함을 코딩 전에 풀어야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="why">
+        <header><span class="num">02</span><h2>왜 스펙부터 봐야 하나 <span class="ts">01:30</span></h2></header>
+        <p>발표자는 공개 연구와 최근 연구를 근거로 이 프로젝트를 시작했다고 말한다. 자막에는 연구 이름이 나오지 않는다. 발표자가 인용한 수치는 이렇다.</p>
+
+        <figure class="chart" aria-label="발표자가 인용한 수치: 불명확한 프롬프트로 코드 정확도 20~40% 하락, valid 코드 중 60~90%가 여전히 틀림">
+          <span class="chart-title">불명확한 프롬프트가 만드는 손실 (발표자가 인용, %)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>코드 정확도 하락</span><span class="val">20~40</span></div>
+              <div class="track"><div class="fill" style="width:40%" title="정확도 하락 범위의 위 끝: 40%"></div><div class="fill key" style="width:20%" title="정확도 하락 범위의 아래 끝: 20%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>'valid' 코드인데 여전히 틀린 비율</span><span class="val">60~90</span></div>
+              <div class="track"><div class="fill" style="width:90%" title="여전히 틀린 비율의 위 끝: 90%"></div><div class="fill key" style="width:60%" title="여전히 틀린 비율의 아래 끝: 60%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">진한 막대는 범위의 아래 끝, 연한 막대는 위 끝까지다. 두 막대는 서로 다른 것을 잰 숫자다.</span>
+        </figure>
+
+        <div class="callout">
+          <span class="title">배포 후 회귀 2배</span>
+          <span>발표자에 따르면 프롬프트가 불명확했던 경우, 그 코드를 배포했을 때 회귀가 2배 더 많았다. 회귀는 새 변경 때문에 잘 되던 기능이 망가지는 것이다.</span>
+        </div>
+        <p class="note">'60~90%' 문장에서 'valid code'가 무엇을 뜻하는지 자막만으로는 분명하지 않다. 컴파일되는 코드인지, 테스트를 통과한 코드인지 알 수 없어 원어를 그대로 두었다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="where">
+        <header><span class="num">03</span><h2>스펙 버그가 숨는 곳 <span class="ts">02:00</span></h2></header>
+        <p>이런 버그는 코드베이스에 닿기 전에 잡아야 한다. 발표자는 설계 문서에 빗댄다. 코드를 쓰기 전에 설계 문서를 쓰고 흐름도를 그려 흐름부터 정한다. 스펙도 그 자리에서 먼저 검증해야 한다.</p>
+        <p>발표자가 원하는 것은 <strong>사람이 첫 번째 리뷰어가 되기 전에 기계가 먼저 스펙을 검증하는 것</strong>이다.</p>
+
+        <h3>문장 안과 문장 사이 <span class="ts">02:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>어디서</th><th>버그 종류</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>한 문장 안</td><td>모호함 <span class="en">ambiguity</span></td><td>한 문장이 두 가지 이상으로 읽힌다</td></tr>
+              <tr><td>한 문장 안</td><td>잘못된 표현 <span class="en">wording</span></td><td>단어 선택이 뜻을 흐린다</td></tr>
+              <tr><td>한 문장 안</td><td>맞지 않는 상세 수준 <span class="en">level of detail</span></td><td>필요한 만큼 자세하지 않거나 지나치게 자세하다</td></tr>
+              <tr><td>문장 사이</td><td>충돌 <span class="en">conflict</span></td><td>두 규칙이 동시에 참일 수 없다</td></tr>
+              <tr><td>문장 사이</td><td>빈틈 <span class="en">gap</span></td><td>어떤 경우를 다루는 규칙이 하나도 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>그래서 문장은 하나씩 검토하고, 문장과 문장 사이는 서로 맞대어 찾아봐야 한다.</p>
+        <p class="note">02:40 부근 자막이 뭉개져 있다. 바로 위 문장은 그 부분을 이렇게 읽은 것이다(추정).</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="pipeline">
+        <header><span class="num">04</span><h2>세 단계 검사 <span class="ts">02:50</span></h2></header>
+        <p>도구는 세 단계로 스펙을 검사한다.</p>
+        <ol class="plain">
+          <li><strong>LLM이 다듬는다</strong> <span class="en">refine</span>. LLM이 표현을 스스로 정리해 본다. 여기서 해결되면 끝이다.</li>
+          <li><strong>논리식으로 옮긴다</strong> <span class="en">formalize</span>. 다듬어지지 않으면 영어 문장을 SMT 논리식으로 바꾼다. 이 식을 솔버에 넘긴다. 솔버는 식들이 모순 없이 함께 성립하는지 참/거짓으로 답한다.</li>
+          <li><strong>LLM이 다시 본다</strong> <span class="en">recheck</span>. 문제가 없으면 아무것도 하지 않는다. 두 문장 사이의 모순이나 한 문장의 두 가지 뜻이 나오면, LLM에게 그 문장을 다시 보게 한다. LLM은 같은 과정을 되풀이한다.</li>
+        </ol>
+
+        <h3>규칙을 논리식으로 옮기면 <span class="ts">03:50</span></h3>
+        <p>발표 슬라이드에는 백오더 규칙을 SMT 형식으로 옮긴 식이 나온다. 수학 공식처럼 생겼다. 슬라이드 내용은 자막에 없다. 그래서 아래에 같은 규칙을 직접 옮긴 예시를 둔다.</p>
+        <p class="note">예시 · SMT-LIB 형식. 발표 슬라이드의 식과 다를 수 있다.</p>
+<pre><code>(declare-const submitted Bool)           ; 주문이 들어왔다
+(declare-const inventory_available Bool) ; 재고가 있다
+(declare-const backorder Bool)           ; 백오더로 둔다
+
+; 규칙 2: 주문이 들어왔고 재고가 없으면 백오더로 둔다
+(assert (=&gt; (and submitted (not inventory_available)) backorder))
+; 다른 규칙: 어떤 주문도 백오더로 두지 않는다
+(assert (not backorder))
+
+; 질문: 재고 없는 주문이 들어오는 상황이 가능한가?
+(assert (and submitted (not inventory_available)))
+(check-sat)                              ; 결과: unsat</code></pre>
+        <p>솔버가 <code>unsat</code>(만족 불가)을 돌려주면, 재고 없는 주문이 들어왔을 때 두 규칙을 함께 지킬 방법이 없다는 뜻이다. 01장에서 사람이 읽고 느낀 충돌을 기계가 이렇게 확인할 수 있다.</p>
+        <p class="note">발표에서는 판정 도구를 'SAT 솔버' 또는 '만족 가능성 검사기'<span class="en">satisfiability checker</span>라고 불렀다. SMT-LIB 형식의 식을 푸는 도구는 보통 SMT 솔버라고 부른다. SMT 솔버는 참/거짓만 다루는 SAT 솔버를 넓힌 것이다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="sampling">
+        <header><span class="num">05</span><h2>같은 문장을 여러 번 옮기기 <span class="ts">04:10</span></h2></header>
+        <p>문제를 찾은 뒤에는 한 단계 더 들어간다. 여기도 세 단계다.</p>
+        <ol class="plain">
+          <li><strong>여러 번 옮긴다.</strong> LLM에게 같은 문장을 7번이나 10번 논리식으로 옮기게 한다. 결과가 흔들리는 이유가 LLM 자체의 능력 때문인지, 문장 안의 무언가 때문인지 가려내려는 것이다.</li>
+          <li><strong>논리적으로 같은 것끼리 묶는다</strong> <span class="en">cluster by logical equivalence</span>. 7~10개의 해석을 서로 비교해 논리적으로 같은 것을 한 묶음으로 만든다. 묶음 하나는 LLM이 스스로 세운 가정 하나에 해당한다.</li>
+          <li><strong>정한다.</strong> 해석을 받아들이거나, 사용자에게 모호함을 풀어 달라고 하거나, 그 부분을 구현하지 않는다<span class="en">abstain</span>.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">왜 여러 번 돌리나 (발표 내용을 풀어 쓴 것)</span>
+          <span>한 번만 옮기면 LLM이 고른 뜻 하나만 보인다. 여러 번 옮기면 문장이 가진 다른 뜻도 드러난다. 겉모양이 다른 두 식도 논리적으로 같으면 같은 뜻이다. 묶음이 하나뿐이면 LLM이 매번 같은 뜻으로 읽은 것이다. 묶음이 여러 개면 문장이 여러 뜻으로 읽힌다는 신호다.</span>
+        </div>
+        <p class="note">예시 · 06장의 "Remove the record" 사례를 이 방식에 맞춰 풀어 본 표다. 발표에서 이 표를 보여 주지는 않았다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>묶음</th><th>LLM이 세운 가정</th><th>옮긴 식이 말하는 것</th></tr></thead>
+            <tbody>
+              <tr><td>A</td><td>제거 = 삭제</td><td>레코드가 더는 존재하지 않는다</td></tr>
+              <tr><td>B</td><td>제거 = 숨김</td><td>레코드는 남아 있고, 사용자에게 보이지 않는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="ask">
+        <header><span class="num">06</span><h2>도구가 사람에게 묻는 것 <span class="ts">05:00</span></h2></header>
+        <p>도구가 찾은 문제는 사람에게 질문으로 돌아온다. 발표에서 보여 준 화면 예시는 세 종류다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">모호함 · ambiguity <span class="ts">05:10</span></span>
+            <p>"Remove the record"(레코드를 제거한다)는 아주 모호한 문장이다. LLM은 이 문장을 원하는 대로 해석할 수 있다. 그렇게 두면 안 된다.</p>
+            <ul>
+              <li>선택지 1: 그대로 둔다. 레코드를 삭제한다.</li>
+              <li>선택지 2: 레코드는 보관하고 사용자에게만 숨긴다.</li>
+            </ul>
+            <p class="verdict"><b>사용자가 고른다.</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">충돌 · conflict <span class="ts">05:40</span></span>
+            <p>두 규칙이 동시에 참일 수 없는 경우다. 슬라이드 예시에서는 규칙 1과 규칙 3이 부딪혔다.</p>
+            <p class="verdict">앞에서 본 백오더 규칙과 같은 종류의 버그다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">빈틈 · gap <span class="ts">05:40</span></span>
+            <p>어떤 규칙도 다루지 않는 경우다. 슬라이드 예시에서는 멈춰 있는 주문<span class="en">idle order</span>을 처리하는 규칙이 없었다.</p>
+            <p class="verdict">빈틈을 그대로 넘기면 에이전트가 그 자리를 스스로 채우게 된다(추론).</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="limits">
+        <header><span class="num">07</span><h2>도구가 못 하는 것 <span class="ts">06:00</span></h2></header>
+        <p>발표자는 이 도구가 결국 할 수 없는 일이 많다고 분명히 말한다.</p>
+        <ul class="plain">
+          <li><strong>스펙이 맞는지 판정할 정답지<span class="en">oracle</span>는 사용자뿐이다.</strong></li>
+          <li>사용자는 규칙 묶음의 모든 부분을 확인한 뒤 LLM에 넘겨야 한다. 도구는 그 일을 거들 뿐이다.</li>
+          <li>사용자가 중요한 이유는 <strong>암묵적인 도메인 지식</strong>이다. LLM은 도메인 지식을 많이 모른다.</li>
+          <li>LLM은 아무것도 보장하지 않는다. 보장은 사용자만 할 수 있다.</li>
+          <li>형식화를 에이전트에 쓰는 방법은 <strong>아직 근거가 얇다.</strong> 막 떠오르는 기술이다.</li>
+        </ul>
+        <p class="note">자막 기준으로, 발표에는 이 도구가 버그를 얼마나 잡았는지 보여 주는 수치가 없다. 02장의 수치는 모호한 프롬프트의 피해를 말하는 인용이고, 도구의 성능이 아니다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="takeaways">
+        <header><span class="num">08</span><h2>옮기고, 확인하고, 정한다 <span class="ts">06:50</span></h2></header>
+        <blockquote>LLM은 옮기고, 솔버는 확인하고, 사람은 정한다.<cite>발표자, 07:10 · "The LLM translates, the solver checks and the human decides."</cite></blockquote>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">LLM · 옮긴다</span>
+            <p>자연어 스펙을 논리식으로 바꾼다. 여러 번 옮겨 해석이 갈리는지 본다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">솔버 · 확인한다</span>
+            <p>식들이 모순 없이 함께 성립하는지 참/거짓으로 판정한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">사람 · 정한다</span>
+            <p>선택지 중 하나를 고른다. 도메인 지식으로 스펙이 맞는지 최종 보장한다.</p>
+          </div>
+        </div>
+        <h3>발표자가 남긴 메시지</h3>
+        <ul class="plain">
+          <li>에이전트에게 넘기기 전에 <strong>스펙을 반드시 점검한다.</strong></li>
+          <li>번역을 논리적으로 같은 것끼리 묶어, LLM의 해석이 어디서 갈리는지 찾는다. 진짜로 틀리는 지점이 거기서 드러난다.</li>
+          <li>사람에게는 <strong>선택지</strong>를 준다.</li>
+          <li>사람이 답하지 않으면 LLM 판정<span class="en">LLM judge</span>에 맡기거나, 그 부분은 구현하지 않는다.</li>
+        </ul>
+        <p class="note">발표 마지막 화면에는 참고 자료와 팀의 블로그, 웹사이트 링크가 있었다. 발표자는 이 작업의 큰 부분을 팀이 했다고 밝혔다. 링크 주소는 자막에 없다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="recap">
+        <header><span class="num">09</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>스펙의 규칙은 하나씩 맞아도 함께 읽으면 충돌할 수 있다. 예: "재고 없으면 백오더"와 "백오더 금지".</li>
+          <li>발표자가 인용한 연구에서 불명확한 프롬프트는 코드 정확도를 <strong>20~40%</strong> 떨어뜨렸다.</li>
+          <li>같은 인용에서 'valid' 코드의 <strong>60~90%</strong>가 여전히 틀렸고, 배포 후 회귀는 <strong>2배</strong>였다.</li>
+          <li>스펙 버그는 문장 안(모호함, 표현, 상세 수준)과 문장 사이(충돌, 빈틈)에 숨는다.</li>
+          <li>검사 순서: LLM이 다듬기 → SMT 논리식으로 옮겨 솔버가 판정 → 문제 문장을 LLM이 다시 보기.</li>
+          <li>솔버는 규칙들이 <strong>모순 없이 함께 성립하는지</strong> 참/거짓으로 답한다.</li>
+          <li>같은 문장을 7~10번 옮기고 <strong>논리적으로 같은 것끼리 묶는다.</strong> 묶음이 여럿이면 문장이 여러 뜻으로 읽힌다.</li>
+          <li>결과는 받아들이기, 사용자에게 묻기, 구현 보류 중 하나로 처리한다.</li>
+          <li>스펙이 맞는지 최종 판정할 수 있는 건 <strong>도메인 지식을 가진 사용자뿐</strong>이다. 도구는 거들 뿐이다.</li>
+          <li>LLM은 옮기고, 솔버는 확인하고, 사람은 정한다. <strong>에이전트에게 넘기기 전에 스펙부터 점검한다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="quiz">
+        <header><span class="num">10</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>백오더 예시의 두 규칙은 각각 말이 되는데, 왜 버그인가?</span></summary><div class="answer">재고 없는 주문이 들어오는 순간 두 규칙을 동시에 지킬 수 없다. 하나는 백오더로 두라고 하고, 다른 하나는 백오더를 금지한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>발표자가 인용한, 불명확한 프롬프트의 피해 수치 세 가지는?</span></summary><div class="answer">코드 정확도 20~40% 하락, 'valid' 코드의 60~90%가 여전히 틀림, 배포 후 회귀 2배. 연구 이름은 자막에 나오지 않는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>한 문장 안에서 생기는 버그와 문장 사이에서 생기는 버그를 나누면?</span></summary><div class="answer">한 문장 안: 모호함, 잘못된 표현, 맞지 않는 상세 수준. 문장 사이: 충돌, 빈틈.</div></details>
+          <details><summary><span class="qn">Q4</span><span>세 단계 검사의 순서는?</span></summary><div class="answer">LLM이 표현을 다듬는다 → 안 되면 SMT 논리식으로 옮겨 솔버가 판정한다 → 모순이나 두 가지 뜻이 나오면 LLM이 그 문장을 다시 본다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>SMT-LIB와 솔버는 각각 무슨 역할을 하나?</span></summary><div class="answer">SMT-LIB는 논리식을 쓰는 표준 형식이다. 솔버는 그 식들이 모순 없이 함께 성립할 수 있는지 판정한다. 성립할 수 없으면 unsat이라고 답한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>같은 문장을 7~10번 옮기게 하는 이유는?</span></summary><div class="answer">결과가 흔들리는 이유가 LLM 자체의 능력 때문인지, 문장 안의 무언가 때문인지 가려내기 위해서다. 한 번만 옮기면 LLM이 고른 뜻 하나만 보인다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>여러 번 옮긴 결과는 무엇을 기준으로 묶나? 묶음이 여러 개면 무슨 뜻인가?</span></summary><div class="answer">논리적 동치를 기준으로 묶는다. 묶음 하나는 LLM이 세운 가정 하나다. 묶음이 여러 개면 그 문장이 여러 뜻으로 읽힌다는 신호다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>"Remove the record"에 대해 도구가 사용자에게 준 두 선택지는?</span></summary><div class="answer">그대로 두고 레코드를 삭제한다. 또는 레코드는 보관하고 사용자에게만 숨긴다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>빈틈(gap)의 예로 나온 것은?</span></summary><div class="answer">멈춰 있는 주문(idle order)을 처리하는 규칙이 스펙 어디에도 없었다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>스펙이 맞는지 최종 판정하는 사람이 사용자여야 하는 이유는?</span></summary><div class="answer">암묵적인 도메인 지식 때문이다. LLM은 도메인 지식을 많이 모르고 아무것도 보장하지 않는다. 스펙의 옳고 그름을 판정할 정답지는 사용자뿐이다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>사람에게 물었는데 답이 없으면 어떻게 하나?</span></summary><div class="answer">LLM 판정에 맡기거나, 그 부분은 구현하지 않고 보류한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="apply">
+        <header><span class="num">11</span><h2>적용 체크리스트</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트에게 스펙을 넘기기 전에 한 번 점검하는 단계를 둔다<span class="how">확인: 스펙이 사람이나 도구의 점검 없이 에이전트로 바로 가는 경로가 없는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>같은 대상을 다루는 규칙끼리 모아 맞대어 읽는다<span class="how">예: 주문, 재고, 레코드에 관한 규칙을 한곳에 모으고 동시에 지킬 수 있는지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>여러 뜻으로 읽히는 동사를 찾아 구체적으로 바꾼다<span class="how">예: "제거한다" → 완전히 삭제하는지, 보관하고 숨기는지 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>모든 상태와 경우에 처리 규칙이 있는지 확인한다<span class="how">예: 주문 상태마다 한 줄씩 적고, 규칙이 비어 있는 상태(멈춘 주문 등)를 찾는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>LLM에게 같은 규칙을 여러 번 해석시켜 결과가 갈리는지 본다<span class="how">확인: 해석이 둘 이상으로 갈린 문장을 고쳤는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>모호한 문장은 선택지로 바꿔 사람에게 묻는다<span class="how">에이전트가 스스로 뜻을 고르게 두지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>답이 정해지지 않은 규칙은 구현하지 말라고 스펙에 적는다<span class="how">확인: 미정 부분이 표시되어 있고, 에이전트가 그 부분을 건너뛰는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>스펙의 최종 승인은 도메인 지식이 있는 사람이 한다<span class="how">도구와 LLM의 결과는 참고 자료로만 쓴다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="glossary">
+        <header><span class="num">12</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>스펙 <span class="en">specification</span></td><td>무엇을 만들고 어떻게 동작해야 하는지 적은 문서. 여기서는 코딩 에이전트에게 넘기는 규칙 파일</td></tr>
+              <tr><td>코딩 에이전트</td><td>지시를 받아 스스로 코드를 쓰고 고치는 AI</td></tr>
+              <tr><td>형식 기법 <span class="en">formal methods</span></td><td>수학적 논리로 시스템이나 문서가 맞는지 따지는 방법</td></tr>
+              <tr><td>자동 추론 <span class="en">automated reasoning</span></td><td>논리적 결론을 컴퓨터가 자동으로 끌어내고 확인하는 기술</td></tr>
+              <tr><td>백오더 <span class="en">back order</span></td><td>재고가 없을 때 받아 두었다가 재고가 들어오면 처리하는 주문</td></tr>
+              <tr><td>모호함 <span class="en">ambiguity</span></td><td>한 문장이 두 가지 이상으로 읽히는 상태</td></tr>
+              <tr><td>충돌 <span class="en">conflict</span></td><td>두 규칙이 동시에 참일 수 없는 상태</td></tr>
+              <tr><td>빈틈 <span class="en">gap</span></td><td>어떤 경우를 다루는 규칙이 하나도 없는 상태</td></tr>
+              <tr><td>형식화 <span class="en">formalization</span></td><td>자연어 문장을 기계가 판정할 수 있는 논리식으로 옮기는 일</td></tr>
+              <tr><td>SMT-LIB</td><td>SMT 솔버에 넘기는 논리식을 쓰는 표준 형식</td></tr>
+              <tr><td>SMT 솔버</td><td>정수 같은 값이 섞인 논리식들이 동시에 참이 될 수 있는지 판정하는 프로그램</td></tr>
+              <tr><td>SAT 솔버</td><td>참/거짓 변수로만 된 논리식이 동시에 참이 될 수 있는지 판정하는 프로그램. SMT 솔버의 바탕이다</td></tr>
+              <tr><td>만족 가능성 <span class="en">satisfiability</span></td><td>식들을 모두 참으로 만드는 값이 하나라도 있는지 여부. 없으면 unsat(만족 불가)이다</td></tr>
+              <tr><td>논리적 동치 <span class="en">logical equivalence</span></td><td>겉모양이 달라도 어떤 상황에서든 참/거짓이 똑같은 두 식</td></tr>
+              <tr><td>샘플링 <span class="en">sampling</span></td><td>같은 입력으로 LLM을 여러 번 돌려 결과를 여러 개 받는 일</td></tr>
+              <tr><td>클러스터링 <span class="en">clustering</span></td><td>같은 성질의 결과끼리 묶는 일. 여기서는 논리적으로 같은 번역끼리 묶는다</td></tr>
+              <tr><td>구현 보류 <span class="en">abstain</span></td><td>답이 정해지지 않은 부분을 코드로 만들지 않고 남겨 두는 것</td></tr>
+              <tr><td>보관 후 숨김</td><td>레코드를 지우지 않고 남기되 사용자에게만 보이지 않게 하는 방식. 흔히 소프트 삭제 <span class="en">soft delete</span>라고 부른다</td></tr>
+              <tr><td>오라클 <span class="en">oracle</span></td><td>무엇이 정답인지 판정해 주는 기준이나 존재</td></tr>
+              <tr><td>도메인 지식</td><td>그 업무 분야에서만 통하는 규칙과 사정. 문서에 적혀 있지 않은 경우가 많다</td></tr>
+              <tr><td>LLM 판정 <span class="en">LLM judge</span></td><td>다른 LLM에게 어느 답이 나은지 판단하게 하는 방법</td></tr>
+              <tr><td>회귀 <span class="en">regression</span></td><td>새 변경 때문에 잘 되던 기능이 망가지는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="timeline">
+        <header><span class="num">13</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자와 스펙 분석 프로젝트 소개</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>예시 버그: 백오더 규칙 충돌</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>LLM이 보는 모호함을 풀어야 하는 이유</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>인용 수치: 정확도 20~40% 하락, 60~90%, 회귀 2배</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>버그가 숨는 곳: 설계 문서처럼 코드 전에 검증</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>문장 안의 버그와 문장 사이의 버그</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>세 단계 검사: LLM이 다듬기</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>SMT 논리식으로 옮기고 솔버가 판정</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>문제가 나오면 LLM이 다시 보기</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>백오더 규칙의 SMT 표현</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>같은 문장을 7~10번 옮기기</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>논리적 동치로 묶기</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>받아들이기, 사용자에게 묻기, 구현 보류</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>사람에게 묻는 예: "Remove the record"</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>충돌과 빈틈의 예</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>한계: 사용자 말고는 정답지가 없다</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>도메인 지식, 아직 얇은 근거</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>정리: LLM은 옮기고, 솔버는 확인하고, 사람은 정한다</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>참고 자료와 팀 소개</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '0EnLxIbAvYk:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

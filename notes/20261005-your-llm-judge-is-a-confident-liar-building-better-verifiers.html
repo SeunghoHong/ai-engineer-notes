@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>범용 검증기 만들기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#deterministic">결정론 평가가 막힌 이유</a></li>
+      <li><a href="#liar">자신 있게 틀리는 판정자</a></li>
+      <li><a href="#how">범용 검증기의 작동 방식</a></li>
+      <li><a href="#principles">네 가지 설계 원칙</a></li>
+      <li><a href="#humans">사람 라벨로 검증기를 검증하다</a></li>
+      <li><a href="#sft">걸러낸 데이터로 학습해 보기</a></li>
+      <li><a href="#autoresearch">AI가 검증기를 만들 수 있나</a></li>
+      <li><a href="#release">공개된 것과 새 벤치마크</a></li>
+      <li><a href="#qa">질의응답</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-05 · 21분 · 영어 발표 한글 정리</span>
+      <h1>LLM 판정자는 자신 있게 거짓말한다</h1>
+      <p class="lead">웹 에이전트가 일을 끝냈는지 LLM에게 물으면 자신 있게 틀린 답이 돌아온다. Browserbase와 Microsoft는 루브릭, 스크린샷 증거, 실패 유형 구분을 갖춘 범용 검증기를 만들어 사람과 비슷한 수준으로 판정하게 했다. 좋은 검증기는 좋은 모델만큼 중요하다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=xLxhT2ZI7UM" target="_blank" rel="noopener">Your LLM Judge Is a Confident Liar: Building Better Verifiers</a></span>
+        <span>발표: Miguel (Browserbase 에이전트 플랫폼 테크 리드), Corby (Microsoft 연구원)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 것만 알려진 이름으로 바로잡았고, 불확실한 것은 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>웹은 정답 경로가 하나가 아니고 사이트도 계속 바뀐다. 그래서 <strong>정해진 답과 비교하는 평가는 규모가 커지면 무너진다.</strong></li>
+        <li>기존 벤치마크의 LLM 판정자는 <strong>자신 있게 틀린다.</strong> 같은 모델을 공식 판정자는 74% 성공이라 했지만, 사람과 잘 맞는 새 검증기는 38%라고 했다.</li>
+        <li>틀린 판정자를 보상 신호로 쓰면 <strong>더 나은 에이전트가 아니라 더 능숙한 거짓말쟁이</strong>를 훈련하게 된다.</li>
+        <li>새 검증기는 <strong>루브릭을 만들고, 기준마다 관련 스크린샷을 골라 증거로 삼고</strong>, 과정 점수와 성공 여부를 따로 낸다.</li>
+        <li>네 원칙: 요청한 것만 채점한다, 한 기준의 실수가 다음 기준으로 번지지 않게 한다, 반드시 화면을 본다, 에이전트가 통제할 수 있는 실패와 없는 실패를 나눈다.</li>
+        <li>사람 라벨과 비교하니 <strong>거짓 양성이 절반에서 0으로</strong> 줄었고, 사람끼리 일치하는 만큼 검증기도 사람과 일치했다.</li>
+        <li>검증기로 거른 데이터로 학습하면 모델이 더 좋아졌다. 자동 연구 루프는 하루 만에 비슷한 검증기를 만들었지만 사람 수준의 70%에 그쳤다. <strong>사람의 직관과 자동 연구를 합친 쪽이 가장 강했다.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="deterministic">
+        <header><span class="num">01</span><h2>결정론 평가가 막힌 이유 <span class="ts">01:10</span></h2></header>
+        <p>Browserbase는 클라우드에서 브라우저를 띄워 주는 회사다. 에이전트가 웹에서 일하게 하는 바탕을 만든다. Miguel은 그 위에서 오픈소스 프레임워크 Stagehand를 1년 반 동안 만들어 왔다.</p>
+        <p>처음부터 평가<span class="en">eval</span>를 같이 만들었다. 프레임워크를 바꾸거나 모델이 바뀔 때 성능이 실제로 올라가는지 확인하기 위해서다. 초기 평가는 모두 <strong>결정론적 환경</strong><span class="en">deterministic environment</span>이었다. 정답이 정해져 있어 기계적으로 맞고 틀림을 가릴 수 있는 환경이다.</p>
+        <p>모델이 좋아지고 과제가 어려워지자 이 방식이 버티지 못했다. 정적 사이트를 계속 땜질하고, 긴 과제에 체크포인트를 잔뜩 심어야 했다.</p>
+        <div class="callout">
+          <span class="title">웹에서 정답 비교가 어려운 이유</span>
+          <span>정답으로 가는 길이 하나가 아니다. 기준이 되는 정답 자체가 없는 경우가 많다. 확인하려던 상품이 사이트에서 사라지면 환경이 통째로 깨진다. 접속 차단이나 환경 오류가 끼어들면 신호를 얻을 수 없다.</span>
+        </div>
+        <p>그래서 대부분이 하는 선택을 했다. LLM 판정자<span class="en">LLM judge</span>를 쓰기로 했다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="liar">
+        <header><span class="num">02</span><h2>자신 있게 틀리는 판정자 <span class="ts">02:50</span></h2></header>
+        <p>컴퓨터 사용 에이전트에는 OSWorld 벤치마크가 있다. 웹에는 Online-Mind2Web과 WebVoyager가 있다. 이 벤치마크들은 LLM 판정자를 함께 제공한다.</p>
+        <p>사람 전문가에게 그 판정을 다시 검사시켰더니, 판정자가 <strong>아주 자신 있게 틀리는</strong> 경우가 많았다. 그 결과는 믿을 수 없다.</p>
+        <blockquote>더 나은 에이전트를 훈련하는 게 아니다. 더 능숙한 거짓말쟁이를 훈련하는 것이다.<cite>발표자의 표현을 옮김 <span class="ts">03:40</span></cite></blockquote>
+        <p>틀린 판정자를 강화학습 보상이나 자동 연구의 신호로 쓰면 이렇게 된다. 에이전트는 실제로 일을 끝내는 법 대신 판정자를 속이는 법을 배운다.</p>
+
+        <figure class="chart" aria-label="같은 모델, 같은 벤치마크에서 판정자별 성공률: WebVoyager 공식 판정자 GPT-4o 74%, 새 범용 검증기 38%">
+          <span class="chart-title">같은 모델, 같은 벤치마크, 다른 판정자 (성공률 %) <span class="ts">03:50</span></span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>WebVoyager 공식 판정자 (GPT-4o)</span><span class="val">74</span></div>
+              <div class="track"><div class="fill" style="width:74%" title="공식 판정자: 74%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>새 범용 검증기 (사람 라벨과 높은 일치)</span><span class="val">38</span></div>
+              <div class="track"><div class="fill key" style="width:38%" title="범용 검증기: 38%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">Microsoft가 훈련한 웹 브라우저 에이전트 Fara-7B(자막에서는 "FARS 7B")를 WebVoyager에서 평가한 결과. 발표자는 38% 쪽이 실제에 가깝다고 본다.</span>
+        </figure>
+
+        <h3>기존 판정자의 약점 <span class="ts">04:20</span></h3>
+        <ul class="plain">
+          <li>작고 약한 모델을 판정자로 쓴다. o4-mini나 GPT-4o 수준이다.</li>
+          <li><strong>루브릭을 쓰지 않는다.</strong> 어디서 점수를 주고 깎을지 기준이 없다.</li>
+          <li>관련 스크린샷을 보지 않는다. 또는 스크린샷을 전부 넣어 문맥 창을 넘치게 하고 길을 잃는다.</li>
+          <li>에이전트의 최종 답이나 행동 기록을 아예 보지 않기도 한다.</li>
+        </ul>
+        <p>새 검증기는 이 네 가지를 모두 채운다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="how">
+        <header><span class="num">03</span><h2>범용 검증기의 작동 방식 <span class="ts">05:00</span></h2></header>
+        <p>과제가 "시애틀에서 보스턴 가는 가장 싼 항공편 예약"이라고 하자. 검증기는 이렇게 움직인다.</p>
+        <ol class="plain">
+          <li><strong>루브릭 생성.</strong> 성공이 무엇인지 기준 10개 안팎으로 쓴다.</li>
+          <li><strong>증거 고르기.</strong> 에이전트의 궤적<span class="en">trajectory</span>에 들어 있는 스크린샷이 실제 상태의 증거다. 기준 하나마다 가장 관련 있는 스크린샷을 순위 매겨 상위 몇 장만 고른다.</li>
+          <li><strong>기준별 판정.</strong> 고른 증거로 그 기준을 충족했는지 본다. 에이전트가 했다고 말한 것과 화면에 실제로 보이는 것이 다르면 잡아낸다.</li>
+          <li><strong>두 가지 출력.</strong> 기준마다 점수를 매긴 <strong>과정 점수</strong><span class="en">process score</span>를 낸다. 부분 점수가 가능하다. 그리고 합리적인 사용자가 "됐다"고 볼지 참·거짓으로 답하는 <strong>결과 판정</strong><span class="en">outcome</span>을 설명과 함께 낸다.</li>
+        </ol>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>출력</th><th>형태</th><th>쓰임</th></tr></thead>
+            <tbody>
+              <tr><td>과정 점수</td><td>기준별 충족 여부 목록, 부분 점수 가능</td><td>어디서 잘했고 어디서 틀렸는지 공로를 나눈다</td></tr>
+              <tr><td>결과 판정</td><td>참/거짓 + 이유 설명</td><td>사용자 기대를 채웠는지 한 번에 답한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">세부 구현은 발표자가 논문을 참고하라고 했다. 이 노트는 발표에서 말한 수준까지만 정리한다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="principles">
+        <header><span class="num">04</span><h2>네 가지 설계 원칙 <span class="ts">06:20</span></h2></header>
+        <p>검증기를 만들 때 지킨 원칙 네 가지다. 각각 발표에서 든 예시와 함께 본다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">원칙 1 · 요청한 것만 채점한다 <span class="ts">07:10</span></span>
+            <p>과제: 자카르타에서 특정 날짜의 싼 호텔을 찾고, 그 호텔 주소로 가장 가까운 커피숍을 검색해 이름과 주소를 답하라.</p>
+            <ul>
+              <li>나쁜 루브릭: "호텔 숙박 총액을 알려 달라"는 기준을 넣는다</li>
+              <li>과제에 없는 요구다. 이런 기준이 들어가면 점수가 부당하게 깎인다</li>
+            </ul>
+            <p class="verdict"><b>교훈</b>: 순진하게 만든 루브릭은 이런 군더더기 기준을 자주 만든다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">원칙 2 · 실수가 번지지 않게 한다 <span class="ts">07:50</span></span>
+            <p>과제: NSYNC와 Backstreet Boys 멤버 중 성이 가장 긴 사람의 순자산을 구하라.</p>
+            <ul>
+              <li>에이전트는 Timberlake(10자)를 골랐다. 실제로는 Kirkpatrick(11자)이 더 길다</li>
+              <li>사람을 잘못 골랐어도 Timberlake의 순자산을 정확히 보고했다면, 그 기준에서는 점수를 받아야 한다</li>
+            </ul>
+            <p class="verdict"><b>교훈</b>: 한 기준의 실수는 그 기준에서만 깎는다. 다음 기준으로 끌고 가지 않는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">원칙 3 · 반드시 화면을 본다 <span class="ts">08:40</span></span>
+            <p>과제: 어떤 이미지 캡션 모델의 정보를 찾아라.</p>
+            <ul>
+              <li>에이전트는 CIDEr 점수가 6.2% 올랐다고 답했다</li>
+              <li>논문 초록에는 2.8%라고 적혀 있었다</li>
+            </ul>
+            <p class="verdict"><b>교훈</b>: 에이전트는 하지 않은 일을 했다고 자신 있게 말한다. 이런 미묘한 환각<span class="en">hallucination</span>은 사람도 놓친다. 실제 화면과 대조해야 잡힌다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">원칙 4 · 통제 가능 / 불가능을 나눈다 <span class="ts">09:20</span></span>
+            <p>과제: Amazon에서 특정 봉제 인형을 사라.</p>
+            <ul>
+              <li>에이전트가 정확히 검색했는데 품절이었다</li>
+              <li>과정 점수는 만점이다. 할 수 있는 최선을 다했다</li>
+              <li>결과 판정은 실패다. 사고 싶은 물건을 못 샀다</li>
+            </ul>
+            <p class="verdict"><b>교훈</b>: 브라우저는 에이전트가 다 통제할 수 없는 환경이다. 품절은 에이전트 탓이 아니다.</p>
+          </div>
+        </div>
+
+        <h3>실패 유형 표 <span class="ts">09:50</span></h3>
+        <p>가능한 상황을 하나하나 나열하고, 각 상황에서 점수를 어떻게 줄지 미리 정했다. 검증기는 이 표를 따른다. 발표에서 언급한 경우를 정리하면 다음과 같다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>상황</th><th>과정 점수</th><th>결과 판정</th></tr></thead>
+            <tbody>
+              <tr><td>정확히 검색했지만 품절</td><td>만점</td><td>실패</td></tr>
+              <tr><td>품절이라 비슷한 대체품을 다른 방법으로 찾아 구매</td><td>성공</td><td>성공</td></tr>
+              <tr><td>에이전트가 통제할 수 있는 실수</td><td>감점</td><td>실패</td></tr>
+              <tr><td>환각 (하지 않은 일을 했다고 보고)</td><td>감점</td><td>실패</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표에서는 "대체품을 찾은 경우 두 쪽 다 성공"이라고 말했다. 그 밖의 칸은 발표 내용에서 추론해 채웠다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="humans">
+        <header><span class="num">05</span><h2>사람 라벨로 검증기를 검증하다 <span class="ts">10:20</span></h2></header>
+        <p>검증기가 실제로 좋아지고 있는지 알려면 기준이 필요하다. 사람 전문가와 실험을 설계하고, 라벨을 모으는 플랫폼을 따로 만들었다. 이렇게 모은 <strong>정답 라벨</strong><span class="en">golden labels</span>은 공개했다.</p>
+        <ol class="plain">
+          <li>사람 라벨러에게 에이전트 궤적의 증거 전체를 보여 준다. 라벨러는 에이전트가 한 행동과 결과를 보고 판정한다.</li>
+          <li>그다음 범용 검증기의 판정을 보여 주고, 동의하는지 묻는다.</li>
+        </ol>
+        <p>두 번째 단계가 방향을 확인하는 믿을 만한 신호가 됐다. 어느 시점부터 <strong>검증기가 사람을 바로잡기 시작했다.</strong> 사람이 놓친 것을 검증기가 찾아냈다.</p>
+        <div class="callout">
+          <span class="title">정답 라벨 기준 결과 <span class="ts">11:40</span></span>
+          <span><strong>거짓 양성</strong><span class="en">false positive</span>이 거의 절반에서 0으로 줄었다. 거짓 양성은 실패한 궤적을 성공이라고 잘못 판정하는 것이다. 사람과의 일치도는 Cohen's kappa로 쟀다. 과제마다 라벨러 두 명이 붙었고, 그 둘 사이의 일치도도 같은 방법으로 쟀다.</span>
+        </div>
+        <p>결과는 kappa 0.58이다. <strong>검증기가 사람과 일치하는 정도가 사람끼리 일치하는 정도와 같았다.</strong> 사람 라벨러 두 명이 서로 동의하는 만큼 검증기도 사람에게 동의한다는 뜻이다.</p>
+        <p class="note">Cohen's kappa는 우연히 일치할 확률을 뺀 뒤 두 판정자가 얼마나 같은 답을 내는지 재는 지표다. 1이면 완전 일치, 0이면 우연 수준이다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="sft">
+        <header><span class="num">06</span><h2>걸러낸 데이터로 학습해 보기 <span class="ts">12:20</span></h2></header>
+        <p>검증기 품질을 확인하는 또 다른 방법은 그 검증기로 거른 데이터로 모델을 학습해 보는 것이다.</p>
+        <ul class="plain">
+          <li>학습 예제 수를 3천 개 또는 9천 개로 고정했다.</li>
+          <li>지도 미세조정<span class="en">SFT</span>에서는 성공한 궤적만 학습해야 한다. 그래서 검증기가 "통과"라고 한 궤적만 골랐다.</li>
+          <li>범용 검증기의 과정 점수로 거른 3천 개로 학습한 모델이, 기존 기준선 검증기로 거른 같은 수로 학습한 모델보다 훨씬 좋았다.</li>
+          <li>9천 개 규모에서도 같은 결과가 나왔다.</li>
+        </ul>
+        <div class="shift" aria-label="검증기 품질이 모델 품질로 이어지는 흐름">
+          <div><span class="tag">더 좋은 검증기</span><b>성공한 궤적을 더 정확히 가려낸다</b><span class="muted">거짓 양성이 적다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">더 좋은 모델</span><b>깨끗한 데이터로 학습한다</b><span class="muted">같은 개수라도 품질이 다르다</span></div>
+        </div>
+        <p>사람과의 일치도에 더해, 실제 학습에서도 효과가 확인됐다. 발표자는 이것을 검증기가 실제 운영 환경에서 쓸 만하다는 결정적 증거로 본다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="autoresearch">
+        <header><span class="num">07</span><h2>AI가 검증기를 만들 수 있나 <span class="ts">13:30</span></h2></header>
+        <p>곁가지 실험이다. 두 발표자는 3주 동안 프롬프트를 다듬고 코드를 쓰며 검증기를 만들었다. 그동안 약 30번의 실험으로 사람 라벨과의 일치도를 올렸다. 그 과정을 AI가 혼자서 재현할 수 있을까.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>선</th><th>무엇</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>파란 선</td><td>두 사람이 3주간 만든 검증기</td><td>기준선</td></tr>
+              <tr><td>빨간 선</td><td>코드와 프롬프트를 모두 치우고 자동 연구<span class="en">auto research</span> 루프에 맡김</td><td>같은 수의 실험을 약 하루 만에 돌렸다. 일치도는 사람 결과의 약 70%</td></tr>
+              <tr><td>초록 선</td><td>3주간 얻은 발견을 미리 알려 주고 자동 연구 루프에 맡김</td><td>사람이 도달한 적 없는 더 높은 일치도에 올랐다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <figure class="chart" aria-label="검증기 개발에 걸린 시간: 사람 두 명 약 21일, 자동 연구 루프 약 1일">
+          <span class="chart-title">같은 수의 실험을 돌리는 데 걸린 시간 (일) <span class="ts">14:40</span></span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>사람 두 명</span><span class="val">약 21</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="사람 두 명: 약 3주"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>자동 연구 루프</span><span class="val">약 1</span></div>
+              <div class="track"><div class="fill key" style="width:4.8%" title="자동 연구 루프: 약 1일"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>21</span></div>
+          <span class="caption">속도는 20배쯤 빨랐지만, 혼자 만든 검증기의 사람 일치도는 사람이 만든 것의 약 70%였다. 3주를 21일로 놓고 그렸다.</span>
+        </figure>
+
+        <ul class="plain">
+          <li>자동 연구는 지표와 검증기를 만드는 데 쓸 수 있다. 적어도 실험 속도는 크게 올린다.</li>
+          <li>다만 아직 사람의 개입이 어느 정도 필요하다.</li>
+          <li>이 결과는 Opus 4.6으로 얻었다. 발표자는 Fable로는 아직 시도하지 않았고 더 잘할 수도 있다고 말했다.</li>
+          <li><strong>사람의 직관과 자동 연구 루프를 합친 것이 가장 강한 조합</strong>이었다. 초록 선이 그 증거다.</li>
+        </ul>
+        <blockquote>검증기를 만드는 일은 모델을 만드는 일만큼 중요하다.<cite>발표자가 남긴 핵심 메시지 <span class="ts">15:40</span></cite></blockquote>
+      </section>
+
+      <!-- 8 -->
+      <section id="release">
+        <header><span class="num">08</span><h2>공개된 것과 새 벤치마크 <span class="ts">16:10</span></h2></header>
+        <ul class="plain">
+          <li>논문은 arXiv에 프리프린트로 올라가 있다.</li>
+          <li>Microsoft 저장소에 정답 라벨과 실험 코드가 있다. 라벨 묶음 이름은 자막상 "CUA Verifier Bench"(추정)다.</li>
+          <li>이 연구에서 새 벤치마크도 나왔다.</li>
+        </ul>
+        <p>Miguel은 여러 연구소와 일하며 모델 개선에 쓸 정량 신호를 제공한다. 그런데 공개 벤치마크는 빠르게 <strong>포화</strong>되고 있다. 테스트 데이터가 이미 학습 데이터 분포 안에 들어가 있는 느낌이라 신호를 얻기 어렵다.</p>
+        <p>새 벤치마크는 완전한 성공까지 가장 큰 격차를 보여 줬다. Miguel은 모델이 어디서 강하고 어디서 부족한지 매일 확인하는 도구로 이 벤치마크를 쓴다.</p>
+        <p class="note">두 발표자는 각각 Browserbase와 Microsoft 소속이고, 발표한 검증기와 벤치마크는 두 회사가 만든 것이다. "기존 벤치마크는 포화됐고 우리 것이 더 좋은 신호를 준다"는 주장은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="qa">
+        <header><span class="num">09</span><h2>질의응답 <span class="ts">17:40</span></h2></header>
+        <h3>웹 말고 다른 과제에도 쓰나 <span class="ts">17:40</span></h3>
+        <p>Microsoft에서 데스크톱 과제용으로 변형 중이다. 노트북에서 하는 기업 업무 흐름 같은 것이다. 웹뿐 아니라 데스크톱 데이터까지 담은 벤치마크도 낼 계획이다. 데스크톱에는 터미널, 로그 등 브라우저보다 많은 정보가 있어 검증기가 그것도 함께 본다.</p>
+
+        <h3>사람 라벨에 과적합되지 않았나 <span class="ts">19:00</span></h3>
+        <p>중요한 문제라 시간을 많이 썼다. 라벨을 두 묶음으로 나눴다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>묶음</th><th>규모</th><th>누가 라벨</th><th>용도</th></tr></thead>
+            <tbody>
+              <tr><td>개발용</td><td>약 50개 궤적</td><td>Corby가 직접</td><td>30번의 실험으로 검증기를 다듬는 데 사용</td></tr>
+              <tr><td>보류용</td><td>약 100개 궤적</td><td>돈을 주고 고용한 라벨러, 궤적당 2명</td><td>검증기가 완성된 뒤에만 사용. 공개한 수치는 이 묶음 기준</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>전체 150개 중 3분의 2를 보류했고 그 라벨로는 한 번도 반복 개선을 하지 않았다. 그래서 과적합되지 않았다고 본다.</p>
+        <div class="callout">
+          <span class="title">황금 기준</span>
+          <span>사람을 고용해 검증 작업을 훈련시키고, 그 사람들의 판정과 시스템의 판정이 일치하는지 본다. 검증기를 다듬는 데 쓴 라벨로 성능을 보고하면 안 된다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="recap">
+        <header><span class="num">10</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>웹은 정답 경로가 하나가 아니고 환경이 계속 바뀐다. <strong>결정론 평가는 규모가 커지면 무너진다.</strong></li>
+          <li>기존 벤치마크의 LLM 판정자는 자신 있게 틀린다. 같은 모델이 공식 판정자로는 74%, 새 검증기로는 38%였다.</li>
+          <li>틀린 판정자로 학습하면 <strong>더 능숙한 거짓말쟁이</strong>를 만든다.</li>
+          <li>기존 판정자의 약점: 약한 모델, 루브릭 없음, 스크린샷을 안 보거나 전부 넣어 길을 잃음, 최종 답과 행동 기록을 안 봄.</li>
+          <li>새 검증기: 루브릭 생성 → 기준별 관련 스크린샷 선별 → 기준별 판정 → 과정 점수 + 결과 판정.</li>
+          <li>네 원칙: <strong>요청한 것만 채점, 실수 번짐 차단, 반드시 화면 확인, 통제 가능/불가능 구분.</strong></li>
+          <li>사람 라벨 기준으로 거짓 양성이 절반에서 0으로 줄었다. kappa 0.58로 사람끼리의 일치 수준과 같다.</li>
+          <li>검증기로 거른 데이터로 SFT하면 같은 개수라도 더 좋은 모델이 나온다. 3천 개와 9천 개 모두에서 확인했다.</li>
+          <li>자동 연구 루프는 하루 만에 검증기를 만들었지만 사람 수준의 70%였다. <strong>사람의 발견을 넣어 준 루프는 사람을 넘어섰다.</strong></li>
+          <li>과적합을 피하려면 라벨을 보류해야 한다. 150개 중 100개는 완성 뒤에만 썼다. <strong>검증기 만들기는 모델 만들기만큼 중요하다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 11 -->
+      <section id="quiz">
+        <header><span class="num">11</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>결정론적 평가 환경이 웹에서 버티지 못한 이유 세 가지는?</span></summary><div class="answer">정답 경로가 하나가 아니다. 사이트가 바뀌어 확인하려던 대상이 사라진다. 접속 차단 같은 환경 오류가 신호를 막는다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>74%와 38%는 각각 무엇인가?</span></summary><div class="answer">같은 모델(Fara-7B)을 WebVoyager에서 평가한 성공률이다. 74%는 공식 판정자 GPT-4o의 판정, 38%는 사람 라벨과 잘 맞는 새 범용 검증기의 판정이다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>"더 능숙한 거짓말쟁이를 훈련한다"는 말의 뜻은?</span></summary><div class="answer">틀린 판정자를 보상 신호로 쓰면 에이전트는 일을 제대로 하는 법이 아니라 판정자를 속이는 법을 배운다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>기존 LLM 판정자의 네 가지 약점은?</span></summary><div class="answer">약한 모델 사용, 루브릭 없음, 관련 스크린샷을 안 보거나 전부 넣어 문맥을 넘침, 최종 답과 행동 기록을 안 봄.</div></details>
+          <details><summary><span class="qn">Q5</span><span>검증기가 기준 하나를 판정할 때 스크린샷을 어떻게 쓰나?</span></summary><div class="answer">궤적의 스크린샷을 그 기준과의 관련도로 순위 매기고, 상위 몇 장만 증거로 쓴다. 에이전트의 주장과 화면이 다르면 잡아낸다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>과정 점수와 결과 판정은 어떻게 다른가?</span></summary><div class="answer">과정 점수는 루브릭 기준별 점수로 부분 점수가 가능하다. 결과 판정은 합리적 사용자가 성공이라 볼지 참·거짓으로 답하고 이유를 붙인다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>자카르타 호텔 예시에서 나쁜 루브릭이 어긴 원칙은?</span></summary><div class="answer">"요청한 것만 채점한다." 과제에 없던 숙박 총액을 기준에 넣어 점수를 부당하게 깎았다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Timberlake와 Kirkpatrick 예시가 보여 주는 원칙은?</span></summary><div class="answer">한 기준의 실수가 다음 기준으로 번지지 않게 한다. 사람을 잘못 골랐어도 그 사람의 순자산을 정확히 보고했다면 그 기준에서는 점수를 준다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>봉제 인형이 품절일 때 과정 점수와 결과 판정은?</span></summary><div class="answer">과정 점수는 만점, 결과 판정은 실패. 품절은 에이전트가 통제할 수 없는 실패이기 때문이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>kappa 0.58이 뜻하는 것은?</span></summary><div class="answer">검증기와 사람의 일치도가 사람 라벨러 두 명 사이의 일치도와 같다는 것. 검증기가 사람 한 명만큼 믿을 만하다는 뜻이다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>SFT 실험에서 무엇을 고정하고 무엇을 바꿨나?</span></summary><div class="answer">학습 궤적 수(3천 또는 9천)를 고정하고, 어떤 검증기로 성공 궤적을 걸렀는지만 바꿨다. 범용 검증기로 거른 쪽이 더 좋은 모델을 냈다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>자동 연구 루프 실험의 세 선은 각각 무엇이고 결론은?</span></summary><div class="answer">파란 선은 사람이 3주간 만든 것, 빨간 선은 AI가 처음부터 하루 만에 만든 것(사람의 70%), 초록 선은 사람의 발견을 넣어 준 AI(사람을 넘어섬). 사람 직관과 자동 연구의 결합이 가장 강하다.</div></details>
+          <details><summary><span class="qn">Q13</span><span>과적합을 피하기 위해 라벨을 어떻게 나눴나?</span></summary><div class="answer">150개 중 약 50개는 Corby가 직접 라벨해 개발에 썼다. 약 100개는 고용한 라벨러 두 명씩이 라벨했고 검증기 완성 뒤에만 썼다. 공개 수치는 보류 묶음 기준이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="apply">
+        <header><span class="num">12</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>지금 쓰는 LLM 판정자의 판정을 사람이 표본 검사한다<span class="how">확인: 실패를 성공이라 한 거짓 양성이 몇 %인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>판정 전에 과제별 루브릭을 먼저 만들게 한다<span class="how">기준은 과제에 적힌 것만. 군더더기 기준이 끼어 있지 않은지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>기준마다 관련 증거만 골라 넣는다<span class="how">스크린샷 전부를 넣지 않는다. 기준별로 순위 매겨 상위 몇 장만</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>에이전트의 주장과 실제 화면을 대조하는 단계를 둔다<span class="how">확인: 숫자나 이름이 다른 미묘한 환각을 잡아내는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>과정 점수와 결과 판정을 따로 낸다<span class="how">통제할 수 없는 실패(품절, 차단)는 과정은 인정하고 결과만 실패로</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>실패 유형과 점수 배정을 표로 미리 정한다<span class="how">통제 가능 실수, 환각, 대체품 성공 등 상황별 규칙</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>사람 라벨을 개발용과 보류용으로 나눈다<span class="how">보류 라벨은 완성 뒤에만 쓴다. 가능하면 라벨러 2명 겹치기</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>검증기로 거른 데이터로 학습해 효과를 확인한다<span class="how">예제 수를 고정하고 검증기만 바꿔 비교</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>검증기 개선에 자동 연구 루프를 붙이되 사람의 발견을 먼저 넣어 준다<span class="how">확인: 사람 라벨 일치도가 사람 혼자일 때보다 올라가는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 13 -->
+      <section id="glossary">
+        <header><span class="num">13</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>검증기</td><td>Verifier. 에이전트가 과제를 제대로 끝냈는지 판정하는 시스템</td></tr>
+              <tr><td>LLM 판정자</td><td>LLM-as-a-judge. 결과의 성공 여부를 LLM에게 판정시키는 방식</td></tr>
+              <tr><td>결정론적 환경</td><td>정답이 정해져 있어 기계적으로 맞고 틀림을 가릴 수 있는 평가 환경</td></tr>
+              <tr><td>궤적</td><td>Trajectory. 에이전트가 과제를 수행하며 남긴 행동, 스크린샷, 답의 전체 기록</td></tr>
+              <tr><td>루브릭</td><td>Rubric. 성공이 무엇인지 항목별로 적은 채점 기준표</td></tr>
+              <tr><td>과정 점수</td><td>Process score. 루브릭 기준마다 매긴 점수. 부분 점수가 가능하다</td></tr>
+              <tr><td>결과 판정</td><td>Outcome. 사용자 기대를 채웠는지에 대한 참·거짓 판정</td></tr>
+              <tr><td>거짓 양성</td><td>False positive. 실패한 것을 성공이라고 잘못 판정하는 것</td></tr>
+              <tr><td>환각</td><td>Hallucination. 모델이 사실이 아닌 것을 사실처럼 말하는 것</td></tr>
+              <tr><td>Cohen's kappa</td><td>우연 일치를 뺀 두 판정자 간 일치도. 1이면 완전 일치, 0이면 우연 수준</td></tr>
+              <tr><td>정답 라벨</td><td>Golden labels. 사람 전문가가 매긴 기준 판정</td></tr>
+              <tr><td>SFT</td><td>Supervised fine-tuning. 좋은 예제를 보여 주며 모델을 추가 학습하는 방법</td></tr>
+              <tr><td>강화학습 보상</td><td>RL reward. 모델의 행동이 좋았는지 알려 주는 신호. 검증기가 이 역할을 맡기도 한다</td></tr>
+              <tr><td>자동 연구</td><td>Auto research. AI가 실험을 설계하고 돌리고 결과를 보며 스스로 개선하는 루프</td></tr>
+              <tr><td>과적합</td><td>Overfitting. 특정 데이터에만 맞춰져 새 데이터에서는 성능이 떨어지는 것</td></tr>
+              <tr><td>벤치마크 포화</td><td>모델들이 거의 만점을 받아 더 이상 차이를 보여 주지 못하는 상태</td></tr>
+              <tr><td>OSWorld / Online-Mind2Web / WebVoyager</td><td>컴퓨터 사용 및 웹 에이전트 평가용 공개 벤치마크</td></tr>
+              <tr><td>CIDEr</td><td>이미지 캡션 품질을 재는 점수. 발표의 환각 예시에 등장</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="timeline">
+        <header><span class="num">14</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개: Browserbase의 Miguel, Microsoft의 Corby</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>Stagehand 평가의 시작: 결정론적 환경</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>결정론 평가가 규모에서 무너진 이유</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>LLM 판정자로 전환, 기존 벤치마크의 판정자</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>사람 전문가 검사 결과: 자신 있게 틀린다</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>"더 능숙한 거짓말쟁이", 74% vs 38%</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>기존 판정자의 네 가지 약점</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>범용 검증기 작동 방식</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>과정 점수와 결과 판정 출력 예시</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>네 가지 설계 원칙 소개</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>원칙 1 예시: 자카르타 호텔과 군더더기 기준</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>원칙 2 예시: Timberlake와 Kirkpatrick</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>원칙 3 예시: CIDEr 점수 환각</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>원칙 4 예시: 품절된 봉제 인형</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>실패 유형 표</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>사람 라벨 수집 플랫폼과 절차</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>검증기가 사람을 바로잡다</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>거짓 양성 절반 → 0, kappa 0.58</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>검증기로 거른 데이터로 SFT</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>자동 연구로 검증기 만들기 실험</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>3주 vs 1일, 일치도 70%</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>Opus 4.6 기준, Fable은 미시도</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>초록 선: 사람의 발견 + 자동 연구</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>오픈소스 공개: 논문, 라벨, 코드</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>벤치마크 포화와 새 벤치마크</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>질문: 웹 밖 과제, 데스크톱 적용</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>질문: 과적합 방지, 라벨 보류</td></tr>
+              <tr><td><span class="ts">20:20</span></td><td>황금 기준: 고용한 사람의 판정과 비교</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'xLxhT2ZI7UM:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

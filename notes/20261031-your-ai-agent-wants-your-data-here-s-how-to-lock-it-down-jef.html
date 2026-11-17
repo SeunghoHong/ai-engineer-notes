@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 데이터 잠그기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#aidb">오라클 AI 데이터베이스란</a></li>
+      <li><a href="#why">에이전트에게 데이터베이스가 왜 중요한가</a></li>
+      <li><a href="#questions">사례 1: 끝없는 업무 질문</a></li>
+      <li><a href="#nl2sql">자연어→SQL이 위험한 이유</a></li>
+      <li><a href="#reports">보고서를 도구로 내준다</a></li>
+      <li><a href="#modes">SQL을 얼마나 열어 줄까</a></li>
+      <li><a href="#tuning">사례 2: 느린 운영 DB 진단</a></li>
+      <li><a href="#dblayer">보안은 데이터베이스에 건다</a></li>
+      <li><a href="#fewtools">도구는 적게, 기능은 묶어서</a></li>
+      <li><a href="#schema">사례 3: 스키마 설명서</a></li>
+      <li><a href="#schemainfo">스키마 정보 도구</a></li>
+      <li><a href="#identity">사용자마다 다른 결과</a></li>
+      <li><a href="#roadmap">앞으로 나올 것</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-31 · 22분 · 영어 발표 한글 정리</span>
+      <h1>에이전트에게 회사 데이터를 안전하게 주는 법</h1>
+      <p class="lead">AI 에이전트가 회사 데이터베이스를 쓰게 하려면 두 가지를 막아야 한다. 틀린 SQL로 틀린 답을 내는 것, 그리고 봐서는 안 될 데이터를 보는 것이다. 발표자는 검증된 보고서를 도구로 주고, 권한 검사는 데이터베이스 안에서 하라고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=LnQce-eHm8k" target="_blank" rel="noopener">Your AI Agent Wants Your Data. Here's How to Lock It Down</a></span>
+        <span>발표: Jeff Smith (Oracle, 데이터베이스 도구 분야 약 25년)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 발표자는 Oracle 소속이고 발표 대부분이 Oracle 제품 기능 소개다. 그 점을 감안해 읽자. 발표 시간이 짧아 데모와 질의응답은 없었다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>회사 지식은 대부분 데이터베이스 안에 있다. 문제는 <strong>개인정보를 흘리지 않고</strong> 에이전트에게 그 데이터를 주는 방법이다.</li>
+        <li><strong>자연어→SQL은 편하지만 위험하다.</strong> 쿼리가 결과를 돌려줬다고 해서 묻고 싶은 걸 물은 건 아니다. 토큰과 시간도 많이 든다.</li>
+        <li>대안: 팀이 이미 쓰는 <strong>검증된 보고서를 도구로 내준다.</strong> 에이전트는 보고서를 잘못 고를 수는 있어도 SQL을 잘못 쓰지는 않는다.</li>
+        <li>보고서가 500개여도 도구는 <strong>"목록 보기"와 "실행" 두 개</strong>면 된다. 도구가 많으면 컨텍스트가 넘친다.</li>
+        <li>운영 DB 문제는 <strong>읽기 전용 복제본</strong>에서 에이전트가 조사하게 한다. 실제 조치는 사람이 한다.</li>
+        <li><strong>보안은 도구가 아니라 데이터베이스에 건다.</strong> 누가 다른 도구로 접속해도 같은 규칙이 적용된다.</li>
+        <li>사내 위키 같은 문서를 읽어 <strong>스키마에 설명을 달아 두면</strong> 에이전트가 데이터베이스를 뒤지며 토큰을 낭비하지 않는다.</li>
+        <li>에이전트는 <strong>사용자의 사내 SSO 신원</strong>으로 접속한다. 데이터베이스는 그 사람의 역할에 맞춰 결과에서 볼 수 없는 데이터를 빼고 돌려준다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="aidb">
+        <header><span class="num">01</span><h2>오라클 AI 데이터베이스란 <span class="ts">01:00</span></h2></header>
+        <p>발표자는 Oracle과 거의 동갑이라며 시작한다. Oracle은 스타워즈가 나온 해(1977년)에 세워졌다. 발표자는 데이터베이스 도구를 25년쯤 만들었다. 일찍 배운 교훈이 하나 있다. 도구를 아무리 잘 만들어도 사람들이 결국 원하는 건 엑셀 스프레드시트라는 것이다.</p>
+        <p>부스에서 가장 많이 받은 질문은 "오라클 AI 데이터베이스가 뭐냐"였다. 발표자의 답은 이렇다.</p>
+        <ul class="plain">
+          <li>데이터베이스가 <strong>벡터</strong><span class="en"> vector</span>를 기본으로 지원한다. 벡터는 글의 의미를 숫자 목록으로 바꾼 것이다.</li>
+          <li>그래서 데이터베이스가 <strong>RAG</strong><span class="en"> Retrieval-Augmented Generation</span> 파이프라인에 직접 참여한다. RAG는 관련 자료를 찾아 모델에게 함께 넣어 주는 방식이다.</li>
+          <li>재무, 인사, ERP, 물류, 의료 데이터가 있는 그 자리에서 벡터를 만든다. 데이터를 여러 플랫폼에 복제할 필요가 없다.</li>
+          <li>관계형 표, 벡터, 그래프 등을 <strong>SQL 하나</strong>로 조회한다. 그래서 에이전트 쪽에는 <strong>MCP 서버 하나</strong>만 붙이면 된다.</li>
+        </ul>
+        <p>발표자는 Oracle이 30년 동안 데이터 유형과 작업 종류를 계속 더해 왔다고 말한다. 그래프 RAG<span class="en"> graph RAG</span>도 한 인스턴스 안에서 된다고 한다.</p>
+        <p class="note">이 절은 발표자 회사 제품 소개다. 기능 범위는 Oracle 공식 문서로 확인하자.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="why">
+        <header><span class="num">02</span><h2>에이전트에게 데이터베이스가 왜 중요한가 <span class="ts">03:30</span></h2></header>
+        <p>발표자가 자주 듣는 질문은 "에이전트, LLM, MCP 다 좋은데 데이터베이스가 무슨 상관이냐"다. 발표자에게는 답이 분명하다. 회사의 데이터와 지식은 거의 다 데이터베이스에 있고, 에이전트는 데이터를 먹고 일한다.</p>
+        <p>남는 질문은 하나다. <strong>개인정보</strong><span class="en"> PII</span>를 흘려 회사가 무너지는 일 없이, 어떻게 안전하게 데이터를 줄까.</p>
+        <p>발표자에 따르면 MCP는 새 프로토콜인데도 거의 3개월마다 기능이 추가된다. Oracle은 그 논의에 참여하며 새 기능을 바로 따라간다고 한다.</p>
+        <div class="callout">
+          <span class="title">발표자가 약속한 세 가지</span>
+          <span>1) 지금까지 만든 것. 2) 자연어→SQL의 문제와 그걸 더 믿을 만하게 만드는 방법. 3) 토큰을 아끼는 방법.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="questions">
+        <header><span class="num">03</span><h2>사례 1: 끝없는 업무 질문 <span class="ts">05:00</span></h2></header>
+        <p>발표자는 이 사례가 회사들이 가장 늦게 시도하는 일이지만, 들인 돈 대비 효과는 가장 크다고 본다.</p>
+        <p>보통 새 기술을 먼저 붙여 보는 사람은 인프라 담당자다. DB 관리자, 네트워크 관리자, 시스템 관리자, DevOps 엔지니어가 MCP 서버를 연결할 권한을 가진다. 이들은 자기 일을 편하게 하려고 쓴다.</p>
+        <p>그런데 회사에는 다른 사람이 훨씬 많다. 임원에게 "지난달 몇 개 팔았나", "이 지역 실적은 어떤가", "장바구니 결제를 늘리려면 할인율을 얼마로 할까" 같은 질문을 받는 사람들이다.</p>
+        <ul class="plain">
+          <li>이들은 BI 도구와 데이터 마트에서 스프레드시트를 만든다.</li>
+          <li>그 결과가 회의에 올라가고, 누군가 그걸 보고 중요한 결정을 내린다.</li>
+          <li>질문은 끝이 없다. 모자란 건 질문이 아니라 답할 사람과 시간이다.</li>
+        </ul>
+        <p>생성형 AI는 여기서 <strong>일손을 몇 배로 늘려 주는 도구</strong><span class="en"> force multiplier</span>다. 이제 끝없는 질문에 답할 시간과 자원이 생긴다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="nl2sql">
+        <header><span class="num">04</span><h2>자연어→SQL이 위험한 이유 <span class="ts">06:50</span></h2></header>
+        <p>문제는 질문하는 사람이 SQL 전문가나 데이터 모델 설계자가 아니라는 점이다. 이들은 사업은 잘 알지만, 이 상황에 크로스 조인<span class="en"> cross join</span>이 말이 안 된다는 걸 알아보지 못한다. 크로스 조인은 두 표의 모든 행을 서로 짝지어 결과를 크게 불리는 연산이다.</p>
+        <blockquote>컴파일되면 내보내라.<cite>엔지니어들이 농담처럼 하는 말. 발표자가 인용함</cite></blockquote>
+        <p>SQL도 마찬가지다. 쿼리를 썼고 데이터가 나왔다고 맞은 게 아니다. <strong>생각한 질문을 실제로 물은 게 아닐 수 있다.</strong></p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">문제 1 · 믿을 수 없다</span>
+            <p>LLM은 맞아 보이지만 틀린 데이터를 돌려주는 쿼리를 자주 실행한다. 모델이 나아지고 있어도 아직 부족하다. 발표자는 프롬프트 한 번에 나온 결과로 어느 사업에 투자할지 정하지 않겠다고 말한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">문제 2 · 비싸다</span>
+            <p>에이전트는 맞는 데이터를 찾으려고 데이터베이스의 사전<span class="en"> data dictionary</span>을 무작정 뒤진다. 토큰과 시간이 많이 든다. 쓰는 사람은 에이전트가 뒤에서 무엇을 하는지도 잘 모른다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="reports">
+        <header><span class="num">05</span><h2>보고서를 도구로 내준다 <span class="ts">08:10</span></h2></header>
+        <p>어느 팀이든 SharePoint나 공유 드라이브에 몇 년 동안 쌓은 보고서 폴더가 있다. 질문이 오면 사람들이 들여다보는 바로 그 보고서들이다. 발표자의 제안은 이걸 데이터베이스나 MCP 서버로 옮겨, <strong>에이전트가 부를 수 있는 도구나 API처럼</strong> 내놓는 것이다.</p>
+        <div class="shift" aria-label="에이전트가 데이터를 얻는 방식의 변화">
+          <div><span class="tag">자연어→SQL</span><b>LLM이 쿼리를 새로 만든다</b><span class="muted">매번 SQL이 틀릴 위험이 있다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">보고서 도구</span><b>에이전트가 보고서를 고른다</b><span class="muted">SQL은 이미 검증돼 고정돼 있다</span></div>
+        </div>
+        <p>대신 사람이 보고서마다 설명을 달아야 한다. 발표자는 이런 내용을 넣는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>보고서 설명에 넣을 것</th><th>예시 (발표에 없는 값, 이해를 돕기 위한 예시)</th></tr></thead>
+            <tbody>
+              <tr><td>보고서가 무슨 뜻인가</td><td>지역별 월간 판매 수량과 매출</td></tr>
+              <tr><td>예시 질문</td><td>"지난달 위젯 몇 개 팔았어?", "서부 지역 실적 어때?"</td></tr>
+              <tr><td>입력값</td><td>시작일, 종료일, 지역 코드 (모두 매개변수)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>보고서 밑의 SQL은 사실상 고정돼 있고, 입력값만 매개변수로 받는다. 그래서 <strong>LLM은 보고서를 잘못 고를 수는 있어도 SQL을 잘못 쓰지는 않는다.</strong> 틀릴 수 있는 곳이 하나 줄어든다.</p>
+
+        <h3>보고서 500개, 도구는 2개 <span class="ts">09:30</span></h3>
+        <p>발표자는 MCP 도구를 두 개만 내놓는다. <strong>보고서 목록 보기</strong><span class="en"> list reports</span>와 <strong>보고서 실행</strong><span class="en"> execute report</span>이다. 에이전트는 키워드로 비슷한 보고서 목록을 받고, 그중 하나를 실행해 데이터를 받는다.</p>
+        <figure class="chart" aria-label="보고서 500개를 다룰 때 노출하는 MCP 도구 수: 보고서마다 도구 하나면 500개, 목록과 실행 도구로 묶으면 2개">
+          <span class="chart-title">보고서 500개를 다룰 때 에이전트에게 보이는 도구 수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>보고서마다 도구 하나</span><span class="val">500</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="보고서마다 도구 하나: 500개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>목록 보기 + 실행</span><span class="val">2</span></div>
+              <div class="track"><div class="fill key" style="width:0.4%" title="목록 보기 + 실행: 2개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>250</span><span>500</span></div>
+          <span class="caption">500은 발표자가 든 가정의 숫자다. 2는 500의 0.4%라 막대가 거의 보이지 않는다. 도구가 500개면 컨텍스트가 넘쳐 에이전트가 도구를 제대로 쓰지 못한다는 게 발표자의 설명이다.</span>
+        </figure>
+      </section>
+
+      <!-- 6 -->
+      <section id="modes">
+        <header><span class="num">06</span><h2>SQL을 얼마나 열어 줄까 <span class="ts">10:00</span></h2></header>
+        <p>발표자에 따르면 Oracle MCP 서버는 세 가지 방식을 지원한다. 보고서 도구는 자연어→SQL을 없애는 게 아니라, 그 위에 하나 더 얹는 선택지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>에이전트가 할 수 있는 것</th><th>언제 쓰나</th></tr></thead>
+            <tbody>
+              <tr><td>즉석 SQL 허용</td><td>즉석 SQL<span class="en"> ad-hoc SQL</span>이나 저장 프로시저 코드를 바로 실행한다</td><td>SQL을 이해하는 사람이 쓸 때</td></tr>
+              <tr><td>즉석 SQL 차단</td><td>미리 만든 도구와 보고서만 쓴다</td><td>SQL을 모르는 업무 담당자가 쓸 때</td></tr>
+              <tr><td>보고서 SQL 공개</td><td>권한이 있으면 보고서 밑의 SQL을 읽고 데이터 구조를 배운다</td><td>에이전트가 새 쿼리를 한 번에 맞히게 하고 싶을 때</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>세 번째 방식은 <strong>컨텍스트 엔지니어링</strong><span class="en"> context engineering</span>이다. 모델에게 줄 정보를 설계하는 일이다. 보고서는 회사 사업과 데이터 모델의 설계도와 같다. OAuth 2 인증 세션에 맞는 범위<span class="en"> scope</span>나 역할이 있으면, 도구가 보고서 밑의 SQL을 에이전트에게 보여 준다. 에이전트는 "지난달 판매량은 이렇게 구한다"는 설명을 읽고 비슷한 쿼리를 한 번에 맞힐 가능성이 커진다.</p>
+        <p class="note">발표자는 결과 표를 에이전트가 보기 좋게 정리해 보여 준다고 덧붙였다. MCP Apps는 7월에 스펙에 들어왔다고 말했고, 13절에서 다시 다룬다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="tuning">
+        <header><span class="num">07</span><h2>사례 2: 느린 운영 DB 진단 <span class="ts">11:30</span></h2></header>
+        <p>Oracle은 오래된 플랫폼이라 문서, PDF, GitHub 프로젝트, Stack Overflow 질문, 블로그 글이 많다. LLM은 이걸로 학습했다. 그래서 쿼리가 느릴 때 무엇을 볼지 안다.</p>
+        <p>그래도 발표자는 LLM에게 인덱스를 지우거나 만드는 일조차 맡기지 않는다. <strong>조언만 받고 실행은 사람이 한다.</strong> 할 수만 있다면 에이전트를 운영 환경에 아예 들이지 않는다.</p>
+        <h3>읽기 전용 복제본에서 조사한다 <span class="ts">12:20</span></h3>
+        <p>운영 환경과 똑같은 테스트 환경이 있는 회사는 드물다. 발표자는 Oracle의 <strong>Data Guard</strong>를 쓴다. 운영 DB의 읽기 전용 대기 인스턴스<span class="en"> standby</span>를 두고, 보고서나 읽기 쿼리를 그쪽으로 돌리는 기능이다.</p>
+        <ul class="plain">
+          <li>운영의 성능 문제는 대기 인스턴스에서도 재현될 가능성이 크다.</li>
+          <li>에이전트는 그 안전한 환경에서 원인을 조사하고 성능 개선 방법을 시험한다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">읽기 전용만으로는 부족하다 <span class="ts">12:50</span></span>
+          <span>데이터를 읽기만 해도, 보면 안 되는 데이터를 읽을 수 있다. 접속한 뒤에 무엇을 볼 수 있는지도 막아야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="dblayer">
+        <header><span class="num">08</span><h2>보안은 데이터베이스에 건다 <span class="ts">13:10</span></h2></header>
+        <p>발표자는 데이터베이스 보안을 걸기 가장 좋은 곳은 데이터베이스 자체라고 말한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">도구에만 보안을 걸면</span>
+            <p>의욕 넘치는 엔지니어가 다른 도구를 데이터베이스에 연결하는 순간, 보안을 건너뛰고 바로 들어간다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">데이터베이스에 보안을 걸면</span>
+            <p>어떤 도구로 들어오든 같은 규칙이 적용된다. 발표자는 이쪽이 대부분의 경우 안전하다고 본다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="fewtools">
+        <header><span class="num">09</span><h2>도구는 적게, 기능은 묶어서 <span class="ts">13:40</span></h2></header>
+        <p>발표자는 에이전트와 LLM이 성능 문제를 찾고 고치는 데 아주 뛰어나다고 말한다. 시간이 없어 데모는 하지 않았고, 직접 만든 성능 튜닝 도구를 설명했다.</p>
+        <ul class="plain">
+          <li>도구 하나에 발표자가 허락한 동작 6가지가 들어 있다.</li>
+          <li>그중 하나는 <strong>통계 수집</strong>이다. 데이터의 모양을 재는 일이다. 예를 들어 이 열에 서로 다른 값이 몇 개 있는지 센다.</li>
+          <li>Oracle의 <strong>비용 기반 옵티마이저</strong><span class="en"> cost-based optimizer</span>는 경험칙이 아니라 이 통계를 보고 실행 계획을 세운다. 통계가 새롭고 정확할수록 좋은 계획이 나온다.</li>
+          <li>또 하나는 <strong>AWR</strong> 성능 보고서 생성이다.</li>
+        </ul>
+        <figure class="chart" aria-label="성능 튜닝 기능을 도구로 만드는 두 방식: 한 가지 일만 하는 도구 15개, 옵션을 가진 도구 3~4개">
+          <span class="chart-title">같은 기능을 에이전트에게 내놓는 두 방식 (도구 수)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>한 가지 일만 하는 도구</span><span class="val">15</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="한 가지 일만 하는 도구: 15개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>범주별로 묶고 옵션을 단 도구</span><span class="val">3~4</span></div>
+              <div class="track"><div class="fill key" style="width:26.7%" title="옵션을 단 도구: 3~4개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>7.5</span><span>15</span></div>
+          <span class="caption">발표자가 말한 숫자다. "3~4개" 막대는 4에 맞춰 그렸다. 에이전트는 "성능 튜닝 도구가 있고 6가지를 할 수 있다"를 한 번에 본다.</span>
+        </figure>
+        <p>5절의 보고서 도구와 같은 원리다. <strong>도구 수를 줄여야 에이전트가 덜 헷갈리고 컨텍스트도 덜 쓴다.</strong></p>
+      </section>
+
+      <!-- 10 -->
+      <section id="schema">
+        <header><span class="num">10</span><h2>사례 3: 스키마 설명서 <span class="ts">14:40</span></h2></header>
+        <p>자연어→SQL은 AI와 데이터베이스 이야기에서 가장 인기가 많다. SQL이 데이터를 꺼내는 가장 흔한 방법이니 당연하다. 하지만 많은 시스템에서는 악몽이다.</p>
+        <p>새 회사에 들어가면 어려운 것들을 정리해 둔 곳이 있기를 바란다. 사내 용어, 내부 농담, 데이터 모델 설명 같은 것이다. 발표자의 예는 이렇다. 매출 데이터가 <code>SALES</code> 표가 아니라 <code>XHR_123</code>이라는 표에 있다. 30년 전 엔지니어가 그게 멋지다고 생각했기 때문이다. 그런 설명은 보통 거대한 Confluence 페이지 하나에 흩어져 있다.</p>
+        <p>이제는 그 Confluence 페이지를 읽어, 데이터베이스에 이미 있는 메타데이터 위에 설명을 덧붙이는 도구가 있다. 이것도 컨텍스트 엔지니어링이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">설명이 없으면</span>
+            <p>에이전트가 데이터베이스를 거꾸로 파헤쳐 데이터를 찾는다. 결국 찾긴 하지만 오래 걸린다. 같은 탐색을 여러 번 한다. 팀 전체가 기억을 공유하지 않으면 모든 사람의 에이전트가 같은 낭비를 반복한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">설명이 있으면</span>
+            <p>설명은 평범한 영어로 데이터베이스 안에 저장된다. 에이전트뿐 아니라 사람에게도 도움이 된다.</p>
+          </div>
+        </div>
+        <blockquote>신입 사원이 고생하는 건 30년 동안 고칠 만한 문제가 아니었는데, AI가 생기니 봇이 고생하게 둘 수는 없게 됐다.<cite>발표자의 농담을 옮김</cite></blockquote>
+      </section>
+
+      <!-- 11 -->
+      <section id="schemainfo">
+        <header><span class="num">11</span><h2>스키마 정보 도구 <span class="ts">17:00</span></h2></header>
+        <p>새 환경을 받으면 발표자는 에이전트에게 "들어가서 구조를 살피고 요약해 줘"라고 한다. 에이전트는 <strong>스키마 정보</strong><span class="en"> schema information</span> 도구를 찾아 쓴다.</p>
+        <div class="shift" aria-label="스키마를 파악하는 방식의 변화">
+          <div><span class="tag">도구가 없을 때</span><b>쿼리를 여러 번 날린다</b><span class="muted">표 목록, 열 목록, 주석, 표마다 다섯 행씩 읽기</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">스키마 정보 도구</span><b>압축된 사전을 한 번에 받는다</b><span class="muted">JSON으로 된 속성 묶음. 항상 같은 형태로 나온다</span></div>
+        </div>
+        <ul class="plain">
+          <li><strong>상세도 선택</strong>: 자세히, 중간, 간단히 중에 고른다. 발표자는 "내 바지처럼"이라는 농담을 붙였다.</li>
+          <li><strong>필터</strong>: 키워드를 주면 그와 관련된 것만 찾는다.</li>
+          <li><strong>맥락 꺼내기</strong><span class="en"> retrieve context</span>: 저장한 정보를 다시 꺼내 AI 벡터 검색에 쓴다.</li>
+          <li><strong>설명 생성</strong><span class="en"> generate annotations</span>: SharePoint의 PDF, PowerPoint, Excel, Word 문서에서 글을 뽑아 정리하고 데이터베이스에 다시 넣는다.</li>
+        </ul>
+        <p class="note">도구 이름은 발표에서 말로 들린 대로 적었다. 실제 제품의 도구 이름 표기는 다를 수 있다.</p>
+        <h3>예: 발표자의 운동 기록 <span class="ts">18:40</span></h3>
+        <p>발표자는 달리기와 자전거 기록을 Strava에서 API로 받아 자기 데이터베이스에 넣는다. 스키마 설명은 괜찮은 편이지만 단위와 시간 표기가 섞여 있다. 이름과 다른 내용이 든 열도 있다. 이걸 모두 설명으로 달아 두니, "다음 주에 어떤 운동을 할까"라고 물었을 때 에이전트가 운동 기록을 훨씬 쉽게 읽었다.</p>
+        <p>발표자는 이 방식이 MCP 위에서 돌기 때문에 특정 AI나 LLM에 묶이지 않는다고 강조한다. MCP 서버와 도구만 있으면 어떤 에이전트든 쓸 수 있다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="identity">
+        <header><span class="num">12</span><h2>사용자마다 다른 결과 <span class="ts">19:20</span></h2></header>
+        <p>발표자는 이 부분이 가장 중요하다고 말한다. 데이터를 돌려주기 전에 <strong>누가 보는지</strong> 알아야 한다. 발표자가 볼 수 있는 데이터와 동료 Tara가 볼 수 있는 데이터는 다르다.</p>
+        <p>Claude, Codex, Gemini, 직접 만든 LangChain 에이전트 중 무엇을 쓰든, 에이전트는 공용 데이터베이스 계정으로 들어가지 않는다. 흐름은 이렇다.</p>
+        <ol class="plain">
+          <li>에이전트가 사용자의 사내 <strong>SSO</strong><span class="en"> single sign-on</span>를 거친다. 발표자는 Azure AD(현재 이름은 Microsoft Entra ID)를 예로 들었다.</li>
+          <li>SSO가 그 사람의 범위와 역할 목록을 돌려준다.</li>
+          <li>데이터베이스에는 역할별 규칙이 있다. 예: "Jeff는 인사 관리자라 모든 직원의 급여를 볼 수 있다. 그 조직 밖의 사람은 못 본다."</li>
+          <li>자연어 질문이 SQL로 바뀌어 실행된다.</li>
+          <li>데이터베이스가 결과에서 그 사람이 볼 수 없는 데이터를 그 자리에서 빼고 에이전트에게 돌려준다.</li>
+        </ol>
+        <p>Oracle은 이 기능을 <strong>Deep Data Security</strong>라고 부른다. 핵심은 에이전트가 쓴 SQL이 무엇이든, <strong>결과가 나가기 전에 데이터베이스가 권한을 걸러 낸다</strong>는 점이다. 8절의 "보안은 데이터베이스에 건다"가 여기서 사용자 단위로 구체화된다.</p>
+        <p class="note">Deep Data Security는 발표자 회사의 기능 이름이다. 지원 범위와 동작 방식은 공식 문서로 확인하자.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="roadmap">
+        <header><span class="num">13</span><h2>앞으로 나올 것 <span class="ts">20:40</span></h2></header>
+        <p>발표자는 시간이 다 돼 로드맵을 빠르게 짚었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>발표자가 말한 내용</th></tr></thead>
+            <tbody>
+              <tr><td>MCP Apps</td><td>데이터베이스 화면을 에이전트 안에서 바로 띄운다. 올해 안에 나온다고 했다</td></tr>
+              <tr><td>스킬</td><td>스킬<span class="en"> skills</span>을 도구를 통해 전달한다</td></tr>
+              <tr><td>자동 RAG 파이프라인</td><td>명령줄로 문서를 빨아들이고, MCP 도구가 벡터와 문서 조각을 에이전트에게 돌려준다</td></tr>
+              <tr><td>더 알아보기</td><td><a href="https://oracle.com/mcp" target="_blank" rel="noopener">oracle.com/mcp</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">출시 시기와 기능은 발표자 회사의 로드맵 발언이다. 실제 출시 여부는 따로 확인하자.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>회사 지식은 데이터베이스에 있다. 에이전트에게 주되 <strong>개인정보를 흘리지 않는 것</strong>이 핵심 과제다.</li>
+          <li>쿼리가 결과를 돌려줬다고 맞은 게 아니다. <strong>자연어→SQL은 맞아 보이는 틀린 답</strong>을 낼 수 있다.</li>
+          <li>에이전트가 데이터베이스를 무작정 뒤지면 <strong>토큰과 시간</strong>이 많이 든다.</li>
+          <li>팀이 이미 믿고 쓰는 <strong>보고서를 도구로</strong> 내주면 SQL을 틀릴 위험이 사라진다. 남는 위험은 보고서를 잘못 고르는 것뿐이다.</li>
+          <li>보고서가 많아도 도구는 <strong>목록 보기와 실행 두 개</strong>로 묶는다. 다른 기능도 범주별로 묶고 옵션을 단다.</li>
+          <li>즉석 SQL 허용, 차단, 보고서 SQL 공개를 <strong>상황과 권한에 맞춰</strong> 고른다.</li>
+          <li>운영 DB는 <strong>읽기 전용 복제본</strong>에서 조사하게 하고, 실제 조치는 사람이 한다.</li>
+          <li>읽기 전용만으로는 부족하다. <strong>보안은 도구가 아니라 데이터베이스에</strong> 건다.</li>
+          <li>스키마에 <strong>사람 말로 된 설명</strong>을 달아 두면 에이전트도 사람도 덜 헤맨다.</li>
+          <li>에이전트는 <strong>사용자 본인의 SSO 신원</strong>으로 접속하고, 데이터베이스가 역할에 따라 결과를 걸러 돌려준다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 첫 번째 사례를 "가장 늦게 하지만 효과가 가장 큰 일"이라고 본 이유는?</span></summary><div class="answer">MCP를 먼저 붙이는 건 인프라 담당자지만, 회사에는 임원의 끝없는 질문에 답해야 하는 업무 담당자가 훨씬 많다. AI가 그 사람들의 일손을 몇 배로 늘려 줄 수 있다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>"컴파일되면 내보내라"가 SQL에서 왜 위험한가?</span></summary><div class="answer">쿼리가 데이터를 돌려줬다고 해서 묻고 싶은 걸 물은 게 아니기 때문이다. LLM은 맞아 보이지만 틀린 결과를 내는 쿼리를 자주 만든다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>자연어→SQL의 두 가지 문제는?</span></summary><div class="answer">결과를 믿기 어렵다는 것, 그리고 에이전트가 데이터베이스를 뒤지느라 토큰과 시간이 많이 든다는 것.</div></details>
+          <details><summary><span class="qn">Q4</span><span>보고서를 도구로 내주면 에이전트가 틀릴 수 있는 곳은 어디로 줄어드나?</span></summary><div class="answer">SQL은 고정돼 있으니 SQL을 잘못 쓸 일은 없다. 남는 실수는 보고서를 잘못 고르는 것이다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>보고서가 500개일 때 도구를 500개 만들지 않는 이유와 대안은?</span></summary><div class="answer">도구가 너무 많으면 컨텍스트가 넘쳐 에이전트가 쓸모없어진다. "보고서 목록 보기"와 "보고서 실행" 두 도구로 묶는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>보고서 밑의 SQL을 에이전트에게 보여 주는 이유는? 조건은?</span></summary><div class="answer">에이전트가 회사 데이터 구조를 배워 새 쿼리를 한 번에 맞힐 가능성을 높인다. OAuth 2 세션에 맞는 범위나 역할이 있을 때만 보여 준다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>느린 운영 DB를 진단할 때 발표자가 에이전트를 어디에 들이나?</span></summary><div class="answer">Data Guard로 만든 읽기 전용 대기 인스턴스다. 에이전트는 조사하고 조언만 하고, 인덱스 변경 같은 실제 조치는 사람이 한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>읽기 전용 접근만으로 부족한 이유는?</span></summary><div class="answer">읽기만 해도 보면 안 되는 데이터를 볼 수 있다. 접속 뒤에 무엇을 볼 수 있는지도 막아야 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>보안을 도구가 아니라 데이터베이스에 걸어야 하는 이유는?</span></summary><div class="answer">누가 다른 도구를 데이터베이스에 연결하면 도구에 건 보안은 우회된다. 데이터베이스에 건 규칙은 어떤 도구로 들어와도 적용된다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>스키마에 설명을 달아 두면 무엇이 좋아지나?</span></summary><div class="answer">에이전트가 표와 열을 일일이 조회하며 헤매지 않는다. 같은 탐색을 여러 사람의 에이전트가 반복하는 낭비가 줄고, 사람에게도 도움이 된다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>Deep Data Security의 흐름을 순서대로 말해 보자.</span></summary><div class="answer">에이전트가 사용자의 SSO를 거친다 → 범위와 역할을 받는다 → SQL이 실행된다 → 데이터베이스가 그 사람이 볼 수 없는 데이터를 결과에서 빼고 돌려준다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>팀이 자주 쓰는 보고서 쿼리를 모은다<span class="how">공유 드라이브, 위키, BI 도구에 흩어진 것부터</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>보고서마다 뜻, 예시 질문, 입력값을 적는다<span class="how">입력값은 매개변수로 받고 SQL은 고정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>보고서를 "목록 보기"와 "실행" 두 도구로 묶어 내놓는다<span class="how">확인: 에이전트에게 보이는 도구 수가 보고서 수와 상관없이 일정한가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>SQL을 모르는 사용자에게는 즉석 SQL을 끈다<span class="how">보고서 SQL 공개는 권한 있는 역할에만 연다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트의 DB 조사는 읽기 전용 복제본에서만 하게 한다<span class="how">인덱스 변경 같은 실제 조치는 사람이 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>접근 규칙을 도구가 아니라 데이터베이스에 건다<span class="how">확인: 다른 클라이언트로 접속해도 같은 데이터만 보이는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>에이전트가 공용 계정 대신 사용자 SSO 신원으로 접속하게 한다<span class="how">확인: 역할이 다른 두 사람이 같은 질문을 하면 결과가 다르게 걸러지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>헷갈리는 표와 열에 사람 말로 된 설명을 단다<span class="how">이름과 내용이 다른 열, 섞인 단위, 사내 용어부터</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>MCP</td><td>Model Context Protocol. 에이전트가 외부 도구와 데이터에 연결하는 표준 규약</td></tr>
+              <tr><td>벡터</td><td>Vector. 글이나 데이터의 의미를 숫자 목록으로 바꾼 것. 의미가 비슷한 것을 찾는 데 쓴다</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 관련 자료를 찾아 모델에게 함께 넣어 답하게 하는 방식</td></tr>
+              <tr><td>자연어→SQL</td><td>Natural language to SQL. 사람 말로 한 질문을 모델이 SQL 쿼리로 바꿔 실행하는 것</td></tr>
+              <tr><td>즉석 SQL</td><td>Ad-hoc SQL. 미리 준비하지 않고 그때그때 만들어 실행하는 쿼리</td></tr>
+              <tr><td>저장 프로시저</td><td>Stored procedure. 데이터베이스 안에 저장해 두고 이름으로 부르는 코드 묶음</td></tr>
+              <tr><td>매개변수</td><td>Parameter. 쿼리는 그대로 두고 바꿔 넣을 수 있게 비워 둔 입력값</td></tr>
+              <tr><td>크로스 조인</td><td>Cross join. 두 표의 모든 행을 서로 짝짓는 연산. 잘못 쓰면 결과가 터무니없이 커진다</td></tr>
+              <tr><td>개인정보</td><td>PII. 특정 개인을 알아볼 수 있는 정보</td></tr>
+              <tr><td>컨텍스트 엔지니어링</td><td>Context engineering. 모델이 일을 잘하도록 넣어 줄 정보를 설계하는 일</td></tr>
+              <tr><td>스키마</td><td>Schema. 데이터베이스의 표, 열, 관계 구조</td></tr>
+              <tr><td>메타데이터</td><td>Metadata. 데이터에 대한 데이터. 표 이름, 열 형식, 주석 등</td></tr>
+              <tr><td>Data Guard</td><td>Oracle의 대기 데이터베이스 기능. 읽기 전용 복제본으로 읽기 작업을 나눌 수 있다</td></tr>
+              <tr><td>통계</td><td>Statistics. 표와 열의 데이터 분포를 잰 값. 고유 값 개수 등</td></tr>
+              <tr><td>비용 기반 옵티마이저</td><td>Cost-based optimizer. 통계를 보고 가장 싼 실행 계획을 고르는 데이터베이스 부품</td></tr>
+              <tr><td>실행 계획</td><td>Execution plan. 쿼리를 어떤 순서와 방법으로 처리할지 정한 계획</td></tr>
+              <tr><td>AWR</td><td>Automatic Workload Repository. Oracle의 성능 기록과 보고서 기능</td></tr>
+              <tr><td>OAuth 2 범위</td><td>Scope. 인증된 사용자나 앱이 무엇을 할 수 있는지 정한 권한 단위</td></tr>
+              <tr><td>SSO</td><td>Single sign-on. 회사 계정 하나로 여러 시스템에 로그인하는 방식</td></tr>
+              <tr><td>Deep Data Security</td><td>발표자가 소개한 Oracle 기능 이름. 사용자 역할에 따라 쿼리 결과에서 볼 수 없는 데이터를 빼고 돌려준다</td></tr>
+              <tr><td>MCP Apps</td><td>에이전트 대화 안에서 도구의 화면(GUI)을 띄우는 MCP 확장</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, "결국 사람들은 엑셀을 원한다"</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>오라클 AI 데이터베이스란: 벡터, RAG</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>SQL 하나, MCP 서버 하나</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>여러 데이터 유형과 그래프</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>에이전트에게 데이터베이스가 왜 중요한가</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>MCP는 3개월마다 바뀐다</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>발표의 세 가지 주제</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>사례 1: 업무 담당자의 끝없는 질문</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>SQL을 모르는 사용자, 크로스 조인</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>"컴파일되면 내보내라"와 자연어→SQL의 위험</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>비용 문제: 데이터베이스 무작정 뒤지기</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>보고서를 도구로 내주기</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>보고서 설명, 예시 질문, 매개변수</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>목록 보기와 실행: 500개 보고서, 도구 2개</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>즉석 SQL 허용과 차단</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>권한에 따라 보고서 SQL 공개</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>MCP Apps 언급</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>사례 2: 성능 문제 진단, 조언만 받기</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>Data Guard 읽기 전용 대기 인스턴스</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>읽기 전용만으로는 부족하다</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>보안은 데이터베이스에서</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>6가지 동작을 가진 튜닝 도구, 통계, 옵티마이저</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>도구 15개 대신 3~4개, AWR</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>사례 3: 스키마 탐색과 문서화</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>신입 사원과 XHR_123 표</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>Confluence로 스키마 설명 만들기</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>스키마 정보 도구: 상세도, 필터</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>맥락 꺼내기, 설명 생성</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>Strava 운동 기록 예시</td></tr>
+              <tr><td><span class="ts">19:10</span></td><td>MCP라서 특정 LLM에 묶이지 않는다</td></tr>
+              <tr><td><span class="ts">19:20</span></td><td>보안: 누가 보는지 알아야 한다</td></tr>
+              <tr><td><span class="ts">19:50</span></td><td>SSO, 범위, 역할</td></tr>
+              <tr><td><span class="ts">20:20</span></td><td>결과에서 데이터를 걸러 내는 Deep Data Security</td></tr>
+              <tr><td><span class="ts">20:40</span></td><td>로드맵: MCP Apps, 스킬, 자동 RAG 파이프라인</td></tr>
+              <tr><td><span class="ts">21:10</span></td><td>oracle.com/mcp, 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'LnQce-eHm8k:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

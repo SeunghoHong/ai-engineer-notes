@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>모델 교체 실습 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+/* scorecard cells: reuse existing tokens */
+td.pass { color: var(--accent); }
+td.fail { color: var(--crit); }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#setup">워크숍 준비와 목표</a></li>
+      <li><a href="#counting">글자 세기: 한 번 호출</a></li>
+      <li><a href="#rag">RAG: 모르면 모른다고 하나</a></li>
+      <li><a href="#image">이미지 입력</a></li>
+      <li><a href="#tools">도구 호출</a></li>
+      <li><a href="#loop">도구 호출 반복과 효율</a></li>
+      <li><a href="#agent">에이전트: 여행 플래너</a></li>
+      <li><a href="#eval-string">평가 1: 문자열 비교</a></li>
+      <li><a href="#eval-judge">평가 2: LLM 심판</a></li>
+      <li><a href="#eval-assert">평가 3: 스펙으로 평가 만들기</a></li>
+      <li><a href="#dspy">DSPy에 프롬프트 맡기기</a></li>
+      <li><a href="#wrapup">Anthropic 인용과 마무리</a></li>
+      <li><a href="#scorecard">모델별 결과 한눈에</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 앱에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-19 · 52분 · 영어 발표 한글 정리</span>
+      <h1>모델을 바꾸면 무엇이 달라지나</h1>
+      <p class="lead">같은 코드에서 모델 이름만 바꿔 GPT-5.5, Kimi K2.6, DeepSeek V4 Flash, Mistral Large 3를 여러 시나리오로 비교한 실습이다. 차이는 바로 드러나고, 그 차이는 자동 평가와 프롬프트 자동 최적화로 줄여 나갈 수 있다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=UGjk3Uk0MxM" target="_blank" rel="noopener">The Model Swap Workshop: GPT-5.5 vs Kimi vs DeepSeek vs Mistral</a></span>
+        <span>발표: Pamela Fox (Microsoft)</span>
+      </div>
+      <p class="note">영어 워크숍의 자동 자막을 바탕으로 한글로 정리했다. 결과와 수치는 모두 발표자가 화면에서 보여 주거나 말한 것이고, 원 출처를 따로 확인하지는 않았다. LLM은 실행할 때마다 답이 달라질 수 있다. 여기 적힌 결과는 그날 시연 한 번의 결과다. 자막에서 뭉개진 이름(GPT-5.5, Kimi, GEPA, Ollama 등)은 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>벤치마크로는 내 시나리오의 결과를 알 수 없다.</strong> 모델 이름 한 줄만 바꿔 같은 시나리오를 돌려 보면 차이가 바로 보인다.</li>
+        <li>문장 속 e 세기에서 GPT-5.5와 Kimi는 13개를 맞혔다. DeepSeek은 6개, Mistral은 8개라고 답했다. <strong>단계별로 세라고 프롬프트를 고치자 Mistral도 맞혔다.</strong></li>
+        <li>RAG에서는 <strong>자료에 없는 것을 모른다고 하는지</strong>를 본다. Mistral은 자료에 없는 내용을 자기 지식으로 채웠고, 프롬프트를 고쳐도 일부만 나아졌다.</li>
+        <li><strong>이미지 이해는 프롬프트로 거의 못 고친다.</strong> 실제로 받을 이미지와 실제 언어로 시험해야 한다.</li>
+        <li>도구 호출과 에이전트에서는 정답보다 <strong>효율</strong>에서 차이가 났다. 호출 횟수와 병렬 호출이다. 병렬 호출은 GPT-5.5만 했다.</li>
+        <li>실제 서비스에는 자동 평가가 필요하다. <strong>문자열 비교 → LLM 심판 → 스펙으로 평가를 만드는 도구</strong> 순서로 보여 줬다. 기본 제공 평가 대신 맞춤 평가를 만들라고 했다.</li>
+        <li>모델마다 프롬프트를 손으로 고치는 대신 <strong>DSPy와 GEPA가 프롬프트를 찾게 하면</strong> 작은 모델로도 원하는 결과를 노릴 수 있다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="setup">
+        <header><span class="num">01</span><h2>워크숍 준비와 목표 <span class="ts">00:10</span></h2></header>
+        <p>참가자는 발표자의 저장소를 받아 따라 했다. 발표자가 나눠 준 <code>.env</code> 파일에 모델 접속 정보가 들어 있다.</p>
+        <ul class="plain">
+          <li>Python과 uv가 있으면 저장소를 내려받고 <code>uv sync</code> 한 번이면 준비가 끝난다.</li>
+          <li>없으면 GitHub Codespaces를 쓴다. 브라우저 안에서 열리는 VS Code이고, 필요한 환경이 다 갖춰져 있다.</li>
+          <li>배포된 모델에는 토큰 한도가 있다. 요청이 몰리면 429 오류 <span class="en">rate limit exceeded</span>가 날 수 있다. 그래서 <code>.env</code>에 다른 프로젝트 주소도 주석으로 넣어 두었다.</li>
+        </ul>
+
+        <h3>왜 모델을 바꿔 봐야 하나 <span class="ts">02:20</span></h3>
+        <p>목표는 최상위 모델들이 실제로 어떻게 다른지 손으로 느껴 보는 것이다. 무엇을 고치면 나아지는지도 함께 본다.</p>
+        <p>발표자는 이것을 AI 엔지니어 모두가 해야 할 일로 본다. 새 모델은 끊임없이 나온다. 발표자는 "미국 정부가 언제든 어떤 모델의 접근을 끊을 수도 있다"는 예도 들었다. 앱이 다른 모델을 가리켜도 돌아가야 하고, 안 돌아가면 어떻게 고칠지 알아야 한다.</p>
+
+        <h3>비교한 네 모델 <span class="ts">03:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>이 워크숍에서의 위치</th></tr></thead>
+            <tbody>
+              <tr><td>GPT-5.5</td><td>발표자가 평소에 쓰는 모델. 모든 예제의 기본값이자 기준선</td></tr>
+              <tr><td>Kimi K2.6</td><td>최근 나온 모델. 발표자는 "꽤 좋다"고 소개했다</td></tr>
+              <tr><td>DeepSeek V4 Flash</td><td>텍스트만 입력받는다. 이미지 실험에서는 빠졌다</td></tr>
+              <tr><td>Mistral Large 3</td><td>이날 시연에서 가장 애를 먹인 모델</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>네 모델은 모두 Microsoft Foundry 프로젝트 하나에 배포돼 있다. Anthropic 모델은 이용 조건이 달라 별도 프로젝트에 두었고, 마지막에 잠깐 다룬다.</p>
+
+        <h3>벤치마크로는 모른다 <span class="ts">05:00</span></h3>
+        <p>모델은 벤치마크로도 비교할 수 있다. 품질 점수, 안전 점수, 비용, 처리량 <span class="en">throughput</span> 같은 숫자다. 이걸로 대략적인 감은 잡힌다.</p>
+        <p>하지만 모델을 쓰는 방식은 너무 다양하다. 어떤 벤치마크도 <strong>내 시나리오</strong>에서 모델이 어떨지 알려 주지 않는다. 그래서 저장소에 여러 시나리오를 담고, 시나리오마다 모델을 바꿔 가며 돌린다.</p>
+        <div class="callout">
+          <span class="title">실습 방식: 모델 한 줄만 바꾼다</span>
+          <span>모든 예제 파일은 맨 위의 모델 변수 하나로 시작한다. 기본값은 GPT-5.5다. 다른 모델 줄의 주석을 풀면 그 모델로 바뀐다. 연결은 OpenAI Python SDK로 Foundry 주소에 붙고, 키는 환경 변수에서 읽는다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="counting">
+        <header><span class="num">02</span><h2>글자 세기: 한 번 호출 <span class="ts">05:40</span></h2></header>
+        <p>가장 단순한 형태부터 시작한다. LLM에 요청 한 번을 보내는 것이다. 요청은 OpenAI의 응답 API <span class="en">Responses API</span>로 보냈다.</p>
+        <p>질문은 LLM이 약하기로 유명한 "세기"다. "다음 문장에 e가 몇 번 나오나? The elderly gentleman eagerly entered the elevator. 꼼꼼히 세라."</p>
+
+        <figure class="chart" aria-label="문장 속 e의 개수를 센 결과. 정답 13. GPT-5.5 13, Kimi K2.6 13, DeepSeek V4 Flash 6, Mistral Large 3 8, 프롬프트를 고친 Mistral 13">
+          <span class="chart-title">"e가 몇 번 나오나"에 대한 모델별 답 (정답 13)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>GPT-5.5</span><span class="val">13</span></div>
+              <div class="track"><div class="fill" style="width:86.7%" title="GPT-5.5: 13"></div><div class="baseline" style="left:86.7%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Kimi K2.6</span><span class="val">13</span></div>
+              <div class="track"><div class="fill" style="width:86.7%" title="Kimi K2.6: 13"></div><div class="baseline" style="left:86.7%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>DeepSeek V4 Flash</span><span class="val">6</span></div>
+              <div class="track"><div class="fill" style="width:40%" title="DeepSeek V4 Flash: 6"></div><div class="baseline" style="left:86.7%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Mistral Large 3</span><span class="val">8</span></div>
+              <div class="track"><div class="fill" style="width:53.3%" title="Mistral Large 3: 8"></div><div class="baseline" style="left:86.7%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Mistral Large 3 · 단계별로 세게 한 프롬프트</span><span class="val">13</span></div>
+              <div class="track"><div class="fill key" style="width:86.7%" title="프롬프트를 고친 Mistral Large 3: 13"></div><div class="baseline" style="left:86.7%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 정답 13</span><span>15</span></div>
+          <span class="caption">DeepSeek은 7개를 놓쳤다. 프롬프트 한 줄을 고치자 Mistral이 정답을 냈다.</span>
+        </figure>
+
+        <p>발표자는 GPT-5.5가 계산에 놀랄 만큼 강하다고 했다. 금융 벤치마크를 돌려 본 동료들이 "머릿속으로 계산을 엄청 해낸다"고 했다는 전언이다.</p>
+
+        <h3>프롬프트를 고치면 <span class="ts">07:40</span></h3>
+        <p>모든 모델을 쓰고 싶다면 프롬프트 엔지니어링을 시작하게 된다. 발표자는 이렇게 덧붙였다. "문장을 단어로 나누고, 단어별로 세고, 더하고, 풀이를 보여 줘."</p>
+        <p>이렇게 답을 바로 내지 않고 풀이 과정을 거치게 하는 기법을 단계별 사고 유도 <span class="en">chain of thought</span>라고 한다. Mistral은 이 프롬프트로 13개를 맞혔다.</p>
+        <p>첫 실험에서 얻는 교훈은 두 가지다. 모델마다 분명히 차이가 있다. 그리고 프롬프트를 바꾸면 결과도 바뀐다.</p>
+        <p class="note">정답 13은 직접 세어 확인했다. The(1), elderly(2), gentleman(2), eagerly(2), entered(3), the(1), elevator(2)다. 자막에는 기본 모델이 "GPT-3.5"로 찍힌 곳이 있지만, 배포한 모델 목록과 흐름으로 보아 GPT-5.5다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="rag">
+        <header><span class="num">03</span><h2>RAG: 모르면 모른다고 하나 <span class="ts">08:30</span></h2></header>
+        <p>RAG <span class="en">Retrieval-Augmented Generation</span>는 검색한 자료를 넣어 주고 그 자료를 바탕으로 답하게 하는 방식이다. 발표자는 "에이전트도 결국 RAG"라고 할 만큼 여전히 가장 큰 쓰임새로 본다.</p>
+        <p>RAG에서 중요한 것은 근거 충실성 <span class="en">grounding</span>이다. 답은 주어진 자료 안에서만 나와야 한다. 모델이 학습으로 외운 지식, 즉 가중치 <span class="en">weights</span>에서 꺼낸 내용을 자료에 있던 척하면 안 된다.</p>
+        <p>발표자 관찰로는 이 점이 모델마다 크게 다르다. <strong>작고 덜 강한 모델일수록 가중치에서 꺼내 자료에 있던 척한다.</strong></p>
+
+        <div class="callout">
+          <span class="title">실험 설계: 함정 질문</span>
+          <span>자료에는 목수벌 <span class="en">carpenter bee</span> 정보만 있다. 질문은 "꿀벌과 목수벌이 둥지를 짓는 방식은 무엇이 다른가?"다. 좋은 답은 목수벌 내용만 말하고, 꿀벌은 자료에 없어서 모른다고 하는 것이다. 시스템 프롬프트는 "자료를 근거로 답하고 출처를 달아라"였다.</span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>GPT-5.5</td><td>"자료에 꿀벌 둥지 정보가 없다"고 답했다. 발표자는 GPT-5.5가 자기가 모르는 것을 아는 데 아주 능하다고 했다</td></tr>
+              <tr><td>Kimi K2.6</td><td>발표자는 "Kimi도 잘한다"고만 하고 시연은 건너뛰었다</td></tr>
+              <tr><td>DeepSeek V4 Flash</td><td>"자료에 그 정보가 없다"고 답했다</td></tr>
+              <tr><td>Mistral Large 3</td><td>자료에 없는 꿀벌 정보를 가중치에서 꺼내 답했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>프롬프트로 강제해 보기 <span class="ts">11:20</span></h3>
+        <p>발표자는 프롬프트에 이렇게 더했다. "답의 정보가 자료에 없으면 '출처 없음'이라고 써라. 지어내지 마라."</p>
+        <p>의도는 이렇다. 답의 정보 하나하나를 출처와 짝짓게 하면, 모델이 "이건 자료에 없었네" 하고 스스로 알아챌 수 있다.</p>
+        <p>결과는 절반의 성공이었다. Mistral은 꿀벌 내용에 "출처 없음"을 붙였다. 그런데 정보는 그대로 줬다. 자료에 없다는 건 알았지만 말하는 걸 멈추지는 않은 것이다.</p>
+        <p>RAG용 모델을 고를 때 볼 것은 두 가지다. <strong>모르는 것을 인정하는가. 지어낼 가능성은 얼마나 되는가.</strong> 발표자가 가장 많이 다루는 분야가 RAG라서 특히 강조한 대목이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="image">
+        <header><span class="num">04</span><h2>이미지 입력 <span class="ts">13:00</span></h2></header>
+        <p>이 모델들 상당수는 멀티모달 <span class="en">multimodal</span>이다. 텍스트뿐 아니라 이미지도 입력으로 받는다. 로컬 이미지 세 장을 보내 질문했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>이미지와 질문</th><th>정답</th><th>GPT-5.5</th><th>Kimi K2.6</th><th>Mistral Large 3</th></tr></thead>
+            <tbody>
+              <tr><td>오록스 <span class="en">aurochs</span> 그림 · "이게 유니콘인가?"</td><td>유니콘이 아니다</td><td class="pass">맞힘</td><td class="pass">맞힘, 오록스까지 알아봄</td><td>유니콘이 아닌 건 맞혔지만 오록스인지는 몰랐다</td></tr>
+              <tr><td>코스타리카에서 찍은 악어 · "앨리게이터인가 크로커다일인가?"</td><td>크로커다일. 주둥이 모양으로 구분한다</td><td class="pass">맞힘</td><td class="pass">맞힘</td><td class="fail">앨리게이터라고 답함</td></tr>
+              <tr><td>작은 글씨의 식물 가격표 스크린샷 · "가장 싼 식물은?"</td><td>0.58달러짜리</td><td class="pass">맞힘</td><td class="pass">맞힘</td><td class="fail">2.30달러짜리를 고름</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">DeepSeek V4 Flash는 텍스트만 받는 모델이라 이 실험에서 뺐다.</p>
+        <p>발표자는 GPT-5.5가 작은 글씨 표에서 가장 싼 식물을 찾아낸 점을 꽤 인상적이라고 했다.</p>
+
+        <div class="callout">
+          <span class="title">이미지는 프롬프트로 고치기 어렵다 <span class="ts">15:30</span></span>
+          <span>모델은 이미지를 이해하거나 못 하거나다. 특정 분야라면 "이런 그래프는 이렇게 읽어라" 같은 힌트를 줄 여지는 있다. 결국 할 일은 내가 보낼 종류의 이미지를 그 모델이 이해하는지 확인하는 것이다. Mistral도 다른 종류의 이미지 작업은 잘할 수 있다.</span>
+        </div>
+
+        <h3>언어를 바꾸면 <span class="ts">16:10</span></h3>
+        <p>이 모델들은 모두 영어 중심이다. 발표자가 같은 질문을 스페인어로 "caimanes o cocodrilos?"라고 물었더니 틀린 답이 나왔다.</p>
+        <p>발표자의 해석은 이렇다. 모델은 앨리게이터와 크로커다일을 구분해야 한다. 동시에 스페인어 caimán이 무엇을 가리키는지도 풀어야 한다. 이 단어는 앨리게이터를 부르는 말로도 쓰이고, 카이만이라는 다른 동물을 뜻하기도 한다. 두 가지를 한 번에 하기엔 너무 어려운 과제가 된다.</p>
+        <p>발표자가 있는 캘리포니아에는 스페인어 사용자가 많아서 앱이 두 언어를 지원하는 경우가 흔하다. <strong>지원할 언어마다 따로 시험해야 한다.</strong></p>
+      </section>
+
+      <!-- 5 -->
+      <section id="tools">
+        <header><span class="num">05</span><h2>도구 호출 <span class="ts">17:10</span></h2></header>
+        <p>도구 호출 <span class="en">tool calling, function calling</span>은 모든 에이전트의 바탕이다. 모델은 학습 과정에서 이 능력을 따로 훈련받는다. 함수 정의와 사용자 입력을 보고, 어떤 함수를 어떤 인자로 부를지 정한다.</p>
+        <p>함수는 JSON 스키마 <span class="en">JSON Schema</span>로 정의해 모델에 보낸다. 이 예제의 함수는 <code>create_calendar_event</code>다. 이름, 설명, 매개변수가 들어 있다. 매개변수마다 타입과 설명이 붙는다. 예를 들어 제목은 문자열이다.</p>
+        <div class="callout">
+          <span class="title">도구 정의도 프롬프트다</span>
+          <span>객체처럼 보이지만 발표자는 이것도 프롬프트 엔지니어링이라고 강조한다. 어떤 타입을 쓸지, 어떤 설명을 달지, 매개변수 이름을 뭐라 할지가 모두 모델이 함수를 어떻게 부를지 정하는 재료다.</span>
+        </div>
+        <p>사용자 메시지는 이렇다. "캘린더에 일정 하나 넣어 줘. 플랫폼 팀 싱크야. 나, Sarah, Marcus, 새 PM Priya. 내일 오후 1시 30분. Microsoft Teams로 온라인." 시스템 프롬프트는 "너는 캘린더 비서다. 오늘은 6월 29일 월요일이다. 도구를 써서 요청을 처리하라"였다.</p>
+        <p>모델은 함수 이름과 인자만 돌려준다. <strong>함수를 실제로 실행하는 건 개발자 코드다.</strong> 확인할 것은 두 가지다. 맞는 도구를 불렀나. 기대한 인자를 넘겼나.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>기대한 값</th><th>GPT-5.5</th><th>DeepSeek V4 Flash</th></tr></thead>
+            <tbody>
+              <tr><td>부른 도구</td><td>create_calendar_event</td><td class="pass">맞음</td><td class="pass">맞음</td></tr>
+              <tr><td>참석자</td><td>이름이 나온 사람만</td><td class="fail">사용자 본인도 넣음</td><td class="fail">사용자 본인(you)도 넣음</td></tr>
+              <tr><td>장소</td><td>virtual</td><td>문제 언급 없음</td><td class="fail">"virtual (Microsoft Teams)"처럼 형식을 어김</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Mistral도 돌렸지만 발표자는 결과를 따로 설명하지 않았다. Kimi는 이 예제에서 시연하지 않았다.</p>
+
+        <h3>틀린 인자는 모호함의 신호 <span class="ts">20:20</span></h3>
+        <p>모델이 엉뚱한 인자를 넣었다면 설명이 모호했다는 뜻이다. 그럴 땐 설명을 더 구체적으로 고친다. 예를 들면 "나나 너는 빼고 이름이 나온 참석자만", "성과 이름이 있으면 둘 다" 같은 문구다. 그다음 여러 입력으로 다시 평가한다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="loop">
+        <header><span class="num">06</span><h2>도구 호출 반복과 효율 <span class="ts">21:00</span></h2></header>
+        <p>에이전트는 목표에 닿을 때까지 도구를 반복해서 부른다. 그 전 단계로, 도구 하나를 반복해서 쓰는 예제를 봤다.</p>
+        <p>도구는 <code>calculate</code> 하나다. 수식을 받아 결과를 돌려준다. 문제는 쇼핑 계산이다. "가게가 세일 중이다. 셔츠 3장을 사고 세금을 내면 총액은?"</p>
+        <p>푸는 길은 두 가지다. 작은 수식을 하나씩 여러 번 계산할 수도 있다. 영리한 모델이라면 전부를 긴 수식 하나로 묶어 한 번에 끝낼 수도 있다.</p>
+        <p>여기서 재는 것은 <strong>효율</strong>이다. 반복 단계에 들어가면 모델 간 차이는 주로 여기서 난다. 같은 목표에 얼마나 빨리, 몇 번의 호출로 가는가.</p>
+        <p>시스템 프롬프트는 "머릿속으로 계산하지 마라" 한 줄이다. 자기 암산 실력을 믿고 도구를 건너뛰려는 GPT-5.5를 위해 넣은 말이다.</p>
+
+        <figure class="chart" aria-label="계산기 도구를 부른 횟수. GPT-5.5 1회, DeepSeek V4 Flash 4회. 둘 다 정답">
+          <span class="chart-title">같은 문제를 푸는 데 쓴 도구 호출 횟수 (적을수록 좋다)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>GPT-5.5 · 긴 수식 하나</span><span class="val">1회</span></div>
+              <div class="track"><div class="fill key" style="width:25%" title="GPT-5.5: 1회"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>DeepSeek V4 Flash · 단계별 수식</span><span class="val">4회</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="DeepSeek V4 Flash: 4회"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>2</span><span>4</span></div>
+          <span class="caption">두 모델 모두 정답을 냈다. Kimi는 이번 실행에서 잘했다고만 했고 횟수는 말하지 않았다.</span>
+        </figure>
+
+        <p>호출 하나하나가 네트워크 요청이다. 호출이 늘면 그만큼 시간이 늘어난다. 그래서 모델을 평가할 때는 최종 답과 함께 <strong>몇 번 만에 거기 닿았는지</strong>도 본다.</p>
+        <p>발표자가 Kimi를 자주 건너뛴 이유는 대부분 GPT-5.5와 거의 대등해서다. 다만 Kimi는 가끔 스스로 검산하다 이상한 반복에 빠진다. 전날에는 첫 시도에 정답을 내고도 확인한다며 4번쯤 더 호출했다. 이날 시연에서는 잘했다. 같은 모델도 실행마다 행동이 다를 수 있다는 뜻이다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="agent">
+        <header><span class="num">07</span><h2>에이전트: 여행 플래너 <span class="ts">24:10</span></h2></header>
+        <p>이제 제대로 된 에이전트를 만든다. 보통은 에이전트 프레임워크를 쓴다. 저장소에는 LangChain, Pydantic AI, Agent Framework 세 가지 버전이 있다. 청중 투표로 LangChain v1을 골랐다.</p>
+        <p>예제는 여행 계획 에이전트다. 도구는 네 개다.</p>
+        <ul class="plain">
+          <li><code>search_flights</code>: 항공편 검색</li>
+          <li><code>search_hotels</code>: 호텔 검색</li>
+          <li><code>check_budget</code>: 고른 항공편과 호텔이 예산 안에 드는지 확인</li>
+          <li><code>search_activities</code>: 도시의 즐길 거리 검색</li>
+        </ul>
+        <p>시스템 프롬프트의 규칙은 이렇다. 항공편과 호텔을 모두 검색한다. 직항을 우선한다. 예산은 항상 확인한다. 남은 예산으로 마지막에 즐길 거리를 찾는다. 사용자는 "다음 달 샌프란시스코에서 뉴욕까지 3박, 총예산은 얼마, 직항, 즐길 거리 하나"를 요청한다. 어떤 도구가 불렸는지 보려고 미들웨어 <span class="en">middleware</span>도 붙였다.</p>
+
+        <h3>GPT-5.5의 흐름 <span class="ts">26:00</span></h3>
+        <ol class="plain">
+          <li><strong>1턴</strong>: 항공편 검색과 호텔 검색을 동시에 요청했다. 둘 사이에 의존 관계가 없다고 판단한 것이다.</li>
+          <li><strong>2턴</strong>: 받은 항공편 가격과 호텔 가격으로 예산을 확인했다.</li>
+          <li><strong>3턴</strong>: 남은 예산으로 즐길 거리를 검색했다.</li>
+        </ol>
+        <p>발표자는 이것을 이 시나리오에서 가장 효율적인 에이전트라고 했다.</p>
+        <p>1턴처럼 서로 의존하지 않는 도구 여러 개를 한 턴에 함께 부르는 것을 병렬 도구 호출 <span class="en">parallel tool calling</span>이라고 한다. 서버는 두 데이터베이스에 요청을 동시에 보낼 수 있어 빨라진다.</p>
+
+        <h3>모델과 하네스를 함께 비교한다 <span class="ts">27:30</span></h3>
+        <p>프레임워크마다 도구 호출을 반복하는 방식이 조금씩 다르다. 이 반복 장치를 하네스 <span class="en">harness</span>라고도 부른다. 그래서 모델끼리만이 아니라 모델과 하네스의 조합을 비교해야 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>병렬 호출</th><th>도구 호출 수</th><th>끝까지 했나</th><th>메모</th></tr></thead>
+            <tbody>
+              <tr><td>GPT-5.5</td><td class="pass">함 (1턴)</td><td>4</td><td class="pass">완료</td><td>3턴 만에 끝냄</td></tr>
+              <tr><td>Kimi K2.6</td><td>안 함</td><td>5</td><td class="pass">완료</td><td>항공편과 호텔을 두 턴에 나눠 검색. 다른 선택지를 확인하느라 예산 확인을 2번 함</td></tr>
+              <tr><td>DeepSeek V4 Flash</td><td>안 함</td><td>4</td><td class="pass">완료</td><td>발표자 평가: "꽤 효율적"</td></tr>
+              <tr><td>Mistral Large 3</td><td>안 함</td><td>2</td><td class="fail">중단</td><td>항공편과 호텔만 검색하고 멈춤</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 Kimi가 "도구 호출을 2번 더 했다"고 말했다. 설명대로 세면 호출은 5번으로 GPT-5.5(4번)보다 1번 많다. Kimi는 병렬 호출을 하지 않았으니 턴 수로는 3번 대 5번이다. "2번 더"는 턴 수 기준으로 보면 맞다.</p>
+        <p class="note">발표자는 Kimi가 병렬 호출을 지원하지 않는 건지, 이번에만 안 한 건지는 모르겠다고 했다.</p>
+
+        <h3>에이전트 평가가 가장 어려운 이유 <span class="ts">28:30</span></h3>
+        <p>"에이전트는 어떻게 평가하나요?"는 발표자가 가장 많이 받는 질문이다. 에이전트는 중간에 일어나는 일이 너무 많다. 맞는 도구를 불렀나. 효율적으로 불렀나. 병렬로 불렀나. 모두 따로 봐야 한다.</p>
+        <p>Mistral은 마지막 단계를 자주 잊는다. 에이전트는 컨텍스트 창 <span class="en">context window</span>이 차면 앞의 지시를 잊거나 덜 꼼꼼해진다. 그래서 중간에 "마지막 단계도 해야지" 하고 일깨워야 할 때가 있다.</p>
+        <div class="callout">
+          <span class="title">멈춘 에이전트를 다시 밀어 주기 <span class="ts">29:50</span></span>
+          <span>"정말 다 했나?" 하고 다시 묻는 장치를 붙인다. 발표자는 Geoffrey Huntley가 만든 Ralph 루프를 예로 들었다. 기본 반복 방식보다 에이전트를 더 끈질기게 몰아붙이는 방법이다.</span>
+        </div>
+        <p>다른 두 프레임워크의 코드도 거의 같다. 발표자는 요즘 에이전트 프레임워크가 다른 점보다 비슷한 점이 많다고 본다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="eval-string">
+        <header><span class="num">08</span><h2>평가 1: 문자열 비교 <span class="ts">30:20</span></h2></header>
+        <p>지금까지는 손으로 돌려 보고 눈으로 확인했다. 감을 잡기엔 좋다. 실제 서비스에는 많은 사례를 자동으로, 믿을 만하게 돌리고 결과를 비교하는 평가 <span class="en">eval</span>가 필요하다.</p>
+        <p>첫 단계는 문자열 비교다. 캘린더 예제처럼 모델이 인자를 돌려주면 그대로 비교하면 된다. "장소로 virtual을 줬나?" 도구 한 번 호출이라면 맞는 도구와 맞는 인자만 확인하면 된다.</p>
+
+        <h3>사례는 많고, 늘리기 쉬워야 한다 <span class="ts">31:30</span></h3>
+        <p>서비스를 내보내면 사용자가 실제로 어떻게 쓰는지 보게 된다. 그러면 새 사례가 생긴다. 그 입력을 평가 세트에 계속 넣어야 평가가 실제 사용과 멀어지지 <span class="en">drift</span> 않는다. 운영 중 들어온 입력을 평가 사례로 옮기는 체계가 필요하다.</p>
+        <p>발표자가 넣은 사례 종류는 이렇다.</p>
+        <ul class="plain">
+          <li>날짜 계산. 윤년이 끼면 더 어렵다</li>
+          <li>애매한 기간 표현</li>
+          <li>스페인어 입력. 지원할 언어마다 시험한다</li>
+          <li>아주 구어체인 입력. 예: "Yo, can you book the big conference room?"</li>
+        </ul>
+        <div class="callout">
+          <span class="title">팁: 날짜 계산은 도구에 맡긴다 <span class="ts">32:20</span></span>
+          <span>발표자는 LLM을 평가할 때 늘 날짜 계산을 확인한다. 대개 잘 못하기 때문이다. 날짜를 다뤄야 한다면 날짜 계산 도구를 주라고 권했다.</span>
+        </div>
+        <p>이날은 비교하려고 모든 모델로 돌렸다. 평소에는 한 모델로 돌리고 이전 실행 결과와 비교한다. 이전 실행은 다른 모델이었을 수도 있다.</p>
+        <p><strong>평가는 pytest 같은 일반 테스트 묶음에 넣지 않는다.</strong> 느리고 비싸기 때문이다. 이날 결과는 발표자가 "이번엔 다들 꽤 잘했다"고 할 정도였다.</p>
+
+        <h3>평가 프레임워크는? <span class="ts">33:50</span></h3>
+        <p>청중이 문자열을 직접 비교하는 것보다 나은 도구가 있느냐고 물었다. 발표자의 답은 이렇다.</p>
+        <ul class="plain">
+          <li>관측 도구 <span class="en">observability</span> 대부분이 평가 기능을 내장한다. Langfuse, LangSmith, Arize 등이다.</li>
+          <li>Foundry 쪽에는 Azure AI Evaluation SDK와 OpenAI 패키지의 evals가 있다. 저장소에 예제가 있다.</li>
+          <li>그 밖에 DeepEval이 있고, JavaScript라면 promptfoo가 있다.</li>
+        </ul>
+        <p>다만 문자열 비교로 충분한 경우라면 거창한 도구가 필요 없다. 병렬 호출 여부처럼 도구 호출 과정을 봐야 할 때 더 정교한 방법이 필요하다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="eval-judge">
+        <header><span class="num">09</span><h2>평가 2: LLM 심판 <span class="ts">35:10</span></h2></header>
+        <p>대부분의 출력은 흐릿하다. 비교할 정답 문자열이 없다. 이럴 때 다른 LLM이 판단하게 한다. 이것을 LLM 심판 <span class="en">LLM-as-a-judge</span>이라고 한다. 여러 프레임워크가 이 기능을 감싸 주지만, 발표자는 원리를 보이려고 코드로 직접 썼다.</p>
+        <p>심판에게 주는 프롬프트는 세 부분이다.</p>
+        <ol class="plain">
+          <li><strong>역할</strong>: "너는 평가자다." 무엇을 평가하는지 알려 준다.</li>
+          <li><strong>출력</strong>: 통과인지 실패인지 고르게 한다. 이유도 함께 쓰게 한다. 발표자는 이유가 아주 유용하다고 했다.</li>
+          <li><strong>입력</strong>: 질문과 응답을 준다. 근거 충실성을 본다면 원래 자료도 준다.</li>
+        </ol>
+        <p>평가할 대상에 따라 더 많은 정보가 필요하다. 도구 호출이 효율적이었는지 보려면 도구 정의와 실제 호출 기록 <span class="en">trace</span>까지 줘야 한다. 좋은 심판은 입력과 출력만이 아니라 과정 전체를 본다.</p>
+        <p>이 예제는 심판 모델로 GPT-5를 쓰고, 결과를 JSON으로 받았다.</p>
+
+        <h3>심판은 느리고 비싸다 <span class="ts">36:50</span></h3>
+        <p>사례 하나마다 앱이 LLM을 한 번 부르고, 심판이 또 한 번 부른다. 사례 하나가 LLM 호출 두 번이다. 심판을 다섯 개쯤 두는 경우도 흔하다. 그러면 심판마다 호출이 하나씩 더 붙는다.</p>
+        <p>발표자는 RAG를 평가할 때 사례가 최소 200개, 많게는 800개는 있어야 한다고 했다. 그래서 모든 커밋, 모든 CI에서 돌리기는 어렵다. 얼마나 자주 돌릴지 따로 정해야 한다.</p>
+        <div class="callout">
+          <span class="title">예시 계산 (발표에 없는 계산)</span>
+          <span>사례 200개에 심판 5개를 둔다고 하자. 사례마다 앱 호출 1번과 심판 호출 5번이 든다. 합치면 LLM 호출 1,200번이다. 사례가 800개면 4,800번이다.</span>
+        </div>
+
+        <h3>심판도 틀린다 <span class="ts">37:50</span></h3>
+        <p>이 예제는 앱의 질문과 답을 미리 돌려 저장해 두고 심판만 따로 돌렸다. 흔히 쓰는 방식이다. 이렇게 하면 앱과 따로 심판을 고칠 수 있어 효율적이다.</p>
+        <p>심판을 따로 고칠 일은 자주 생긴다. 심판 자체가 잘못 만들어진 경우가 많기 때문이다. 결과가 나쁘면 문제가 앱인지 심판인지부터 가려야 한다.</p>
+        <p>그래서 심판을 사람 판단에 맞춰 보정 <span class="en">calibration</span>한다. 도메인 전문가가 데이터에 통과와 실패 라벨을 달고, 심판의 판단과 일치하는지 본다.</p>
+        <p>결과는 대부분의 모델이 3문제 중 2개를 통과했다. Mistral은 1개였다. 근거 충실성을 더 손봐야 한다는 뜻이다.</p>
+        <p class="note">발표자는 평가를 더 배우려면 Hamel Husain의 Hamel.dev를 보라고 추천했다. 평가 자료와 강의가 많다고 했다. 그 자료의 핵심 메시지로 "LLM 심판을 믿으려면 보정해야 한다"를 짚었다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="eval-assert">
+        <header><span class="num">10</span><h2>평가 3: 스펙으로 평가 만들기 <span class="ts">40:00</span></h2></header>
+        <p>좋은 심판을 만들기는 어렵다. 모범 사례를 따로 공부해야 할 정도다. 발표자는 Microsoft Research가 지난주쯤 낸 새 도구 Assert(추정)를 소개했다. 스펙을 주면 심판을 만들어 준다.</p>
+        <p>스펙에는 세 가지를 쓴다. 어떤 에이전트를 만드는지. 대략 어떻게 동작해야 하는지. 어떤 사용자를 지원해야 하는지. 도구는 이 스펙을 실제 채점 기준 <span class="en">rubric</span>으로 풀어내고, 테스트 사례를 많이 만든다. 발표자는 연구에 기반한 방법이라고 설명했다.</p>
+
+        <h3>YAML로 쓰는 스펙 <span class="ts">40:50</span></h3>
+        <ul class="plain">
+          <li>설정은 YAML 파일 하나다. 발표자는 YAML이 싫지만 이 용도에는 다른 어떤 형식보다 낫다고 했다.</li>
+          <li>맥락, 심판 모델, 신경 쓰는 차원을 적는다. 예를 들면 예산 압박이다. 넉넉함, 빠듯함, 불가능으로 나눈다.</li>
+          <li>이렇게 조건별로 나눠 사례를 골고루 만드는 것을 계층화 <span class="en">stratification</span>라고 한다. 미리 정해도 되고 도구가 정하게 둬도 된다.</li>
+          <li>YAML 작성을 돕는 에이전트 스킬도 있다. 아무도 직접 쓰고 싶어 하지 않으니까.</li>
+          <li>평가 대상은 앞의 LangChain 여행 플래너다. 모든 도구 호출이 기록되게 해 둔다. 제대로 평가하려면 호출 하나하나를 봐야 하기 때문이다.</li>
+        </ul>
+
+        <h3>결과 <span class="ts">42:20</span></h3>
+        <p>실행 시간이 꽤 걸려서 미리 돌려 두었다. 결과는 간단한 화면에서 본다.</p>
+        <ol class="plain">
+          <li><strong>행동 범주</strong>: 예산으로 불가능한 요청, 직항 선호 규칙 위반, 필수 도구 사용 등. 허용되는 행동과 아닌 행동을 정리한다.</li>
+          <li><strong>테스트 세트</strong>: 실제 사용자를 흉내 낸 시나리오들이다. 제목만 봐도 LLM이 지은 티가 나서 발표자가 재미있어했다. 출시 전에 평가 세트를 처음 만드는 일, 즉 부트스트랩 <span class="en">bootstrap</span>을 도와준다.</li>
+          <li><strong>모델 비교</strong>: DeepSeek, Kimi, GPT-5.5를 돌렸다. 숫자는 규칙 위반 수라 낮을수록 좋다. <strong>GPT-5.5가 훨씬 적었다.</strong> 발표자는 Kimi가 내내 대등해 보였기에 놀랐다고 했다. 구체적인 숫자는 자막에 나오지 않는다.</li>
+        </ol>
+        <p>발표자도 이 도구는 나온 지 일주일이라 써 본 건 이게 전부라고 했다.</p>
+
+        <h3>기본 평가 대신 맞춤 평가 <span class="ts">44:30</span></h3>
+        <p>"평가를 돌려라"라고 아무리 말해도 사람들은 안 돌린다. 돌리더라도 일관성 <span class="en">coherence</span>, 유창성 <span class="en">fluency</span> 같은 기본 평가만 돌린다.</p>
+        <blockquote>그런 건 절대 돌리지 마라. LLM은 원래 일관성이 좋다. 일관성이 없다면 뭔가 아주 크게 잘못된 것이다.<cite>발표자의 말을 옮김</cite></blockquote>
+        <p>발표자는 RAG에 근거 충실성 <span class="en">groundedness</span>과 관련성 <span class="en">relevance</span> 평가를 가끔 쓴다. 하지만 대부분은 기본 평가가 원하는 것이 아니다. <strong>에이전트가 일을 잘하는지 보려면 맞춤 평가가 필요하다.</strong> Assert는 그 맞춤 평가를 처음 만드는 일을 돕는다.</p>
+        <p class="note">발표자는 Microsoft 소속이다. Assert는 Microsoft Research의 도구이고, 실습 환경인 Foundry도 Microsoft 제품이다. Assert에 대한 좋은 평가는 그 점을 감안해 읽자.</p>
+
+        <h3>평가 방식 세 가지 비교</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>언제 쓰나</th><th>장점</th><th>주의할 점</th></tr></thead>
+            <tbody>
+              <tr><td>문자열 비교</td><td>도구 이름, 인자처럼 답이 정해져 있을 때</td><td>빠르고 싸다. 거창한 도구가 필요 없다</td><td>흐릿한 출력은 판단하지 못한다</td></tr>
+              <tr><td>LLM 심판</td><td>근거 충실성처럼 정답 문자열이 없을 때</td><td>흐릿한 출력도 이유와 함께 판정한다</td><td>사례마다 LLM 호출이 2번 이상이다. 심판도 사람 라벨로 보정해야 한다</td></tr>
+              <tr><td>스펙 기반 생성 (Assert)</td><td>평가 세트와 기준을 처음부터 만들기 어려울 때</td><td>스펙에서 시나리오와 채점 기준을 만들어 준다</td><td>실행이 오래 걸린다. 나온 지 일주일 된 도구다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="dspy">
+        <header><span class="num">11</span><h2>DSPy에 프롬프트 맡기기 <span class="ts">45:20</span></h2></header>
+        <p>모델을 바꿀 때마다 프롬프트를 손보고 평가를 다시 돌리는 건 고된 일이다. 어느 방향으로 고쳐야 할지도 모른다. 모델마다 무엇이 잘 통하는지 세세히 알 수 없기 때문이다.</p>
+        <p>발표자가 마지막으로 보여 준 방법은 DSPy다. 프로그램을 선언한다. 예를 들어 "사용자 입력을 받아 정해진 구조의 결과로 바꾼다"고 적는다. 지켜야 할 제약 조건도 선언한다. 그러면 DSPy가 평가를 돌려 보며 그 제약을 만족하는 프롬프트를 찾아 쓴다.</p>
+        <p>이때 쓰는 최적화 방법이 GEPA다. 유전 알고리즘 방식으로 다음에 시도할 더 나은 프롬프트를 만든다. 발표자는 이 과정을 지켜보는 게 정말 재미있다고 했다.</p>
+
+        <div class="shift" aria-label="코드에 들어가는 것의 변화">
+          <div><span class="tag">지금까지</span><b>프롬프트가 코드 안에 있다</b><span class="muted">모델을 바꿀 때마다 사람이 프롬프트를 고친다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">DSPy</span><b>스펙과 검사가 코드 안에 있다</b><span class="muted">프롬프트는 최적화 과정이 내놓는 결과물이다</span></div>
+        </div>
+        <p>그래서 기존 코드를 그대로 쓸 수 없다. 코드를 거의 다시 짜야 한다.</p>
+
+        <h3>예제: 단어 수와 첫 글자 맞추기 <span class="ts">47:00</span></h3>
+        <ul class="plain">
+          <li><strong>과제</strong>: 번호 목록을 만든다. 각 줄은 정해진 단어 수를 지킨다. 각 줄의 첫 글자를 이으면 목표 단어가 된다.</li>
+          <li><strong>검사</strong>: 결과가 제약을 지켰는지 확인하는 함수들을 둔다. 이 검사가 있어야 DSPy가 계속 고쳐 가며 점수를 올릴 수 있다. 이런 탐색을 언덕 오르기 <span class="en">hill climbing</span>라고 한다.</li>
+          <li><strong>설정</strong>: 학생 모델 <span class="en">student model</span>과 반성 모델 <span class="en">reflection model</span>을 정하고 GEPA 최적화기를 돌린다.</li>
+          <li><strong>시간</strong>: 이 과제에서 약 6분 걸렸다.</li>
+          <li><strong>결과</strong>: 시스템 프롬프트 한 편이 나온다. Mistral에서 통하는 프롬프트다. 이날 가장 애먹인 모델이라 Mistral을 골랐다.</li>
+        </ul>
+
+        <h3>작은 모델로 옮겨 가기 <span class="ts">48:10</span></h3>
+        <p>이 방식이면 작은 모델, 가장 싼 모델로도 필요한 결과를 얻을 수 있다. 발표자는 Dropbox와 Shopify가 DSPy와 GEPA로 큰 모델에서 작은 모델로 옮겼다는 발표를 예로 들었다. 자체 인프라에 모델을 올린 경우도 있다고 했다.</p>
+        <p>프롬프트가 결과물이 되는 방식은 낯설다. 그래도 발표자는 이것이 <strong>모델 독립성</strong>을 크게 높여 준다고 본다. 더 많은 모델을 골라 쓸 수 있게 된다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="wrapup">
+        <header><span class="num">12</span><h2>Anthropic 인용과 마무리 <span class="ts">49:00</span></h2></header>
+        <p>발표자의 정리는 간단하다. 모델 간 차이는 크다. 결과를 개선하고, 평가하고, 다시 개선하는 방법은 여러 가지다. 직접 여러 모델을 만져 보라고 권했다. 발표자 자신도 모델을 바꿔 볼 때마다 많이 배운다고 했다.</p>
+
+        <h3>Anthropic 모델과 인용 기능 <span class="ts">49:20</span></h3>
+        <p>Anthropic 모델은 시연 내내 쓰지 않았다. 다른 API인 Messages API를 써야 해서 코드를 바꿔야 하기 때문이다.</p>
+        <p>그래도 발표자는 RAG에 특히 Anthropic 모델을 좋아한다. 인용 <span class="en">citations</span> 기능이 모델에 내장돼 있어서다.</p>
+        <ol class="plain">
+          <li>자료를 정해진 구조로 넣는다. 문서이고, 텍스트이고, 본문은 이것이라고 적는다.</li>
+          <li>인용 기능을 켠다.</li>
+          <li>모델은 인용이 붙은 텍스트 블록을 돌려주도록 학습돼 있다. 코드로 인용을 뽑아 화면에서 바로 링크할 수 있다.</li>
+        </ol>
+        <p>모델을 부르는 방식 자체가 다른 것도 비교할 거리라는 뜻이다.</p>
+
+        <h3>저장소와 로컬 모델 <span class="ts">50:30</span></h3>
+        <p>저장소는 계속 공개된다. 나눠 준 <code>.env</code> 키는 곧 교체한다. 발표자는 전날 Ollama 지원도 추가했다. 로컬 모델을 쓰려면 예제가 로컬 Ollama 서버를 가리키게 하고 모델 이름만 바꾸면 된다. 같은 API라서 대체로 그대로 돌아간다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="scorecard">
+        <header><span class="num">13</span><h2>모델별 결과 한눈에</h2><p class="muted">이날 시연 한 번의 결과다. 같은 모델도 실행마다 달라질 수 있다.</p></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시나리오</th><th>GPT-5.5</th><th>Kimi K2.6</th><th>DeepSeek V4 Flash</th><th>Mistral Large 3</th></tr></thead>
+            <tbody>
+              <tr><td>글자 세기 (정답 13)</td><td class="pass">13</td><td class="pass">13</td><td class="fail">6</td><td class="fail">8. 단계별 프롬프트 뒤 13</td></tr>
+              <tr><td>RAG: 모른다고 하기</td><td class="pass">자료에 없다고 답함</td><td class="pass">잘한다고만 언급</td><td class="pass">자료에 없다고 답함</td><td class="fail">자기 지식으로 답함. 프롬프트를 고쳐도 일부만 나아짐</td></tr>
+              <tr><td>이미지 3문제</td><td class="pass">3개 모두 맞힘</td><td class="pass">3개 모두 맞힘</td><td>텍스트 전용이라 제외</td><td class="fail">유니콘이 아니라는 것만 맞힘</td></tr>
+              <tr><td>캘린더 도구 호출</td><td>본인을 참석자로 넣음. 나머지는 양호</td><td>시연 안 함</td><td class="fail">본인을 넣고 장소 형식을 어김</td><td>결과 언급 없음</td></tr>
+              <tr><td>계산기 반복</td><td class="pass">호출 1번</td><td>이번엔 양호. 전날엔 정답 뒤 4번 더 검산</td><td>호출 4번, 정답</td><td>시연 안 함</td></tr>
+              <tr><td>여행 에이전트</td><td class="pass">병렬 호출, 4번, 완료</td><td>병렬 없음, 5번, 완료</td><td>병렬 없음, 4번, 완료</td><td class="fail">2번 호출 후 중단</td></tr>
+              <tr><td>LLM 심판 (근거 충실성)</td><td colspan="3">대부분 3문제 중 2개 통과. 모델별로 나눠 말하지 않음</td><td class="fail">3문제 중 1개</td></tr>
+              <tr><td>Assert 규칙 위반</td><td class="pass">가장 적음</td><td>더 많음</td><td>더 많음</td><td>평가 안 함</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>벤치마크는 대략적인 감만 준다. <strong>내 시나리오로 직접 돌려 봐야</strong> 모델이 어떨지 안다.</li>
+          <li>모델 이름 한 줄만 바꿔 같은 시나리오를 돌리면 차이가 바로 보인다.</li>
+          <li>단순한 세기에서도 답이 13, 13, 6, 8로 갈렸다. <strong>단계별로 풀게 하는 프롬프트</strong>로 약한 모델을 끌어올릴 수 있다.</li>
+          <li>RAG에서는 <strong>모르는 것을 모른다고 하는지</strong> 본다. 약한 모델은 자기 지식으로 빈칸을 채운다.</li>
+          <li>이미지 이해는 프롬프트로 거의 못 고친다. <strong>실제 이미지와 실제 언어</strong>로 시험한다.</li>
+          <li>도구 정의(JSON 스키마)도 프롬프트다. 인자가 틀리면 <strong>설명의 모호함</strong>부터 고친다.</li>
+          <li>도구 반복과 에이전트에서는 <strong>호출 횟수와 병렬 호출</strong>이 차이를 만든다. 이날은 GPT-5.5만 병렬 호출을 했다.</li>
+          <li>평가는 문자열 비교, LLM 심판, 스펙 기반 생성 순으로 정교해진다. 느리고 비싸니 <strong>일반 테스트와 분리</strong>하고 실행 주기를 정한다.</li>
+          <li>LLM 심판은 통과·실패와 이유를 함께 내게 하고 <strong>사람 라벨로 보정</strong>한다. 일관성·유창성 같은 기본 평가 대신 맞춤 평가를 만든다.</li>
+          <li>DSPy와 GEPA로 프롬프트를 자동으로 찾으면 <strong>작은 모델로도</strong> 같은 결과를 노릴 수 있고, 특정 모델에 덜 묶인다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 모델을 바꿔 쓸 줄 알아야 한다고 본 이유 두 가지는?</span></summary><div class="answer">새 모델이 끊임없이 나온다. 그리고 어떤 모델의 접근이 언제든 끊길 수 있다. 발표자는 미국 정부가 접근을 끊는 경우를 예로 들었다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>e 세기에서 각 모델의 답과, Mistral을 정답으로 이끈 프롬프트 변화는?</span></summary><div class="answer">GPT-5.5와 Kimi는 13, DeepSeek은 6, Mistral은 8이었다. 문장을 단어로 나누고, 단어별로 세서 더하고, 풀이를 보여 달라고 하자 Mistral도 13을 맞혔다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>꿀벌·목수벌 RAG 실험에서 좋은 답은 어떤 모습인가?</span></summary><div class="answer">자료에 있는 목수벌 내용만 답하고, 꿀벌은 자료에 없어서 모른다고 말하는 답이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Mistral에게 '출처 없음'을 쓰게 했더니 어떻게 됐나?</span></summary><div class="answer">꿀벌 내용에 "출처 없음"을 붙이긴 했다. 하지만 정보는 그대로 줬다. 조금 나아졌을 뿐 완전히 고쳐지지는 않았다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>이미지 입력에서 프롬프트 엔지니어링의 효과가 작은 이유는?</span></summary><div class="answer">모델은 이미지를 이해하거나 못 하거나다. 특정 분야에서 읽는 법 힌트를 주는 정도만 가능하다. 그래서 내가 보낼 종류의 이미지로 직접 시험해야 한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>도구를 정의하는 JSON 스키마가 왜 프롬프트 엔지니어링인가?</span></summary><div class="answer">타입, 설명, 매개변수 이름이 모두 모델이 함수를 어떻게 부를지 정하는 재료이기 때문이다. 인자가 틀리게 나오면 설명이 모호하다는 신호다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>계산기 문제에서 GPT-5.5와 DeepSeek은 어떻게 달랐고, 왜 중요한가?</span></summary><div class="answer">GPT-5.5는 긴 수식 하나로 1번, DeepSeek은 4번 호출했다. 둘 다 정답이었다. 하지만 호출마다 네트워크 요청이라 시간이 늘어난다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>병렬 도구 호출이란 무엇이고 왜 좋은가?</span></summary><div class="answer">서로 의존하지 않는 도구 여러 개를 한 턴에 함께 부르는 것이다. 서버가 요청을 동시에 보낼 수 있어 빨라진다. 여행 예제에서는 항공편과 호텔 검색을 함께 불렀다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>평가를 pytest 같은 일반 테스트 묶음에 넣지 말라는 이유는?</span></summary><div class="answer">느리고 비싸기 때문이다. LLM 심판을 쓰면 사례 하나에 LLM 호출이 2번 이상 들고, RAG 평가에는 사례가 200~800개 필요하다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>LLM 심판에게 무엇을 주고 무엇을 받나?</span></summary><div class="answer">질문, 응답, 그리고 필요하면 원래 자료나 도구 정의와 호출 기록을 준다. 받는 것은 통과·실패 판정과 그 이유다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>LLM 심판을 보정한다는 것은 무슨 뜻인가?</span></summary><div class="answer">도메인 전문가가 단 통과·실패 라벨과 심판의 판단이 일치하는지 확인하는 것이다. 결과가 나쁠 때 문제가 앱인지 심판인지 가리는 데도 필요하다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>DSPy를 쓰면 코드에 들어가는 것과 결과물로 나오는 것은 각각 무엇인가?</span></summary><div class="answer">코드에는 스펙(입력·출력과 제약)과 그 제약을 확인하는 검사가 들어간다. 프롬프트는 GEPA 같은 최적화 과정이 내놓는 결과물이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 앱에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>모델 이름을 한 곳에서 바꿀 수 있게 코드를 정리한다<span class="how">워크숍 예제처럼 파일 맨 위 변수 하나, 또는 설정값 하나로 모델을 고른다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>우리 서비스의 대표 시나리오로 후보 모델을 직접 돌려 본다<span class="how">벤치마크 점수가 아니라 실제 쓰는 방식으로 비교한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>RAG라면 자료에 없는 것을 묻는 함정 질문을 넣는다<span class="how">확인: 모델이 모른다고 하는가, 자기 지식으로 채우는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>이미지 입력은 실제로 받을 이미지와 지원 언어로 시험한다<span class="how">프롬프트로는 거의 못 고치니 모델 선택 단계에서 거른다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>도구 설명의 모호함을 줄인다<span class="how">인자가 틀리게 나온 사례마다 설명 문구를 더 구체적으로 고친다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>날짜 계산은 도구로 맡긴다<span class="how">윤년, 요일, 상대 날짜("내일")를 모델 암산에 맡기지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>에이전트 평가에 도구 호출 수와 병렬 여부를 넣는다<span class="how">최종 답뿐 아니라 과정 기록(trace)을 남겨 함께 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>평가 세트를 일반 테스트와 분리하고, 운영 중 들어온 입력을 계속 추가한다<span class="how">확인: 평가 사례가 실제 사용자 입력을 따라가고 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>LLM 심판은 판정과 이유를 함께 내게 하고 사람 라벨로 보정한다<span class="how">일관성·유창성 같은 기본 평가 대신 맞춤 기준을 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>작은 모델로 옮기고 싶다면 DSPy와 GEPA 같은 프롬프트 최적화를 검토한다<span class="how">먼저 제약을 확인하는 검사 함수를 만든다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>Microsoft Foundry</td><td>Microsoft의 AI 모델 배포 플랫폼. 이 워크숍은 네 회사의 모델을 한 프로젝트에 배포해 같은 방식으로 불렀다</td></tr>
+              <tr><td>429 오류</td><td>요청 한도 초과. 정해진 시간에 너무 많이 요청하면 서버가 돌려주는 응답 코드</td></tr>
+              <tr><td>uv</td><td>Python 패키지와 가상환경을 관리하는 도구. <code>uv sync</code>로 필요한 패키지를 한 번에 설치한다</td></tr>
+              <tr><td>응답 API</td><td>Responses API. OpenAI의 모델 호출 API</td></tr>
+              <tr><td>단계별 사고 유도</td><td>Chain of thought. 답을 바로 내지 말고 풀이 과정을 거치게 하는 프롬프트 기법</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 검색한 자료를 넣어 주고 그 자료를 바탕으로 답하게 하는 방식</td></tr>
+              <tr><td>근거 충실성</td><td>Grounding, groundedness. 답이 주어진 자료 안에서만 나왔는가</td></tr>
+              <tr><td>가중치</td><td>Weights. 모델이 학습하며 익힌 지식이 담긴 숫자들. "가중치에서 답한다"는 자료가 아니라 외운 지식으로 답한다는 뜻</td></tr>
+              <tr><td>멀티모달</td><td>Multimodal. 텍스트 말고 이미지 같은 다른 형태의 입력도 받는 모델</td></tr>
+              <tr><td>도구 호출</td><td>Tool calling, function calling. 모델이 어떤 함수를 어떤 인자로 부를지 정해 돌려주는 기능. 실제 실행은 개발자 코드가 한다</td></tr>
+              <tr><td>JSON 스키마</td><td>JSON Schema. 데이터의 이름, 타입, 설명을 정의하는 형식. 도구를 정의할 때 쓴다</td></tr>
+              <tr><td>에이전트</td><td>목표에 닿을 때까지 도구 호출을 반복하는 LLM 프로그램</td></tr>
+              <tr><td>턴</td><td>Turn. 모델에 한 번 요청하고 응답을 받는 한 차례</td></tr>
+              <tr><td>병렬 도구 호출</td><td>Parallel tool calling. 서로 의존하지 않는 도구 여러 개를 한 턴에 함께 부르는 것</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구 호출 반복을 돌리는 실행 틀. 프레임워크마다 조금씩 다르다</td></tr>
+              <tr><td>미들웨어</td><td>Middleware. 실행 흐름 중간에 끼워 기록이나 처리를 더하는 코드</td></tr>
+              <tr><td>컨텍스트 창</td><td>Context window. 모델이 한 번에 볼 수 있는 입력의 양</td></tr>
+              <tr><td>Ralph 루프</td><td>Geoffrey Huntley가 만든 방식. 에이전트를 반복 실행해 기본 루프보다 끝까지 밀어붙인다</td></tr>
+              <tr><td>평가</td><td>Eval. 모델이나 앱의 결과 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>드리프트</td><td>Drift. 여기서는 평가 세트가 실제 사용자 입력과 점점 멀어지는 것</td></tr>
+              <tr><td>LLM 심판</td><td>LLM-as-a-judge. 다른 LLM에게 결과를 채점하게 하는 평가 방식</td></tr>
+              <tr><td>호출 기록</td><td>Trace. 실행 중 어떤 도구를 어떤 순서와 인자로 불렀는지 남긴 기록</td></tr>
+              <tr><td>보정</td><td>Calibration. 심판의 판단이 사람 전문가의 판단과 맞는지 확인하고 맞추는 일</td></tr>
+              <tr><td>채점 기준</td><td>Rubric. 무엇을 통과로, 무엇을 실패로 볼지 적은 기준표</td></tr>
+              <tr><td>계층화</td><td>Stratification. 테스트 사례를 조건별로 나눠 골고루 만드는 것. 예: 예산이 넉넉함, 빠듯함, 불가능</td></tr>
+              <tr><td>부트스트랩</td><td>Bootstrap. 실제 사용자 데이터가 없을 때 평가 세트를 처음 만들어 내는 일</td></tr>
+              <tr><td>DSPy</td><td>입력·출력과 제약을 선언하면 평가를 돌려 프롬프트를 찾아 주는 프레임워크</td></tr>
+              <tr><td>GEPA</td><td>DSPy에서 쓰는 프롬프트 최적화 방법. 유전 알고리즘 방식으로 다음에 시도할 프롬프트를 만든다</td></tr>
+              <tr><td>언덕 오르기</td><td>Hill climbing. 조금씩 고쳐 보며 점수가 오르는 쪽으로 계속 나아가는 탐색</td></tr>
+              <tr><td>학생 모델 / 반성 모델</td><td>Student model은 최적화한 프롬프트를 실제로 쓸 모델. Reflection model은 결과를 보고 프롬프트 개선안을 내는 모델</td></tr>
+              <tr><td>Messages API</td><td>Anthropic 모델을 부르는 API. OpenAI 방식과 달라 코드를 바꿔야 한다</td></tr>
+              <tr><td>인용</td><td>Citations. 답의 각 부분이 어느 자료에서 왔는지 표시하는 기능</td></tr>
+              <tr><td>Ollama</td><td>내 컴퓨터에서 모델을 돌리는 로컬 서버 도구</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>워크숍 안내, 저장소와 .env, 429 오류 가능성</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>uv sync 또는 GitHub Codespaces</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>목표: 모델 간 차이 익히기, 대안 모델 확보</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>비교할 네 모델</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>벤치마크로는 내 시나리오를 알 수 없다</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>한 번 호출: e 세기</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>단계별 프롬프트로 Mistral 정답</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>RAG: 꿀벌과 목수벌</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>Mistral이 자기 지식으로 답함</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>"출처 없음" 프롬프트</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>이미지 입력: 오록스, 악어, 식물 가격표</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>Mistral의 이미지 결과</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>이미지는 프롬프트로 고치기 어렵다</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>스페인어로 물으면 실패</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>도구 호출: 캘린더 일정 만들기</td></tr>
+              <tr><td><span class="ts">19:30</span></td><td>GPT-5.5와 DeepSeek의 인자 비교</td></tr>
+              <tr><td><span class="ts">20:20</span></td><td>틀린 인자는 모호함의 신호</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>도구 호출 반복: 계산기</td></tr>
+              <tr><td><span class="ts">22:20</span></td><td>GPT-5.5는 1번, DeepSeek은 4번</td></tr>
+              <tr><td><span class="ts">23:20</span></td><td>Kimi의 검산 반복 이야기</td></tr>
+              <tr><td><span class="ts">24:10</span></td><td>에이전트 프레임워크 세 가지, LangChain 선택</td></tr>
+              <tr><td><span class="ts">24:50</span></td><td>여행 계획 에이전트 구성</td></tr>
+              <tr><td><span class="ts">26:10</span></td><td>GPT-5.5의 병렬 도구 호출</td></tr>
+              <tr><td><span class="ts">27:30</span></td><td>모델과 하네스 비교, Kimi 결과</td></tr>
+              <tr><td><span class="ts">28:30</span></td><td>에이전트 평가가 어려운 이유</td></tr>
+              <tr><td><span class="ts">29:00</span></td><td>Mistral이 마지막 단계를 빠뜨림</td></tr>
+              <tr><td><span class="ts">29:50</span></td><td>Ralph 루프로 더 밀어붙이기</td></tr>
+              <tr><td><span class="ts">30:20</span></td><td>평가 1: 문자열 비교</td></tr>
+              <tr><td><span class="ts">31:30</span></td><td>운영 입력을 평가 사례로 옮기기</td></tr>
+              <tr><td><span class="ts">32:20</span></td><td>날짜 계산은 도구에 맡겨라</td></tr>
+              <tr><td><span class="ts">33:30</span></td><td>평가는 일반 테스트와 분리</td></tr>
+              <tr><td><span class="ts">33:50</span></td><td>평가 프레임워크 질문과 답</td></tr>
+              <tr><td><span class="ts">35:10</span></td><td>평가 2: LLM 심판</td></tr>
+              <tr><td><span class="ts">36:50</span></td><td>심판은 느리고 비싸다, RAG는 200~800개</td></tr>
+              <tr><td><span class="ts">37:50</span></td><td>미리 돌린 답, 심판 보정</td></tr>
+              <tr><td><span class="ts">38:40</span></td><td>결과: 대부분 2/3, Mistral 1/3</td></tr>
+              <tr><td><span class="ts">39:10</span></td><td>Hamel.dev 추천</td></tr>
+              <tr><td><span class="ts">40:00</span></td><td>평가 3: Microsoft Research의 Assert</td></tr>
+              <tr><td><span class="ts">40:50</span></td><td>YAML 스펙과 계층화</td></tr>
+              <tr><td><span class="ts">42:20</span></td><td>행동 범주와 생성된 테스트 세트</td></tr>
+              <tr><td><span class="ts">43:30</span></td><td>GPT-5.5의 위반이 가장 적음</td></tr>
+              <tr><td><span class="ts">44:30</span></td><td>기본 평가 대신 맞춤 평가</td></tr>
+              <tr><td><span class="ts">45:20</span></td><td>모델마다 프롬프트를 고치는 고통, DSPy</td></tr>
+              <tr><td><span class="ts">46:20</span></td><td>GEPA 최적화</td></tr>
+              <tr><td><span class="ts">47:00</span></td><td>예제: 단어 수와 첫 글자 제약</td></tr>
+              <tr><td><span class="ts">47:40</span></td><td>6분 걸려 나온 Mistral용 프롬프트</td></tr>
+              <tr><td><span class="ts">48:10</span></td><td>Dropbox, Shopify의 작은 모델 전환 사례</td></tr>
+              <tr><td><span class="ts">49:00</span></td><td>정리: 직접 만져 보라</td></tr>
+              <tr><td><span class="ts">49:20</span></td><td>Anthropic Messages API와 인용 기능</td></tr>
+              <tr><td><span class="ts">50:30</span></td><td>키 교체 예정, Ollama 지원</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'UGjk3Uk0MxM:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

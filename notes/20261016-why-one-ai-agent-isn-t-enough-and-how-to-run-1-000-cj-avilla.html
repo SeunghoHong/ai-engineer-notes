@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 천 개 운영 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#history">유닉스 한 달, OS/360 천 명</a></li>
+      <li><a href="#flows">플로우: Claude가 팀을 스스로 짠다</a></li>
+      <li><a href="#pain">직접 멀티 에이전트를 짜 본 사람들의 고통</a></li>
+      <li><a href="#managed">Claude 관리형 에이전트란</a></li>
+      <li><a href="#demo">콘솔 데모: 주식 워치리스트 스캐너</a></li>
+      <li><a href="#integrate">콘솔에서 코드로</a></li>
+      <li><a href="#phases">단계마다 자원을 다르게 쓴다</a></li>
+      <li><a href="#qa1">질의응답 1부</a></li>
+      <li><a href="#os">에이전트 1,000개로 운영체제 만들기</a></li>
+      <li><a href="#templates">버그 헌터와 설명 영상 스튜디오</a></li>
+      <li><a href="#failures">에이전트 하나가 넘어지는 세 지점</a></li>
+      <li><a href="#safety">안전: 선언, 격리, 감지</a></li>
+      <li><a href="#controls">API로 다루는 통제 수단</a></li>
+      <li><a href="#qa2">마무리와 질의응답 2부</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-16 · 1시간 42분 · 영어 발표 한글 정리</span>
+      <h1>에이전트 하나로는 왜 부족한가, 그리고 천 개는 어떻게 굴리나</h1>
+      <p class="lead">에이전트 하나는 큰 일을 맡기면 게을러지고, 자기 결과를 편애하고, 목표를 잊는다. Anthropic은 Claude가 스스로 에이전트 팀을 짜서 단계별로 일하게 하는 "플로우"를 내놓았다. 최대 1,000개까지 띄울 수 있고, 안전은 선언·격리·감지 세 축으로 지킨다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=kiClTcJUnhc" target="_blank" rel="noopener">Why One AI Agent Isn’t Enough (And How to Run 1,000)</a></span>
+        <span>발표: CJ Avilla, Harrison Stall (Anthropic 기술 스태프)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다. 1시간을 넘는 곳은 h:mm:ss로 적었다. 발표 후반 약 30분과 끝부분은 청중 질의응답이다.</p>
+      <p class="note">두 발표자는 모두 Anthropic 소속이고, 발표 내용은 Anthropic의 유료 API 제품(Claude 관리형 에이전트) 소개다. 제품의 장점과 비교 수치는 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>소프트웨어 역사는 <strong>한 사람의 머리</strong>에서 <strong>신뢰 계층을 가진 네트워크</strong>로 조직을 키워 온 역사다. 유닉스 한 달, OS/360 천 명, 리눅스 2,600명. 에이전트도 같은 길을 간다.</li>
+        <li><strong>플로우</strong><span class="en">flows</span>는 Claude 관리형 에이전트 API의 새 기능이다. 리드 에이전트가 계획을 세우고, 단계마다 서브 에이전트를 스스로 띄우고 거둔다. 사람이 구조를 그려 주지 않는다.</li>
+        <li>에이전트 하나는 세 가지에 약하다. <strong>게으름</strong>(35개 보고 "다 괜찮겠지"), <strong>자기 편애</strong>(내가 쓴 코드는 좋다), <strong>목표 이탈</strong>(컨텍스트가 압축되며 "프로덕션은 건드리지 마"가 사라진다). 플로우는 일을 쪼개 격리된 컨텍스트에 맡겨 이 셋을 피한다.</li>
+        <li><strong>단계마다 자원을 다르게</strong> 쓴다. 검색 단계는 값싼 Haiku 2개, 검토 단계는 Fable 2~3개처럼 늘리고 줄인다. 플로우는 비용이 훨씬 더 들지만 훨씬 더 많이 찾는다.</li>
+        <li>플로우는 한 번에 <strong>최대 1,000개</strong> 에이전트를 쓸 수 있다. 발표자는 "유닉스 호환 운영체제를 만들라"는 한 줄 프롬프트로 85시간째 돌아가는 프로젝트를 보여 줬다.</li>
+        <li>안전은 <strong>선언·격리·감지</strong>다. 에이전트의 권한과 도구를 선언하고, 네트워크와 비밀 정보를 물리적으로 격리하고, 모든 행동을 이벤트 스트림으로 감지한다. 비밀 키는 컨테이너에 가짜 값만 있고 나가는 길목에서만 진짜로 바뀐다.</li>
+        <li>오늘 할 일: <strong>예산을 걸고, 권한 정책을 자동 모드로 바꾸고, 비밀 키는 볼트에 넣는다.</strong> 템플릿에서 시작해 자기 일에 맞게 다듬는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="history">
+        <header><span class="num">01</span><h2>유닉스 한 달, OS/360 천 명 <span class="ts">00:00</span></h2></header>
+        <p>CJ Avilla는 운영체제 세 개의 이야기로 시작한다. 셋은 "일을 몇 사람이 어떻게 나눠 맡았나"가 다르다.</p>
+        <ul class="plain">
+          <li><strong>유닉스, 1969년.</strong> Ken Thompson은 가족이 한 달 집을 비운 사이 혼자 커널, 편집기, 어셈블러를 한 주씩 만들었다. 한 사람이 프로젝트 전체를 머리에 담고 끝까지 끌고 가는 것을 <strong>개념적 완결성</strong><span class="en">conceptual integrity</span>이라 부른다.</li>
+          <li><strong>OS/360, 1960년대 IBM.</strong> 하드웨어를 바꾸면 소프트웨어를 전부 다시 쓰던 시절에 회사 명운을 걸고 만든 운영체제다. 약 5,000인년이 들 거라 보고 엔지니어 1,000명을 투입했다. 관리자였던 Fred Brooks는 교훈을 <em>맨먼스 미신</em><span class="en">The Mythical Man-Month</span>에 적었다. 핵심 하나가 <strong>외과 수술팀</strong> 구조다. 전체를 머리에 담은 집도의 한 명과 전문가 열 명 정도가 둘러싼다.</li>
+          <li><strong>리눅스 7.2, 2026년.</strong> 9주 동안 300여 회사의 개발자 2,600여 명이 기여했다. 처음부터 이랬던 건 아니다.</li>
+        </ul>
+
+        <figure class="chart" aria-label="운영체제 프로젝트 한 건에 참여한 인원 비교: 유닉스 1명, OS/360 약 1,000명, 리눅스 7.2 약 2,600명, 플로우 한 번에 쓸 수 있는 에이전트 상한 1,000개">
+          <span class="chart-title">운영체제 하나를 만든 인원 (발표자 인용)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>유닉스 (1969, 한 달)</span><span class="val">1명</span></div>
+              <div class="track"><div class="fill" style="width:0.04%" title="유닉스: 1명"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>IBM OS/360</span><span class="val">약 1,000명</span></div>
+              <div class="track"><div class="fill" style="width:38.5%" title="OS/360: 약 1,000명"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>리눅스 7.2 (9주)</span><span class="val">약 2,600명</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="리눅스 7.2: 약 2,600명"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>플로우 한 번의 에이전트 상한</span><span class="val">1,000개</span></div>
+              <div class="track"><div class="fill key" style="width:38.5%" title="플로우 에이전트 상한: 1,000개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>1,300</span><span>2,600</span></div>
+          <span class="caption">막대는 실제 비율이다. 유닉스 1명은 비율대로 그리면 거의 보이지 않는다. 마지막 막대는 사람이 아니라 발표에서 말한 에이전트 수다.</span>
+        </figure>
+
+        <h3>"Linus는 확장되지 않는다" <span class="ts">03:10</span></h3>
+        <p>1998년 커널 메일링 리스트에서 Linus Torvalds는 지쳐 있었다. 패치를 보낸 사람들이 "세 번 보냈는데 왜 안 넣느냐"고 재촉했고, Linus는 "휴가 간다, 메일함에서 나가라"고 폭발했다. 다음 날 Larry McVoy가 글을 올렸다. "문제는 Linus가 확장되지 않는다는 것이다." 자기 버전 관리 제품 홍보도 끼어 있었다.</p>
+        <p>약 4년 뒤인 2002년 Linus는 인정했다. 모두가 자기에게 직접 보내는 <strong>별 구조</strong>를 버리고, 신뢰하는 메인테이너들이 먼저 검토하고 예외만 위로 올리는 <strong>네트워크 구조</strong>로 바꿨다. 발표 슬라이드에서 별 구조에는 행위자가 36명 모여 있었고, 네트워크 구조에서는 한 층에 많아야 4명이 보고했다.</p>
+        <div class="callout">
+          <span class="title">이 이야기를 하는 이유</span>
+          <span>에이전트 여러 개를 굴리는 사람은 지금 1998년의 Linus 자리에 있다. 에이전트가 PR을 쏟아 내고 사람은 GitHub에서 승인 버튼을 누르며 병목이 된다. 해법도 같다. 신뢰 계층을 가진 조직을 만들고 자기는 꼭대기에만 남는다.</span>
+        </div>
+        <p class="note">발표자는 샌프란시스코 AI Engineer 행사에서 Anthropic의 Tarek과 Gary(추정)가 "이제 무리하게 야심을 가져라, 바다를 끓여라"고 말했다고 전한다. 이 발표는 그 말을 받아 "그 큰 일을 어떻게 조직하나"를 다룬다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="flows">
+        <header><span class="num">02</span><h2>플로우: Claude가 팀을 스스로 짠다 <span class="ts">06:00</span></h2></header>
+        <p>CJ Avilla와 Harrison Stall은 Anthropic 기술 스태프다. 발표 사흘 전인 금요일에 <strong>Claude 관리형 에이전트</strong><span class="en">Claude managed agents</span>에 <strong>플로우</strong><span class="en">flows</span>라는 기능이 추가됐다. 관리형 에이전트 자체는 4월에 나왔다.</p>
+        <p>플로우는 멀티 에이전트 오케스트레이션의 다음 단계다. 사람이 "에이전트 1은 이걸 하고, 에이전트 2는 1이 끝나길 기다렸다가 저걸 한다"고 구조를 그려 주지 않는다. <strong>Claude가 자기 멀티 에이전트 구조를 통째로 짜고 운영한다.</strong></p>
+
+        <h3>Claude Code의 동적 워크플로우가 원형이다 <span class="ts">07:40</span></h3>
+        <p>Claude Code에서 "ultra code를 써서 X를 하라"고 하면 Claude가 복잡한 에이전트 망을 알아서 띄운다. 내부에서는 JavaScript 엔진이 맵리듀스 같은 작업을 받친다. 분류, 분산 후 종합, 적대적 검증 같은 구조를 사람이 그리는 대신 Claude가 학습된 능력으로 고른다. 플로우는 이 방식을 API로 꺼낸 것이다.</p>
+
+        <div class="shift" aria-label="단일 에이전트에서 동적 워크플로우로">
+          <div><span class="tag">단일 에이전트</span><b>한 시간쯤 버틴다</b><span class="muted">야심이 조금만 커져도 먼저 넘어진다. 발표자도 "대략적인 숫자"라고 했다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div><span class="tag">코디네이터 + 로스터</span><b>조금 더 오래 간다</b><span class="muted">조정자 하나 밑에 한 층의 에이전트. 첫 멀티 에이전트 시도였다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">동적 워크플로우</span><b>임의로 깊고 넓게</b><span class="muted">여러 에이전트가 병렬로 돌며 서로 주고받는다. 어려운 문제의 열쇠라고 본다</span></div>
+        </div>
+        <p class="note">발표 뒷부분 질의응답에서는 현재 플로우의 중첩이 한 단계뿐이라고 답했다. 위 그림의 "임의로 깊게"는 방향이고, 오늘 제품은 리드 에이전트 아래 한 층이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="pain">
+        <header><span class="num">03</span><h2>직접 멀티 에이전트를 짜 본 사람들의 고통 <span class="ts">09:50</span></h2></header>
+        <p>Anthropic이 사용자에게 들은 공통된 어려움이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>어려움</th><th>구체적으로</th></tr></thead>
+            <tbody>
+              <tr><td>직접 만든 하네스</td><td>단일 에이전트의 한계를 넘으려고 각자 복잡한 오케스트레이션 시스템을 손으로 짠다</td></tr>
+              <tr><td>컨테이너 재시작</td><td>에이전트 100개 중 하나가 두 시간 만에 죽으면 어디서 다시 시작하나. 전체 상태를 어떻게 파악하나</td></tr>
+              <tr><td>조정자의 한계</td><td>에이전트 하나가 서브 에이전트 60개를 머리에 담아야 한다. Linus처럼 한계가 있다</td></tr>
+              <tr><td>그래프 들여다보기</td><td>지금 어디까지 왔는지 알려면 노드마다 찔러 봐야 하나, 조정자에게 다 물어야 하나</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">노트북을 살짝 열고 다니는 사람들</span>
+          <span>Opus 4.5쯤부터 자율 코딩이 강해지자, Claude Code가 죽지 않게 노트북을 살짝 열어 둔 채 걸어 다니고, 공원에서 "승인, 승인, 승인"을 누르는 사람들이 생겼다. 발표자는 이것이 사회 수준의 문제를 풀 방식은 아니라고 말한다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="managed">
+        <header><span class="num">04</span><h2>Claude 관리형 에이전트란 <span class="ts">12:10</span></h2></header>
+        <p>청중의 절반 정도가 들어 봤다고 손을 들었다. 관리형 에이전트는 <strong>에이전트의 생애를 Anthropic이 대신 관리해 주는 API</strong>다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>개념</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트 <span class="en">agent</span></td><td>스킬, 도구, MCP 서버 목록으로 정의한다. 상태를 가진 API 리소스다</td></tr>
+              <tr><td>세션 <span class="en">session</span></td><td>"실제 일을 해 달라"는 요청 하나. 에이전트를 세션 안에 띄우면 알아서 일한다</td></tr>
+              <tr><td>환경 <span class="en">environment</span></td><td>Claude가 쓰는 컴퓨터. 컴퓨터를 주면 능력이 크게 오른다. 직접 호스팅한 샌드박스도 쓸 수 있다</td></tr>
+              <tr><td>이벤트 로그</td><td>지속되는 로그 하나로 모든 일을 실시간으로 지켜본다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>멀티 에이전트 1판에서 동적 워크플로우로 <span class="ts">13:10</span></h3>
+        <p>5월에 나온 1판에서는 서브 에이전트를 하나하나 정의하고, 각 에이전트가 도는 <strong>스레드</strong><span class="en">thread</span>를 모두 들어야 했다. 운영체제의 프로세스와 스레드처럼 각 스레드는 자기 컨텍스트를 갖고, 상태를 나누려면 메시지를 주고받아야 했다. 가능하긴 했지만 쉽지 않았다.</p>
+        <p>지난 금요일에 나온 동적 워크플로우는 다르다.</p>
+        <ol class="plain">
+          <li><strong>리드 에이전트</strong>가 일을 받는다. 예: "백만 줄짜리 모노레포를 Python에서 Rust로 옮겨라."</li>
+          <li>리드가 계획을 세우고, 스스로 서브 에이전트를 띄우고 거둔다.</li>
+          <li>여러 <strong>단계</strong><span class="en">phase</span>를 거치며 작고 검증 가능한 일 단위를 끝낸다. 1단계는 탐색 에이전트들이 파일을 읽고, 2단계는 무언가를 가려내는 식이다.</li>
+          <li>사람은 에이전트 사이의 연결을 관리하지 않는다.</li>
+        </ol>
+        <p>도는 동안 할 수 있는 일은 셋이다. 단일 이벤트 스트림으로 에이전트별 행동을 실시간으로 본다. 세션에 <strong>예산</strong>을 걸어 토큰이 새지 않게 한다. 방향이 틀렸으면 API로 <strong>중단</strong>한다.</p>
+
+        <h3>Claude Code와 무엇이 다른가 <span class="ts">16:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>Claude Code 동적 워크플로우</th><th>관리형 에이전트 플로우</th></tr></thead>
+            <tbody>
+              <tr><td>쓰는 자리</td><td>터미널에 앉아 대화하며 쓴다</td><td>API다. 내 제품, 내부 프로세스, CI 어디든 붙인다</td></tr>
+              <tr><td>시작 방식</td><td>사람이 입력한다</td><td>스케줄, 웹훅(예: GitHub PR) 등으로 자동 시작한다</td></tr>
+              <tr><td>대표 사례</td><td>지금 손에 든 코드 작업</td><td>PR마다 돌아가는 버그 헌터</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="demo">
+        <header><span class="num">05</span><h2>콘솔 데모: 주식 워치리스트 스캐너 <span class="ts">17:20</span></h2></header>
+        <p>Harrison Stall이 Claude 콘솔에서 플로우를 하나 띄웠다. 콘솔은 API 사용자가 Anthropic의 모든 리소스를 관리하는 곳이다.</p>
+        <ol class="plain">
+          <li>왼쪽 메뉴 "관리형 에이전트"로 들어간다. 빠른 시작에 클릭 한 번으로 돌릴 수 있는 워크플로우들이 있고, 맨 아래에 "동적 워크플로우" 탭이 있다.</li>
+          <li>금융 쪽 청중이 많아 <strong>주식 워치리스트 스캐너</strong> 템플릿을 골랐다. 설정은 모델 Opus 5.5, 타입 <code>multi-agent 2026-10-01</code>, 그리고 에이전트의 성격을 정하는 시스템 프롬프트다. 템플릿을 쓰면 뒤에서 에이전트 리소스가 만들어진다.</li>
+          <li>에이전트에는 <strong>환경</strong>이 필요하다. Claude가 일할 컴퓨터다. 미리 만들어 둔 환경을 골라 세션을 시작했다.</li>
+          <li>종목으로 Apple, Nvidia, Amazon, JPM, XOM, COST를 넣고 엔터를 쳤다. 여기서 실제 멀티 에이전트 오케스트레이션이 시작된다.</li>
+        </ol>
+        <p>세션 화면에는 피라미드 꼭대기의 리드 에이전트, 환경, 그리고 실시간 진행이 보인다. Claude가 스스로 정한 에이전트 묶음으로 단계를 밟아 가고, 컨텍스트 창 하나에 해당하는 <strong>세션 스레드</strong>들이 병렬로 떠 있다. 먼저 돌려 둔 세션은 단계마다 에이전트 6개 정도가 동시에 돌았다. 에이전트 수는 Claude가 일의 복잡도에 맞춰 늘리고 줄인다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="integrate">
+        <header><span class="num">06</span><h2>콘솔에서 코드로 <span class="ts">23:10</span></h2></header>
+        <p>CJ Avilla가 이어받는다. 보통 콘솔에서 플로우를 시험해 보고, 만족하면 자기 애플리케이션에 붙인다. 장 시작 5분 전에 매일 돌리거나, Slack에서 트리거하는 식이다.</p>
+        <p>코드는 단순하다. 에이전트를 만들 때 멀티 에이전트 설정을 켜고, 리드 에이전트에 보내는 첫 이벤트에 "워크플로우를 돌려라"고 쓴다. 이 둘로 플로우가 돈다. 기본값으로는 Claude가 필요한 서브 에이전트를 즉석에서 만든다.</p>
+        <h3>더 쥐고 싶을 때</h3>
+        <ul class="plain">
+          <li><strong>미리 정의한 서브 에이전트</strong>를 설정에 넣을 수 있다. Yahoo Finance를 보는 에이전트, 특정 뉴스를 보는 에이전트, SEC EDGAR를 보는 에이전트처럼 전문화된 것들이다.</li>
+          <li>에이전트에 <strong>커스텀 스킬</strong>, <strong>MCP 서버</strong>, 환경 안에서 도는 <strong>커스텀 도구</strong>를 줄 수 있다. 모두 플로우와 함께 작동한다.</li>
+          <li>환경은 <strong>직접 호스팅</strong>할 수 있다. 자기 인프라의 샌드박스를 가져온다.</li>
+        </ul>
+      </section>
+
+      <!-- 7 -->
+      <section id="phases">
+        <header><span class="num">07</span><h2>단계마다 자원을 다르게 쓴다 <span class="ts">26:10</span></h2></header>
+        <p>같은 워치리스트 스캐너를 단일 에이전트와 플로우로 각각 돌려 봤다. 단일 에이전트는 종목 목록을 받아 하나씩 최선을 다하지만, 뒤에서 다룰 세 가지 약점에 걸린다. 플로우는 이렇게 간다.</p>
+        <ol class="plain">
+          <li><strong>스캔 단계</strong>: 종목을 쪼개 종목마다 스캔 에이전트 하나를 준다. 격리된 컨텍스트라 다른 종목의 검색 결과에 영향받지 않는다.</li>
+          <li><strong>검토 단계</strong>: 스캔 결과를 넘겨받아 역시 격리된 컨텍스트에서 검토한다. 필요하면 스캐너로 되돌리거나 보고서에 쓸 내용을 골라낸다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">비용과 깊이의 교환</span>
+          <span>발표 슬라이드에서 플로우는 단일 에이전트보다 <strong>비용이 훨씬 더</strong> 들었고, 동시에 세부 사항을 <strong>훨씬 더 많이</strong> 찾았다. 발표자의 기준은 "이 문제를 빈틈없이 깊게 보고 싶고, 돈을 쓸 의향이 있을 때" 플로우를 쓰라는 것이다. 구체적 수치는 슬라이드에만 있었고 자막에는 없다.</span>
+        </div>
+        <h3>늘리고 줄이는 손잡이 <span class="ts">28:10</span></h3>
+        <p>플로우를 만들라고 프롬프트할 때 단계별로 자원을 다르게 달라고 할 수 있다. 발표자가 든 예시다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">스캔 단계 · 싸고 넓게</span>
+            <p>인터넷을 뒤지는 일만 한다. 빠르고 값싼 <strong>Haiku</strong>를 쓰고, 종목마다 2개를 띄워 폭넓게 훑는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">검토 단계 · 비싸고 깊게</span>
+            <p>돌아온 웹페이지에서 세부 사항을 놓치는 일이 잦다면 여기에 투자한다. <strong>Fable</strong>을 쓰고, 종목마다 2~3개를 띄워 깊이 검토한다.</p>
+          </div>
+        </div>
+        <p>각 단계를 아코디언처럼 늘리고 줄인다고 생각하면 된다. 중요한 작업이라면 플로우가 원하는 대로 움직이는지 <strong>평가 세트</strong>로 확인하라고 권한다.</p>
+
+        <h3>템플릿과 프롬프트 요령 <span class="ts">29:40</span></h3>
+        <ul class="plain">
+          <li>콘솔 템플릿 외에 Claude Code의 <strong>Claude API 스킬</strong>에도 템플릿이 묶여 있다. 발표 전 일요일 밤 이후 설치했다면 Claude Code 안에서 워치리스트 스캐너를 온보딩하는 명령을 쓸 수 있다. 발표자는 콘솔 대신 Claude Code에서 "이런 관리형 에이전트를 띄워라"고 말하는 방식을 즐겨 쓴다. 뒤에서 Ant CLI(들린 대로)라는 명령줄 도구가 API를 다룬다.</li>
+          <li>첫 메시지는 <strong>느슨하고 자유롭게</strong> 주는 편이 더 잘 된다. "워크플로우를 써라, 종목 하나에 에이전트 하나, 이런 걸 찾고 있다" 정도로 말하고 Claude가 초기 구조를 짜게 한 뒤 다듬는다.</li>
+        </ul>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>실습용 크레딧 (발표 시점)</th><th>금액</th></tr></thead>
+            <tbody>
+              <tr><td>워크숍 QR 코드</td><td>50달러</td></tr>
+              <tr><td>Max 5x 구독에 딸린 API 크레딧</td><td>월 100달러</td></tr>
+              <tr><td>Teams 구독</td><td>최대 500달러</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="qa1">
+        <header><span class="num">08</span><h2>질의응답 1부 <span class="ts">32:10</span></h2></header>
+        <p>실습 시간에 약 30분 동안 질문을 받았다. 질문은 청중이, 답은 두 발표자가 했다. 주제별로 묶었다.</p>
+
+        <h3>실행 위치와 연동</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>답</th></tr></thead>
+            <tbody>
+              <tr><td>Claude Code의 Claude API 스킬은 어디서 도나</td><td>내 컴퓨터 또는 Claude Code 클라우드다. 관리형 에이전트와는 별개 시스템이고, 거기서 API를 호출해 에이전트·세션 리소스를 만든다</td></tr>
+              <tr><td>플러그인과 합쳐지나</td><td>플러그인의 구성 요소(스킬 등)는 이미 API 필드에 들어간다. 만든 워크플로우를 플러그인으로 배포하는 것은 아직 안 된다. 생성된 프롬프트는 텍스트 파일이니 가져다 쓰면 비슷하게 된다</td></tr>
+              <tr><td>Mac 같은 다른 환경에서 일부를 돌리려면</td><td><strong>커스텀 도구</strong>를 쓴다. 모델이 "이 일을 해 달라"고 요청하면 내가 그 컴퓨터에서 실행하고 결과를 돌려준다</td></tr>
+              <tr><td>Claude Tag(Slack 봇)와 통합되나</td><td>별개 제품이다. Tag 같은 것을 플로우로 직접 만들 수는 있다. 제품 사이의 경계는 몇 달에 걸쳐 사라질 것이다</td></tr>
+              <tr><td>에이전트를 다른 사람과 공유하려면</td><td>Terraform 프로바이더와 콘솔 내보내기가 있다. 원클릭 공유 버튼은 없다. 흔한 방법은 자기 제품 UI 뒤에 붙이는 것이다. 칸반 카드를 옮기면 세션이 시작되는 식이다</td></tr>
+              <tr><td>마크다운 파일로 에이전트를 정의하고 보는 게 맞나</td><td>경우에 따라 다르다. API 키를 마크다운에 넣어 주는 것은 절대 하지 말라. 한 가지 요령은 색인 문서가 세부 문서를 링크하게 해 서브 에이전트가 자기에게 필요한 것만 읽게 하는 것이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>비용, 예산, 개선</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>답</th></tr></thead>
+            <tbody>
+              <tr><td>토큰 비용을 어떻게 줄이나</td><td>Claude Code의 <strong>힐 클라임</strong><span class="en">hill climb</span> 스킬로 프롬프트를 반복 개선한다. 플로우의 전체 전사를 Claude에 주고 과하거나 모자란 곳을 찾게 한다. 발표자는 "회피성 답"이라고 인정했다</td></tr>
+              <tr><td>모델이 자기 예산을 아나</td><td>모른다. 예산은 폭주를 막는 안전장치다. 지금 모델에게 예산을 알려주면 <strong>불안해하는</strong> 경향이 있어 알려주지 않는다. 예산에 닿으면 이벤트가 오고, 예산을 올리면 한 일을 버리지 않고 이어간다</td></tr>
+              <tr><td>플로우가 스스로 프롬프트를 고칠 수 있나</td><td>힐 클라임과 <strong>드리밍</strong>으로 간접적으로 한다. 세션을 스케줄로 돌리는 <strong>배포</strong><span class="en">deployment</span>는 있지만 스케줄로 자기 개선하는 기능은 없다</td></tr>
+              <tr><td>드리밍이란</td><td>관리형 에이전트에 메모리 저장소를 붙이고 플로우를 열 번쯤 돌린 뒤, 그 세션들을 드리밍에 넘기면 메모리를 정리해 다음 세션이 더 잘 되게 한다</td></tr>
+              <tr><td>조건에 따라 일부만 돌릴 수 있나</td><td>플랫폼 기능은 없다. 내 애플리케이션 층에서 판단해 플로우를 부르라. 단일 에이전트가 30초면 끝내는 일에 플로우를 쓰지 말라</td></tr>
+              <tr><td>Claude는 어느 규모로 돌릴지 어떻게 아나</td><td>평가와 낮은 기본값이다. 주식 스캐너에 에이전트 천 개를 띄우면 안 된다. 큰 문제라면 프롬프트에서 명시적으로 밀어 줘야 한다</td></tr>
+              <tr><td>작업 종류에 따라 행동을 바꾸려면</td><td>시스템 프롬프트에 쓰는 게 기본이다. 세션 단위로 <strong>effort</strong> 손잡이와 일부 필드를 덮어쓸 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>관찰과 개입</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>답</th></tr></thead>
+            <tbody>
+              <tr><td>돌아가는 구조를 눈으로 볼 수 있나</td><td>콘솔에서 본다. 서브 에이전트마다 세션 스레드가 있고 API로 전부 접근할 수 있어 자기 UI를 만들 수 있다. 콘솔 대시보드 자체도 공개 API 위에 있다. 이벤트에는 도구 호출, 결과, 리드가 서브 에이전트에 넘긴 메시지 내용까지 있다</td></tr>
+              <tr><td>서브 에이전트끼리 대화하나</td><td>A가 B에 메시지를 보내게 강제하는 API는 없다. 서브 에이전트들은 <strong>파일 시스템을 공유</strong>하므로 그걸로 주고받을 수 있다. 메시지 송수신 이벤트로 관찰은 가능하다</td></tr>
+              <tr><td>사람 피드백을 끼워 넣으려면</td><td>"사람 피드백 요청" 같은 커스텀 도구를 준다. Claude가 필요할 때 부르고 내가 답한다</td></tr>
+              <tr><td>긴 작업의 중간 상태를 어떻게 보나</td><td>운영체제 프로젝트에서는 단계마다 Sonnet 5.5 문서 작성 팀이 문서를 쓰게 했다. 중단하고 방향을 바꿀 수도 있다. 출력 디렉터리에 쓴 파일은 파일 API로 내려받을 수 있고, GitHub 커밋으로도 남는다</td></tr>
+              <tr><td>중간에 새 정보가 생기면 처음부터 다시 하나</td><td>세션을 중단하고 정보를 준다. 리드 에이전트가 전체 상태를 알고 있어 이어서 새 플로우를 짠다. 기존 계획 중간에 단계 하나를 끼워 넣고 뒷단계를 다시 돌리는 것은 안 된다</td></tr>
+              <tr><td>게임 텔레메트리나 스크린샷을 넣을 수 있나</td><td>이벤트 스트림으로 지금 상황을 본다. 이미지 입력은 지원하지만 게임 안에서 실시간으로 쓸 만큼 빠르지는 않다. 크래시 스크린샷을 던져 디버깅하는 용도는 좋다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>격리와 안전</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>답</th></tr></thead>
+            <tbody>
+              <tr><td>무한 루프나 연쇄 오류를 막나</td><td>"어느 정도는." 예산을 걸어 폭주를 막는다. Claude가 오동작하는 서브 에이전트를 감지해 잘라 내는 데 내부 평가에서 꽤 잘했다</td></tr>
+              <tr><td>에이전트 사이 컨텍스트는 격리되나</td><td>각 서브 에이전트는 데이터베이스에서 물리적으로 분리된 세션 스레드다. 시스템 프롬프트도 각각이다. 중간 관리자 에이전트가 수상한 일을 하는지는 메시지 이벤트로 본다</td></tr>
+              <tr><td>공유 파일 시스템을 나눌 수 있나</td><td>지금은 프롬프트로만 한다. 경로 권한 층은 없다. 대신 <strong>도구 권한</strong>으로 특정 에이전트의 파일 읽기 요청을 거부할 수 있다. 발표자는 "쓸모 있겠다, 가져가겼다"고 했다</td></tr>
+              <tr><td>서브 에이전트를 늘리면 체감 효과가 줄어드나</td><td>정확한 수치는 없다. 다만 같은 100개라도 단계와 격리가 있는 플로우로 던지는 쪽이 낫다</td></tr>
+              <tr><td>과학적 발견에도 쓰나</td><td>플로우는 어려운 문제에 테스트 시점 계산을 쏟는 방법이다. 내부 연구용 하네스는 말할 수 없지만, API로 이것을 여는 것이 일반 대중이 그런 일을 할 첫걸음이라고 본다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="os">
+        <header><span class="num">09</span><h2>에이전트 1,000개로 운영체제 만들기 <span class="ts">45:50</span></h2></header>
+        <p>이전 코디네이터 방식에는 서브 에이전트 수 제한이 있었다. 플로우는 한 번에 <strong>1,000개</strong>까지다. 리드 에이전트는 플로우 여러 개를 동시에 띄우거나, 하나가 끝나면 다음을 시작할 수 있다. 그래서 아주 큰 프로젝트를 던질 수 있다.</p>
+        <blockquote>Ken Thompson은 유닉스를 일주일에 만들었다. Python 인터프리터가 있는 유닉스 호환 운영체제를 만들어 보라. 플로우를 쓰고, 용감하게 에이전트를 1,000개까지 써도 된다.<cite>CJ Avilla가 금요일에 넣었다고 말한 프롬프트의 요지. GitHub 저장소도 함께 줬다</cite></blockquote>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>발표 시점 상태</th><th>값</th></tr></thead>
+            <tbody>
+              <tr><td>경과</td><td>약 85시간. 월요일 아침까지 끝나길 바랐지만 아직이다</td></tr>
+              <tr><td>진행</td><td>플로우 3~4개째</td></tr>
+              <tr><td>커밋</td><td>마지막 확인 때 약 1,000개</td></tr>
+              <tr><td>문서</td><td>단계마다 Sonnet 5.5 문서 작성 팀이 구현 내용을 문서로 남긴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">성공 여부는 발표 시점에 알 수 없었다. 이 사례는 "이런 크기의 일을 던질 수 있다"는 예시이고, 결과물의 품질을 보여 준 것은 아니다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="templates">
+        <header><span class="num">10</span><h2>버그 헌터와 설명 영상 스튜디오 <span class="ts">1:03:40</span></h2></header>
+        <p>지난 AI Engineer에서 많이 나온 주제가 "루프를 어떻게 닫나"였다. 사람 없이 시스템이 스스로 돌게 하는 방법이다. 발표자가 실제로 쓰는 플로우 두 개다. 둘 다 템플릿으로, 그리고 Claude Code에서 온보딩 명령으로 쓸 수 있다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">버그 헌터 <span class="en">Bug Hunter</span></span>
+            <p>PR을 올리면 플로우가 리뷰해 성능 문제나 실제 고장을 찾아 준다. 사람이 PR을 더 빨리 볼 수 있다.</p>
+            <ul>
+              <li>코드를 <strong>조각</strong>으로 나눠 조각마다 리뷰 에이전트 하나가 "이게 문제일 수 있다"를 적는다</li>
+              <li>2단계에서 다른 에이전트가 각 지적에 동의·반대한다</li>
+              <li>진짜일 가능성이 있는 후보를 고른다</li>
+              <li><strong>증명 단계</strong>: 저장소를 내려받아 버그를 재현하거나 실제 문제인지 확인한다</li>
+              <li>결과는 PR의 해당 줄에 심각도와 함께 댓글로 달린다</li>
+            </ul>
+            <p class="verdict">사람 리뷰어의 강점은 PR에 없는 코드베이스의 다른 구석을 안다는 것이다. 버그 헌터는 "이 파일을 바꾸면 저 멀리 있는 코드가 깨진다"를 에이전트가 먼저 찾아 준다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">설명 영상 스튜디오 <span class="en">Explainer Studio</span></span>
+            <p>Claude Devs 트위터에 올라가는 기능 소개 애니메이션을 만드는 플로우다. "동적 워크플로우가 어떻게 작동하는지 설명하라" 한 줄로 시작한다.</p>
+            <ul>
+              <li>조사 → 계획 → 자료 수집 → 사실 확인 → 디자인 브리프</li>
+              <li>제작: 장면을 나누고 각각 애니메이션</li>
+              <li>실제로는 효과음, 성우, 대본 단계가 더 붙는다</li>
+            </ul>
+            <p class="verdict">4년 전이라면 20시간쯤 걸렸을 영상이 짧은 프롬프트 하나가 됐다고 발표자는 말한다. 데모 영상의 목소리는 CJ Avilla 본인이었다. 브랜드 스타일은 Claude 디자인으로 만든 디자인 시스템을 넘겨 맞출 수 있다.</p>
+          </div>
+        </div>
+        <p class="note">자막에 들린 명령은 "Claude API skill managed agents onboard bug-hunter / explainer-video-maker"에 가깝다. 정확한 철자는 자막으로 확정할 수 없다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="failures">
+        <header><span class="num">11</span><h2>에이전트 하나가 넘어지는 세 지점 <span class="ts">1:12:00</span></h2></header>
+        <p>동적 워크플로우를 만들며 얻은 가장 큰 교훈이다. 예시 프롬프트는 이렇다. "지금 장애가 났다. 서비스 50개를 보고 원인을 찾아라. 프로덕션은 건드리지 마라."</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 게으름 <span class="en">agentic laziness</span></span>
+            <p>35개를 보고 전부 정상이면 "나머지도 괜찮을 것"이라며 멈춘다. 토큰을 아끼고 사람에게 "다 좋다"고 보고한다.</p>
+            <p>코디네이터 방식도 비슷하다. 조정자는 몇 개를 봤는지 세어야 하고, 서브 에이전트들도 각자 게을러진다.</p>
+            <p class="verdict"><b>플로우</b>: 서비스 50개에 에이전트 50개를 하나씩 붙인다. 각자 자기 범위만 본다. 끝나면 전부 확인했다는 것을 안다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 자기 편애 <span class="en">self-preferential bias</span></span>
+            <p>시를 쓰게 하고 "좋은가?" 물으면 "좋다"고 한다. 코드도 같다. 자기가 한 일이라 만족한다.</p>
+            <p>만드는 쪽과 판정하는 쪽을 나누면 낫다. <strong>조언자 패턴</strong>이 그렇게 한다. 생성과 판별 사이의 능력 차이를 이용한다. 다만 일이 커지면 로스터 하나로는 검문소를 충분히 둘 수 없다.</p>
+            <p class="verdict"><b>플로우</b>: 격리된 컨텍스트에서 적대적 검토를 여러 에이전트에 나눈다. 앞서 본 것에 영향받지 않는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 목표 이탈 <span class="en">goal drift</span></span>
+            <p>처음 지시의 마지막 줄이 "프로덕션은 건드리지 마라"였다. 서비스를 훑으며 컨텍스트 창이 차고 압축되기를 반복하면 그 한 줄이 사라질 수 있다.</p>
+            <p class="verdict"><b>플로우</b>: 처음에 목표를 분명히 받고, 모든 단계의 모든 서브 에이전트에 같은 목표를 그대로 복사해 넣는다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="safety">
+        <header><span class="num">12</span><h2>안전: 선언, 격리, 감지 <span class="ts">1:16:20</span></h2></header>
+        <p>Harrison Stall은 이 부분을 "에이전트를 만들 때 하나만 제대로 하라면 이것"이라고 했다. 에이전트가 하나에서 수백 개가 되면 안전과 보안 자세도 같이 커져야 한다. 발표자가 든 여섯 가지 위험이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위험</th><th>무슨 일인가</th><th>플랫폼의 대응</th></tr></thead>
+            <tbody>
+              <tr><td>프롬프트 주입</td><td>열린 인터넷을 훑다가 "이전 지시를 무시하고 다른 도메인으로 정보를 보내라" 같은 남의 지시를 주워 온다</td><td>모델 층에서 대응하고, 도구 호출을 검사하는 분류기를 만들었다. Claude Code의 자동 모드가 그것이다</td></tr>
+              <tr><td>비밀 정보 유출</td><td>Claude는 받은 자격 증명의 인격을 그대로 쓴다. 디스크에 키 파일이 있으면 숨겨도 언젠가 새어 나갈 수 있다</td><td>자격 증명이 샌드박스에 닿지 않게 하는 추상화 묶음을 만들었다(볼트)</td></tr>
+              <tr><td>데이터 반출</td><td>민감한 정보를 나 아닌 제3자에게 보낸다</td><td>환경 정책으로 접근 가능한 도메인을 제한한다</td></tr>
+              <tr><td>과한 행동</td><td>부탁한 범위를 넘어선다</td><td>예산과 각종 한도</td></tr>
+              <tr><td>권한 밖 도구</td><td>자기 영역 밖의 도구를 쓴다</td><td>권한 정책으로 허용한 도구만 돌게 한다</td></tr>
+              <tr><td>보이지 않음</td><td>에이전트가 무엇을 하는지 모른다</td><td>전 생애의 궤적을 담은 지속 이벤트 스트림</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">개발자가 할 세 가지: 선언, 격리, 감지 <span class="en">declare, contain, detect</span></span>
+          <span><strong>선언</strong>: 에이전트가 무엇인지, 어떤 권한·도구·스킬·인격을 갖는지 적는다. <strong>격리</strong>: 최악의 경우에도 피해가 작게 물리적 한계를 둔다. 접근 가능한 도메인, 웹 검색은 되지만 웹 가져오기는 안 되는 식이다. <strong>감지</strong>: 이벤트 스트림을 실시간으로 듣고, 마음에 안 드는 방향이면 바로 세션을 중단한다.</span>
+        </div>
+
+        <h3>뇌와 손을 떼어 놓는다 <span class="ts">1:21:10</span></h3>
+        <p>4월 관리형 에이전트 출시 때 "Anthropic이 뇌와 손은 분리해야 한다는 논쟁을 끝냈다"는 농담이 돌았다. 농담을 빼면 이것이 안전을 기본값으로 만드는 핵심이다.</p>
+        <div class="shift" aria-label="뇌와 손의 분리">
+          <div><span class="tag">뇌 <span class="en">brain</span></span><b>추론 루프와 세션 상태</b><span class="muted">에이전트 하네스, 모든 에이전트의 전체 이력. 비밀 정보는 여기와 하네스에만 있다</span></div>
+          <span class="arrow" aria-hidden="true">↔</span>
+          <div class="to"><span class="tag">손 <span class="en">hands</span></span><b>실제 세상에 행동하는 자리</b><span class="muted">컴퓨터에서 grep을 돌리거나, 내 Mac에서 도는 커스텀 도구. 손에 접근해도 뇌를 해롭게 조종할 길이 없어야 한다</span></div>
+        </div>
+        <div class="callout">
+          <span class="title">자격 증명 주입의 원리</span>
+          <span>비밀 정보에 접근하는 컨테이너에는 <strong>가짜 값</strong>만 둔다. 그 값으로 외부 API를 부르면 작동하지 않는다. 요청이 컨테이너를 나가는 <strong>출구 프록시</strong>에서만 진짜 값으로 바뀐다. 그래서 Claude를 아무리 설득해도, 샌드박스에 들어가도, 진짜 자격 증명을 꺼낼 물리적 방법이 없다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="controls">
+        <header><span class="num">13</span><h2>API로 다루는 통제 수단 <span class="ts">1:23:50</span></h2></header>
+        <p>CJ Avilla와 Harrison Stall이 번갈아 API 수준의 손잡이를 보여 줬다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>수단</th><th>어떻게 쓰나</th><th>왜</th></tr></thead>
+            <tbody>
+              <tr><td>예산</td><td>세션을 시작할 때 금액을 건다. 예: 1.25달러. 닿으면 멈추고, 올리면 한 일을 버리지 않고 이어간다</td><td>토큰이 예상 밖으로 새는 것을 막는다. 플로우든 아니든 모든 세션에 쓸 수 있다</td></tr>
+              <tr><td>아웃컴 <span class="en">Outcomes</span></td><td>"원하는 결과와 평가 기준은 이것, 예산은 이것" 하고 함께 준다</td><td>예산 안에서 목표를 이루게 하는 조합이다</td></tr>
+              <tr><td>중단</td><td><code>user.interrupt</code> 이벤트를 보낸다. 멈춘 뒤 다시 프롬프트한다</td><td>달리는 중에 방향을 바꾼다</td></tr>
+              <tr><td>전사 검토 에이전트</td><td>지난 세션들의 전사를 API로 뽑아 다른 관리형 에이전트에 주고 "이상한 도구 호출이나 접근이 있었나" 묻는다</td><td>모든 이벤트가 남아 있어 사후 감사가 된다. 오늘 실습 세션에 바로 해 보라고 권했다</td></tr>
+              <tr><td>자동 모드 <span class="en">auto mode</span></td><td>권한 정책을 "항상 묻기"에서 자동 모드로 바꾼다</td><td>사람은 97%를 그냥 승인한다. Claude는 더 끈기 있게 도구 호출 하나하나가 파괴적인지 판단한다. 가장 쉬운 개선이라고 했다</td></tr>
+              <tr><td>볼트 <span class="en">vault</span></td><td>자격 증명을 볼트에 넣고 세션 생성 때 볼트를 넘긴다. 키가 요청 어디에 들어가는지(헤더의 Bearer 토큰인지 본문인지)와 어느 호스트로만 치환할지를 정한다</td><td>Twilio 키가 엉뚱한 도메인으로 나가는 일을 막는다. .env 파일을 올리는 방식 대신이다</td></tr>
+              <tr><td>도구 끄기</td><td>웹 가져오기·웹 검색 같은 도구를 기본으로 끈다. MCP 서버는 도구 하나하나 단위로 켠다</td><td>GitHub MCP가 뚫려 반출 도구가 추가돼도 에이전트가 집어 들지 않게 한다</td></tr>
+              <tr><td>네트워크 허용 목록</td><td>환경 설정에서 접근 가능한 호스트를 적는다. 예: api.twilio.com만</td><td>다른 사이트 호출은 방화벽 층에서 물리적으로 실패한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">오늘 실습에서 해 볼 것</span>
+          <span>방금 돌린 플로우에 예상보다 낮은 예산(예: 1달러)을 걸고 돌린다. 예산에 닿으면 올려서 이어가는 것을 지켜본다.</span>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="qa2">
+        <header><span class="num">14</span><h2>마무리와 질의응답 2부 <span class="ts">1:31:40</span></h2></header>
+        <p>발표자는 1960~70년대에 사람으로 큰 팀을 꾸려 배운 조직 교훈을 에이전트로 다시 발명하고 있다고 본다. 템플릿에서 시작해 자기 것으로 다듬고, 무엇을 찾았는지 알려 달라고 했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>답</th></tr></thead>
+            <tbody>
+              <tr><td>영상처럼 취향이 걸린 결과는 어떻게 다듬나</td><td>Claude Code에서 과정을 먼저 반복해 보고, 그것을 스킬로 적어 플로우에 넣는다. 힐 클라임은 둘을 만들어 보여 주고 어느 쪽이 좋은지 고르게 하며 프롬프트를 스스로 고친다</td></tr>
+              <tr><td>Ultra Code와 플로우는 언제 각각 쓰나</td><td>노트북 앞에서 터미널로 대화하며 한 번 쓰는 일은 Ultra Code. 반복되는 일을 API로 제품이나 스케줄에 붙이는 것은 플로우. 플로우는 Ultra Code의 방법을 API로 일반화한 것이다</td></tr>
+              <tr><td>플랫폼에서 나쁜 일이 생기면 책임은</td><td>변호사가 아니라 답할 수 없다. 다른 플랫폼 사업과 비슷하게 각 층이 최선을 다하는 다층 방어로 본다</td></tr>
+              <tr><td>이벤트 스트림으로 무엇을 만들었나</td><td>내부에서 카탄 보드게임 시뮬레이션을 만들어 각 플레이어가 왜 그 선택을 했는지 설명하게 했다. 흔한 용도는 도구 호출을 펼쳐 볼 수 있는 자기 채팅 UI와 차트 같은 생성 UI다</td></tr>
+              <tr><td>직접 호스팅 샌드박스에서도 되나</td><td>플로우는 바로 된다. 일부 기능은 아직 지원하지 않는다</td></tr>
+              <tr><td>버그 헌터가 여러 저장소의 의존 관계를 어떻게 아나</td><td>준 저장소는 모두 컨테이너에 마운트되고 Claude가 알아서 한다. Bazel처럼 깨끗한 의존 트리가 있으면 그걸 쓰고, 없으면 심볼을 검색한다. PR마다 다시 마운트해야 하는 점은 CI와 같다. 의존 그래프를 미리 만들어 파일로 올려 주면 도움이 된다</td></tr>
+              <tr><td>에이전트 중첩은 몇 단계까지</td><td>지금은 한 단계다. 안전이 확실해질 때까지 더 깊은 분산은 지원하지 않는다</td></tr>
+              <tr><td>VPN 뒤의 데이터에 접근하려면</td><td><strong>MCP 터널</strong>. Cloudflare 터널로 사설 MCP 서버를 열린 인터넷에 노출하지 않고 플랫폼의 에이전트에 연결한다</td></tr>
+              <tr><td>Anthropic 내부는 어떻게 쓰나</td><td>Claude Tag를 많이 쓴다. 지난 24시간의 Jira 활동을 보고 티켓 변경을 먼저 제안하는 일 등을 Tag 모양으로 돌린다. "@Claude, 매일 아침 6시에 이걸 해"가 그대로 된다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="recap">
+        <header><span class="num">15</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>한 사람의 머리(유닉스)에서 신뢰 계층의 네트워크(리눅스)로 옮겨 온 것이 소프트웨어 조직의 역사다. <strong>에이전트를 굴리는 사람은 지금 1998년의 Linus다.</strong></li>
+          <li><strong>플로우</strong>는 리드 에이전트가 계획을 세우고 단계마다 서브 에이전트를 스스로 띄우고 거두는 관리형 에이전트 기능이다. 사람이 구조를 그리지 않는다.</li>
+          <li>관리형 에이전트는 에이전트·세션·환경을 Anthropic이 관리하는 API다. Claude Code가 터미널용이라면 이것은 제품, CI, 스케줄에 붙이는 용도다.</li>
+          <li>플로우는 <strong>비용이 훨씬 더 들고 훨씬 더 많이 찾는다.</strong> 빈틈없이 깊게 보고 싶고 돈을 쓸 때 쓴다. 30초짜리 일에는 쓰지 않는다.</li>
+          <li><strong>단계마다 자원을 다르게</strong> 쓴다. 넓게 훑는 단계는 Haiku 여러 개, 깊게 보는 단계는 Fable 여러 개. 평가 세트로 확인한다.</li>
+          <li>첫 프롬프트는 느슨하게 주고 Claude가 구조를 짜게 한 뒤 다듬는다. 반복 개선은 힐 클라임과 드리밍으로 한다.</li>
+          <li>에이전트 하나의 약점은 <strong>게으름, 자기 편애, 목표 이탈</strong>이다. 플로우는 일을 쪼개 격리된 컨텍스트에 맡기고 목표를 모든 서브 에이전트에 복사해 피한다.</li>
+          <li>한 번에 <strong>1,000개</strong>까지. 중첩은 한 단계. 서브 에이전트끼리는 공유 파일 시스템으로만 소통한다. 모델은 자기 예산을 모른다.</li>
+          <li>안전은 <strong>선언·격리·감지</strong>. 뇌(추론·상태)와 손(행동)을 떼어 놓고, 비밀 키는 컨테이너에 가짜 값만 두고 출구 프록시에서 바꾼다.</li>
+          <li>오늘 할 일: <strong>예산을 걸고, 권한 정책을 자동 모드로 바꾸고, 키는 볼트에 넣고, 네트워크 허용 목록을 적는다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 16 -->
+      <section id="quiz">
+        <header><span class="num">16</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>Linus Torvalds가 2002년에 바꾼 것은 무엇이고, 이 발표와 무슨 상관인가?</span></summary><div class="answer">모두가 자기에게 직접 보내는 별 구조를 버리고, 신뢰하는 메인테이너들이 먼저 검토하고 예외만 올리는 네트워크 구조로 바꿨다. 에이전트가 쏟아 내는 PR을 혼자 승인하는 사람도 같은 병목에 걸린다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>플로우에서 사람이 하지 않게 된 일은?</span></summary><div class="answer">에이전트 구조를 그리는 일. "에이전트 1은 이것, 2는 1을 기다렸다가 저것" 같은 연결을 리드 에이전트가 스스로 계획하고 띄우고 거둔다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>관리형 에이전트의 세 가지 기본 리소스는?</span></summary><div class="answer">에이전트(스킬·도구·MCP 서버 목록), 세션(일을 해 달라는 요청 하나), 환경(Claude가 쓰는 컴퓨터). 여기에 모든 행동을 담은 이벤트 로그가 붙는다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Claude Code의 동적 워크플로우와 관리형 에이전트 플로우는 언제 각각 쓰나?</span></summary><div class="answer">터미널 앞에서 대화하며 한 번 하는 일은 Claude Code. 반복되는 일을 API로 제품·CI·스케줄에 붙일 때는 플로우. 플로우는 Claude Code 방식을 API로 일반화한 것이다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>워치리스트 스캐너 예시에서 단계별 자원 배분은 어땠나?</span></summary><div class="answer">인터넷을 훑는 스캔 단계는 값싼 Haiku를 종목마다 2개. 세부를 놓치기 쉬운 검토 단계는 Fable을 종목마다 2~3개. 단계마다 늘리고 줄인다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>에이전트 하나가 넘어지는 세 지점과 플로우의 대응은?</span></summary><div class="answer">게으름(35개 보고 멈춤)에는 서비스마다 에이전트 하나. 자기 편애(내 결과는 좋다)에는 격리된 적대적 검토. 목표 이탈(압축되며 "프로덕션 금지"가 사라짐)에는 목표를 모든 서브 에이전트에 복사.</div></details>
+          <details><summary><span class="qn">Q7</span><span>모델에게 예산을 알려주지 않는 이유는?</span></summary><div class="answer">지금 모델은 예산을 알면 불안해하는 경향이 있다. 예산은 폭주를 막는 안전장치로만 쓰고, 닿으면 이벤트가 온다. 올리면 한 일을 버리지 않고 이어간다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>서브 에이전트끼리 대화하는 방법은?</span></summary><div class="answer">A가 B에 메시지를 보내게 하는 API는 없다. 공유 파일 시스템으로 주고받는다. 메시지 송수신 이벤트로 관찰은 할 수 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>버그 헌터의 단계를 순서대로 말해 보라.</span></summary><div class="answer">코드를 조각으로 나눠 조각마다 리뷰 → 다른 에이전트가 지적에 동의·반대 → 후보 선별 → 저장소를 내려받아 재현하는 증명 → PR 줄에 심각도와 함께 댓글.</div></details>
+          <details><summary><span class="qn">Q10</span><span>자격 증명이 샌드박스에서 새지 않는 원리는?</span></summary><div class="answer">컨테이너에는 작동하지 않는 가짜 값만 있다. 요청이 나가는 출구 프록시에서만 진짜 값으로 바뀌고, 그것도 허용한 호스트로 갈 때만이다. Claude를 설득해도 꺼낼 것이 없다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>선언·격리·감지는 각각 무엇인가?</span></summary><div class="answer">선언: 에이전트의 권한·도구·스킬·인격을 적는다. 격리: 접근 도메인과 도구를 물리적으로 제한해 최악의 피해를 줄인다. 감지: 이벤트 스트림을 듣고 바로 중단한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 "가장 쉬운 개선"이라고 한 것과 그 근거는?</span></summary><div class="answer">권한 정책을 "항상 묻기"에서 자동 모드로 바꾸는 것. 사람은 97%를 그냥 승인하지만 Claude는 도구 호출마다 파괴적인지 끈기 있게 판단한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="apply">
+        <header><span class="num">17</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>플로우를 쓸 일과 쓰지 않을 일을 가른다<span class="how">빈틈없이 깊게 봐야 하고 비용을 낼 일만. 단일 에이전트가 30초면 끝내는 일은 제외</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>첫 프롬프트는 느슨하게 쓰고 구조는 Claude에 맡긴다<span class="how">"워크플로우를 써라, 항목 하나에 에이전트 하나, 찾는 것은 이것" 정도. 결과를 보고 다듬는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>단계별 모델과 에이전트 수를 정한다<span class="how">넓게 훑는 단계는 싼 모델 여러 개, 깊게 보는 단계는 센 모델 여러 개. 평가 세트로 확인</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>모든 세션에 예산을 건다<span class="how">확인: 예산에 닿았을 때 이벤트를 받고 올려서 이어가는 흐름을 한 번 돌려 봤는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>목표와 금지 사항을 모든 서브 에이전트에 들어가게 쓴다<span class="how">"프로덕션은 건드리지 마라" 같은 줄이 압축에 사라지지 않게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>권한 정책을 자동 모드로 바꾼다<span class="how">사람의 "승인, 승인, 승인"을 도구 호출 단위 판단으로 대체</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>비밀 키를 볼트로 옮기고 파일에서 지운다<span class="how">.env나 마크다운에 키를 두지 않는다. 치환 위치와 허용 호스트를 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>도구와 네트워크를 최소로 연다<span class="how">웹 가져오기·검색은 필요할 때만. MCP는 도구 단위로. 환경에 호스트 허용 목록</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>지난 세션 전사를 검토하는 에이전트를 한 번 돌린다<span class="how">"이상한 도구 호출이나 접근이 있었나"를 묻는다. 주기적으로 돌릴지 정한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 18 -->
+      <section id="glossary">
+        <header><span class="num">18</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>개념적 완결성</td><td>Conceptual integrity. 한 사람이 프로젝트 전체를 머리에 담아 설계가 일관되게 유지되는 상태</td></tr>
+              <tr><td>맨먼스 미신</td><td>The Mythical Man-Month. Fred Brooks가 OS/360 경험에서 쓴 소프트웨어 관리 책</td></tr>
+              <tr><td>외과 수술팀</td><td>전체를 아는 집도의 한 명을 전문가 열 명 정도가 둘러싸는 팀 구조</td></tr>
+              <tr><td>Claude 관리형 에이전트</td><td>Claude managed agents. 에이전트의 생애를 Anthropic이 관리해 주는 API 제품. 2026년 4월 출시</td></tr>
+              <tr><td>플로우 / 동적 워크플로우</td><td>Flows / dynamic workflows. 리드 에이전트가 계획을 세우고 단계마다 서브 에이전트를 스스로 띄우고 거두는 기능</td></tr>
+              <tr><td>코디네이터 + 로스터</td><td>조정자 하나 밑에 한 층의 에이전트 명단을 두는 첫 멀티 에이전트 방식</td></tr>
+              <tr><td>리드 에이전트</td><td>플로우 꼭대기에서 계획과 상태를 쥐는 에이전트</td></tr>
+              <tr><td>단계</td><td>Phase. 플로우에서 작고 검증 가능한 일 단위를 끝내는 구간</td></tr>
+              <tr><td>세션 스레드</td><td>에이전트 하나가 도는 컨텍스트 창 하나. 데이터베이스에서 물리적으로 분리된다</td></tr>
+              <tr><td>환경</td><td>Environment. Claude가 일하는 컴퓨터. 네트워크 허용 목록을 여기에 적는다. 직접 호스팅할 수 있다</td></tr>
+              <tr><td>커스텀 도구</td><td>모델이 "이 일을 해 달라"고 밖으로 요청하면 내가 실행해 결과를 돌려주는 도구</td></tr>
+              <tr><td>예산</td><td>세션에 거는 금액 한도. 닿으면 멈추고 올리면 이어간다</td></tr>
+              <tr><td>아웃컴</td><td>Outcomes. 원하는 결과와 평가 기준을 예산과 함께 주는 기능</td></tr>
+              <tr><td>힐 클라임</td><td>Hill climb. 프롬프트를 조금씩 바꿔 평가가 좋아지는 쪽으로 반복 개선하는 Claude Code 스킬. Karpathy의 autoresearch를 스킬로 만든 것</td></tr>
+              <tr><td>드리밍</td><td>Dreaming. 여러 세션을 돌아보며 메모리 저장소를 정리해 다음 세션을 개선하는 기능</td></tr>
+              <tr><td>배포</td><td>Deployment. 세션을 스케줄로 돌리는 기능</td></tr>
+              <tr><td>게으름 / 자기 편애 / 목표 이탈</td><td>Agentic laziness / self-preferential bias / goal drift. 단일 에이전트의 세 약점</td></tr>
+              <tr><td>조언자 패턴</td><td>Advisor pattern. 만드는 에이전트와 판정하는 에이전트를 나누는 구조</td></tr>
+              <tr><td>프롬프트 주입</td><td>입력 안에 숨은 지시를 AI가 따르게 만드는 공격</td></tr>
+              <tr><td>자동 모드</td><td>Auto mode. 도구 호출마다 안전한지 분류기와 Claude가 판단하는 권한 정책</td></tr>
+              <tr><td>볼트</td><td>Vault. 자격 증명을 샌드박스 밖에 두고 출구 프록시에서만 치환하는 저장소</td></tr>
+              <tr><td>출구 프록시</td><td>Egress proxy. 컨테이너에서 나가는 요청이 거치는 길목. 가짜 키를 진짜로 바꾼다</td></tr>
+              <tr><td>뇌와 손</td><td>추론 루프·세션 상태(뇌)와 실제 행동 자리(손)를 분리하는 설계</td></tr>
+              <tr><td>MCP 터널</td><td>Cloudflare 터널로 사설 MCP 서버를 인터넷에 노출하지 않고 에이전트에 연결하는 기능</td></tr>
+              <tr><td>Claude Tag</td><td>Slack 안에서 정보를 연결해 일하는 Anthropic의 봇 제품</td></tr>
+              <tr><td>Ultra Code</td><td>Claude Code에서 동적 워크플로우를 켜는 키워드</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 19 -->
+      <section id="timeline">
+        <header><span class="num">19</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>Ken Thompson과 유닉스, 개념적 완결성</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>IBM OS/360, 맨먼스 미신, 외과 수술팀</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>리눅스 7.2: 9주, 2,600명</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>1998년 Linus의 폭발, "Linus는 확장되지 않는다"</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>2002년 별 구조에서 네트워크 구조로</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>"무리하게 야심을 가져라" 이어받기</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>발표자 소개, 세션 구성</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>플로우 발표</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>Claude Code 동적 워크플로우(ultra code)</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>단일 에이전트, 코디네이터, 동적 워크플로우 비교</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>직접 만든 하네스의 어려움</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>노트북을 살짝 열고 다니는 사람들</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>Claude 관리형 에이전트란</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>멀티 에이전트 1판(5월)</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>동적 워크플로우의 작동 방식</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>이벤트 스트림, 예산, 중단</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>Claude Code와의 비교</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>콘솔 데모 시작</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>워치리스트 스캐너 템플릿 설정</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>종목 입력, 세션 시작</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>세션 화면 둘러보기</td></tr>
+              <tr><td><span class="ts">23:10</span></td><td>콘솔에서 코드로, 트리거 방식</td></tr>
+              <tr><td><span class="ts">25:00</span></td><td>미리 정의한 서브 에이전트, 스킬, MCP, 직접 호스팅</td></tr>
+              <tr><td><span class="ts">26:10</span></td><td>스캔 단계와 검토 단계</td></tr>
+              <tr><td><span class="ts">27:20</span></td><td>비용과 깊이의 교환</td></tr>
+              <tr><td><span class="ts">28:10</span></td><td>단계별 모델 배분: Haiku와 Fable</td></tr>
+              <tr><td><span class="ts">29:40</span></td><td>템플릿, Claude API 스킬, 프롬프트 요령</td></tr>
+              <tr><td><span class="ts">31:20</span></td><td>실습 크레딧 안내</td></tr>
+              <tr><td><span class="ts">32:10</span></td><td>질의응답 1부 시작</td></tr>
+              <tr><td><span class="ts">36:10</span></td><td>드리밍</td></tr>
+              <tr><td><span class="ts">38:50</span></td><td>모델은 예산을 모른다</td></tr>
+              <tr><td><span class="ts">41:20</span></td><td>서브 에이전트 간 통신: 공유 파일 시스템</td></tr>
+              <tr><td><span class="ts">42:50</span></td><td>힐 클라임 스킬, 제스처 게임 사례</td></tr>
+              <tr><td><span class="ts">45:50</span></td><td>에이전트 1,000개 상한, 운영체제 프로젝트</td></tr>
+              <tr><td><span class="ts">47:40</span></td><td>체감 효과 감소 질문</td></tr>
+              <tr><td><span class="ts">50:40</span></td><td>컨텍스트 격리, 파일 시스템, 도구 권한</td></tr>
+              <tr><td><span class="ts">53:40</span></td><td>중간 상태 보기, 새 정보 넣기</td></tr>
+              <tr><td><span class="ts">57:50</span></td><td>에이전트 공유 방법</td></tr>
+              <tr><td><span class="ts">1:02:00</span></td><td>마크다운과 API 키 경고, 점진적 컨텍스트 공개</td></tr>
+              <tr><td><span class="ts">1:03:40</span></td><td>버그 헌터</td></tr>
+              <tr><td><span class="ts">1:07:00</span></td><td>설명 영상 스튜디오</td></tr>
+              <tr><td><span class="ts">1:12:00</span></td><td>단일 에이전트의 세 약점</td></tr>
+              <tr><td><span class="ts">1:16:20</span></td><td>안전: 여섯 가지 위험</td></tr>
+              <tr><td><span class="ts">1:20:00</span></td><td>선언, 격리, 감지</td></tr>
+              <tr><td><span class="ts">1:21:10</span></td><td>뇌와 손의 분리, 자격 증명 주입</td></tr>
+              <tr><td><span class="ts">1:23:50</span></td><td>예산, 아웃컴, 중단</td></tr>
+              <tr><td><span class="ts">1:25:40</span></td><td>전사 검토 에이전트</td></tr>
+              <tr><td><span class="ts">1:26:40</span></td><td>자동 모드로 바꾸라</td></tr>
+              <tr><td><span class="ts">1:27:50</span></td><td>볼트와 Twilio 예시</td></tr>
+              <tr><td><span class="ts">1:30:00</span></td><td>도구 끄기, MCP 도구 단위 허용, 네트워크 허용 목록</td></tr>
+              <tr><td><span class="ts">1:31:40</span></td><td>마무리</td></tr>
+              <tr><td><span class="ts">1:32:30</span></td><td>질의응답 2부</td></tr>
+              <tr><td><span class="ts">1:39:20</span></td><td>중첩은 한 단계, MCP 터널</td></tr>
+              <tr><td><span class="ts">1:40:50</span></td><td>Anthropic 내부의 Claude Tag 활용, 마침</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'kiClTcJUnhc:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

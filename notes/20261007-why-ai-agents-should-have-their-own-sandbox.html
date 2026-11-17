@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 전용 샌드박스</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#history">문장 잇기에서 목표 맡기기까지</a></li>
+      <li><a href="#interactions">Interactions API의 기본 모양</a></li>
+      <li><a href="#state">서버가 상태를 들고 기다려 준다</a></li>
+      <li><a href="#steps">대화 턴 대신 단계</a></li>
+      <li><a href="#harness">Antigravity 에이전트와 하네스</a></li>
+      <li><a href="#environment">요청마다 붙는 샌드박스</a></li>
+      <li><a href="#sources">소스, 스킬, AGENTS.md</a></li>
+      <li><a href="#agents-api">Agents API와 CLI</a></li>
+      <li><a href="#demo-radio">데모 1: AI Talk Radio</a></li>
+      <li><a href="#files">에이전트는 파일이다</a></li>
+      <li><a href="#demo-sandbox">데모 2: 샌드박스 안 들여다보기</a></li>
+      <li><a href="#loop">서버에서 도는 에이전트 루프</a></li>
+      <li><a href="#why">왜 샌드박스인가</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-07 · 21분 · 영어 발표 한글 정리</span>
+      <h1>에이전트에게 자기 샌드박스를 주는 이유</h1>
+      <p class="lead">에이전트가 목표를 받아 몇 시간씩 혼자 일하려면 코드를 돌리고 파일을 남길 자기 컴퓨터가 필요하다. Google은 Gemini API 요청마다 클라우드 샌드박스를 붙이고, 에이전트 루프 전체를 서버에서 돌리는 방식으로 답한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=oWTEiYpxl80" target="_blank" rel="noopener">Why AI Agents Should Have Their Own Sandbox</a></span>
+        <span>발표: Philipp Schmid (Google DeepMind, AI Studio·Gemini API 담당)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말한 것이고 따로 확인하지 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고, 확실하지 않은 것에는 (추정)을 붙였다. 발표 화면의 코드는 자막에 남지 않아 옮기지 않았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">제목은 "왜"를 묻지만, 발표 대부분은 Gemini의 Interactions API와 관리형 에이전트 소개다. 발표 곳곳에 흩어진 이유는 13번 섹션에 모았다. 발표자는 이 제품을 만드는 Google 쪽 사람이므로, 장점 위주의 설명은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트를 쓰는 방식이 바뀌었다. 질문하고 답을 받는 대신 <strong>목표와 확인 방법을 주고</strong> 몇 시간에서 며칠을 맡긴다.</li>
+        <li>Google의 새 <strong>Interactions API</strong>는 모델과 에이전트를 같은 모양으로 부른다. 대화 상태는 서버가 들고, 오래 걸리는 일은 비동기로 처리한다.</li>
+        <li>대화를 사용자·모델의 <strong>턴</strong>이 아니라 <strong>단계</strong>로 기록한다. 함수 결과는 사용자가 아니라 환경에서 오기 때문이다.</li>
+        <li><code>environment</code> 칸에 remote를 지정하면 에이전트가 <strong>Google이 관리하는 클라우드 샌드박스</strong>를 받는다. 코드 실행, 파일 쓰기, 패키지 설치를 거기서 한다.</li>
+        <li>샌드박스는 <strong>다음 요청에도 남고</strong>, 여러 에이전트가 같이 쓸 수 있다. 파일 시스템이 에이전트끼리 맥락을 나누는 통로가 된다.</li>
+        <li><strong>에이전트는 파일이다.</strong> AGENTS.md와 skills 폴더는 자동으로 시스템 지시문에 들어간다. 다 꾸린 환경은 ID로 저장해 새 에이전트의 출발점으로 쓴다.</li>
+        <li>클라이언트가 함수 호출을 받아 실행하고 결과를 돌려보내던 루프가 <strong>API 호출 한 번</strong>으로 줄어든다. 인프라를 직접 다룰 필요가 없다는 것이 발표자의 주장이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="history">
+        <header><span class="num">01</span><h2>문장 잇기에서 목표 맡기기까지 <span class="ts">01:20</span></h2></header>
+        <p>발표자는 언어 모델이 할 수 있게 된 일을 다섯 단계로 짚었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>할 수 있게 된 것</th><th>사람이 주는 것</th></tr></thead>
+            <tbody>
+              <tr><td>사전학습 모델 (2018~2019, BERT·GPT)</td><td>문장을 이어 쓴다. 첫 몇 단어를 주면 시를 이어 쓴다. 신기했지만 무언가를 만드는 데는 별로 쓸모가 없었다</td><td>첫 몇 단어</td></tr>
+              <tr><td>지시 따르기 <span class="en">instruction following</span></td><td>질문에 답한다</td><td>질문</td></tr>
+              <tr><td>채팅 (ChatGPT)</td><td>사용자와 모델이 번갈아 말한다</td><td>대화 한 턴</td></tr>
+              <tr><td>함수 호출 <span class="en">function calling</span></td><td>모델이 사람 대신 행동한다</td><td>쓸 수 있는 함수 목록</td></tr>
+              <tr><td>에이전트 (지금) <span class="ts">02:20</span></td><td>목표를 받아 생각하고 함수를 부르며 몇 시간, 길게는 며칠 일한다</td><td>목표, 목표를 확인하는 방법, 배포하는 방법</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>마지막 단계에서는 프롬프트를 하나하나 쓰지 않는다. 목표를 주고 그 목표를 어떻게 확인할지 알려 준 뒤, 결과를 기다린다. 발표의 나머지는 이런 에이전트를 어디서 어떻게 돌리느냐에 대한 Google의 답이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="interactions">
+        <header><span class="num">02</span><h2>Interactions API의 기본 모양 <span class="ts">03:20</span></h2></header>
+        <p>Interactions API는 Gemini 모델과 Gemini 에이전트를 부르는 새 API다. 발표자는 OpenAI의 Responses API에 대한 Google의 답이라고 소개했다.</p>
+        <p>발표자가 강조한 점은 <strong>모델을 부를 때와 에이전트를 부를 때 모양이 같다</strong>는 것이다. 이미지, 오디오 같은 다른 형식에도 같은 모양을 쓴다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>칸</th><th>들어가는 것</th></tr></thead>
+            <tbody>
+              <tr><td>누구에게</td><td>모델(예: Gemini) 또는 에이전트(예: Antigravity 에이전트)</td></tr>
+              <tr><td>입력</td><td>글 한 줄, 또는 이미지·오디오 같은 멀티모달 데이터</td></tr>
+              <tr><td>도구 또는 환경</td><td>Google 검색 같은 도구, 또는 에이전트가 일할 샌드박스</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">위 표는 발표자의 설명을 칸별로 정리한 것이다. 실제 코드 문법은 공식 문서에서 확인해야 한다.</p>
+        <p class="note">"Responses API보다 개발자 중심이고 단순하며 웹 개발자에게 친숙하다"는 비교는 발표자의 주장이다.</p>
+
+        <h3>직접 써 보려면 <span class="ts">02:40</span></h3>
+        <ul class="plain">
+          <li><strong>ai.studio</strong> 또는 <strong>ai.dev</strong>에 들어가 API 키를 받는다. 설치할 것이 없고 Gmail 계정으로 바로 시작한다.</li>
+          <li>더 큰 모델이나 더 많은 사용량이 필요하면 신용카드를 등록한다. 이제 Google Cloud로 넘어가지 않고 AI Studio 안에서 다 된다.</li>
+          <li>예산 한도를 정해 비용이 넘치지 않게 할 수 있다.</li>
+        </ul>
+      </section>
+
+      <!-- 3 -->
+      <section id="state">
+        <header><span class="num">03</span><h2>서버가 상태를 들고 기다려 준다 <span class="ts">04:10</span></h2></header>
+        <p>Interactions API에서 새로 생긴 것은 세 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기능</th><th>하는 일</th><th>좋아지는 점</th></tr></thead>
+            <tbody>
+              <tr><td>서버 측 상태 관리 <span class="en">server-side state</span></td><td>다음 턴에는 새 입력과 이전 상호작용의 ID만 보낸다. 서버가 지금까지의 입력을 이어 붙여 모델에게 보여 준다</td><td>클라이언트가 대화 기록을 들고 다니지 않아도 된다</td></tr>
+              <tr><td>오래 걸리는 작업 <span class="en">long-running operations</span></td><td>요청을 보내면 ID를 바로 받는다. 스트리밍이나 폴링으로 끝날 때까지 기다린다</td><td>영상 생성처럼 오래 걸리는 일에 HTTP 연결을 계속 열어 두지 않는다</td></tr>
+              <tr><td>도구 섞어 쓰기</td><td>Google 검색 같은 기본 도구와 직접 만든 함수를 한 요청에 함께 넣는다</td><td>어떤 도구를 먼저 쓸지 모델이 스스로 정한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이름을 "interactions"로 지은 이유도 설명했다. 이제는 응답 하나를 받고 끝나는 게 아니라 모델, 에이전트와 계속 주고받기 때문이다.</p>
+
+        <h3>오디오와 이미지도 같은 모양 <span class="ts">05:20</span></h3>
+        <ul class="plain">
+          <li><strong>오디오</strong>: Gemini TTS 모델, 입력, 생성 설정을 넣는다. 글이 아니라 오디오를 받고 싶으니 응답 형식 <span class="en">response modality</span>을 오디오로 정한다.</li>
+          <li><strong>이미지</strong>: 이미지 생성 모델 Nano Banana, 입력, 생성 설정을 넣으면 이미지가 돌아온다.</li>
+        </ul>
+
+        <h3>작은 CVE 탐지 에이전트 <span class="ts">06:10</span></h3>
+        <p>도구 사용의 예로, React에 알려진 보안 취약점(CVE)이 있는지 찾는 에이전트를 화면 한 장의 코드로 만들었다.</p>
+        <ol class="plain">
+          <li>Google 검색으로 관련 글을 찾는다.</li>
+          <li>URL 컨텍스트 도구로 그 페이지들을 읽는다.</li>
+          <li>함수 호출로 결과를 정해진 구조로 정리한다. 데이터베이스에 저장하거나 나중에 찾아보기 좋게 만드는 단계다.</li>
+        </ol>
+
+        <div class="callout">
+          <span class="title">발표 전날 나온 모델 <span class="ts">00:50</span></span>
+          <span><strong>Nano Banana Light (추정)</strong>: 새 이미지 생성 모델이다. 발표자는 아주 빠르고 싸다고 했다. 이미지 한 장에 4센트라고 한다.</span>
+          <span><strong>Omni Flash (추정)</strong>: Interactions API에서 Omni로 영상을 만들고 편집할 수 있게 됐다. 발표자는 Omni 영상 생성을 오래 걸리는 작업의 예로 들었다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="steps">
+        <header><span class="num">04</span><h2>대화 턴 대신 단계 <span class="ts">06:40</span></h2></header>
+        <p>다른 모델 제공사의 API나 오픈 모델은 사용자 턴과 모델 턴이 번갈아 오는 구조다. 사용자가 입력하고 모델이 답한다. 발표자는 이 구조가 1~2년 전까지는 잘 맞았다고 본다.</p>
+        <p>에이전트와 추론 모델이 나오면서 맞지 않게 됐다. 이유는 두 가지다.</p>
+        <ul class="plain">
+          <li>모델이 오래 생각한다. 생각을 그대로 보여 주기도 하고, 서명 <span class="en">signature</span>만 남기기도 한다.</li>
+          <li>함수 결과를 돌려줄 자리가 사용자 턴밖에 없었다. 그런데 그 결과는 사용자가 아니라 환경에서 온 것이다. 발표자는 이 점이 늘 어색했다고 했다. <span class="ts">07:20</span></li>
+        </ul>
+        <div class="shift" aria-label="대화 기록 방식의 변화">
+          <div><span class="tag">지금까지 · 턴</span><b>사용자 → 모델 → 사용자 → 모델</b><span class="muted">함수 결과도 "사용자" 턴에 넣어 돌려준다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Interactions API · 단계</span><b>일어난 순서대로 단계가 쌓인다</b><span class="muted">단계마다 자기 타입이 있다. 함수 결과는 "함수 결과" 단계로 돌려준다</span></div>
+        </div>
+        <p>이렇게 하면 새 기능이 생겨도 새 단계 타입만 더하면 된다. 각 단계가 무엇인지 타입으로 드러나서 쓰기도 쉽다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="harness">
+        <header><span class="num">05</span><h2>Antigravity 에이전트와 하네스 <span class="ts">08:10</span></h2></header>
+        <p>Google은 Google I/O에서 Gemini API용 Antigravity 에이전트를 내놓았다. 이 에이전트는 자기 샌드박스를 가지고 온다.</p>
+        <p>이 원격 에이전트는 Antigravity 제품들과 <strong>같은 하네스</strong> <span class="en">harness</span>로 돈다. Antigravity IDE, Antigravity 2.0, CLI를 써 봤다면 이미 이 하네스를 쓴 셈이다.</p>
+        <div class="callout">
+          <span class="title">하네스와 에이전트는 다르다 <span class="ts">08:30</span></span>
+          <span>하네스는 에이전트의 뒷단이다. 같은 하네스 위에서도 제품마다 도구와 시스템 지시문이 다를 수 있다.</span>
+          <span>예를 들어 Antigravity IDE는 코딩 에이전트라서, API에 있는 Antigravity 에이전트와 도구 구성이 조금 다르다.</span>
+          <span>하네스가 같으니 Gemini가 이 하네스에서 더 잘 일하도록 개선되면 두 쪽이 함께 좋아진다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="environment">
+        <header><span class="num">06</span><h2>요청마다 붙는 샌드박스 <span class="ts">09:00</span></h2></header>
+        <p>새 에이전트와 함께 <code>environment</code> 칸이 생겼다. 여기에 remote를 지정하면, 그 API 호출에서 에이전트가 Google이 관리하는 샌드박스 <span class="en">sandbox</span>를 받는다.</p>
+        <p>요청을 보내면 Google 백엔드가 클라우드 샌드박스를 띄운다. 에이전트는 그 안에서 이런 일을 한다. <span class="ts">09:20</span></p>
+        <ul class="plain">
+          <li>코드를 실행한다</li>
+          <li>파일을 만들고 쓴다</li>
+          <li>의존성을 설치한다</li>
+          <li>필요한 도구를 직접 설치한다</li>
+          <li>사용자의 API를 부른다</li>
+        </ul>
+        <p>인프라는 Google이 관리한다. 개발자는 API 요청만 보낸다.</p>
+
+        <h3>환경은 남고, 나눠 쓸 수 있다 <span class="ts">09:40</span></h3>
+        <p>첫 요청에서 "최신 기술 뉴스를 조사해서 파일로 만들어"라고 시킨다고 하자. 다음 요청에서 같은 환경을 이어 쓰면 앞에서 만든 파일이 그대로 있다.</p>
+        <p>환경은 에이전트끼리 나눠 쓸 수도 있다. <span class="ts">10:00</span> 에이전트 셋이 한 환경에서 일하면 <strong>파일 시스템으로 맥락을 공유</strong>한다. 하위 에이전트 <span class="en">subagent</span>가 다른 에이전트가 하던 일을 이어받을 수도 있다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="sources">
+        <header><span class="num">07</span><h2>소스, 스킬, AGENTS.md <span class="ts">10:20</span></h2></header>
+        <p>샌드박스만 있다고 일을 잘하지는 않는다. 모델은 그 안에서 쓸 맥락, 정보, 도구가 필요하다. 그래서 환경에 소스 <span class="en">sources</span>를 넣을 수 있다.</p>
+        <ul class="plain">
+          <li>Google Cloud Storage(GCS) 버킷</li>
+          <li>GitHub 저장소</li>
+          <li>요청에 직접 담은 파일</li>
+        </ul>
+        <p>Antigravity 에이전트는 파일 시스템을 기준으로 움직인다. 발표자는 "스킬 네이티브", "파일 시스템 네이티브"라고 표현했다. 정해진 자리에 파일을 두면 에이전트가 알아서 읽는다는 뜻이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>파일</th><th>두는 곳</th><th>쓰이는 방식</th></tr></thead>
+            <tbody>
+              <tr><td>스킬 <span class="en">skills</span></td><td>skills 폴더</td><td>자동으로 찾아 시스템 지시문 <span class="en">system instruction</span>에 넣는다</td></tr>
+              <tr><td>AGENTS.md</td><td>환경 안</td><td>시스템 지시문 뒤에 자동으로 붙는다 <span class="ts">10:50</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>코딩 에이전트나 기존 에이전트에서 쓰던 AGENTS.md와 스킬을 그대로 가져올 수 있다는 뜻이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="agents-api">
+        <header><span class="num">08</span><h2>Agents API와 CLI <span class="ts">11:00</span></h2></header>
+        <p>요청마다 설정을 다 보내는 방식은 편하지만 공유하기 어렵다. 1팀이 만든 에이전트를 2팀이 쓰고 싶을 때가 그렇다. 그래서 Agents API를 만들었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>정하는 것</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>기본 에이전트</td><td>밑에서 도는 두뇌</td></tr>
+              <tr><td>지시문</td><td>에이전트가 할 일과 규칙</td></tr>
+              <tr><td>환경</td><td>소스를 넣은 새 환경, 또는 이미 만들어 둔 환경</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>에이전트가 자기 환경을 만든다 <span class="ts">11:30</span></h3>
+        <ol class="plain">
+          <li>에이전트에게 준비 작업을 시킨다. 예: GitHub CLI 설치, 스킬 추가, 기본 점검.</li>
+          <li>작업이 끝나면 환경 ID를 받는다.</li>
+          <li>그 환경 ID로 새 에이전트를 만든다.</li>
+          <li>새 에이전트는 부를 때마다 준비가 끝난 환경에서 출발한다.</li>
+        </ol>
+        <p>이렇게 만든 에이전트를 사용자나 고객과 나눌 수 있다. 발표자는 Terraform, Kubernetes, 마이크로서비스, Firecracker 같은 것을 고민하지 않아도 된다고 강조했다. <span class="ts">12:10</span></p>
+
+        <h3>에이전트가 쓰는 Gemini API CLI <span class="ts">12:10</span></h3>
+        <p>Gemini API를 부르는 명령줄 도구도 내놓았다. 코딩 에이전트가 아니고, Gemini CLI와도 다르다. <strong>내 코딩 에이전트가 Gemini API를 부를 때 쓰는 도구</strong>다.</p>
+        <ul class="plain">
+          <li>Nano Banana나 Omni로 이미지, 영상 같은 자료를 만든다.</li>
+          <li>에이전트를 만들고, 고치고, 다듬는다.</li>
+        </ul>
+        <p>Interactions API와 Agents API를 다루는 스킬도 따로 있다. 발표 화면의 QR 코드는 GitHub 저장소로 연결됐다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="demo-radio">
+        <header><span class="num">09</span><h2>데모 1: AI Talk Radio <span class="ts">13:00</span></h2></header>
+        <p>AI Talk Radio는 AI Studio 안의 앱 <span class="en">applet</span>이다. Google I/O 개발자 키노트에서도 보여 준 것으로, 관리형 에이전트 <span class="en">managed agents</span> 위에 얹은 단순한 화면이다.</p>
+        <p>토크쇼 에이전트는 Gemini 모델을 모두 쓸 수 있다. 썸네일, 음성, 음악을 만들고 조사도 한다. 주제 하나를 주면 라디오 방송 한 편을 한 번에 만든다.</p>
+
+        <h3>실행하면 일어나는 일 <span class="ts">13:40</span></h3>
+        <p>발표자는 "피자에 파인애플을 올려도 되나"를 주제로 넣었다.</p>
+        <ol class="plain">
+          <li>환경을 띄운다.</li>
+          <li>모델이 할 일을 생각한다.</li>
+          <li>Python 의존성을 설치한다.</li>
+          <li>스킬을 읽는다.</li>
+          <li>나머지 작업을 이어 간다.</li>
+        </ol>
+        <p>시간이 걸려서 미리 만든 방송을 틀었다. 주제는 "시리얼이 먼저냐, 우유가 먼저냐"였다. <span class="ts">14:20</span></p>
+
+        <h3>미리 만든 방송 <span class="ts">14:40</span></h3>
+        <p>듣기만 하는 팟캐스트와 다르다. 여러 사람이 전화로 들어와 각자 근거를 대며 의견을 나눈다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>등장인물</th><th>주장</th></tr></thead>
+            <tbody>
+              <tr><td>진행자 Paul (런던)</td><td>두 방식의 장단점을 객관적으로 따져 보자</td></tr>
+              <tr><td>David (보스턴)</td><td>시리얼이 먼저다. 시리얼 양을 보고 우유를 맞춘다. 마른 시리얼을 우유에 부으면 사방에 튄다. 으깬 감자를 그레이비 위에 떨어뜨리지 않는 것과 같다</td></tr>
+              <tr><td>Sarah (시드니)</td><td>우유가 먼저다. 식감이 완전히 달라진다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">등장인물과 목소리는 모두 에이전트가 만든 것이다.</p>
+
+        <h3>직접 찾아보기 <span class="ts">16:00</span></h3>
+        <ul class="plain">
+          <li>AI Studio 왼쪽의 Build 메뉴에서 갤러리로 들어가면 Gemini 사용 예를 담은 앱들이 있다. 그중 하나가 Talk Show Radio다.</li>
+          <li>리믹스 <span class="en">remix</span>하면 내 필요에 맞게 고칠 수 있다. 토크쇼 대신 일반 팟캐스트 앱으로 바꾸는 식이다. Gemini와 함께 고치면 된다.</li>
+          <li>하루 무료 사용량이 있다.</li>
+        </ul>
+      </section>
+
+      <!-- 10 -->
+      <section id="files">
+        <header><span class="num">10</span><h2>에이전트는 파일이다 <span class="ts">16:40</span></h2></header>
+        <p>AI Studio의 앱은 코드가 공개돼 있어서 에이전트 속을 들여다볼 수 있다.</p>
+        <blockquote>"our agent is just files" (우리 에이전트는 그냥 파일이다)<cite>Philipp Schmid, 16:40</cite></blockquote>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>파일</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td>AGENTS.md</td><td>환경이 뜰 때 읽혀 시스템 지시문에 들어간다. 할 일을 적어 둔다: 조사, 등장인물별 대본 쓰기, 음악 생성, 음성 생성, 전부 섞기</td></tr>
+              <tr><td>스킬 (예: TTS 생성) <span class="ts">17:10</span></td><td>그 일을 어떻게 실행하는지 적은 설명</td></tr>
+              <tr><td>스킬 안의 Python 파일</td><td>Interactions API로 다른 Gemini 모델을 불러 음성을 만든다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>즉 Gemini 에이전트가 다른 Gemini 모델을 도구처럼 부르는 구조다. 이 에이전트를 화면에서 백엔드로 옮기려면 파일을 복사하고, 에이전트를 만들고, 부르면 된다. <span class="ts">17:30</span></p>
+      </section>
+
+      <!-- 11 -->
+      <section id="demo-sandbox">
+        <header><span class="num">11</span><h2>데모 2: 샌드박스 안 들여다보기 <span class="ts">17:40</span></h2></header>
+        <p>AI Studio 플레이그라운드의 모델 선택 메뉴에 에이전트 항목이 새로 생겼다. Deep Research와 Antigravity 에이전트가 있다. Antigravity 에이전트에는 바로 써 볼 수 있는 템플릿이 6개 있다.</p>
+        <p>발표자는 기본 템플릿을 골라, 에이전트가 자기가 어디서 돌고 있는지 알아보게 했다. <span class="ts">18:10</span></p>
+        <ol class="plain">
+          <li>첫 요청이라 환경을 띄우는 데 7~10초쯤 걸린다.</li>
+          <li>에이전트가 생각하고 bash 명령을 돌린다. 운영체제 버전, CPU, 메모리를 확인한다.</li>
+          <li>찾은 내용을 답한다.</li>
+          <li>"Node도 설치돼 있어?"라고 이어 묻자 같은 환경에서 계속 일한다. <span class="ts">18:40</span></li>
+        </ol>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>에이전트가 찾은 것 <span class="ts">18:30</span></th><th>값</th></tr></thead>
+            <tbody>
+              <tr><td>운영체제</td><td>Ubuntu</td></tr>
+              <tr><td>CPU</td><td>vCPU 8개</td></tr>
+              <tr><td>메모리</td><td>16 GB</td></tr>
+              <tr><td>설치된 것</td><td>Python, pip</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">데모 화면에서 나온 값이다. 이것이 고정 사양인지는 발표에서 말하지 않았다.</p>
+        <p>화면 오른쪽에는 환경을 내려받는 버튼이 있다. <span class="ts">19:00</span> 에이전트가 만든 파일을 꺼내 공유할 수 있다. 같은 일을 하는 API도 있다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="loop">
+        <header><span class="num">12</span><h2>서버에서 도는 에이전트 루프 <span class="ts">19:10</span></h2></header>
+        <p>발표자는 마지막으로 전체 흐름을 다시 보여 줬다.</p>
+        <ol class="plain">
+          <li>요청을 보낸다.</li>
+          <li>샌드박스가 뜬다.</li>
+          <li>필요한 파일을 싣는다.</li>
+          <li>에이전트 루프가 <strong>전부 서버에서</strong> 돈다. <span class="ts">19:30</span></li>
+        </ol>
+        <div class="shift" aria-label="에이전트 루프가 도는 위치의 변화">
+          <div><span class="tag">직접 만든 에이전트</span><b>클라이언트가 루프를 돈다</b><span class="muted">모델이 보낸 함수 호출을 해석하고, 어딘가에서 실행하고, 결과를 다시 보낸다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">관리형 에이전트</span><b>API 호출 한 번</b><span class="muted">모든 일이 원격 샌드박스 안에서 돈다</span></div>
+        </div>
+        <p>원격 MCP 서버를 연결하거나, 로컬 MCP 서버를 환경 안에서 돌릴 수도 있다. <span class="ts">19:50</span></p>
+        <p>시작하려면 Gemini API 문서의 에이전트 항목에서 빠른 시작 안내를 따른다. 첫 요청 보내기와 첫 에이전트 만들기를 다룬다. 코딩 스킬을 설치하면 Claude Code나 Codex 같은 코딩 에이전트가 작업을 도울 수 있다. <span class="ts">20:00</span></p>
+      </section>
+
+      <!-- 13 -->
+      <section id="why">
+        <header><span class="num">13</span><h2>왜 샌드박스인가</h2></header>
+        <p>발표자는 이유를 한곳에 모아 말하지 않았다. 아래 표는 발표 곳곳에서 나온 말을 이유별로 묶은 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>이유</th><th>발표에서 나온 근거</th><th>위치</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트는 오래, 혼자 일한다</td><td>목표와 확인 방법을 받고 몇 시간에서 며칠 동안 일한다</td><td><span class="ts">02:20</span></td></tr>
+              <tr><td>일하려면 실제 컴퓨터가 필요하다</td><td>코드를 실행하고, 파일을 쓰고, 의존성과 도구를 설치한다</td><td><span class="ts">09:20</span></td></tr>
+              <tr><td>함수 결과는 환경에서 온다</td><td>함수 결과를 사용자 턴에 넣는 게 어색해서 단계로 바꿨다</td><td><span class="ts">07:20</span></td></tr>
+              <tr><td>작업이 이어지고 공유된다</td><td>환경이 다음 요청에도 남고, 에이전트끼리 파일 시스템으로 맥락을 나눈다</td><td><span class="ts">09:40</span></td></tr>
+              <tr><td>에이전트를 파일로 옮길 수 있다</td><td>AGENTS.md와 스킬을 자동으로 읽는다. 다 꾸린 환경을 ID로 다시 쓴다</td><td><span class="ts">10:30</span> <span class="ts">11:30</span></td></tr>
+              <tr><td>클라이언트가 가벼워진다</td><td>함수 호출 루프가 API 호출 한 번이 된다. 인프라를 직접 꾸리지 않는다</td><td><span class="ts">12:10</span> <span class="ts">19:30</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">발표에서 다루지 않은 것</span>
+          <span>샌드박스를 어떻게 격리하는지, 샌드박스 사용 비용, 환경을 얼마나 오래 보관하는지, 실행 시간 제한은 나오지 않았다. 실제로 쓰기 전에 공식 문서에서 확인할 부분이다.</span>
+        </div>
+        <p class="note">이유 자체는 어느 에이전트에나 해당한다. 다만 발표가 결론으로 내놓은 방법은 Google의 관리형 샌드박스다. 발표자가 그 제품을 만드는 쪽이라는 점을 감안하자.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트는 이제 질문에 답하는 대신 <strong>목표를 받아 몇 시간에서 며칠 일한다.</strong></li>
+          <li>Interactions API는 모델과 에이전트를 같은 모양(누구에게, 입력, 도구 또는 환경)으로 부른다.</li>
+          <li>대화 상태는 서버가 들고, 다음 요청에는 이전 상호작용의 ID만 보낸다.</li>
+          <li>오래 걸리는 작업은 ID를 먼저 받고 스트리밍이나 폴링으로 기다린다.</li>
+          <li>함수 결과는 사용자가 아니라 환경에서 온다. 그래서 턴 대신 <strong>타입이 있는 단계</strong>로 기록한다.</li>
+          <li>하네스는 에이전트의 뒷단이다. 같은 하네스 위에서도 제품마다 도구와 지시문이 다를 수 있다.</li>
+          <li><code>environment</code>를 remote로 두면 에이전트가 <strong>Google이 관리하는 샌드박스</strong>에서 코드를 돌리고 파일을 쓴다.</li>
+          <li>환경은 다음 요청에도 남고, 여러 에이전트가 <strong>파일 시스템으로 맥락을 나눈다.</strong></li>
+          <li><strong>에이전트는 파일이다.</strong> AGENTS.md와 스킬은 자동으로 지시문에 들어가고, 다 꾸린 환경은 ID로 다시 쓴다.</li>
+          <li>클라이언트가 돌리던 함수 호출 루프가 서버로 옮겨 가, 에이전트 실행이 <strong>API 호출 한 번</strong>이 된다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말한 지금의 에이전트는 이전 단계와 무엇이 다른가?</span></summary><div class="answer">프롬프트 대신 목표와 그 목표를 확인하는 방법을 준다. 에이전트는 몇 시간에서 며칠 동안 혼자 일하고 결과를 가져온다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Interactions API에서 모델을 부를 때와 에이전트를 부를 때 같은 것은?</span></summary><div class="answer">부르는 모양이 같다. 누구에게(모델 또는 에이전트), 입력(글 또는 멀티모달 데이터), 도구 또는 환경.</div></details>
+          <details><summary><span class="qn">Q3</span><span>서버 측 상태 관리를 쓰면 다음 턴에 무엇을 보내나?</span></summary><div class="answer">새 입력과 이전 상호작용의 ID. 서버가 지금까지의 입력을 이어 붙여 모델에게 보여 준다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>영상 생성처럼 오래 걸리는 요청은 어떻게 처리하나?</span></summary><div class="answer">요청하면 ID를 바로 받는다. 그다음 스트리밍이나 폴링으로 끝날 때까지 기다린다. HTTP 연결을 계속 열어 둘 필요가 없다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>발표자가 사용자·모델 턴 구조를 버린 이유는?</span></summary><div class="answer">모델이 오래 생각하고, 함수 결과는 사용자가 아니라 환경에서 온다. 그 결과를 사용자 턴에 넣는 게 어색했다. 그래서 단계마다 타입이 있는 타임라인으로 바꿨다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>하네스와 에이전트는 어떻게 다른가?</span></summary><div class="answer">하네스는 에이전트의 뒷단이다. 같은 하네스 위에서도 제품마다 도구와 시스템 지시문이 다를 수 있다. 하네스가 같으면 모델 개선이 여러 제품에 함께 반영된다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>environment를 remote로 두면 에이전트가 할 수 있게 되는 일은?</span></summary><div class="answer">Google이 관리하는 클라우드 샌드박스에서 코드를 실행하고, 파일을 만들고 쓰고, 의존성과 도구를 설치하고, 사용자의 API를 부른다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>여러 에이전트가 한 환경에서 일할 때 맥락은 무엇으로 나누나?</span></summary><div class="answer">파일 시스템. 한 에이전트가 남긴 파일을 다른 에이전트나 하위 에이전트가 읽고 이어서 일한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Antigravity 에이전트가 환경에서 자동으로 읽는 두 가지는?</span></summary><div class="answer">skills 폴더의 스킬과 AGENTS.md. 둘 다 시스템 지시문에 들어간다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>준비가 끝난 환경에서 출발하는 에이전트는 어떤 순서로 만드나?</span></summary><div class="answer">에이전트에게 준비 작업을 시킨다. 끝나면 환경 ID를 받는다. 그 ID로 Agents API에서 새 에이전트를 만든다. 새 에이전트는 부를 때마다 그 환경에서 출발한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>Gemini API CLI는 Gemini CLI와 무엇이 다른가?</span></summary><div class="answer">코딩 에이전트가 아니다. 내 코딩 에이전트가 Gemini API를 부를 때 쓰는 도구다. 이미지, 영상 같은 자료를 만들고, 에이전트를 만들고 다듬는 데 쓴다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>관리형 에이전트가 클라이언트에서 없애 주는 일은?</span></summary><div class="answer">모델이 보낸 함수 호출을 해석하고, 실행하고, 결과를 다시 보내는 루프. 이 루프가 서버의 샌드박스에서 돌아 API 호출 한 번이 된다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>AI Studio에서 API 키를 받고 예산 한도부터 정한다<span class="how">ai.studio 또는 ai.dev</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>플레이그라운드의 Antigravity 에이전트에게 자기 환경을 조사시켜 본다<span class="how">확인: 운영체제, CPU, 메모리, 설치된 도구가 무엇인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>갤러리의 AI Talk Radio를 리믹스해 에이전트 파일 구조를 본다<span class="how">AGENTS.md, skills 폴더, 스킬 안의 Python 파일</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>지금 쓰는 AGENTS.md와 스킬을 환경 소스로 넣어 본다<span class="how">확인: 시스템 지시문에 자동으로 들어가 동작이 바뀌는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>클라이언트에서 함수 호출 루프를 직접 돌리는 코드를 찾는다<span class="how">관리형 에이전트 API 호출 한 번으로 바꿀 수 있는지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>오래 걸리는 생성 요청은 ID를 받고 폴링이나 스트리밍으로 기다린다<span class="how">확인: HTTP 연결을 끝날 때까지 붙잡고 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>매번 반복하는 준비 작업을 환경 ID로 저장한다<span class="how">예: CLI 설치, 스킬 추가, 기본 점검. 확인: 새 에이전트가 준비된 상태에서 출발하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>여러 에이전트가 한 환경을 나눠 쓸 때 어떤 파일로 일을 넘길지 정한다<span class="how">예: 조사 결과 파일, 작업 메모 파일</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>쓰기 전에 발표에서 다루지 않은 부분을 공식 문서로 확인한다<span class="how">샌드박스 격리 방식, 사용 비용, 환경 보관 기간, 실행 시간 제한</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>샌드박스</td><td>Sandbox. 에이전트가 코드를 돌리고 파일을 쓰는 따로 떨어진 실행 공간</td></tr>
+              <tr><td>환경</td><td>Environment. 에이전트가 일할 샌드박스를 정하는 칸. remote면 Google이 관리하는 클라우드 샌드박스를 쓴다</td></tr>
+              <tr><td>관리형 에이전트</td><td>Managed agents. 에이전트 루프와 실행 환경을 제공사 서버가 맡아 돌리는 에이전트</td></tr>
+              <tr><td>Interactions API</td><td>Gemini 모델과 에이전트를 같은 모양으로 부르는 Google의 새 API</td></tr>
+              <tr><td>Agents API</td><td>기본 에이전트, 지시문, 환경을 묶어 다시 쓸 수 있는 에이전트로 저장하는 API</td></tr>
+              <tr><td>하네스</td><td>Harness. 에이전트의 뒷단. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>함수 호출</td><td>Function calling. 모델이 정해진 함수를 불러 달라고 요청하고, 그 결과를 받아 이어서 일하는 방식</td></tr>
+              <tr><td>서버 측 상태 관리</td><td>Server-side state. 대화 기록을 클라이언트 대신 서버가 들고 있는 것</td></tr>
+              <tr><td>폴링</td><td>Polling. 작업이 끝났는지 일정 간격으로 물어보는 방식</td></tr>
+              <tr><td>스트리밍</td><td>Streaming. 결과를 다 만들 때까지 기다리지 않고 만들어지는 대로 받는 방식</td></tr>
+              <tr><td>응답 형식</td><td>Response modality. 모델이 돌려줄 결과의 종류. 글, 오디오, 이미지 등</td></tr>
+              <tr><td>시스템 지시문</td><td>System instruction. 에이전트의 역할과 규칙을 적어 모든 요청 앞에 붙이는 지시</td></tr>
+              <tr><td>스킬</td><td>Skills. 특정 일을 하는 방법을 적은 설명과 스크립트 묶음. skills 폴더에 두면 자동으로 읽힌다</td></tr>
+              <tr><td>AGENTS.md</td><td>에이전트에게 줄 지시를 적은 마크다운 파일. 코딩 에이전트에서 쓰던 것을 그대로 쓸 수 있다</td></tr>
+              <tr><td>하위 에이전트</td><td>Subagent. 다른 에이전트가 맡긴 일을 받아 처리하는 에이전트</td></tr>
+              <tr><td>앱 / 리믹스</td><td>Applet / remix. AI Studio 안에서 도는 작은 앱과, 그 앱을 복사해 내 필요에 맞게 고치는 것</td></tr>
+              <tr><td>CVE</td><td>공개된 보안 취약점마다 붙는 고유 번호</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 에이전트에 외부 도구와 데이터를 연결하는 규약</td></tr>
+              <tr><td>vCPU</td><td>가상 머신에 할당된 CPU 코어 하나</td></tr>
+              <tr><td>Terraform / Kubernetes / Firecracker</td><td>인프라를 코드로 만드는 도구 / 컨테이너를 여러 서버에 배치하고 운영하는 도구 / 가벼운 가상 머신을 띄우는 도구. 발표자가 "이제 신경 쓰지 않아도 된다"며 든 예</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>발표 전날 나온 모델: Nano Banana Light (추정), Omni Flash (추정)</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>언어 모델의 짧은 역사: 문장 잇기에서 목표 맡기기까지</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>AI Studio에서 시작하기</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>Interactions API 소개</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>서버 측 상태, 오래 걸리는 작업, 도구 섞어 쓰기</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>코드 예시: 상태 이어 가기, 오디오, 이미지</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>도구 사용과 CVE 탐지 에이전트</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>턴에서 단계로</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>Antigravity 에이전트와 하네스</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>environment 칸과 원격 샌드박스</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>환경 유지와 에이전트 간 공유</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>소스, 스킬, AGENTS.md</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>Agents API</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>에이전트가 만든 환경을 ID로 다시 쓰기</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>Gemini API CLI와 스킬</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>데모: AI Talk Radio</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>파인애플 피자를 주제로 실행</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>미리 만든 방송 재생: 시리얼이 먼저냐 우유가 먼저냐</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>갤러리에서 앱 찾고 리믹스하기</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>에이전트는 파일이다: AGENTS.md와 스킬</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>플레이그라운드의 에이전트 메뉴</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>샌드박스 조사: Ubuntu, vCPU 8개, 16 GB</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>환경 내려받기</td></tr>
+              <tr><td><span class="ts">19:10</span></td><td>동작 흐름 정리: 서버에서 도는 에이전트 루프</td></tr>
+              <tr><td><span class="ts">19:50</span></td><td>MCP 서버 연결</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>문서 안내와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'oWTEiYpxl80:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

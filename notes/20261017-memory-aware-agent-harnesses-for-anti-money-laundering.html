@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 하네스 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#why">모델이 아니라 하네스</a></li>
+      <li><a href="#bank">시나리오: 은행 자금세탁 감시</a></li>
+      <li><a href="#stack">에이전트 스택과 데이터 층</a></li>
+      <li><a href="#shapes">AI 앱의 네 가지 모양</a></li>
+      <li><a href="#agent">에이전트는 사람을 닮았다</a></li>
+      <li><a href="#components">하네스를 이루는 결정들</a></li>
+      <li><a href="#files">파일인가 데이터베이스인가</a></li>
+      <li><a href="#memory">단기 기억과 장기 기억</a></li>
+      <li><a href="#context">컨텍스트는 작을수록 좋다</a></li>
+      <li><a href="#loop">에이전트 루프</a></li>
+      <li><a href="#toolbox">툴박스와 스킬박스</a></li>
+      <li><a href="#distill">스킬 증류와 지속 학습</a></li>
+      <li><a href="#hierarchy">지시 계층과 요청의 구성</a></li>
+      <li><a href="#demo">워크숍 데모</a></li>
+      <li><a href="#qa">질의응답에서 나온 것</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 프로젝트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-17 · 52분 · 영어 발표 한글 정리</span>
+      <h1>모델이 아니라 하네스를 만든다</h1>
+      <p class="lead">프론티어 모델은 바꿀 수 없지만, 모델을 감싸는 하네스는 우리가 전부 설계한다. 은행의 자금세탁 감시 에이전트를 예로 삼아, 메모리 층과 에이전트 루프와 스킬 검색으로 컨텍스트 윈도우를 작게 유지하는 방법을 다룬다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=KtBivPzmOM8" target="_blank" rel="noopener">Memory-Aware Agent Harnesses for Anti-Money Laundering</a></span>
+        <span>발표: Nacho Martinez (Oracle, AI 개발자 애드보킷 · 데이터 과학자)</span>
+      </div>
+      <p class="note">영어 워크숍의 자동 자막을 바탕으로 한글로 정리했다. 앞 30분은 이론 강의, 뒤 20분은 실습 안내와 질의응답이다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 것만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>모델은 프론티어 랩이 만들고 우리는 손댈 수 없다. <strong>같은 모델이라도 하네스가 다르면 성능이 달라진다.</strong> 그래서 하네스가 지금 가장 재미있는 주제다.</li>
+        <li>하네스는 모델이 원래 갖고 있지 않은 세 가지를 만들어 준다. <strong>기억, 도구 사용, 인식.</strong> 사람으로 치면 데이터베이스, 손발, 감각이다.</li>
+        <li><strong>컨텍스트 윈도우는 작을수록 문제를 잘 푼다.</strong> 광고된 한도 안에서도 토큰이 쌓일수록 정확도가 떨어진다. 요약과 압축으로 줄인다.</li>
+        <li>기억은 단기와 장기로 나눈다. 장기 기억은 다시 <strong>에피소드 기억, 절차 기억, 의미 기억</strong>으로 나눈다. 처음엔 두 구조만 두고 시작하라.</li>
+        <li>스킬 100개를 전부 컨텍스트에 넣으면 한도를 넘는다. <strong>도구와 스킬을 벡터로 바꿔 두고 필요할 때 가장 가까운 3개만 꺼낸다.</strong></li>
+        <li>파일과 데이터베이스는 경쟁 관계가 아니다. 여러 에이전트가 같은 파일에 쓰는 문제는 <strong>데이터베이스가 30년 전에 ACID로 해결한 일</strong>이다.</li>
+        <li>워크숍의 결과물은 은행 거래를 24시간 감시하며 <strong>의심 거래를 차단하지 않고 표시만 하는 에이전트</strong>다. 최종 판단은 사람이 한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="why">
+        <header><span class="num">01</span><h2>모델이 아니라 하네스 <span class="ts">03:50</span></h2></header>
+        <p>발표자는 OpenAI가 수천 개의 에이전트를 띄워 오래 풀리지 않던 수학 문제를 풀었다는 소식을 예로 든다. 이런 에이전트는 결론에 이르기까지 사람이 전혀 끼지 않는다. 10시간, 100시간을 혼자 돌아야 한다.</p>
+        <p>그런데 큰 언어 모델 <span class="en">LLM</span> 자체에는 그런 능력이 없다. 컨텍스트 윈도우는 유한하고, 기억 장치는 모델에 내장돼 있지 않다. 긴 자율 작업을 가능하게 하는 부품은 전부 <strong>우리가 모델 바깥에 만들어 붙여야</strong> 한다.</p>
+        <div class="callout">
+          <span class="title">발표의 전제</span>
+          <span>프론티어 모델에 집중할 필요가 없다. 모델은 가져다 쓰면 된다. 우리가 바꿀 수 있고 점점 더 깊이 손댈 수 있는 부분은 하네스 <span class="en">harness</span>다. 그래서 워크숍은 하네스를 만든다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="bank">
+        <header><span class="num">02</span><h2>시나리오: 은행 자금세탁 감시 <span class="ts">05:00</span></h2></header>
+        <p>청중에 금융권 사람이 많다는 말을 듣고 발표자는 워크숍 소재를 은행으로 바꿨다. 중간 규모 은행에 의심스러운 거래가 자주 들어오고, 그 거래는 다섯 가지 유형으로 분류된다.</p>
+        <p>예를 들어 어떤 계좌에 100만 달러가 들어온 뒤 사흘 동안 현금 인출기에서 5만 달러씩 빠져나간다. 큰돈을 넣고 바로 잘게 흩어 뽑는 행동은 자금세탁 방지 <span class="en">AML, Anti-Money Laundering</span> 관점에서 수상하다.</p>
+        <p>에이전트가 할 일은 이런 거래를 자율적으로 판단하거나 적어도 <strong>표시</strong>해 두는 것이다. 목표는 은행 직원이 거래를 들여다보는 시간을 줄이는 것이다. 사람을 대신해 계좌를 막는 것이 아니다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="stack">
+        <header><span class="num">03</span><h2>에이전트 스택과 데이터 층 <span class="ts">05:50</span></h2></header>
+        <p>에이전트와 대화할 때 우리가 만지는 건 응용 층이다. 그 아래에 모델, 인프라, 컴퓨팅이 있다. 이 셋은 우리가 통제하기 어렵다. 특히 남의 모델을 쓸 때는 더 그렇다.</p>
+        <p>발표자가 하루 동안 집중하는 곳은 <strong>데이터 층</strong>이다. 우리가 조작하고 설계할 수 있는 것은 전부 여기 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>데이터 층의 부품</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트 루프</td><td>전체를 굴리는 운전자. 가장 중요한 부품이고 우리가 고칠 수 있다</td></tr>
+              <tr><td>게이트웨이 · MCP</td><td>외부 데이터 소스와 연결한다</td></tr>
+              <tr><td>메모리 층</td><td>정보를 저장하고 다듬고 필요할 때 다시 불러온다</td></tr>
+              <tr><td>컨텍스트 엔지니어링</td><td>작업 중인 컨텍스트 윈도우를 자동으로 요약하고 압축해 줄인다</td></tr>
+              <tr><td>도구 · 스킬</td><td>컨텍스트를 작게 유지하면서 똑똑한 일을 하게 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="shapes">
+        <header><span class="num">04</span><h2>AI 앱의 네 가지 모양 <span class="ts">07:40</span></h2></header>
+        <ol class="plain">
+          <li><strong>LLM 챗봇</strong>: 가장 쉽다. 모델에 말을 걸 수 있게 한 것</li>
+          <li><strong>RAG 앱</strong>: 발표자 표현으로는 "그럴싸하게 꾸민 벡터 검색"</li>
+          <li><strong>LLM 주도 워크플로</strong>: 자동화를 준다</li>
+          <li><strong>AI 에이전트</strong>: 자율성을 준다</li>
+        </ol>
+        <p>우리가 매일 쓰는 Claude Code, Codex, Pi, OpenClaw, Hermes Agent 같은 시스템은 3번과 4번의 결합이다. 발표자는 이를 <strong>에이전틱 시스템</strong>이라 부른다. 자동화와 자율성을 합친 것이다.</p>
+        <div class="callout">
+          <span class="title">발표자가 짚은 모순</span>
+          <span>엔지니어들은 이런 에이전틱 시스템을 매일 쓴다. 그런데 자기 AI 앱을 만들 때는 챗봇이나 RAG로 끝낸다. 자기가 소비하는 방식으로 자기 앱을 만들지 않는다. 워크숍은 그 간극을 메우려 한다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="agent">
+        <header><span class="num">05</span><h2>에이전트는 사람을 닮았다 <span class="ts">09:10</span></h2></header>
+        <p>발표자는 AI 에이전트를 사람에 빗대어 정의한다. LLM이 추론을 맡는 계산 주체다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>에이전트</th><th>사람</th><th>누가 만드나</th></tr></thead>
+            <tbody>
+              <tr><td>추론 (LLM)</td><td>뇌</td><td>프론티어 랩. 우리는 통제권이 거의 없다</td></tr>
+              <tr><td>기억 (데이터베이스)</td><td>뇌의 기억</td><td>우리</td></tr>
+              <tr><td>도구</td><td>손발. 세상과 상호작용한다</td><td>우리</td></tr>
+              <tr><td>입력</td><td>눈과 귀 같은 감각</td><td>우리</td></tr>
+              <tr><td>컨텍스트 윈도우</td><td>주의력. 영화 일곱 편을 동시에 보면 하나도 이해 못 한다</td><td>모델의 한계. 우리는 그 안을 관리한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>하네스의 정의 <span class="ts">10:40</span></h3>
+        <p>하네스는 우리가 통제할 수 있는 세 가지, 즉 <strong>기억, 도구 사용, 인식</strong>을 세우는 데 필요한 모든 발판이다. 모델은 손댈 여지가 거의 없으니 깊이 다루지 않는다.</p>
+        <blockquote>하네스 설정만 바꿔도 같은 프론티어 모델이 특정 작업에서 더 잘하거나 더 못하게 된다.<cite>발표자의 말을 옮김 <span class="ts">11:20</span></cite></blockquote>
+      </section>
+
+      <!-- 6 -->
+      <section id="components">
+        <header><span class="num">06</span><h2>하네스를 이루는 결정들 <span class="ts">11:40</span></h2></header>
+        <p>하네스 하나를 만들려면 일곱 개에서 여덟 개의 부품에 대해 결정을 내려야 한다. 지속 학습까지 넣으면 여덟이다.</p>
+        <ul class="plain">
+          <li><strong>모델</strong>: 어느 모델을 부를 것인가</li>
+          <li><strong>저장소</strong>: 데이터를 어디에 둘 것인가</li>
+          <li><strong>인코딩과 검색</strong>: 두 벡터 사이 거리를 어떻게 재서 제대로 꺼낼 것인가</li>
+          <li><strong>기억의 종류</strong>: 사람처럼 단기와 장기로 나눌 것인가, 다른 칸으로 나눌 것인가</li>
+          <li><strong>의미 층</strong> <span class="en">semantic layer</span>: 말하지 않았지만 전제된 것들</li>
+          <li><strong>에이전트 루프</strong>: 에이전트를 반복해서 돌리는 장치</li>
+          <li><strong>컨텍스트 엔지니어링</strong>: 컨텍스트를 어떻게 조립하고 줄일 것인가</li>
+          <li><strong>지속 학습</strong>: 시간이 지나며 어떻게 좋아질 것인가</li>
+        </ul>
+        <div class="callout">
+          <span class="title">의미 층이란 <span class="ts">12:20</span></span>
+          <span>발표자가 무대에서 말하고 청중은 듣고 있다. 누구도 "노래하지 마세요"라고 말하지 않았지만 아무도 노래하지 않는다. 지금 상황의 의미가 그렇게 정하기 때문이다. 모델에게도 이렇게 명시되지 않았지만 전제된 맥락을 주는 층이 필요하다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="files">
+        <header><span class="num">07</span><h2>파일인가 데이터베이스인가 <span class="ts">13:10</span></h2></header>
+        <p>최근 큰 논쟁이 있었다. 한쪽은 "전부 파일에 넣으면 한 달 뒤 에이전트가 저절로 좋아진다"고 하고, 다른 쪽은 데이터베이스 최대주의자다.</p>
+        <p>발표자가 청중에게 물었다. 여러 에이전트가 같은 파일에 동시에 쓸 때 요즘 에이전트는 어떻게 피하나. 답은 <strong>워크트리</strong> <span class="en">git worktree</span>다. 그런데 이건 우회책이다. 파일은 동시 쓰기가 들어오면 어느 쓰기가 먼저인지, 수정 전에 읽은 쪽은 어떻게 하는지 같은 일관성 문제를 안고 있다.</p>
+        <div class="shift" aria-label="워크트리 우회책에서 트랜잭션 일관성으로">
+          <div><span class="tag">지금의 우회책</span><b>에이전트마다 워크트리를 따로 판다</b><span class="muted">파일 충돌을 피하기 위해 작업 공간을 복제한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">30년 전에 해결된 답</span><b>ACID 쓰기</b><span class="muted">원자성, 일관성, 격리성, 지속성이 보장되면 동시 쓰기 문제가 사라진다</span></div>
+        </div>
+        <p>결론은 양자택일이 아니다. 파일은 비정형 데이터를 대량으로 담는 데 훌륭하다. 데이터베이스는 다른 종류의 일에 맞다. <strong>경우에 따라 둘을 골라 쓰고, 바퀴를 다시 발명하지 말라.</strong></p>
+        <p class="note">발표자는 Oracle 소속이고 스스로 "데이터베이스 사람"이라고 말한다. 워크숍도 Oracle 데이터베이스와 Oracle 클라우드 위에서 돈다. 데이터베이스를 권하는 대목은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="memory">
+        <header><span class="num">08</span><h2>단기 기억과 장기 기억 <span class="ts">15:50</span></h2></header>
+        <p>메모리 층은 에이전트가 정보를 쓰고, 다듬고, 때맞춰 불러오게 하는 모든 장치다. 어떤 종류로 나눌지는 엔지니어가 정한다. 발표자가 제안하는 구분은 이렇다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">단기 기억</span>
+            <p><strong>컨텍스트 윈도우 자체</strong>다. 대화가 끝나면 사라진다. 새 대화는 0에서 시작한다. 용량이 작아서 모든 걸 담을 수 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">장기 기억 · 세 갈래</span>
+            <ul>
+              <li><strong>에피소드 기억</strong> <span class="en">episodic</span>: 일어난 일. 지난 대화, 도구 호출 기록, 대화 요약</li>
+              <li><strong>절차 기억</strong> <span class="en">procedural</span>: 하는 법. 스킬, 그리고 스킬을 순서대로 묶은 워크플로</li>
+              <li><strong>의미 기억</strong> <span class="en">semantic</span>: 말하지 않은 것. 사용자가 누구인지, 선호, 좋아하는 프레임워크</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="context">
+        <header><span class="num">09</span><h2>컨텍스트는 작을수록 좋다 <span class="ts">17:50</span></h2></header>
+        <p>왜 전부 단기 기억에 넣지 못하나. 용량이 작기 때문만은 아니다. <strong>어텐션 행렬이 커질수록 모델 성능이 나빠진다.</strong> 어텐션 행렬은 사실상 컨텍스트 윈도우다. 모든 모델이 그렇다.</p>
+        <p>발표자가 인용한 연구에 따르면, 컨텍스트가 0토큰일 때와 이미 25만 6천 토큰이 쌓였을 때는 같은 문제의 정답률이 크게 다르다. 지금 한도가 100만 토큰인 건 KV 캐시 덕분이다. 광고된 한도를 넘겨 계속 밀어 넣으면 성능이 "끔찍하게" 떨어진다.</p>
+        <blockquote>컨텍스트 윈도우가 작을수록 문제를 더 잘 푼다. 사람이 생각할 수 있는 모든 종류의 문제에 적용된다.<cite>발표자의 말을 옮김 <span class="ts">18:50</span></cite></blockquote>
+        <h3>줄이는 두 가지 방법 <span class="ts">19:00</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">컨텍스트 요약</span>
+            <p>모델에게 지금까지 말한 것을 짧게 요약해 달라고 한다. 다음 대화는 그 요약에서 시작한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">압축 <span class="en">compaction</span></span>
+            <p>대화 덩어리를 데이터베이스나 파일에 ID를 붙여 저장한다. 나중에 필요하면 ID와 오프셋으로 그 부분만 다시 읽어 온다. 파일을 읽는 것과 비슷하다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="loop">
+        <header><span class="num">10</span><h2>에이전트 루프 <span class="ts">19:40</span></h2></header>
+        <p>에이전트 루프는 지금까지 말한 모든 부품을 모는 자동차다. 한 바퀴는 이렇게 돈다.</p>
+        <ol class="plain">
+          <li><strong>컨텍스트 조립</strong>: 스킬, 도구, 지난 대화, 파일, 데이터베이스에서 필요한 것을 동적으로 끌어와 컨텍스트 윈도우에 넣는다</li>
+          <li><strong>추론</strong>: 모델 API를 호출해 무엇을 할지 결정한다</li>
+          <li><strong>실행과 반복</strong>: 원하면 무한히 돈다</li>
+        </ol>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>워크숍 루프의 설정</th><th>값</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>최대 반복 횟수</td><td>8회</td><td>발표자의 API 크레딧을 지키기 위해. 완전히 바꿀 수 있다</td></tr>
+              <tr><td>반복당 추론 시간</td><td>최대 60초</td><td>같은 이유</td></tr>
+              <tr><td>한 번에 꺼내는 도구 · 스킬</td><td>각 3개 (k=3)</td><td>기본값. 리랭커를 붙여 1개로 좁힐 수 있다 <span class="ts">39:30</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>사람이 전혀 끼지 않는 수학 문제 풀이 같은 작업에는 반대로 <strong>자동 압축과 거의 무한한 인내</strong>가 기본값이어야 한다. 루프의 설정은 문제에 따라 달라진다. <span class="ts">49:00</span></p>
+      </section>
+
+      <!-- 11 -->
+      <section id="toolbox">
+        <header><span class="num">11</span><h2>툴박스와 스킬박스 <span class="ts">20:50</span></h2></header>
+        <p>발표자는 스킬을 이미 100개쯤 설치해 두었다고 한다. 스킬 하나가 3천에서 5천 토큰이다. 전부 컨텍스트에 넣으면 광고된 한도를 금방 넘고, 실제 대화에 쓸 자리가 남지 않는다.</p>
+
+        <figure class="chart" aria-label="스킬 100개를 전부 올리면 30만에서 50만 토큰, 광고된 한도는 25만 6천 또는 100만 토큰">
+          <span class="chart-title">스킬 100개를 전부 컨텍스트에 넣으면 (토큰)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>스킬 100개 × 3천~5천 토큰</span><span class="val">300,000~500,000</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="스킬 100개: 30만~50만 토큰, 상한으로 그림"></div><div class="baseline" style="left:25.6%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>광고된 한도 (작은 쪽)</span><span class="val">256,000</span></div>
+              <div class="track"><div class="fill" style="width:25.6%" title="한도 256K"></div><div class="baseline" style="left:25.6%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>광고된 한도 (큰 쪽)</span><span class="val">1,000,000</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="한도 1M"></div><div class="baseline" style="left:25.6%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 256K 한도</span><span>1,000,000</span></div>
+          <span class="caption">발표자가 말한 수치로 계산했다. 스킬 막대는 상한인 50만으로 그렸다. 스킬만으로 작은 한도를 넘고, 큰 한도에서도 절반을 먹는다.</span>
+        </figure>
+
+        <h3>해법: 도구와 스킬을 벡터로 바꾼다 <span class="ts">21:20</span></h3>
+        <ol class="plain">
+          <li>도구와 스킬 각각에 대해 벡터 임베딩을 만들어 벡터 저장소에 넣는다. 도구용 저장소와 스킬용 저장소를 따로 둔다</li>
+          <li>에이전트 루프가 도구나 스킬이 필요해지면 벡터 유사도 검색을 한다</li>
+          <li>가장 관련 있는 것만 꺼내 컨텍스트에 올린다</li>
+          <li>문제를 풀고 나면 다시 내려놓는다</li>
+        </ol>
+        <p>도구 사용은 아주 흔하다. bash 명령 하나, 디렉터리 이동 하나가 모두 도구 호출이다. 발표자에 따르면 어떤 경우에는 <strong>컨텍스트 윈도우의 절반 이상이 도구와 스킬</strong>이 차지한다. 그 크기를 늘 의식하라는 것이 요점이다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="distill">
+        <header><span class="num">12</span><h2>스킬 증류와 지속 학습 <span class="ts">22:30</span></h2></header>
+        <h3>스킬 증류 <span class="en">skill distillation</span></h3>
+        <p>지난 대화와 실행 기록에서 의미 있는 것을 뽑아낸다. 가장 쉬운 방법은 그것을 <code>SKILL.md</code> 하나로 써서 기존 스킬박스에 넣는 것이다. 발표자는 Hermes Agent를 이 분야의 선구자로 꼽는다.</p>
+        <p>예를 들어 프런트엔드 작업에서 잘 먹힌 색 조합 선호를 스킬로 남겨 둔다. 스킬은 임베딩돼 있으니, 다음에 "그때 그 색 스타일"이라고만 말해도 에이전트가 그 스킬을 알아서 고른다. 이렇게 루프가 컨텍스트를 조립할 때 알맞은 스킬을 스스로 찾는 것을 <strong>동적 스킬 발견</strong>이라 부른다.</p>
+
+        <h3>고정된 모델은 어떻게 좋아지나 <span class="ts">24:10</span></h3>
+        <p>프론티어 모델은 우리가 가중치를 못 만지니 "얼어 있다". 그래도 좋아지게 만드는 길이 세 갈래 있다. 발표자는 이를 지속 학습 <span class="en">continual learning</span>의 세 범주로 묶는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>범주</th><th>무엇을 바꾸나</th><th>예</th></tr></thead>
+            <tbody>
+              <tr><td>파라메트릭 기억</td><td>신경망의 가중치(파라미터)</td><td>미세 조정, 저차원 적응 <span class="en">LoRA</span></td></tr>
+              <tr><td>표현 기억</td><td>임베딩</td><td>이 문제에 더 맞는 임베딩 모델을 만들어 검색 품질을 올린다</td></tr>
+              <tr><td>비파라메트릭 기억</td><td>모델 바깥의 데이터 층</td><td>이 발표에서 다룬 모든 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 앞 두 범주를 다루는 무료 1시간 강좌를 Andrew Ng의 DeepLearning.AI와 함께 냈다고 소개했다. 자기 교육 콘텐츠를 홍보하는 대목이다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="hierarchy">
+        <header><span class="num">13</span><h2>지시 계층과 요청의 구성 <span class="ts">25:50</span></h2></header>
+        <p>모델 API 호출에는 지시 계층 <span class="en">instruction hierarchy</span>이 있다. 들어가는 내용마다 모델이 부여하는 무게가 다르다.</p>
+        <ol class="plain">
+          <li><strong>시스템 프롬프트</strong>: 가장 무겁다. 그렇다고 모든 걸 여기 넣으면 계층이 무너진다</li>
+          <li><strong>개발자 지시</strong>: 이 앱에 특화된 지시</li>
+          <li><strong>사용자 요청</strong>: 우리가 채팅창에 치는 것. 세 번째다</li>
+          <li><strong>도구와 스킬</strong>: 가장 가볍다. 요청 맨 아래에 붙는다. 꽂았다 뺐다 하는 자리로 생각하라 <span class="ts">34:30</span></li>
+        </ol>
+        <p>이 계층 덕분에 모델이 어떤 것에 더 집중할지 정할 수 있다. 질의응답에서 "에피소드 기억이 지난 대화와 혼동되지 않나"라는 질문이 나왔을 때도 발표자의 답은 같았다. 얼마나 무게를 줄지 설계자가 정하고, 중요한 기억이면 원문 대신 벡터로 저장해 꺼내라.</p>
+
+        <h3>요청 한 건은 무엇으로 채워지나 <span class="ts">36:40</span></h3>
+        <figure class="chart" aria-label="요청 한 건의 토큰 구성: 시스템 프롬프트 5천~1만, 사용자 질문 100~1천, 도구 출력과 검색 문서 3만 5천~10만">
+          <span class="chart-title">API 요청 한 건의 토큰 구성 (발표자 추정)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>시스템 프롬프트</span><span class="val">5,000~10,000</span></div>
+              <div class="track"><div class="fill" style="width:10%" title="시스템 프롬프트: 5천~1만 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>사용자 질문</span><span class="val">100~1,000</span></div>
+              <div class="track"><div class="fill" style="width:1%" title="사용자 질문: 100~1천 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>도구 출력 · 검색된 문서 · 스킬</span><span class="val">35,000~100,000</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="도구 출력과 검색 문서: 3만 5천~10만 토큰"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50,000</span><span>100,000</span></div>
+          <span class="caption">막대는 각 범위의 상한으로 그렸다. 발표자는 도구와 스킬이 요청의 약 80%라고 말했다. 사용자가 친 글은 거의 보이지 않는다.</span>
+        </figure>
+        <div class="callout">
+          <span class="title">왜 비용이 다섯 배로 안 나오나 <span class="ts">35:50</span></span>
+          <span>요청의 80%가 직전 요청과 같으면 모델 제공자는 그 부분을 다시 계산하지 않고 캐시에서 꺼낸다. 발표자는 이 캐시가 없었다면 지금보다 네다섯 배 비쌌을 것이라고 말한다.</span>
+        </div>
+        <p class="note">발표자는 이 기능을 "시맨틱 캐시"라고 불렀다. 설명한 동작, 즉 앞부분이 같은 요청을 다시 계산하지 않는 것은 보통 프롬프트 캐시 또는 프리픽스 캐시라고 부른다. 의미가 비슷한 질문의 답을 재사용하는 시맨틱 캐시와는 다른 기능이다.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="demo">
+        <header><span class="num">14</span><h2>워크숍 데모 <span class="ts">27:00</span></h2></header>
+        <p>워크숍은 GitHub Codespaces 위에서 돈다. 참가자는 발표자가 만든 안내 사이트에 GitHub 계정으로 가입하면 저장소 초대를 자동으로 받는다. 비용은 발표자가 낸다. 집이나 호텔에서 이어서 해도 된다고 했다. <span class="ts">51:00</span></p>
+        <h3>자율 에이전트의 화면 <span class="ts">29:20</span></h3>
+        <ul class="plain">
+          <li>에이전트는 24시간 배경에서 돈다. 잠도 안 자고 사람의 필요도 없다</li>
+          <li>가짜 거래 데이터가 계속 생성된다. 정상도 있고 문제도 있다</li>
+          <li>모델은 Oracle 클라우드 <span class="en">OCI</span>에서 도는 Grok 4.3(추정)이다. 자막에서 이름이 뭉개져 확실하지 않다</li>
+          <li>에이전트가 의심 거래를 목록에 추가한다. 에이전트의 컨텍스트 윈도우를 눈으로 볼 수 있는 화면이 따로 있다</li>
+          <li>증거를 모으고, 벡터 저장소로 만든 지식 공간을 검색하고, 도구를 여러 번 호출해 의심 활동 보고서 <span class="en">SAR</span>를 자동으로 작성한다</li>
+          <li>최근 30건의 은행 이벤트를 보여 주는 화면이 있다</li>
+        </ul>
+        <div class="callout">
+          <span class="title">사람의 삶을 망치지 않는 설계</span>
+          <span>에이전트는 "이 사람 수상하니 은행 전체를 막자"고 하지 않는다. 결정을 내리되 기록으로 남기고, 사람이 나중에 검토한다. 조사 과정의 시간을 줄이는 것이 목적이다.</span>
+        </div>
+        <p>실습은 학생용 노트북 하나로 진행된다. 모델을 연결하고, 데이터베이스에 붙고, 위에서 설명한 부품을 하나씩 구현하는 할 일 목록을 채운다.</p>
+      </section>
+
+      <!-- 15 -->
+      <section id="qa">
+        <header><span class="num">15</span><h2>질의응답에서 나온 것 <span class="ts">33:30</span></h2></header>
+        <p>마이크 없이 들어온 질문이 많아 자막에는 답만 남았다. 발표자가 되풀이한 질문 요지와 답을 정리한다.</p>
+
+        <h3>하네스마다 시작 토큰이 얼마나 다른가 <span class="ts">37:20</span></h3>
+        <p>컨텍스트 윈도우는 0에서 시작하지 않는다. 첫 요청부터 이미 1만 토큰 가까이 차 있다. 발표자가 읽은 논문에 따르면 하네스별 차이가 크다.</p>
+        <figure class="chart" aria-label="첫 요청에 포함되는 토큰: Pi 약 6천, 다른 하네스 3만~4만">
+          <span class="chart-title">하네스가 첫 요청에 넣는 토큰 (발표자가 인용한 논문)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Pi</span><span class="val">약 6,000</span></div>
+              <div class="track"><div class="fill key" style="width:15%" title="Pi: 약 6천 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>다른 하네스들</span><span class="val">30,000~40,000</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="다른 하네스: 3만~4만 토큰, 상한으로 그림"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>20,000</span><span>40,000</span></div>
+          <span class="caption">Pi는 발표자가 가장 미니멀하고 효율적이라고 평한 하네스다. 다른 하네스 막대는 상한 4만으로 그렸다.</span>
+        </figure>
+
+        <h3>메모리 층은 어떻게 설계해야 효율적인가 <span class="ts">40:50</span></h3>
+        <ol class="plain">
+          <li><strong>단순하게 시작한다.</strong> 추상화와 부품을 많이 만들지 않는다. 단기와 장기, 두 구조만 둔다</li>
+          <li>컨텍스트에 있던 것 중 남길 가치가 있으면 장기 기억으로 <strong>승격</strong>한다. 처음엔 그냥 원문 텍스트로 어딘가에 둔다</li>
+          <li>그 텍스트를 벡터로 바꾼다</li>
+          <li>루프의 관찰 단계와 추론 단계 사이에 <strong>"장기 기억 떠올리기"</strong> 단계를 하나 끼운다. 질문 벡터와 저장된 기억 벡터의 거리가 충분히 가까우면 컨텍스트에 넣고, 멀면 버린다</li>
+        </ol>
+
+        <h3>MCP는 데이터베이스에 무슨 도움이 되나 <span class="ts">42:50</span></h3>
+        <p>이 워크숍은 MCP를 쓰지 않는다. 발표자는 데이터베이스에서 MCP가 푸는 문제를 하나로 꼽는다. 에이전트가 매번 SQL을 새로 지어내다 틀리는 일을 막는 것이다. SQL 엔진은 열다섯 가지쯤 되고 각각 미묘한 문법 차이가 있다. <strong>검증된 SQL 질의를 미리 만들어 두고 에이전트가 그것만 쓰게 하는 것</strong>이 MCP의 실용적 쓸모다.</p>
+
+        <h3>스킬을 왜 파일에서 grep하지 않고 임베딩하나 <span class="ts">44:20</span></h3>
+        <ul class="plain">
+          <li>파일에 텍스트로 두면 검색은 키워드나 정규식 매칭이 된다. 파일이 커질수록 성능은 선형이 아니라 <strong>제곱으로</strong> 나빠진다고 발표자는 말한다</li>
+          <li>임베딩은 사람이 읽는 설명 뒤에 숨은 의미까지 담는다. 차원은 최소 384에서 1,000 이상이다</li>
+          <li>그래서 <strong>하이브리드 검색</strong>으로 간다. 의미 검색(임베딩)과 키워드 검색을 합치는 방법으로 발표자는 RRF <span class="en">Reciprocal Rank Fusion</span>를 든다. 계산은 조금 늘지만 둘 중 하나만 쓸 때보다 검색 품질이 좋다</li>
+        </ul>
+
+        <h3>직접 하네스를 만들어야 하나 <span class="ts">47:30</span></h3>
+        <p>발표자는 이 자리의 누구도 새 Claude Code를 만들라고 기대하지 않는다. 시장에 이미 좋은 하네스가 있다. 대신 <strong>풀려는 문제를 작게 자르고, 거기에 붙는 작은 맞춤 하네스를 만들라</strong>고 한다. 컨설턴트가 이 워크숍의 이상적인 청중이다. 금융 고객용 하네스와 다른 데이터, 다른 제약을 가진 고객용 하네스는 다르다.</p>
+        <p>처음부터 만들 것인가. 발표자는 그렇다고 답한다. 그래야 필요 없는 90%를 걷어낼 수 있다. 모든 것은 결국 채팅 완성 API <span class="en">chat completions API</span> 위에 올라간다. 모델과 통신하는 부분을 하네스의 플러그인 하나로 보면, <strong>작을수록 좋다</strong>는 원칙이 분명해진다. <span class="ts">49:30</span></p>
+      </section>
+
+      <!-- 16 -->
+      <section id="recap">
+        <header><span class="num">16</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>모델은 못 바꾼다. <strong>하네스는 전부 우리가 설계한다.</strong> 같은 모델도 하네스에 따라 결과가 달라진다.</li>
+          <li>하네스가 채우는 세 가지는 <strong>기억, 도구 사용, 인식</strong>이다. 사람의 기억, 손발, 감각에 해당한다.</li>
+          <li>우리가 손댈 수 있는 곳은 <strong>데이터 층</strong>이다. 에이전트 루프, 게이트웨이와 MCP, 메모리 층, 컨텍스트 엔지니어링, 도구와 스킬.</li>
+          <li><strong>컨텍스트는 작을수록 좋다.</strong> 한도 안에서도 토큰이 쌓이면 정확도가 떨어진다. 요약과 압축으로 줄인다.</li>
+          <li>기억은 <strong>단기(컨텍스트 윈도우)와 장기</strong>로 나누고, 장기는 에피소드·절차·의미로 나눈다. 처음엔 두 구조만.</li>
+          <li>스킬 하나가 3천~5천 토큰이다. <strong>도구와 스킬을 임베딩해 두고 가장 가까운 3개만 꺼낸다.</strong> 리랭커로 1개까지 좁힐 수 있다.</li>
+          <li>지난 실행에서 <code>SKILL.md</code>를 뽑아 스킬박스에 넣는 것이 <strong>스킬 증류</strong>다. 모델을 안 건드리고 좋아지는 길이다.</li>
+          <li>지시 계층은 시스템 프롬프트, 개발자 지시, 사용자 요청, 도구·스킬 순이다. 요청의 약 80%는 도구와 문서다.</li>
+          <li>파일과 데이터베이스는 각자 맞는 일이 있다. 동시 쓰기는 <strong>ACID</strong>가 30년 전에 해결했다.</li>
+          <li>큰 하네스를 다시 만들지 말고, <strong>문제를 작게 잘라 작은 맞춤 하네스</strong>를 만든다. 자율 작업에는 자동 압축과 긴 인내가 기본값이다.</li>
+        </ol>
+      </section>
+
+      <!-- 17 -->
+      <section id="quiz">
+        <header><span class="num">17</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 프론티어 모델 대신 하네스에 집중하라고 한 이유는?</span></summary><div class="answer">모델은 프론티어 랩이 만들어 우리가 손댈 수 없다. 하네스는 우리가 전부 설계할 수 있고, 같은 모델도 하네스에 따라 성능이 달라진다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>하네스가 모델에 붙여 주는 세 가지와 그 사람 비유는?</span></summary><div class="answer">기억(데이터베이스, 뇌의 기억), 도구 사용(손발), 인식(눈과 귀 같은 감각). 추론만 모델이 맡는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>LLM 챗봇, RAG, LLM 주도 워크플로, AI 에이전트 중 Claude Code 같은 도구는 어디에 속하나?</span></summary><div class="answer">워크플로(자동화)와 에이전트(자율성)의 결합이다. 발표자는 이를 에이전틱 시스템이라 부른다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>컨텍스트 윈도우를 전부 채우지 말라는 이유는 용량 때문만인가?</span></summary><div class="answer">아니다. 어텐션 행렬이 커질수록 성능이 나빠진다. 0토큰에서 시작할 때보다 25만 6천 토큰이 쌓였을 때 정답률이 떨어지고, 광고된 한도를 넘기면 급격히 나빠진다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>컨텍스트 요약과 압축의 차이는?</span></summary><div class="answer">요약은 모델이 짧은 요약을 만들어 다음 대화의 시작점으로 쓴다. 압축은 대화 덩어리를 ID를 붙여 저장해 두고, 필요할 때 ID와 오프셋으로 그 부분만 다시 읽는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>장기 기억의 세 갈래와 각각의 예는?</span></summary><div class="answer">에피소드 기억(지난 대화, 도구 호출 기록, 요약), 절차 기억(스킬, 워크플로), 의미 기억(사용자가 누구인지, 선호, 좋아하는 프레임워크).</div></details>
+          <details><summary><span class="qn">Q7</span><span>스킬 100개를 전부 컨텍스트에 넣으면 왜 문제인가? 해법은?</span></summary><div class="answer">스킬 하나가 3천~5천 토큰이라 합치면 30만~50만 토큰이다. 한도를 넘거나 대화할 자리가 없다. 스킬과 도구를 임베딩해 벡터 저장소에 두고, 필요할 때 유사도 검색으로 가장 가까운 3개만 꺼낸다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>여러 에이전트가 같은 파일에 쓰는 문제의 현재 우회책과 발표자가 말한 근본 해법은?</span></summary><div class="answer">우회책은 git 워크트리다. 근본 해법은 데이터베이스가 30년 전에 해결한 ACID 트랜잭션이다. 파일과 데이터베이스는 각자 맞는 일에 쓴다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>지시 계층에서 가장 무거운 것과 가장 가벼운 것은?</span></summary><div class="answer">가장 무거운 것은 시스템 프롬프트, 가장 가벼운 것은 도구와 스킬이다. 사용자 요청은 세 번째다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>요청의 80%가 도구와 스킬인데 비용이 그만큼 안 드는 이유는?</span></summary><div class="answer">제공자가 직전 요청과 같은 앞부분을 캐시에서 꺼내 다시 계산하지 않는다. 발표자는 이를 시맨틱 캐시라 불렀지만 일반적으로 프롬프트 캐시라 부르는 기능이다. 없었다면 네다섯 배 비쌌을 것이라고 한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>메모리 층을 처음 설계할 때 발표자의 첫 권고는?</span></summary><div class="answer">단순하게. 단기와 장기 두 구조만 두고, 남길 가치가 있는 것을 원문 텍스트로 장기 기억에 승격한 뒤 벡터로 바꾼다. 루프의 관찰과 추론 사이에 기억 떠올리기 단계를 하나 끼운다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>데이터베이스 앞에 MCP를 두면 무엇이 좋아지나?</span></summary><div class="answer">에이전트가 매번 SQL을 새로 지어내 틀리는 대신, 미리 만들어 검증한 질의만 쓰게 할 수 있다. SQL 엔진은 열다섯 가지쯤이고 문법이 미묘하게 다르다.</div></details>
+          <details><summary><span class="qn">Q13</span><span>워크숍의 자금세탁 감시 에이전트는 의심 거래를 발견하면 무엇을 하나?</span></summary><div class="answer">계좌를 막지 않는다. 의심 거래를 목록에 표시하고 보고서를 만들어 사람이 나중에 검토하게 한다. 조사 시간을 줄이는 것이 목적이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="apply">
+        <header><span class="num">18</span><h2>내 프로젝트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>내 에이전트의 첫 요청이 몇 토큰인지 잰다<span class="how">기준: Pi는 약 6천, 다른 하네스는 3만~4만. 어디에 있는지 알고 시작한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>도구와 스킬이 컨텍스트에서 차지하는 비율을 잰다<span class="how">절반이 넘으면 벡터 검색으로 필요한 것만 꺼내는 구조를 검토한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>스킬과 도구 설명을 임베딩해 벡터 저장소에 넣는다<span class="how">도구용과 스킬용을 따로 둔다. 처음엔 k=3, 필요하면 리랭커로 1개까지</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>메모리는 단기와 장기 두 구조로만 시작한다<span class="how">남길 것을 원문으로 승격한 뒤 벡터화한다. 추상화를 먼저 늘리지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>루프의 관찰과 추론 사이에 "기억 떠올리기" 단계를 넣는다<span class="how">질문 벡터와 거리가 가까운 기억만 컨텍스트에 올린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>요약 또는 압축 중 하나를 루프에 기본으로 넣는다<span class="how">사람이 끼지 않는 긴 작업이면 자동 압축이 기본값이어야 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>잘 된 실행에서 SKILL.md 하나를 뽑아 스킬박스에 넣어 본다<span class="how">확인: 다음 비슷한 작업에서 그 스킬이 자동으로 검색되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>데이터베이스에 붙는 SQL은 미리 만들어 검증한 질의만 쓰게 한다<span class="how">에이전트가 매번 SQL을 지어내지 않게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>최대 반복 횟수와 반복당 시간 제한을 설정에 둔다<span class="how">워크숍 예: 8회, 60초. 문제에 맞게 바꾼다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>에이전트가 되돌리기 어려운 결정은 표시만 하고 사람이 확정하게 한다<span class="how">AML 예: 계좌 차단 대신 의심 목록에 추가하고 보고서를 남긴다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 19 -->
+      <section id="glossary">
+        <header><span class="num">19</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 기억, 도구, 입력, 루프, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>자금세탁 방지</td><td>AML, Anti-Money Laundering. 불법 자금의 출처를 숨기는 거래를 찾아내는 은행 업무</td></tr>
+              <tr><td>의심 활동 보고서</td><td>SAR, Suspicious Activity Report. 수상한 거래를 정리해 당국이나 내부 심사에 올리는 문서</td></tr>
+              <tr><td>컨텍스트 윈도우</td><td>모델이 한 번에 읽을 수 있는 입력 전체. 발표자는 단기 기억이자 주의력에 비유한다</td></tr>
+              <tr><td>어텐션 행렬</td><td>모델이 입력 토큰 사이의 관계를 계산하는 표. 컨텍스트가 길어질수록 커지고 성능이 떨어진다</td></tr>
+              <tr><td>KV 캐시</td><td>이미 처리한 토큰의 중간 계산을 저장해 긴 컨텍스트를 감당하게 하는 장치</td></tr>
+              <tr><td>압축</td><td>Compaction. 대화 덩어리를 ID와 함께 저장해 두고 필요할 때 일부만 다시 읽는 방법</td></tr>
+              <tr><td>에피소드 · 절차 · 의미 기억</td><td>일어난 일 · 하는 법 · 말하지 않은 전제. 장기 기억의 세 갈래</td></tr>
+              <tr><td>의미 층</td><td>Semantic layer. 명시되지 않았지만 상황이 전제하는 맥락을 모델에 주는 층</td></tr>
+              <tr><td>벡터 임베딩</td><td>글의 의미를 수백에서 수천 개의 숫자로 바꾼 것. 거리를 재서 비슷한 것을 찾는다</td></tr>
+              <tr><td>리랭커</td><td>Reranker. 검색으로 뽑은 후보 몇 개를 다시 정밀하게 순위 매기는 모델</td></tr>
+              <tr><td>하이브리드 검색 · RRF</td><td>의미 검색과 키워드 검색 결과를 합치는 방법. RRF는 두 순위를 합산하는 공식</td></tr>
+              <tr><td>스킬 증류</td><td>Skill distillation. 지난 실행에서 잘 된 방법을 뽑아 재사용 가능한 스킬로 남기는 것</td></tr>
+              <tr><td>지시 계층</td><td>Instruction hierarchy. 시스템 프롬프트, 개발자 지시, 사용자 요청, 도구 순으로 무게가 다른 것</td></tr>
+              <tr><td>프롬프트 캐시</td><td>앞부분이 같은 요청을 다시 계산하지 않고 재사용하는 기능. 발표자는 시맨틱 캐시라 불렀다</td></tr>
+              <tr><td>ACID</td><td>원자성, 일관성, 격리성, 지속성. 데이터베이스 트랜잭션이 보장하는 네 성질</td></tr>
+              <tr><td>워크트리</td><td>Git worktree. 한 저장소에서 작업 디렉터리를 여러 개 두는 기능. 에이전트 간 파일 충돌 회피에 쓰인다</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 에이전트에 외부 도구와 데이터를 표준 방식으로 연결하는 규약</td></tr>
+              <tr><td>LoRA</td><td>Low-Rank Adaptation. 모델 가중치 일부만 작게 추가 학습하는 미세 조정 기법</td></tr>
+              <tr><td>채팅 완성 API</td><td>Chat completions API. 메시지 목록을 보내고 모델의 다음 메시지를 받는 표준 호출 방식</td></tr>
+              <tr><td>OCI</td><td>Oracle Cloud Infrastructure. 워크숍의 모델과 데이터베이스가 도는 Oracle 클라우드</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 20 -->
+      <section id="timeline">
+        <header><span class="num">20</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>워크숍 안내, Codespaces 접속 방법</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>발표자 소개, DeepLearning.AI 강좌</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>오늘 다룰 주제 목록</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>왜 하네스인가: 자율 에이전트와 모델의 한계</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>시나리오: 중간 규모 은행의 의심 거래</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>에이전트 스택과 데이터 층</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>AI 앱의 네 가지 모양, 에이전틱 시스템</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>AI 에이전트의 정의: 사람 비유</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>하네스의 정의, 하네스가 성능을 바꾼다</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>하네스의 구성 요소, 의미 층</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>파일 vs 데이터베이스, 워크트리와 ACID</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>메모리 층: 단기와 장기, 세 갈래</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>컨텍스트는 작을수록 좋다</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>요약과 압축</td></tr>
+              <tr><td><span class="ts">19:40</span></td><td>에이전트 루프, 8회 · 60초</td></tr>
+              <tr><td><span class="ts">20:50</span></td><td>툴박스 · 스킬박스 패턴</td></tr>
+              <tr><td><span class="ts">22:30</span></td><td>스킬 증류, 동적 스킬 발견</td></tr>
+              <tr><td><span class="ts">24:10</span></td><td>얼어 있는 모델이 좋아지는 세 길</td></tr>
+              <tr><td><span class="ts">25:50</span></td><td>지시 계층</td></tr>
+              <tr><td><span class="ts">27:00</span></td><td>워크숍 UI 소개, 사람의 역할</td></tr>
+              <tr><td><span class="ts">29:20</span></td><td>데모: 자율 에이전트 화면</td></tr>
+              <tr><td><span class="ts">31:50</span></td><td>학생용 노트북 시작</td></tr>
+              <tr><td><span class="ts">33:30</span></td><td>Q: 에피소드 기억이 혼동되지 않나</td></tr>
+              <tr><td><span class="ts">34:30</span></td><td>Q: 스킬은 어디에 들어가나, 요청의 80%, 캐시</td></tr>
+              <tr><td><span class="ts">37:20</span></td><td>Q: 예산 관리, Pi 6천 vs 3만~4만</td></tr>
+              <tr><td><span class="ts">38:50</span></td><td>컨텍스트 조립 코드, k=3, 리랭커</td></tr>
+              <tr><td><span class="ts">40:50</span></td><td>Q: 메모리 층을 단순하게</td></tr>
+              <tr><td><span class="ts">42:50</span></td><td>Q: MCP와 SQL</td></tr>
+              <tr><td><span class="ts">44:20</span></td><td>Q: 파일 grep vs 임베딩, 하이브리드 검색</td></tr>
+              <tr><td><span class="ts">47:30</span></td><td>Q: 직접 하네스를 만들어야 하나</td></tr>
+              <tr><td><span class="ts">49:30</span></td><td>처음부터 만들어 90% 걷어내기, 채팅 완성 API</td></tr>
+              <tr><td><span class="ts">50:50</span></td><td>마무리, Codespaces 유지, Oracle 부스</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'KtBivPzmOM8:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

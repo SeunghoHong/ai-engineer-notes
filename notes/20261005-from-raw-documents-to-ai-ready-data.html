@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>문서 데이터 큐레이션 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#who">발표자와 회사</a></li>
+      <li><a href="#scenario">가상 고객: 법무 챗봇</a></li>
+      <li><a href="#scale">40개는 되는데 8만 개는 안 된다</a></li>
+      <li><a href="#quality">문서의 품질은 표의 품질과 다르다</a></li>
+      <li><a href="#tagging">데모 1: 태깅 트리로 문서 분류</a></li>
+      <li><a href="#sensitive">데모 2: 민감 정보 찾기</a></li>
+      <li><a href="#slice">데모 3: 품질 대시보드와 데이터 슬라이스</a></li>
+      <li><a href="#usecase">데모 4: 쓰임새를 적으면 태그가 나온다</a></li>
+      <li><a href="#delivery">전달과 유지, 그리고 성과</a></li>
+      <li><a href="#why">왜 중복과 오래된 문서가 치명적인가</a></li>
+      <li><a href="#context">데모 5: 폴더마다 컨텍스트 파일 만들기</a></li>
+      <li><a href="#closing">마무리와 1주 PoC 제안</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-05 · 22분 · 영어 발표 한글 정리</span>
+      <h1>날것의 문서를 AI가 쓸 수 있는 데이터로</h1>
+      <p class="lead">문서 40개로 만든 시범 챗봇은 잘 돌아간다. 같은 방식을 문서 8만 개에 적용하면 멈춘다. 어떤 파일이 필요한지 못 찾고, 민감 정보가 어디 있는지 모르고, 중복되거나 낡은 문서가 답변을 망친다. 발표는 문서에 메타데이터를 붙이고, 민감 정보를 걸러내고, 중복과 오래된 문서를 치우는 자동화 흐름을 데모로 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=wzWNYDY7toc" target="_blank" rel="noopener">From Raw Documents to AI-Ready Data</a></span>
+        <span>발표: Jeff Koss (Deasy Labs 스태프 고객 엔지니어), Leo Platzer (Deasy Labs 전 CTO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 경우에만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>가상 제조사 North River는 SharePoint에 수백만 개 문서가 있고, 법무팀용 계약 챗봇을 만들려 한다. 미리 골라 둔 <strong>파일 40개로는 잘 됐지만 8만 개로 넓히자 막혔다.</strong></li>
+        <li>막힌 이유는 세 가지다. <strong>필요한 파일을 못 찾고, 민감 정보 위치를 모르고, 품질을 믿을 수 없다.</strong></li>
+        <li>문서의 품질은 표 데이터와 다르게 본다. 기준은 <strong>중복, 상충, 신선도, 그리고 챗봇에 넣을 맥락(메타데이터)</strong>이다.</li>
+        <li>데모의 핵심은 <strong>태깅 트리</strong>다. 태그마다 프롬프트를 적으면 LLM이 문서를 분류하고, 근거 문장과 확신도를 함께 돌려준다. 조건부 하위 태그로 가지를 친다.</li>
+        <li>민감 정보는 AI 판단과 패턴 검색을 함께 쓴다. 핀란드 주민번호처럼 모르는 형식도 정규식과 관련 단어를 만들어 냈다.</li>
+        <li>Leo Platzer의 주장: <strong>파일의 30%가 낡거나 중복이면, 답변에 쓰이는 맥락의 최대 80%가 쓸모없는 정보로 찬다.</strong> 중복 제거와 신선도 관리만으로 recall@1이 약 2배, 과제 완료율이 10~15% 올랐다고 한다.</li>
+        <li>SDK로 SharePoint 폴더마다 컨텍스트 파일을 만들면, 코딩 에이전트가 파일 23개를 뒤지는 대신 요약 하나를 읽고 어디를 볼지 정한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="who">
+        <header><span class="num">01</span><h2>발표자와 회사 <span class="ts">00:20</span></h2></header>
+        <p>Jeff Koss는 Deasy Labs의 스태프 고객 엔지니어다. Leo Platzer는 Deasy Labs의 전 CTO다. Deasy Labs는 지난해 여름 Collibra에 인수됐다. Collibra는 표 형태의 정형 데이터와 AI 모델을 관리하는 데이터 거버넌스<span class="en">data governance</span> 회사다. 문서 같은 비정형 데이터<span class="en">unstructured data</span>를 다루는 능력이 비어 있었고, 그 빈자리를 Deasy Labs가 채운다는 설명이다.</p>
+        <p class="note">자막에는 회사 이름이 "DZ Labs", "Calibbra"로 들린다. 발표 내용(비정형 문서 큐레이션, 데이터 거버넌스 회사의 인수)과 맞춰 Deasy Labs와 Collibra로 적었다.</p>
+        <div class="callout">
+          <span class="title">읽기 전에</span>
+          <span>이 발표는 두 발표자의 회사 제품(Deasy)을 데모하는 자리다. 성과 수치와 평가 결과는 모두 회사가 자체 측정한 것이다. 흐름과 기준은 참고하되 숫자는 그 점을 감안해 읽자.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="scenario">
+        <header><span class="num">02</span><h2>가상 고객: 법무 챗봇 <span class="ts">01:10</span></h2></header>
+        <p>발표는 가상의 제조사 North River Manufacturing을 예로 든다. 직원 4만 명, 20개국에서 운영하고, SharePoint에 수년간 쌓인 문서가 수백만 개다. 올해 목표는 법무·구매팀을 위한 계약 챗봇이다.</p>
+        <ul class="plain">
+          <li>특정 공급사 계약의 해지 조항은 무엇인가</li>
+          <li>이번 분기, 다음 분기에 만료되는 계약은 무엇인가</li>
+          <li>독점 조건이 붙은 파트너십은 무엇인가</li>
+        </ul>
+        <h3>관련된 다섯 사람 <span class="ts">02:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>이름</th><th>역할</th><th>원하는 것</th></tr></thead>
+            <tbody>
+              <tr><td>Sarah</td><td>데이터·AI 총괄</td><td>답변의 정확도를 책임진다</td></tr>
+              <tr><td>Jim</td><td>AI 엔지니어</td><td>수천 개 파일 중 챗봇에 필요한 것만, 민감 정보 없이 받고 싶다</td></tr>
+              <tr><td>Priya</td><td>지식 관리 총괄</td><td>민감 정보가 새지 않게 하고, 기밀은 가려서<span class="en">redaction</span> 내보낸다</td></tr>
+              <tr><td>Michael</td><td>법무 운영 디렉터</td><td>현업 사용자. 팀에 정확한 답을 주는 챗봇이 필요하다</td></tr>
+              <tr><td>Jackson</td><td>전사 혁신 리드</td><td>이 건 말고도 다른 사례가 15개 더 있다. 한 번 쓰고 버릴 게 아니라 반복할 수 있는 절차를 원한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>다섯 사람의 요구를 합치면 과제가 보인다. <strong>정확도, 파일 선별, 민감 정보 차단, 현업 만족, 반복 가능성</strong>을 동시에 만족해야 한다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="scale">
+        <header><span class="num">03</span><h2>40개는 되는데 8만 개는 안 된다 <span class="ts">03:20</span></h2></header>
+        <p>팀은 미리 골라 둔 파일 약 40개로 작은 시범 시스템<span class="en">PoC</span>을 만들었다. 파싱, 청킹, OCR, 임베딩을 거쳐 벡터 데이터베이스와 지식 그래프에 넣었다. 답변 품질은 꽤 좋았다.</p>
+        <div class="shift" aria-label="40개 파일 PoC에서 8만 개 파일 운영으로">
+          <div><span class="tag">시범 단계</span><b>미리 고른 파일 40개</b><span class="muted">파싱 → 청킹 → OCR → 임베딩 → 벡터 DB + 지식 그래프. 잘 된다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">실제 운영</span><b>파일 8만 개 이상</b><span class="muted">필요한 파일을 못 찾고, 민감 정보 위치를 모르고, 품질을 믿을 수 없다.</span></div>
+        </div>
+        <p>같은 흐름을 8만 개 넘는 파일에 적용하자 갑자기 어려워졌다. 기술 자체가 아니라 <strong>어떤 파일을 넣을지 고르는 일</strong>이 병목이 됐다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="quality">
+        <header><span class="num">04</span><h2>문서의 품질은 표의 품질과 다르다 <span class="ts">04:10</span></h2></header>
+        <p>Jeff Koss는 Informatica와 Databricks에서 일했다. 표 형태 데이터의 품질은 보통 완전성, 적합성, 정확성 같은 여섯 가지 차원으로 잰다. 문서는 다르다. 발표자가 꼽은 문서 품질의 기준은 네 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기준</th><th>묻는 질문</th></tr></thead>
+            <tbody>
+              <tr><td>중복</td><td>같은 내용이 여러 파일에 있는가</td></tr>
+              <tr><td>상충</td><td>같은 주제인데 서로 다른 말을 하는 파일이 있는가 (예: 옛 버전과 새 버전)</td></tr>
+              <tr><td>신선도</td><td>이미 만료된 계약처럼 낡은 문서가 섞여 있는가</td></tr>
+              <tr><td>맥락</td><td>문서에 붙인 메타데이터를 벡터 DB와 챗봇이 활용할 수 있는가</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>품질을 못 믿으면 생기는 일 <span class="ts">05:00</span></h3>
+        <ul class="plain">
+          <li>챗봇이 틀린 답을 한다.</li>
+          <li>민감 정보가 챗봇 답변으로 새어 나간다.</li>
+          <li>파일을 찾느라 시간을 다 써서 출시가 늦어진다. 엔지니어는 코드를 쓰는 대신 파일을 뒤진다.</li>
+          <li>유지가 어렵다. 발표자가 함께 일하는 한 통신사는 전문가 6~7명이 HTML 파일 2만 개를 손으로 정리하는데 따라가지 못한다.</li>
+        </ul>
+        <p>발표자의 답은 이 과정 전체를 자동화하는 것이다. 데이터에 접근하고, 내용을 파악하고, 관련 파일을 고르고, OCR과 청킹까지 한 흐름으로 돌린다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="tagging">
+        <header><span class="num">05</span><h2>데모 1: 태깅 트리로 문서 분류 <span class="ts">06:30</span></h2></header>
+        <p>SharePoint에는 통화 녹취록, PDF, 엑셀, 워드 문서가 섞여 있다. 어떤 것이 법무 관련인지 아무도 모른다. 데모에서는 파일 339개를 먼저 불러왔다. 파일 단위와 페이지·청크 단위 양쪽으로 내용을 볼 수 있다.</p>
+        <h3>택소노미 = 태그의 나무 <span class="ts">07:20</span></h3>
+        <p>택소노미<span class="en">taxonomy</span>는 태그를 묶어 놓은 분류 체계다. 발표자는 "태깅 트리"라고 부른다. 태그를 만드는 방법은 세 가지다.</p>
+        <ol class="plain">
+          <li><strong>직접 만들기</strong>: 태그 이름과 프롬프트를 적는다. 이 프롬프트가 LLM에 전달되어 "이 파일에 어떤 값을 붙일까"를 결정한다. 분류 값<span class="en">classification values</span>은 선택이다. 이미 정해진 값 목록이 있으면 CSV로 올린다.</li>
+          <li><strong>태그 라이브러리에서 재사용</strong>: 전에 만든 태그를 다시 쓴다.</li>
+          <li><strong>AI 자동 제안</strong>: 어떤 태그가 있어야 할지 AI가 먼저 제안한다.</li>
+        </ol>
+        <h3>조건부 하위 태그 <span class="ts">08:20</span></h3>
+        <p>태그에 조건을 걸 수 있다. 예를 들어 "법무·계약"으로 분류된 파일에만 계약 유형 태그를 추가로 붙인다. 공급사 계약인지, 비밀유지계약<span class="en">NDA</span>인지, 시간·자재 계약인지 묻는 식이다. 이렇게 하면 나무에 가지가 생긴다. 조건 없는 태그도 얼마든지 섞을 수 있다.</p>
+        <h3>메타데이터 생성과 결과 확인 <span class="ts">09:00</span></h3>
+        <p>파일과 태그를 고르고 "메타데이터 생성"을 누르면 결과가 나온다. 데모에서는 339개 중 68개가 계약·법무 문서로 분류됐다. 결과 화면에서 할 수 있는 일은 세 가지다.</p>
+        <ul class="plain">
+          <li><strong>근거 보기</strong>: AI가 왜 이 태그를 붙였는지, 문서의 어느 부분에서 찾았는지 보여 준다.</li>
+          <li><strong>좋아요·싫어요</strong>: 판단에 피드백을 준다. 이 피드백이 예시가 되어 다음 분류에 쓰인다. 발표자는 이를 퓨샷 학습<span class="en">few-shot learning</span>이라고 불렀다.</li>
+          <li><strong>필터</strong>: 태그 두 개로 거르자 339개가 20개로 줄었다.</li>
+        </ul>
+
+        <figure class="chart" aria-label="데모에서 파일 수가 줄어드는 과정: 불러온 파일 339개, 계약·법무로 분류된 파일 68개, 필터 두 개 적용 후 20개">
+          <span class="chart-title">데모에서 파일이 걸러지는 과정 (개)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>SharePoint에서 불러온 파일</span><span class="val">339</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="불러온 파일: 339개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>계약·법무로 분류된 파일</span><span class="val">68</span></div>
+              <div class="track"><div class="fill" style="width:20.1%" title="계약·법무 문서: 68개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>필터 두 개를 적용한 뒤</span><span class="val">20</span></div>
+              <div class="track"><div class="fill key" style="width:5.9%" title="필터 적용 후: 20개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>170</span><span>339</span></div>
+          <span class="caption">같은 데모 안에서 발표자가 말한 숫자를 그대로 옮겼다. 20개가 68개의 부분집합인지는 발표에서 분명히 말하지 않았다.</span>
+        </figure>
+      </section>
+
+      <!-- 6 -->
+      <section id="sensitive">
+        <header><span class="num">06</span><h2>데모 2: 민감 정보 찾기 <span class="ts">10:00</span></h2></header>
+        <p>개인 식별 정보<span class="en">PII</span>, 의료 정보<span class="en">PHI</span> 등 어떤 종류든 민감 정보를 스캔할 수 있다. 방식은 두 가지를 함께 쓴다. AI가 문맥을 보고 판단하는 방식과, 정규식 같은 패턴으로 찾되 앞뒤 문맥을 함께 보는 방식이다.</p>
+        <div class="callout">
+          <span class="title">핀란드 주민번호 이야기 <span class="ts">10:10</span></span>
+          <span>런던의 Gartner 행사에서 핀란드 참가자들이 "핀란드 국가 ID를 찾을 수 있나"고 물었다. 발표자는 핀란드어를 모른다. 그냥 요청을 입력했더니 시스템이 해당 ID의 정규식 문법을 만들어 냈고, 그 ID와 함께 쓰일 법한 핀란드어 단어까지 추가했다. 단어 문맥이 붙으면 패턴만 볼 때보다 거짓 경보<span class="en">false positive</span>가 줄어든다는 설명이다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="slice">
+        <header><span class="num">07</span><h2>데모 3: 품질 대시보드와 데이터 슬라이스 <span class="ts">10:50</span></h2></header>
+        <p>품질 대시보드에서는 앞서 말한 기준을 실제로 적용한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기능</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>중복·상충 묶음</td><td>같은 내용끼리, 서로 다른 말을 하는 문서끼리 묶어 보여 준다. 어느 것을 남길지 AI가 제안한다</td></tr>
+              <tr><td>신선도 필터</td><td>최근 N일 이내, 또는 특정 날짜 범위의 파일만 남긴다</td></tr>
+              <tr><td>필수 메타데이터</td><td>"이 메타데이터는 꼭 있어야 한다"를 정하면 조건에 맞는 파일만 남긴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 과정을 거치면 339개 중 실제로 필요한 건 200개쯤일 수 있다. 그렇게 걸러 낸 묶음을 데이터 슬라이스<span class="en">data slice</span>라고 부른다. 슬라이스에는 맥락 설명을 덧붙일 수 있다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="usecase">
+        <header><span class="num">08</span><h2>데모 4: 쓰임새를 적으면 태그가 나온다 <span class="ts">11:50</span></h2></header>
+        <p>두 번째 영상 데모는 반대 방향에서 시작한다. 법무 관련 파일 14개로 된 데이터 슬라이스를 두고, "내가 만들려는 것은 이런 챗봇이다"라는 유스케이스 설명을 붙여 넣는다. 태그 구조를 한 단계로 할지 여러 단계로 할지 고르고 실행하면, 시스템이 태그를 제안한다.</p>
+        <ul class="plain">
+          <li>제안은 유스케이스 설명과 파일 내용 양쪽을 근거로 만든다.</li>
+          <li>사람이 중간에서 고른다. 마음에 드는 태그만 남긴다.</li>
+          <li>분류 값까지 시스템이 채워 준다.</li>
+        </ul>
+        <p>메타데이터 생성을 돌리면 민감 정보 목록도 함께 나온다. 파일 단위와 청크 단위로 근거를 보여 주고, 모델이 돌려준 확신도<span class="en">confidence score</span>를 그대로 표시한다. 발표자의 말을 빌리면 "100%인지 95%인지 추측할 필요가 없다"는 것이다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="delivery">
+        <header><span class="num">09</span><h2>전달과 유지, 그리고 성과 <span class="ts">13:30</span></h2></header>
+        <p>데이터 슬라이스에는 일정을 걸 수 있다. SharePoint에 파일이 추가되거나 삭제되면 정해진 주기로 슬라이스에 반영된다. SDK가 그 변화를 받아 벡터 DB를 다시 채우므로 챗봇의 메타데이터가 낡지 않는다.</p>
+        <h3>North River가 얻은 것 <span class="ts">14:10</span></h3>
+        <ul class="plain">
+          <li>데이터 준비 기간이 <strong>4개월에서 며칠로</strong> 줄었다.</li>
+          <li>AI에 쓰는 데이터의 활용률이 올랐다.</li>
+          <li>어떤 파일을 쓸지 알게 됐고, 파일에 붙인 메타데이터를 SDK로 챗봇에 주입해 정확도가 올랐다.</li>
+          <li>민감 정보가 어디 있는지 알고 데이터 저장소에서 걸러 냈기 때문에 규정 위반 위험이 줄었다.</li>
+        </ul>
+        <p class="note">North River는 가상의 회사다. 이 성과는 실제 고객 사례를 가상 시나리오에 얹은 것으로 보이며, 발표자의 회사가 제시한 수치다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="why">
+        <header><span class="num">10</span><h2>왜 중복과 오래된 문서가 치명적인가 <span class="ts">15:00</span></h2></header>
+        <p>Leo Platzer는 "그래서 뭐가 달라지는데"라는 질문에 답한다. 중복을 없애고, 검색 범위를 줄이고, 신선하게 유지하면 실제로 무슨 일이 일어나는가.</p>
+        <h3>벡터 공간에서 벌어지는 일 <span class="ts">15:10</span></h3>
+        <p>질문이 들어오면 벡터 DB는 가장 비슷한 문서 조각 K개를 돌려준다. 이 top-K 안에 같은 내용의 복사본이나 옛 버전이 여러 개 끼어 있으면, 자리를 차지하는 건 정보가 아니라 잡음이다. Slack을 떠올리면 된다. 오늘 누군가 A라고 말하고 내일 B라고 말한다. 진실은 바뀌는데 지식 저장소에 둘 다 남아 있으면 top-K는 늘 쓸모없는 것으로 찬다.</p>
+        <p>Deasy는 중복을 두 종류로 나눈다. 다른 맥락을 더해 주는 중복은 남긴다. 그냥 같은 내용이 반복된 것은 지식 저장소에서 뺀다. 낡은 정보도 마찬가지다. 2000년 이전 데이터, 지난주에만 유효했던 정보가 섞이면 에이전트가 실제 업무에 들어갔을 때 큰 피해로 이어진다.</p>
+
+        <h3>발표자가 인용한 평가 결과 <span class="ts">16:30</span></h3>
+        <figure class="chart" aria-label="파일 1,000개 중 30%가 낡거나 중복일 때, 답변에 쓰이는 맥락의 최대 80%가 낡은 정보로 찬다">
+          <span class="chart-title">원본 파일의 오염 비율과 답변 맥락의 오염 비율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>원본 파일 1,000개 중 낡거나 중복인 비율</span><span class="val">30</span></div>
+              <div class="track"><div class="fill" style="width:30%" title="원본 파일 중 낡거나 중복: 30%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>답변에 쓰인 맥락 중 낡은 정보 비율 (최대)</span><span class="val">80</span></div>
+              <div class="track"><div class="fill key" style="width:80%" title="답변 맥락 중 낡은 정보: 최대 80%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">파일의 30%만 오염돼도 검색 결과는 훨씬 더 오염된다는 주장이다. 비슷한 문서끼리 서로 가까이 묶여 top-K를 독차지하기 때문이다. 발표자의 회사가 자체 평가한 수치다.</span>
+        </figure>
+        <p>같은 과제로 비교했을 때의 결과도 인용했다. 코딩 과제가 아니라 여러 문서를 거쳐 답을 찾는 멀티홉 RAG 평가다.</p>
+        <ul class="plain">
+          <li><strong>recall@1이 약 2배</strong> 올랐다. 첫 번째 검색 결과에 정답 문서가 들어 있는 비율이다.</li>
+          <li><strong>과제 완료율이 10~15%</strong> 올랐다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">왜 이 결과가 중요한가 <span class="ts">17:50</span></span>
+          <span>관련성<span class="en">relevancy</span> 같은 품질 기준은 데이터를 무엇에 쓸지 알아야 적용할 수 있다. 하지만 <strong>중복 제거와 신선도는 쓰임새와 상관없이 항상 참</strong>이다. 어떤 챗봇, 어떤 에이전트를 만들든 먼저 해 둬야 하는 일이라는 뜻이다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="context">
+        <header><span class="num">11</span><h2>데모 5: 폴더마다 컨텍스트 파일 만들기 <span class="ts">18:20</span></h2></header>
+        <p>마지막은 라이브 데모다. 행사장에서 컨텍스트 엔지니어링 이야기가 많았다며, Deasy SDK로 컨텍스트 저장소를 준비하는 방법을 보여 준다.</p>
+        <ol class="plain">
+          <li>SharePoint 사이트 하나에 대해 가진 메타데이터를 모두 가져온다.</li>
+          <li>폴더마다 그 폴더가 무엇인지 설명하는 컨텍스트 파일을 만든다.</li>
+          <li>모든 폴더를 아우르는 색인을 하나 만든다.</li>
+        </ol>
+        <p>결과는 SharePoint 구조를 그대로 비춘 폴더 트리에 컨텍스트 마크다운 파일이 붙은 모양이다. 파일마다 그 폴더에 어떤 문서 유형이 있는지, 무엇에 관한 것인지, 핵심 주제는 무엇인지, 언제 이 폴더를 써야 하는지, 예시 질문은 무엇인지 적혀 있다.</p>
+        <div class="callout">
+          <span class="title">코딩 에이전트에게 주는 효과</span>
+          <span>Claude Code나 Codex 같은 에이전트는 폴더 안의 파일 23개를 하나씩 열어 볼 필요가 없다. 컨텍스트 파일 하나를 읽고 이 폴더를 봐야 하는지 판단한다. 발표자는 RAG 챗봇의 품질을 올리는 용도뿐 아니라 <strong>에이전트의 토큰 비용을 줄이는 용도</strong>로도 쓸 수 있다고 말했다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="closing">
+        <header><span class="num">12</span><h2>마무리와 1주 PoC 제안 <span class="ts">20:10</span></h2></header>
+        <p>Jeff Koss가 마무리한다. 부스에 와서 비정형 문서로 겪는 어려움을 이야기하자는 초대와, 1주짜리 시범 프로젝트 제안이다. 업무 문제와 샘플 파일을 가져오면 파일마다 메타데이터를 만들고, 민감 정보 보고서와 데이터 품질 보고서를 주고, 그 유스케이스에 맞는 택소노미를 만들어 보여 주겠다는 내용이다.</p>
+        <p class="note">PoC 제안은 영업 메시지다. 다만 "메타데이터, 민감 정보 보고서, 품질 보고서, 택소노미"라는 네 가지 산출물은 문서 데이터를 준비할 때 무엇을 점검해야 하는지 보여 주는 체크리스트로 읽어도 된다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>파일 40개로 되는 RAG 흐름이 파일 8만 개에서 막히는 이유는 기술이 아니라 <strong>파일 선별</strong>이다.</li>
+          <li>막히는 지점은 세 가지다. <strong>필요한 파일 발견, 민감 정보 위치 파악, 품질 신뢰.</strong></li>
+          <li>문서 품질의 기준은 표 데이터와 다르다. <strong>중복, 상충, 신선도, 맥락(메타데이터)</strong>으로 본다.</li>
+          <li>태깅 트리는 태그마다 프롬프트를 적어 LLM이 분류하게 하는 구조다. 조건부 하위 태그로 가지를 친다.</li>
+          <li>분류 결과에는 <strong>근거 문장과 확신도</strong>가 붙는다. 좋아요·싫어요가 다음 분류의 예시가 된다.</li>
+          <li>민감 정보는 AI 판단과 패턴 검색을 함께 쓴다. 문맥 단어를 붙이면 거짓 경보가 준다.</li>
+          <li>중복·상충 묶음, 신선도 필터, 필수 메타데이터로 걸러 낸 묶음이 데이터 슬라이스다. 일정을 걸어 자동으로 새로 고친다.</li>
+          <li>발표자 인용: 파일의 30%가 오염되면 답변 맥락은 최대 80%가 오염된다. 중복 제거와 신선도만으로 recall@1 약 2배, 과제 완료율 10~15% 상승.</li>
+          <li><strong>중복 제거와 신선도는 쓰임새와 무관하게 항상 해야 하는 일</strong>이다. 관련성은 쓰임새를 알아야 적용할 수 있다.</li>
+          <li>폴더마다 컨텍스트 파일을 만들면 코딩 에이전트가 파일을 다 열지 않고도 어디를 볼지 정한다. 토큰 비용이 준다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>North River의 PoC는 파일 몇 개로 성공했고, 몇 개로 넓히자 막혔나?</span></summary><div class="answer">약 40개로 성공했고, 8만 개 이상으로 넓히자 막혔다. 파싱·청킹·OCR·임베딩 기술이 아니라 어떤 파일을 넣을지 고르는 일이 병목이었다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>8만 개 규모에서 팀이 겪은 세 가지 어려움은?</span></summary><div class="answer">필요한 파일을 못 찾는다. 민감 정보가 어디 있는지 모른다. 데이터 품질을 믿을 수 없다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>발표자가 문서 품질을 볼 때 쓰는 네 가지 기준은?</span></summary><div class="answer">중복, 상충(서로 다른 말을 하는 문서), 신선도, 맥락(챗봇이 쓸 수 있는 메타데이터). 표 데이터의 완전성·적합성·정확성 같은 차원과는 다르다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>택소노미, 즉 태깅 트리에서 태그를 만드는 세 가지 방법은?</span></summary><div class="answer">직접 이름과 프롬프트를 적어 만들기, 태그 라이브러리에서 재사용하기, AI 자동 제안 받기. 분류 값은 선택이고 CSV로 올릴 수도 있다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>조건부 하위 태그는 무엇이고 데모에서 어떻게 썼나?</span></summary><div class="answer">특정 태그가 붙은 파일에만 적용되는 태그다. "법무·계약"으로 분류된 파일에만 계약 유형(공급사 계약, NDA, 시간·자재 계약)을 추가로 물었다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>분류 결과 화면에서 사람이 할 수 있는 세 가지는?</span></summary><div class="answer">AI가 왜 그렇게 태그했는지 근거 보기, 좋아요·싫어요로 피드백 주기(다음 분류의 예시가 된다), 태그로 필터하기. 데모에서는 339개가 20개로 줄었다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>핀란드 주민번호 사례에서 시스템이 만든 두 가지는?</span></summary><div class="answer">해당 ID의 정규식 문법, 그리고 그 ID와 함께 쓰일 법한 핀란드어 단어. 패턴에 문맥 단어를 더해 거짓 경보를 줄인다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>데이터 슬라이스는 무엇이고, 어떻게 낡지 않게 유지하나?</span></summary><div class="answer">중복·상충 정리, 신선도 필터, 필수 메타데이터 조건으로 걸러 낸 파일 묶음이다. 일정을 걸어 두면 SharePoint의 추가·삭제를 주기적으로 반영하고, SDK가 벡터 DB를 다시 채운다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Leo Platzer가 인용한 30%와 80%는 각각 무엇인가?</span></summary><div class="answer">파일 1,000개 중 낡거나 중복인 비율이 30%일 때, 답변에 쓰이는 맥락의 최대 80%가 낡은 정보로 찬다. 비슷한 문서끼리 top-K를 독차지하기 때문이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>중복 제거와 신선도가 관련성과 다른 점은?</span></summary><div class="answer">관련성은 데이터를 무엇에 쓸지 알아야 판단할 수 있다. 중복 제거와 신선도는 쓰임새와 상관없이 항상 필요하다. 그래서 어떤 사례든 먼저 해 두면 효과를 본다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>폴더마다 만든 컨텍스트 파일에는 무엇이 적혀 있고, 코딩 에이전트에게 어떤 이득이 있나?</span></summary><div class="answer">문서 유형, 주제, 핵심 토픽, 언제 이 폴더를 쓸지, 예시 질문. 에이전트는 폴더 안 파일을 다 열지 않고 이 파일만 읽고 판단하므로 토큰 비용이 준다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>문서 저장소 전체 규모와 PoC에 쓴 파일 수를 적어 본다<span class="how">확인: PoC가 "미리 고른 파일"에 기대고 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>챗봇이 답해야 할 질문 3개를 먼저 쓴다<span class="how">예: 해지 조항, 만료 시기, 독점 조건. 이 질문이 태그 설계의 출발점이다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>문서 품질을 중복·상충·신선도·맥락 네 기준으로 점검한다<span class="how">확인: 같은 문서의 옛 버전과 새 버전이 둘 다 색인에 들어 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>중복 제거와 신선도 필터를 먼저 적용한다<span class="how">쓰임새와 무관하게 항상 효과가 있는 작업이다. 관련성 필터는 그 다음</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>태그마다 LLM에 줄 프롬프트와 허용 값을 글로 정한다<span class="how">상위 태그 조건에 따라 하위 태그가 붙는 구조로 그려 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>분류 결과에 근거와 확신도를 남기고 사람이 샘플을 검토한다<span class="how">확인: 틀린 분류를 피드백으로 돌려줄 통로가 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>민감 정보 스캔을 AI 판단과 패턴 검색 두 겹으로 돌린다<span class="how">우리 회사만의 식별자 형식(사번, 계약번호 등)도 패턴에 넣는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>걸러 낸 문서 묶음을 주기적으로 다시 만드는 일정을 건다<span class="how">확인: 원본 저장소에서 파일이 삭제되면 색인에서도 빠지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>에이전트가 읽을 폴더별 컨텍스트 파일을 만들어 본다<span class="how">문서 유형, 주제, 언제 쓰는지, 예시 질문. 파일을 다 열지 않고 판단할 수 있는지 확인</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>비정형 데이터</td><td>Unstructured data. 문서, 녹취록, PDF처럼 표 형태가 아닌 데이터</td></tr>
+              <tr><td>데이터 거버넌스</td><td>Data governance. 조직의 데이터를 누가 어떻게 쓰고 관리할지 정하는 체계</td></tr>
+              <tr><td>PoC</td><td>Proof of Concept. 되는지 보려고 작게 만드는 시범 시스템</td></tr>
+              <tr><td>파싱 / 청킹</td><td>문서에서 글을 뽑아내는 것 / 뽑은 글을 검색하기 좋은 조각으로 나누는 것</td></tr>
+              <tr><td>OCR</td><td>이미지나 스캔 문서에서 글자를 읽어 내는 기술</td></tr>
+              <tr><td>임베딩</td><td>Embedding. 글을 의미가 비슷하면 가까워지는 숫자 벡터로 바꾸는 것</td></tr>
+              <tr><td>벡터 데이터베이스</td><td>임베딩을 저장하고 질문과 비슷한 조각을 찾아 주는 저장소</td></tr>
+              <tr><td>지식 그래프</td><td>Knowledge graph. 개체와 개체 사이의 관계를 그물처럼 저장한 것</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 질문과 관련된 문서를 먼저 찾아 LLM에 주고 답하게 하는 방식</td></tr>
+              <tr><td>top-K</td><td>검색에서 가장 비슷한 결과 K개</td></tr>
+              <tr><td>recall@1</td><td>첫 번째 검색 결과에 정답 문서가 들어 있는 비율</td></tr>
+              <tr><td>멀티홉</td><td>Multi-hop. 여러 문서를 차례로 거쳐야 답이 나오는 질문</td></tr>
+              <tr><td>메타데이터</td><td>문서에 대한 설명 정보. 문서 유형, 계약 종류, 날짜, 민감 여부 등</td></tr>
+              <tr><td>택소노미</td><td>Taxonomy. 태그를 계층으로 묶은 분류 체계. 발표에서는 태깅 트리</td></tr>
+              <tr><td>퓨샷 학습</td><td>Few-shot learning. 예시 몇 개를 보여 주어 모델의 판단을 조정하는 것</td></tr>
+              <tr><td>휴먼 인 더 루프</td><td>Human in the loop. 자동 처리 중간에 사람이 확인하고 고르는 단계</td></tr>
+              <tr><td>PII / PHI</td><td>개인 식별 정보 / 개인 의료 정보</td></tr>
+              <tr><td>정규식</td><td>Regex. 글자 패턴을 기술하는 문법. 예: 주민번호 형식</td></tr>
+              <tr><td>거짓 경보</td><td>False positive. 민감하지 않은 것을 민감하다고 잘못 잡는 것</td></tr>
+              <tr><td>데이터 슬라이스</td><td>Data slice. 조건으로 걸러 낸 문서 묶음. 발표에서는 AI 준비 데이터 제품이라고도 부름</td></tr>
+              <tr><td>SDK</td><td>다른 프로그램에서 이 제품의 기능을 부를 수 있게 해 주는 코드 묶음</td></tr>
+              <tr><td>컨텍스트 파일</td><td>에이전트가 읽도록 폴더나 저장소의 내용과 용도를 요약해 둔 마크다운 파일</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:20</span></td><td>발표자 소개, Deasy Labs와 Collibra</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>가상 고객 North River와 법무 챗봇 목표</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>다섯 사람의 요구</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>파일 40개 PoC 성공, 8만 개에서 실패</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>문서 품질의 네 기준</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>품질을 못 믿으면 생기는 일, 통신사 사례</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>데모 시작: SharePoint, 파일 339개</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>택소노미와 태그 만들기 세 가지 방법</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>조건부 하위 태그</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>메타데이터 생성, 근거, 피드백, 필터 339 → 20</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>민감 정보 스캔, 핀란드 주민번호</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>품질 대시보드, 신선도, 데이터 슬라이스</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>유스케이스 설명으로 태그 자동 제안</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>민감 정보 결과, 근거, 확신도</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>일정 기반 자동 새로 고침과 SDK</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>North River의 성과</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>Leo Platzer: 벡터 공간과 top-K</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>30% 오염 → 맥락 80% 오염</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>멀티홉 RAG 평가: recall@1 2배, 완료율 +10~15%</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>중복·신선도는 쓰임새와 무관</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>라이브 데모: SDK로 컨텍스트 파일 생성</td></tr>
+              <tr><td><span class="ts">19:50</span></td><td>RAG 품질과 에이전트 토큰 비용</td></tr>
+              <tr><td><span class="ts">20:10</span></td><td>마무리, 부스와 1주 PoC 제안</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'wzWNYDY7toc:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

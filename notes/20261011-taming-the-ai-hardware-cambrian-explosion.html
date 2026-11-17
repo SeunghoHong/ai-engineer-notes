@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 하드웨어 길들이기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#explosion">하드웨어는 늘고 소프트웨어는 엉킨다</a></li>
+      <li><a href="#stack">바닥부터 다시 짠 세 층</a></li>
+      <li><a href="#mojo">Mojo: Python 모양의 시스템 언어</a></li>
+      <li><a href="#max">MAX: PyTorch 다음의 추론 엔진</a></li>
+      <li><a href="#cloud">Modular Cloud: 속이 보이는 클라우드</a></li>
+      <li><a href="#perf">발표자가 내세운 성능 숫자</a></li>
+      <li><a href="#speed">빠른 추론이 여는 것</a></li>
+      <li><a href="#try">써 보고 참여하기</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 환경에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-11 · 17분 · 영어 발표 한글 정리</span>
+      <h1>여러 AI 칩을 한 스택으로 다루기</h1>
+      <p class="lead">AI 칩의 종류가 폭발적으로 늘면서, 칩마다 소프트웨어를 따로 맞춰야 하는 부담이 커졌다. Modular는 언어 Mojo, 추론 엔진 MAX, Modular Cloud를 바닥부터 새로 만들어 모든 하드웨어를 한 스택으로 다루겠다고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=7BcQdtRA3Tc" target="_blank" rel="noopener">Taming the AI Hardware Cambrian Explosion</a></span>
+        <span>발표: Abdul Dakkak (Modular)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 것만 알려진 이름으로 바로잡았고(예: VLM → vLLM), 확실하지 않은 것에는 (추정)을 붙였다. 발표 전체가 발표자 회사의 제품 소개라는 점을 감안해 읽자. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI 연산 자원이 모자라면서 Nvidia, AMD, Intel, ARM, Apple 등 <strong>AI 하드웨어가 한꺼번에 쏟아지고 있다.</strong> 발표자는 이를 "캄브리아기 대폭발"이라 부른다.</li>
+        <li>문제는 소프트웨어다. 하드웨어마다 다른 코드 경로가 스택 위로 번져, <strong>서빙 도구가 점점 복잡해진다.</strong></li>
+        <li>Modular의 답은 바닥부터 다시 짠 세 층이다. <strong>언어 Mojo, 추론 엔진 MAX, Modular Cloud.</strong></li>
+        <li>Mojo는 Python처럼 생긴 시스템 언어다. <strong>CPU, GPU, 가속기를 한 언어로</strong> 다루면서 CUDA 수준 성능을 노린다.</li>
+        <li>MAX는 PyTorch 위에 덧대던 서빙 기능을 <strong>한 스택으로</strong> 다시 만든 것이다. 여러 GPU, 여러 기계, 서로 다른 하드웨어를 섞어 쓸 수 있다.</li>
+        <li>발표자가 인용한 성능은 Kimi K2.5 첫 토큰 <strong>5.5배</strong>, Flux 2 이미지 생성 <strong>7배</strong> 등이다. 모두 Modular가 고른 조건에서 낸 자사 주장이다.</li>
+        <li>커널 코드 70만 줄 이상이 공개돼 있다. <strong><code>pip install modular</code>로 직접 검증해 볼 수 있다.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="explosion">
+        <header><span class="num">01</span><h2>하드웨어는 늘고 소프트웨어는 엉킨다 <span class="ts">00:10</span></h2></header>
+        <p>AI 연산 자원<span class="en">compute</span>이 크게 모자라다. 발표자에 따르면 앞으로 몇 년 치 물량이 이미 예약돼 있고, 나아질 기미도 없다.</p>
+        <p>그 결과 AI 하드웨어가 한꺼번에 쏟아지고 있다. 발표자는 이를 캄브리아기 대폭발<span class="en">Cambrian explosion</span>에 빗댄다. Nvidia는 여러 세대의 GPU를 내놓았고, Intel, ARM, Apple도 있다. 저마다 맡은 틈새가 있다.</p>
+        <p>그래서 나오는 질문은 하나다. <strong>이 많은 하드웨어를 어떻게 다 프로그래밍하나.</strong></p>
+
+        <h3>하드웨어 선택이 스택 위로 번진다 <span class="ts">01:00</span></h3>
+        <p>지금의 소프트웨어는 엉켜 있다. 맨 아래에서 고른 하드웨어가 그 위의 모든 층에 영향을 주기 때문이다.</p>
+        <p>발표자는 vLLM이 Nvidia와 AMD를 함께 지원하는 구조도를 보여 줬다. 두 회사만으로도 복잡하다. 하드웨어를 하나 더 넣으면 그림은 더 어려워진다.</p>
+        <p>배포 도구도 하나가 아니다. vLLM 말고도 SGLang, TensorRT-LLM, llama.cpp를 함께 쓴다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="stack">
+        <header><span class="num">02</span><h2>바닥부터 다시 짠 세 층 <span class="ts">01:40</span></h2></header>
+        <p>Modular는 기존 스택을 고쳐 쓰지 않고 바닥부터 다시 짜기로 했다. 모든 하드웨어를 하나로 묶는 계층을 만들고, 모든 것을 그 위에서 돌린다.</p>
+        <div class="shift" aria-label="소프트웨어 구조의 변화">
+          <div><span class="tag">지금</span><b>하드웨어마다 다른 코드 경로</b><span class="muted">칩별 차이가 서빙 도구까지 올라온다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Modular의 제안</span><b>모든 하드웨어를 받는 한 계층</b><span class="muted">위쪽 소프트웨어는 칩 차이를 신경 쓰지 않는다</span></div>
+        </div>
+        <p>설계할 때 세 가지를 처음부터 함께 고려했다. 이식성<span class="en">portability</span>, 성능<span class="en">performance</span>, 프로그래밍하기 쉬움<span class="en">programmability</span>이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>정체</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>Modular Cloud</td><td>분산 추론 플랫폼</td><td>모델을 올릴 하드웨어를 고르고, 사용자 요청을 어느 기계로 보낼지 정한다. KV 캐시를 GPU 밖으로 내려놓고, 분산 추론과 분리 추론을 돌린다</td></tr>
+              <tr><td>MAX</td><td>추론 엔진</td><td>이미지, 영상, 음성, 텍스트 모델을 추론<span class="en">inference</span>한다. 안쪽 커널은 모두 Mojo로 썼다</td></tr>
+              <tr><td>Mojo</td><td>프로그래밍 언어</td><td>CPU, GPU, 가속기를 한 언어로 다룬다. AI뿐 아니라 일반 프로그래밍도 겨냥한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">표는 위에서 아래로 쌓인 순서다. Mojo가 맨 아래, Modular Cloud가 맨 위다.</p>
+        <p>클라우드 층이 필요한 이유는 오늘의 AI 추론이 여러 기계에 나뉘어 돌기 때문이다. 사용자가 기대하는 속도와 비용을 맞추려면 하드웨어 선택과 요청 배분까지 다뤄야 한다.</p>
+        <p>발표자가 정리한 플랫폼의 성격은 네 가지다 <span class="ts">03:20</span>.</p>
+        <ul class="plain">
+          <li>끝까지 프로그래밍할 수 있다</li>
+          <li>하드웨어 차이를 감춘다</li>
+          <li>최고 수준 성능<span class="en">SOTA</span>을 낸다</li>
+          <li>회사 서버와 Modular 클라우드 어디에든 배포한다. 자기 클라우드가 있으면 내려받아 그 위에 올릴 수도 있다</li>
+        </ul>
+      </section>
+
+      <!-- 3 -->
+      <section id="mojo">
+        <header><span class="num">03</span><h2>Mojo: Python 모양의 시스템 언어 <span class="ts">03:50</span></h2></header>
+        <p>Mojo는 Python처럼 생긴 시스템 프로그래밍 언어다. C++, Rust, CUDA C++과 같은 부류다. 발표자는 Python을 아는 사람이라면 Mojo의 90%는 이미 안다고 말한다 <span class="ts">02:20</span>.</p>
+        <p>핵심은 여러 가속기를 한 언어로 프로그래밍한다는 점이다. 발표자는 성능도 CUDA와 겨룬다고 말한다. CPU와 GPU를 Python 비슷한 언어로 다루는 가장 좋은 방법이라는 것이 발표자의 설명이다.</p>
+
+        <h3>세 기준으로 본 Mojo의 자리 <span class="ts">04:30</span></h3>
+        <p>발표자는 GPU 프로그래밍 방식을 쓰기 편함<span class="en">usability</span>, 성능, 이식성 세 기준으로 나눴다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>성능</th><th>이식성</th><th>쓰기 편함</th></tr></thead>
+            <tbody>
+              <tr><td>CUDA, ROCm</td><td>아주 높다</td><td>낮다</td><td>낮다</td></tr>
+              <tr><td>OpenCL</td><td>낮다</td><td>높다</td><td>낮다</td></tr>
+              <tr><td>Triton</td><td>최고의 약 70%</td><td>높다</td><td>높다</td></tr>
+              <tr><td>Mojo (목표)</td><td>최고 수준</td><td>높다</td><td>높다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자의 구분을 표로 옮겼다. 자막에는 CUDA, ROCm과 같은 줄에 이름이 하나 더 있었지만 알아들을 수 없어 뺐다. OpenCL은 몇 년 전에 많이 쓰였다고 발표자는 덧붙였다.</p>
+        <p>Mojo가 노리는 자리는 양쪽 장점을 다 갖는 곳이다. 이식성 있고 쓰기 쉬운 커널을 짤 수 있는 추상화를 준다. 동시에 최대 성능을 뽑을 수 있게 저수준 접근도 열어 둔다.</p>
+
+        <h3>공개된 커널과 성능 주장 <span class="ts">05:20</span></h3>
+        <p>Modular는 커널<span class="en">kernel</span>을 거의 다 오픈소스로 공개했다. 누구나 자기 기계에서 돌려 보고 벤치마크할 수 있다.</p>
+        <ul class="plain">
+          <li><strong>행렬 곱</strong><span class="en">matrix multiplication</span>: Nvidia의 cuBLAS, AMD의 hipBLAS 등 기존 라이브러리보다 빠르다고 주장한다</li>
+          <li><strong>어텐션</strong>: FlashAttention보다 빠른, 현존 가장 빠른 어텐션 커널을 갖고 있다고 말한다</li>
+          <li>Nvidia, AMD와 다른 하드웨어에서도 최고 수준 커널을 갖췄다고 말한다</li>
+        </ul>
+        <p class="note">차이가 얼마나 나는지는 분명하지 않다. 자막에는 "1%가 아니라, 어떤 경우는 2%"로 적혀 있어 이 노트에서는 폭을 확정하지 않는다.</p>
+        <div class="callout">
+          <span class="title">Mojo 1.0 <span class="ts">05:50</span></span>
+          <span>한 달쯤 전에 Mojo 1.0을 발표했다. API를 안정화한다는 뜻이다. 정식 출시와 Mojo 언어 자체의 오픈소스 공개는 발표 시점 기준으로 "앞으로 몇 달 안"이다. 지금 공개된 것은 커널, 모델 정의, MAX 서빙 코드다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="max">
+        <header><span class="num">04</span><h2>MAX: PyTorch 다음의 추론 엔진 <span class="ts">06:10</span></h2></header>
+        <p>Mojo 위에 올라가는 것이 MAX다. MAX는 PyTorch가 처음에 깔고 시작한 전제를 다시 풀려고 한다.</p>
+        <ol class="plain">
+          <li>PyTorch는 약 10년 된 프레임워크다. 지금 같은 생성형 AI 추론을 염두에 두고 설계되지 않았다.</li>
+          <li>그 빈자리를 vLLM과 SGLang이 메웠다. KV 캐시, 페이지드 어텐션<span class="en">paged attention</span> 같은 기능을 위에 얹었다.</li>
+          <li>그 결과 PyTorch 생태계 전체가 복잡해졌다. 발표자는 PyTorch를 그대로 쓰는 사람이 드물고, 대부분 위에 덧댄 층에 기댄다고 본다.</li>
+        </ol>
+        <p>MAX 프레임워크는 이 문제를 처음부터 새로 푼다 <span class="ts">06:50</span>.</p>
+        <ul class="plain">
+          <li>최신 그래프 컴파일러를 쓴다</li>
+          <li>연산을 바로바로 실행하는 eager 실행<span class="en">eager mode</span>도 지원한다</li>
+          <li>여러 기기로 옮겨 쓸 수 있다</li>
+          <li>Mojo 프로그램을 이해해서, 연산을 새로운 방식으로 합친다<span class="en">fusion</span></li>
+        </ul>
+        <p>발표자가 강조하는 차이는 <strong>하나의 스택</strong>이라는 점이다. 모델 개발, 최적화, 서빙을 한 시스템 안에서 한다. 일반 PyTorch로는 얻기 어려운 성능과 배포 편의를 준다고 말한다.</p>
+
+        <h3>지원 모델 <span class="ts">07:40</span></h3>
+        <p>발표자는 MAX가 수천 개 모델, 사실상 수천 개 아키텍처를 지원한다고 말한다. 예로 Gemma 4, MiniMax 3 (추정), GLM을 들었다. 떠올릴 수 있는 모델은 거의 다 된다는 것이 발표자의 표현이다.</p>
+        <p>쓰는 방식도 지금의 표준과 같다. OpenAI 호환 엔드포인트를 제공한다.</p>
+
+        <h3>모델을 짜는 방식 <span class="ts">08:10</span></h3>
+        <p>PyTorch로 모델을 짜 본 사람이라면 사고방식을 크게 바꿀 필요가 없다고 발표자는 말한다.</p>
+        <ul class="plain">
+          <li>모델 작성 언어는 Python이다</li>
+          <li>모듈을 import해서 조합한다</li>
+          <li>eager 실행으로 디버깅할 수 있다</li>
+        </ul>
+
+        <h3>여러 GPU, 여러 기계, 다른 하드웨어 섞기 <span class="ts">08:40</span></h3>
+        <p>요즘 LLM은 GPU 여러 장에서 돌고, 많은 경우 기계 여러 대에 걸쳐 돈다. MAX API는 여러 GPU와 여러 노드<span class="en">multi-node</span>를 API 안에서 바로 다룬다. 모델이 처음부터 여러 기기에 걸쳐 돌도록 지원한다는 뜻이다.</p>
+        <p>서로 다른 하드웨어를 섞을 수도 있다 <span class="ts">09:10</span>. 발표자의 예는 프리필은 하드웨어 X에, 디코드는 하드웨어 Y에 두는 것이다.</p>
+        <div class="shift" aria-label="프리필과 디코드를 다른 하드웨어에서 처리">
+          <div><span class="tag">1단계 · 프리필</span><b>하드웨어 X</b><span class="muted">프롬프트 전체를 한 번에 읽고 KV 캐시를 채운다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">2단계 · 디코드</span><b>하드웨어 Y</b><span class="muted">답 토큰을 하나씩 만든다</span></div>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="cloud">
+        <header><span class="num">05</span><h2>Modular Cloud: 속이 보이는 클라우드 <span class="ts">09:30</span></h2></header>
+        <p>맨 위 층은 Modular Cloud다. 오늘의 AI 추론은 여러 기계에 나뉘어 돌고, 하드웨어 종류도 섞여 있다. 이걸 운영하는 곳이 Modular Cloud다.</p>
+        <p>발표자는 이 클라우드를 <strong>유리 상자</strong><span class="en">glass box</span>라고 부른다. 속을 들여다볼 수 있다는 뜻이다. MAX, Mojo, 그 사이에 있는 모든 설정값을 자기 엔드포인트에서 직접 바꿔 볼 수 있다.</p>
+        <ul class="plain">
+          <li><strong>엔드포인트 배포</strong>: Modular가 운영하는 곳에 모델을 띄운다</li>
+          <li><strong>자기 클라우드 배포</strong><span class="en">bring your own cloud</span>: 자기 회사 클라우드 계정에 올린다</li>
+          <li><strong>Modular Cloud Lab</strong>: 여러 설정을 실험해서, 모델과 워크로드에 맞는 파레토 프런티어<span class="en">Pareto frontier</span> 위의 가장 좋은 지점을 고른다</li>
+        </ul>
+
+        <h3>사용 흐름 <span class="ts">10:20</span></h3>
+        <p>일반 클라우드 서비스와 비슷하다.</p>
+        <ol class="plain">
+          <li>웹사이트에서 돌릴 모델을 고른다</li>
+          <li>API 키를 받는다</li>
+          <li>HTTP 요청에 키를 넣어 호출한다</li>
+        </ol>
+        <p>전용 엔드포인트도 있다. 직접 만든 모델도 올려 준다. 파인튜닝한 모델이나 자체 추측 디코더<span class="en">speculative decoder</span>를 붙인 모델도 Modular가 대신 서빙할 수 있다고 한다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="perf">
+        <header><span class="num">06</span><h2>발표자가 내세운 성능 숫자 <span class="ts">11:00</span></h2></header>
+        <p>발표자가 말하는 이 스택의 이점은 세 가지다. 비용을 줄인다. 하드웨어 업체 한 곳에 묶이지 않는다. 여러 모델을 옮겨 가며 쓸 수 있다.</p>
+        <p>성능은 vLLM과 SGLang 중 가장 좋은 조합과 비교했다고 한다 <span class="ts">11:20</span>. 발표자는 이 벤치마크들이 독립적으로 검증됐다고 말한다.</p>
+
+        <figure class="chart" aria-label="발표자가 인용한 속도 배수: Kimi K2.5 첫 토큰 시간 5.5배, Kimi K2.5 GPU당 처리량 1.5배, Flux 2 7배, AMD MI355 4배, Flux 2 dev 3배, Gemma 4 약 6배">
+          <span class="chart-title">발표자가 인용한 속도 배수 (비교 대상 = 1배)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Kimi K2.5 · 첫 토큰까지 시간 · vLLM 대비</span><span class="val">5.5배</span></div>
+              <div class="track"><div class="fill key" style="width:78.6%" title="Kimi K2.5 TTFT: vLLM 대비 5.5배"></div><div class="baseline" style="left:14.3%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Kimi K2.5 · GPU당 처리량(B200) · vLLM 대비</span><span class="val">1.5배</span></div>
+              <div class="track"><div class="fill key" style="width:21.4%" title="Kimi K2.5 처리량: vLLM 대비 1.5배"></div><div class="baseline" style="left:14.3%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Flux 2 · torch.compile + diffusers 대비</span><span class="val">7배</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="Flux 2: torch.compile + diffusers 대비 7배"></div><div class="baseline" style="left:14.3%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>AMD MI355 · 같은 시스템의 기존 방식 대비</span><span class="val">4배</span></div>
+              <div class="track"><div class="fill key" style="width:57.1%" title="AMD MI355: 기존 방식 대비 4배"></div><div class="baseline" style="left:14.3%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Flux 2 dev · Artificial Analysis 다음 경쟁자 대비</span><span class="val">3배</span></div>
+              <div class="track"><div class="fill key" style="width:42.9%" title="Flux 2 dev: 다음 경쟁자 대비 3배"></div><div class="baseline" style="left:14.3%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Gemma 4 · SambaNova 대비 ("대략")</span><span class="val">~6배</span></div>
+              <div class="track"><div class="fill" style="width:85.7%" title="Gemma 4: SambaNova 대비 대략 6배"></div><div class="baseline" style="left:14.3%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 비교 대상 (1배)</span><span>7배</span></div>
+          <span class="caption">줄마다 비교 대상이 다르다. 막대끼리 견주지 말고, 각 줄을 "자기 비교 대상보다 몇 배인가"로 읽는다. Gemma 4는 발표자가 "대략"이라고 말해 회색으로 그렸다.</span>
+        </figure>
+
+        <ul class="plain">
+          <li><strong>Kimi K2.5</strong> <span class="ts">11:40</span>: 첫 토큰까지 걸리는 시간<span class="en">TTFT</span>이 vLLM보다 5.5배 빠르다. B200 GPU에서 GPU 한 장이 분당 만드는 토큰 수는 vLLM의 1.5배다.</li>
+          <li><strong>Flux 2</strong> <span class="ts">12:10</span>: 이미지 생성 모델이다. torch.compile을 켠 diffusers보다 약 7배 빠르다. MAX는 한 프레임워크에서 영상, 음성, 이미지, 텍스트 생성을 모두 지원한다고 한다.</li>
+          <li><strong>AMD MI355</strong> <span class="ts">12:40</span>: 같은 시스템의 기존 방식보다 4배 빠르다. 발표자는 이를 총소유비용<span class="en">TCO</span> 측면의 이점으로 소개했다. 발표자에 따르면 AMD GPU는 보통 같은 급 Nvidia보다 30% 싸다.</li>
+          <li><strong>Artificial Analysis</strong> <span class="ts">13:20</span>: Modular는 벤치마크 사이트 Artificial Analysis와 협력하고, 그쪽이 결과를 따로 검증한다고 한다. Flux 2 dev에서 다음 경쟁자보다 약 3배 빠르다. 발표자는 증류나 양자화 같은 요령 없이 낸 순수 속도라고 강조했다.</li>
+          <li><strong>Gemma 4</strong> <span class="ts">14:40</span>: 한 달에서 한 달 반 전에 나온 모델이다. 경쟁자 중에는 하드웨어 회사도 있다. 가속기 회사 SambaNova보다 "대략" 6배 빠르다고 말했다.</li>
+        </ul>
+        <p>발표자는 모든 경우가 아직 시작 단계이고, 최적화가 계속 들어가고 있다고 덧붙였다.</p>
+
+        <p class="note">바로잡기: 발표자는 "7배가 4배보다 크다고 단순 비교하면 안 되고, AMD가 30% 싸다는 점을 따져야 한다"고 말했다. 그런데 7배와 4배는 둘 다 기존 소프트웨어보다 몇 배 빠른지를 나타낸다. 같은 GPU 위에서 비교했다면 GPU 가격은 양쪽에 똑같이 들어가므로 배수를 바꾸지 않는다. 가격 차이는 AMD와 Nvidia의 처리량을 비용 대비로 견줄 때 쓰는 값이다. 발표의 요지는 "AMD에서도 비용 대비 좋은 결과를 낼 수 있다"로 읽는 편이 맞다.</p>
+        <p class="note">발표자는 Modular 소속이고, 이 발표는 자사 제품 소개다. 비교 상대와 조건도 Modular가 골랐다. "독립 검증"이라는 말도 발표자의 주장이며 이 노트에서 확인하지 않았다. 발표자도 직접 검증해 보라고 권했다. 확인 방법은 <a href="#apply">내 환경에 적용하기</a>에 정리했다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="speed">
+        <header><span class="num">07</span><h2>빠른 추론이 여는 것 <span class="ts">14:00</span></h2></header>
+        <p>발표자는 빠른 추론이 새로운 앱을 가능하게 한다고 말한다. 추론이 느려서 만들 수 없던 앱들이다.</p>
+        <ul class="plain">
+          <li>무대에서 보여 준 영상은 실제 화면이다. 누군가 프롬프트를 붙여 넣으면 이미지가 1초 안에 나온다. 많은 경우 0.3초였다.</li>
+          <li>행사장 부스에서는 프롬프트를 주면 영상 입력을 읽어 다시 그려 내는 데모를 돌렸다.</li>
+        </ul>
+      </section>
+
+      <!-- 8 -->
+      <section id="try">
+        <header><span class="num">08</span><h2>써 보고 참여하기 <span class="ts">15:30</span></h2></header>
+        <ul class="plain">
+          <li><strong>오픈소스</strong>: 커널 코드 70만 줄 이상, 모델 정의 전부, MAX 서빙 코드<span class="en">MAX Serve</span>를 공개했다</li>
+          <li><strong>AI 스킬</strong><span class="en">AI skills</span>: Mojo나 MAX를 몰라도, 익숙한 언어로 된 코드를 Mojo나 MAX로 옮길 때 쓰도록 만든 스킬이다</li>
+          <li><strong>바로 설치</strong>: <code>pip install modular</code>로 지금 설치할 수 있다. 발표자는 "데모용도 슬라이드용도 아니다"라고 강조했다</li>
+          <li><strong>채용</strong>: 저수준 커널 엔지니어부터 Kubernetes를 다루는 사람까지 뽑는다</li>
+        </ul>
+      </section>
+
+      <!-- 9 -->
+      <section id="recap">
+        <header><span class="num">09</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>AI 연산 자원이 모자라면서 하드웨어 종류가 폭발적으로 늘었다.</li>
+          <li>하드웨어마다 다른 코드 경로가 서빙 도구까지 번져 소프트웨어가 엉켰다.</li>
+          <li>Modular는 <strong>Mojo(언어), MAX(추론 엔진), Modular Cloud(배포)</strong> 세 층을 바닥부터 새로 만들었다.</li>
+          <li>Mojo는 Python 모양의 시스템 언어다. 성능, 이식성, 쓰기 편함을 함께 노린다. 발표자는 Triton이 성능 약 70%에 머문다고 본다.</li>
+          <li>Modular는 커널을 거의 다 공개했고, 행렬 곱과 어텐션에서 기존 최고 라이브러리보다 빠르다고 주장한다.</li>
+          <li>Mojo 1.0(API 안정화) 출시와 Mojo 언어의 오픈소스 공개는 몇 달 안에 나올 예정이다.</li>
+          <li>MAX는 PyTorch 위에 vLLM과 SGLang을 덧대던 구조를 <strong>한 스택</strong>으로 바꾼다. Python으로 모델을 쓰고 eager 실행으로 디버깅한다.</li>
+          <li>MAX는 여러 GPU와 여러 기계를 API로 다루고, <strong>프리필과 디코드를 서로 다른 하드웨어에</strong> 둘 수 있다.</li>
+          <li>발표자가 인용한 성능은 Kimi K2.5 첫 토큰 5.5배, Flux 2 7배 등이다. <strong>배수마다 비교 대상이 다르고, 모두 자사 주장이다.</strong></li>
+          <li>커널, 모델 정의, 서빙 코드가 공개돼 있다. <code>pip install modular</code>로 직접 검증할 수 있다.</li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="quiz">
+        <header><span class="num">10</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말한 "캄브리아기 대폭발"은 무엇을 가리키나?</span></summary><div class="answer">연산 자원이 모자란 상황에서 Nvidia, Intel, ARM, Apple 등 AI 하드웨어가 한꺼번에 쏟아지는 현상. 저마다 맡은 틈새가 있다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>지금의 AI 소프트웨어가 엉킨 이유는?</span></summary><div class="answer">맨 아래에서 고른 하드웨어가 위쪽 모든 층에 영향을 주기 때문이다. vLLM 같은 서빙 도구가 칩마다 다른 경로를 품게 된다. 배포 도구도 vLLM, SGLang, TensorRT-LLM, llama.cpp로 갈라져 있다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Modular 스택의 세 층과 각 역할은?</span></summary><div class="answer">맨 아래 Mojo는 CPU, GPU, 가속기를 한 언어로 다루는 프로그래밍 언어다. 가운데 MAX는 Mojo로 만든 추론 엔진이다. 맨 위 Modular Cloud는 하드웨어 선택, 요청 배분, 분산 추론을 맡는 배포 플랫폼이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>발표자가 성능, 이식성, 쓰기 편함으로 나눈 비교에서 Triton과 Mojo의 자리는?</span></summary><div class="answer">Triton은 이식성과 쓰기 편함을 갖췄지만 성능은 최고의 약 70%다. Mojo는 세 가지를 모두 갖추는 것을 목표로 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>Modular가 커널 성능에 대해 한 주장 두 가지는?</span></summary><div class="answer">행렬 곱이 cuBLAS, hipBLAS 같은 기존 라이브러리보다 빠르다. 어텐션 커널이 FlashAttention보다 빠르다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>MAX가 풀려는 PyTorch의 문제는?</span></summary><div class="answer">PyTorch는 약 10년 전 설계라 생성형 AI 추론을 염두에 두지 않았다. vLLM, SGLang이 KV 캐시와 페이지드 어텐션을 위에 덧대면서 생태계가 복잡해졌다. MAX는 개발, 최적화, 서빙을 한 스택으로 묶는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>프리필은 하드웨어 X, 디코드는 하드웨어 Y에 둔다는 말은 무슨 뜻인가?</span></summary><div class="answer">프롬프트를 한 번에 읽는 단계와 답 토큰을 하나씩 만드는 단계를 서로 다른 하드웨어에서 처리한다는 뜻이다. MAX API는 이렇게 종류가 다른 하드웨어를 섞어 쓰는 구성을 지원한다고 한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Modular Cloud를 "유리 상자"라고 부르는 이유는?</span></summary><div class="answer">속을 들여다볼 수 있어서다. MAX와 Mojo 사이의 모든 설정값을 자기 엔드포인트에서 직접 바꿔 볼 수 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Kimi K2.5에서 발표자가 인용한 두 숫자는?</span></summary><div class="answer">첫 토큰까지 시간(TTFT)이 vLLM보다 5.5배 빠르다. B200에서 GPU당 처리량은 vLLM의 1.5배다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>"7배와 4배를 단순 비교하면 안 되고 AMD가 30% 싸다는 점을 따져야 한다"는 말에서 바로잡을 점은?</span></summary><div class="answer">7배와 4배는 둘 다 기존 소프트웨어 대비 배수다. 같은 GPU에서 비교했다면 GPU 가격은 양쪽에 똑같이 들어가 배수를 바꾸지 않는다. 가격 차이는 AMD와 Nvidia의 처리량을 비용 대비로 견줄 때 쓰는 값이다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>Artificial Analysis 결과에서 발표자가 강조한 점은?</span></summary><div class="answer">Flux 2 dev에서 다음 경쟁자보다 약 3배 빠르다. 증류나 양자화 같은 요령 없이 낸 순수 속도라는 점이다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자의 주장을 직접 검증하려면 무엇을 하면 되나?</span></summary><div class="answer"><code>pip install modular</code>로 설치해 내 모델로 돌려 본다. 공개된 커널을 내 GPU에서 벤치마크한다. Artificial Analysis에서 결과를 직접 본다.</div></details>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="apply">
+        <header><span class="num">11</span><h2>내 환경에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>지금 쓰는 서빙 도구와 하드웨어 조합을 적는다<span class="how">vLLM, SGLang, TensorRT-LLM, llama.cpp 중 무엇을 어떤 GPU에서 쓰는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span><code>pip install modular</code>로 설치해 본다<span class="how">발표자는 데모용이 아니라 지금 쓸 수 있다고 했다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>내가 쓰는 모델이 MAX 지원 목록에 있는지 확인한다<span class="how">OpenAI 호환 엔드포인트로 기존 호출 코드를 그대로 붙일 수 있는지도 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>같은 GPU, 같은 모델로 현재 도구와 MAX를 비교한다<span class="how">확인: 첫 토큰까지 시간과 GPU당 처리량을 둘 다 쟀는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>비용까지 넣어 비교한다<span class="how">처리량을 GPU 시간당 가격으로 나눈다. AMD와 Nvidia를 견줄 때는 배수가 아니라 이 값으로 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>Artificial Analysis에서 발표자가 말한 결과를 직접 본다<span class="how">Flux 2 dev 등 내 관심 모델의 순위와 조건을 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>공개된 Mojo 커널 하나를 읽어 본다<span class="how">확인: Python을 알면 정말 읽히는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>프리필과 디코드를 다른 하드웨어로 나눌 이유가 있는지 따진다<span class="how">긴 프롬프트가 많은지, 긴 답을 많이 만드는지 워크로드를 본다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="glossary">
+        <header><span class="num">12</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>캄브리아기 대폭발</td><td>Cambrian explosion. 약 5억 년 전 생물 종류가 짧은 기간에 폭발적으로 늘어난 일. 여기서는 AI 하드웨어가 한꺼번에 쏟아지는 상황을 빗댄 말</td></tr>
+              <tr><td>추론</td><td>Inference. 학습이 끝난 모델로 실제 답을 만들어 내는 일</td></tr>
+              <tr><td>서빙</td><td>Serving. 모델을 띄워 두고 사용자 요청을 받아 처리하는 일</td></tr>
+              <tr><td>커널</td><td>Kernel. GPU 같은 가속기에서 돌아가는 계산 함수. 행렬 곱, 어텐션 등</td></tr>
+              <tr><td>이식성</td><td>Portability. 같은 코드가 다른 하드웨어에서도 돌아가는 성질</td></tr>
+              <tr><td>CUDA / ROCm</td><td>Nvidia GPU / AMD GPU 전용 프로그래밍 플랫폼</td></tr>
+              <tr><td>OpenCL</td><td>여러 제조사 하드웨어에서 돌아가도록 만든 오래된 표준</td></tr>
+              <tr><td>Triton</td><td>Python으로 GPU 커널을 짤 수 있게 해 주는 언어</td></tr>
+              <tr><td>cuBLAS / hipBLAS</td><td>Nvidia / AMD가 제공하는 행렬 연산 라이브러리</td></tr>
+              <tr><td>FlashAttention</td><td>메모리 이동을 줄여 어텐션을 빠르게 계산하는 대표적인 커널</td></tr>
+              <tr><td>KV 캐시</td><td>앞서 처리한 토큰의 계산 결과를 저장해 다시 계산하지 않게 하는 메모리</td></tr>
+              <tr><td>페이지드 어텐션</td><td>Paged attention. KV 캐시를 작은 블록으로 나눠 관리해 메모리 낭비를 줄이는 방식</td></tr>
+              <tr><td>그래프 컴파일러</td><td>모델의 연산 전체를 그래프로 보고 한꺼번에 최적화하는 컴파일러</td></tr>
+              <tr><td>eager 실행</td><td>Eager mode. 연산을 한 줄씩 바로 실행하는 방식. 디버깅이 쉽다</td></tr>
+              <tr><td>퓨전</td><td>Fusion. 여러 연산을 커널 하나로 합쳐 메모리 왕복을 줄이는 최적화</td></tr>
+              <tr><td>프리필 / 디코드</td><td>Prefill / Decode. 프롬프트 전체를 한 번에 처리하는 단계 / 답 토큰을 하나씩 만드는 단계</td></tr>
+              <tr><td>분리 추론</td><td>Disaggregated inference. 프리필과 디코드를 서로 다른 기계에서 처리하는 방식</td></tr>
+              <tr><td>TTFT</td><td>Time To First Token. 요청을 보낸 뒤 첫 토큰이 나오기까지 걸린 시간</td></tr>
+              <tr><td>처리량</td><td>Throughput. 일정 시간에 만들어 내는 토큰 수</td></tr>
+              <tr><td>TCO</td><td>Total Cost of Ownership. 하드웨어 구매와 운영 비용을 합친 총비용</td></tr>
+              <tr><td>파레토 프런티어</td><td>Pareto frontier. 한 지표를 더 좋게 하려면 다른 지표를 내줘야 하는 지점들을 이은 경계. 예: 속도와 비용</td></tr>
+              <tr><td>추측 디코딩</td><td>Speculative decoding. 작은 모델이 토큰 여러 개를 먼저 추측하고 큰 모델이 한 번에 검증해 속도를 높이는 방법</td></tr>
+              <tr><td>증류 / 양자화</td><td>Distillation / Quantization. 작은 모델이 큰 모델을 따라 하게 학습시키기 / 숫자 정밀도를 낮춰 모델을 가볍게 만들기</td></tr>
+              <tr><td>OpenAI 호환 엔드포인트</td><td>OpenAI API와 같은 요청 형식을 받는 주소. 기존 호출 코드를 거의 그대로 쓸 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="timeline">
+        <header><span class="num">13</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, 연산 자원 부족</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>AI 하드웨어의 캄브리아기 대폭발</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>엉킨 소프트웨어: vLLM 구조도</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>바닥부터 다시 짠 통합 계층</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>세 가지 목표와 Mojo 소개</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>MAX 추론 엔진 소개</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>분산 추론과 클라우드</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>Modular 플랫폼의 성격</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>Mojo 상세</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>쓰기 편함, 성능, 이식성 비교</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>커널 공개, cuBLAS와 FlashAttention보다 빠르다는 주장</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>Mojo 1.0과 오픈소스 계획</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>MAX: PyTorch의 한계</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>MAX 프레임워크 구성</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>지원 모델과 OpenAI 호환 엔드포인트</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>모델을 짜는 방식</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>여러 GPU와 여러 기계, 프리필과 디코드 나누기</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>Modular Cloud와 Cloud Lab</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>클라우드 사용 흐름, 맞춤 모델</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>왜 신경 써야 하나</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>벤치마크: Kimi K2.5</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>Flux 2: 7배</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>AMD MI355: 4배와 GPU 가격</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>Artificial Analysis: Flux 2 dev 3배</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>1초 안에 나오는 이미지 생성 데모</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>Gemma 4: SambaNova 대비 약 6배</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>오픈소스, AI 스킬, 채용</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td><code>pip install modular</code>, 질의응답 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '7BcQdtRA3Tc:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

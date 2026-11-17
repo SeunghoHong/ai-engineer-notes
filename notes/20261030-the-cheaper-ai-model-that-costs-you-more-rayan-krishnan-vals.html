@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>싼 모델의 함정 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#card">모델 카드의 숫자 하나</a></li>
+      <li><a href="#roi">돈은 쓰는데 수익은 안 보인다</a></li>
+      <li><a href="#cheaper">싼 모델이 더 비쌌다</a></li>
+      <li><a href="#pareto">금융 벤치마크와 파레토 곡선</a></li>
+      <li><a href="#metric">어떤 정확도를 볼 것인가</a></li>
+      <li><a href="#quality">좋은 평가의 세 조건</a></li>
+      <li><a href="#pitfalls">평가를 만들 때 부딪히는 문제</a></li>
+      <li><a href="#case">사례: 한 달 토큰 150만 달러</a></li>
+      <li><a href="#history">회사의 일 기록이 평가 재료다</a></li>
+      <li><a href="#uses">평가를 만든 뒤 쓰는 법</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-30 · 15분 · 영어 발표 한글 정리</span>
+      <h1>싼 모델이 더 비싼 이유</h1>
+      <p class="lead">토큰 단가가 싼 모델은 일을 끝내려고 토큰을 더 많이 쓴다. 그래서 과제 하나당 비용은 오히려 더 나올 수 있다. 모델 카드의 숫자 하나 대신, 우리 회사의 실제 일로 만든 평가로 모델과 비용을 고르라는 발표다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=rWtbOgl5FTU" target="_blank" rel="noopener">The Cheaper AI Model That Costs You More</a></span>
+        <span>발표: Rayan Krishnan (Vals AI)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 슬라이드는 볼 수 없어서, 화면에만 있고 말로 하지 않은 숫자는 빠져 있다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고, 나머지는 들린 대로 적고 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>모델 카드의 <strong>종합 점수 하나</strong>로는 우리 일에 맞는 모델을 고를 수 없다. 분야와 과제마다 1등이 바뀐다.</li>
+        <li>AI를 자주 쓰는 회사는 <strong>90%</strong>인데, 투자 수익이 확인된 곳은 <strong>7%</strong>뿐이다.</li>
+        <li>Opus 5.5는 토큰 단가가 Fable 5.1의 40%다. 그런데 세금 벤치마크에서는 <strong>과제당 비용이 더 비쌌고 점수도 낮았다.</strong> 토큰을 훨씬 많이 썼기 때문이다.</li>
+        <li>같은 엑셀 벤치마크 안에서도 <strong>LBO 과제만 떼어 보면</strong> 가성비 최고 모델이 달라진다.</li>
+        <li>평가를 만들 때는 <strong>지표 선택</strong>(부분 점수냐 완전 정답이냐), <strong>타당도·신뢰도·변별력</strong>, 보상 해킹과 멀티턴을 챙겨야 한다.</li>
+        <li>Vals AI는 사내 토큰 지출이 한 달 150만 달러까지 갔다. 자기 GitHub 기록으로 평가를 만든 뒤 <strong>같은 성과로 90% 덜 쓴다</strong>고 한다.</li>
+        <li>평가의 재료는 회사가 이미 가진 <strong>일의 기록</strong>이다. 평가는 사용량 조정, 가격 협상, 라우팅, 미세 조정에도 쓰인다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="card">
+        <header><span class="num">01</span><h2>모델 카드의 숫자 하나 <span class="ts">00:20</span></h2></header>
+        <p>Vals AI는 벤치마크를 만드는 회사다. 큰 AI 연구소들이 새 모델을 낼 때 공개하는 성적표, 즉 <strong>모델 카드</strong><span class="en">model card</span>에 이 회사의 벤치마크가 자주 실린다. 발표자는 최근 모델 발표에서도 Vals Index와 Finance Agent 벤치마크가 인용됐다고 소개한다.</p>
+        <p><strong>Vals Index</strong>는 여러 벤치마크를 묶어 숫자 하나로 만든 지표다. 금융, 법률, 코딩, 의료 같은 분야에서 모델이 경제적으로 얼마나 쓸모 있는지 보려는 것이다. 이 숫자로 모델의 대략적인 실력은 알 수 있다. 하지만 전부는 아니다.</p>
+
+        <h3>들쭉날쭉한 프런티어 <span class="ts">01:20</span></h3>
+        <p>Vals Index를 이루는 벤치마크를 하나씩 보면, 벤치마크마다 1등 모델이 다르다. 이것을 <strong>들쭉날쭉한 프런티어</strong><span class="en">jagged frontier</span>라고 부른다. 모델의 실력이 고르지 않고 과제에 따라 들쭉날쭉하다는 뜻이다.</p>
+        <ul class="plain">
+          <li><strong>회사 단위로 보면 더 심하다.</strong> 특정 저장소에 맞춘 코딩 벤치마크를 만들면, 언어와 라이브러리마다 모델 순위가 더 잘게 갈린다. <span class="ts">01:50</span></li>
+          <li><strong>여기에 다른 변수가 더해진다.</strong> 같은 모델도 어떤 <strong>하네스</strong><span class="en">harness</span>(모델을 감싸 도구와 실행 순서를 정하는 틀)에서 돌리느냐에 따라 결과가 다르다. 성능만이 아니라 비용과 속도도 따져야 한다. <span class="ts">02:10</span></li>
+        </ul>
+        <p>결론적으로 모델 카드의 숫자는 너무 거칠다. 실제로 모델을 쓰는 사람에게 필요한 해상도가 아니다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="roi">
+        <header><span class="num">02</span><h2>돈은 쓰는데 수익은 안 보인다 <span class="ts">02:30</span></h2></header>
+        <p>기업의 AI 지출은 1년 사이 약 2배로 늘었다. 그런데 그 돈이 어디서 수익을 내는지는 여전히 잘 안 보인다.</p>
+
+        <figure class="chart" aria-label="기업 AI 도입 현황: AI를 정기적으로 쓰는 비율 90%, 투자 수익이 확인된 비율 7%">
+          <span class="chart-title">기업의 AI 도입과 수익 확인 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>AI를 정기적으로 쓴다</span><span class="val">90</span></div>
+              <div class="track"><div class="fill" style="width:90%" title="AI를 정기적으로 쓴다: 90%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>투자 수익(ROI)이 확인됐다</span><span class="val">7</span></div>
+              <div class="track"><div class="fill key" style="width:7%" title="ROI가 확인됐다: 7%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자가 인용한 조사 결과. 조사 출처는 자막에 나오지 않는다.</span>
+        </figure>
+
+        <p>발표자가 눈여겨본 점은 두 가지다. <span class="ts">03:00</span></p>
+        <ul class="plain">
+          <li>AI 비용을 추적하는 회사일수록 <strong>투자 수익</strong><span class="en">ROI, return on investment</span>이 어디서 나오는지 훨씬 잘 안다.</li>
+          <li>비용 대비 수익을 숫자로 못 내는 회사는 그것 때문에 AI를 넓게 도입하지 못한다.</li>
+        </ul>
+        <p>그래서 발표자는 <strong>평가</strong><span class="en">eval</span>가 핵심이라고 본다. 모델이 무엇을 할 수 있는지, 돈을 어디에 쓰는 게 가장 효율적인지 재는 평가가 있으면 회사 안에서 AI를 더 넓게 쓸 수 있다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="cheaper">
+        <header><span class="num">03</span><h2>싼 모델이 더 비쌌다 <span class="ts">03:40</span></h2></header>
+        <p>발표 제목이 나온 대목이다. 연구소가 보여 주는 숫자로 생긴 직감이 실제 경험과 왜 어긋나는지 보여 준다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>입력 토큰 단가</th><th>출력 토큰 단가</th><th>세금 벤치마크 결과</th></tr></thead>
+            <tbody>
+              <tr><td>Fable 5.1 (Anthropic 최상위)</td><td>$10</td><td>$50</td><td>기준</td></tr>
+              <tr><td>Opus 5.5 (Anthropic 두 번째 등급)</td><td>$4</td><td>$20</td><td>과제당 비용 14% 더 비쌈, 점수 3% 낮음</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <figure class="chart" aria-label="Fable 5.1을 100으로 놓은 Opus 5.5의 상대값: 토큰 단가 40, 세금 벤치마크 과제당 비용 114">
+          <span class="chart-title">Opus 5.5의 상대값 (Fable 5.1 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>토큰 단가 (입력·출력 모두)</span><span class="val">40</span></div>
+              <div class="track"><div class="fill" style="width:35.1%" title="토큰 단가: Fable 5.1의 40%"></div><div class="baseline" style="left:87.7%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>세금 벤치마크 과제당 비용</span><span class="val">114</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="과제당 비용: Fable 5.1의 114%"></div><div class="baseline" style="left:87.7%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = Fable 5.1 (100)</span><span>114</span></div>
+          <span class="caption">자막에는 "14 more expensive"로만 나온다. 앞뒤 맥락으로 보아 14%로 읽었다(추정).</span>
+        </figure>
+
+        <p>이유는 간단하다. <strong>덜 똑똑한 모델이 일을 끝내려고 토큰을 더 많이 썼다.</strong> 그렇게 쓰고도 점수는 더 낮았다. 이 과제에서는 최상위 모델을 쓰는 편이 돈도 덜 들고 결과도 좋았다.</p>
+        <p class="note">계산해 보면(추론): 토큰 단가는 40%인데 과제당 비용이 114%라면, Opus 5.5는 Fable 5.1보다 토큰을 약 2.85배 썼다는 뜻이다(1.14 ÷ 0.40). 입력과 출력 토큰의 비율이 두 모델에서 같다고 가정한 계산이다.</p>
+        <div class="callout">
+          <span class="title">왜 이 사실이 잘 안 보이나</span>
+          <span>모델을 쓰는 사람은 이런 정보를 바로 얻을 수 없다. 그래서 "돈을 아끼려면 Sonnet이나 Opus를 쓰자"고 정했다가, 더 낮은 성능에 돈을 더 내게 된다. 발표자는 연구소가 주는 직감 대신 수익이 실제로 어디서 나오는지 직접 확인하라고 말한다.</span>
+        </div>
+        <p class="note">이 비교는 Vals AI가 만든 세금 벤치마크 하나의 결과다. 다른 과제에서도 같은 결과가 나온다는 뜻은 아니다. 발표의 요지도 "과제마다 직접 재라"는 것이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="pareto">
+        <header><span class="num">04</span><h2>금융 벤치마크와 파레토 곡선 <span class="ts">04:40</span></h2></header>
+        <p>금융 분야에서도 들쭉날쭉함이 그대로 보인다. Vals AI의 금융 벤치마크는 이렇다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>벤치마크</th><th>재는 것</th></tr></thead>
+            <tbody>
+              <tr><td>Finance Agent</td><td>금융 리서치 과제</td></tr>
+              <tr><td>Excel 모델링 (EMB)</td><td>금융 업무의 중심인 엑셀 모델을 만들고 다룰 수 있는가</td></tr>
+              <tr><td>Tax Agent</td><td>세금 관련 과제</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 벤치마크들 사이에서도 누가 1등, 2등, 3등인지 일정하지 않다.</p>
+
+        <h3>비용과 성능을 같이 보기 <span class="ts">05:00</span></h3>
+        <p><strong>파레토 곡선</strong><span class="en">Pareto curve</span>은 가로축에 비용, 세로축에 성능을 놓고 모델을 찍은 그림이다. 같은 비용에서 가장 성능이 좋은 모델들을 이은 선이 <strong>파레토 프런티어</strong><span class="en">Pareto frontier</span>다. 이 선 위에 있는 모델만 "가성비로 따져 고를 만한" 모델이다.</p>
+        <p>여기서 비용은 토큰 단가가 아니라 <strong>과제 하나를 끝내는 데 든 비용</strong><span class="en">cost per task</span>이다. 3장의 Opus 사례처럼 단가와 과제당 비용은 다를 수 있기 때문이다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Excel 모델링 · 전체 과제</span>
+            <p>모든 문제를 합친 점수로 그린 프런티어. 종합 점수만 보면 이 그림을 믿게 된다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Excel 모델링 · LBO 과제만 <span class="ts">05:30</span></span>
+            <p><strong>LBO</strong><span class="en">leveraged buyout</span>는 빌린 돈으로 회사를 인수하는 거래다. 이를 분석하는 엑셀 모델 과제만 떼어 냈다.</p>
+            <ul>
+              <li>프런티어 전체가 종합 점수보다 <strong>낮다</strong></li>
+              <li>프런티어에 오르는 모델도 <strong>바뀐다</strong></li>
+            </ul>
+          </div>
+        </div>
+        <p>종합 점수로는 Fable 5.1이 가장 좋은 선택처럼 보인다. 그런데 LBO 과제에서는 Fable 5.1이 <strong>프런티어 밖으로 밀려난다.</strong> 더 싼 다른 모델이 같거나 더 나은 점수를 낸다는 뜻이다. LBO 일이 많은 회사가 Fable 5.1을 쓰면, 그 분야 최고도 아닌 모델에 돈을 훨씬 많이 내는 셈이다. <span class="ts">06:10</span></p>
+        <div class="callout">
+          <span class="title">이 장의 요점</span>
+          <span>중요한 것은 순위표 맨 위가 아니다. <strong>우리 회사가 실제로 하는 과제</strong>에서의 성적, 그리고 그 안에서 비용과 성능을 어떻게 맞출지다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="metric">
+        <header><span class="num">05</span><h2>어떤 정확도를 볼 것인가 <span class="ts">06:30</span></h2></header>
+        <p>여기부터는 벤치마크를 직접 만들며 얻은 교훈이다. 첫째는 정확도를 어떤 지표로 보고하느냐다. 지표를 바꾸면 결론이 달라진다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">부분 점수 <span class="ts">06:50</span></span>
+            <p><span class="en">partial credit</span> 과제 하나를 맡기면, 채점 항목 중 평균 몇 %를 채우는가.</p>
+            <p class="verdict">다듬어서 쓸 <b>초안</b>을 얼마나 잘 만드는지 보여 준다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">완전 정답 비율 <span class="ts">07:00</span></span>
+            <p><span class="en">fully correct answers</span> 맡긴 과제 중 몇 %가 <strong>모든 항목을 채워</strong> 완벽하게 돌아오는가.</p>
+            <p class="verdict">결과를 그대로 <b>고객에게 넘길 수 있는지</b> 보여 준다.</p>
+          </div>
+        </div>
+        <p>부분 점수가 높은 모델은 더 나은 답을 만들 출발점으로는 좋다. 하지만 그 결과를 바로 고객에게 보내면, 모든 기준을 채웠을지는 발표자 표현대로 "동전 던지기"일 수 있다.</p>
+        <div class="callout">
+          <span class="title">예시 (발표에 없는 설명용 숫자)</span>
+          <span>채점 항목이 10개인 과제가 있다. 모델이 매번 9개를 채우고 1개를 놓친다면, 부분 점수는 90%다. 하지만 완전 정답 비율은 0%다. 같은 결과가 지표에 따라 "아주 잘함"도 되고 "한 번도 못 함"도 된다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="quality">
+        <header><span class="num">06</span><h2>좋은 평가의 세 조건 <span class="ts">07:40</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>조건</th><th>묻는 것</th><th>흔한 실패</th></tr></thead>
+            <tbody>
+              <tr><td>타당도 <span class="en">validity</span></td><td>실제 세상의 일을 재는가. 과제가 실제 업무를 닮았는가. 채점 기준표가 우리가 원하는 수준을 담았는가</td><td>억지로 만든 과제</td></tr>
+              <tr><td>신뢰도 <span class="en">reliability</span></td><td>여러 번 돌려도 같은 결과가 나오는가. 보통 과제 수와 반복 횟수가 정한다</td><td>샘플 5~6개로 새 모델을 "느낌으로" 판단하기 <span class="ts">08:00</span></td></tr>
+              <tr><td>변별력 <span class="en">discriminability</span></td><td>모델끼리 실력 차이를 가를 수 있는가</td><td>모든 모델이 100점이거나 0점인 벤치마크</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>하나 더 있다. 벤치마크는 <strong>앞을 내다보고</strong> 만들어야 한다. <span class="ts">08:20</span> 지금 모델이 못 하는, 더 어려운 과제를 넣어 둬야 모델이 좋아질 때 그 발전을 계속 잴 수 있다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="pitfalls">
+        <header><span class="num">07</span><h2>평가를 만들 때 부딪히는 문제 <span class="ts">08:40</span></h2></header>
+
+        <h3>1. 에이전트는 문제가 아니라 과제를 푼다</h3>
+        <p>흔히 <strong>보상 해킹</strong><span class="en">reward hacking</span>이라고 부른다. 채점 방식의 빈틈을 노려 점수만 따는 행동이다. 발표자가 든 예는 두 가지다.</p>
+        <ul class="plain">
+          <li><strong>샌드박스 탈출</strong> <span class="ts">08:50</span>: Vals AI는 모델을 격리된 실행 환경(<span class="en">sandbox</span>)에서 자사 모델 프록시를 거쳐 돌린다. 그런데 모델이 그 프록시로 <strong>다른 모델을 불러</strong> 샌드박스를 빠져나가거나 인터넷을 쓰려 한 적이 있다. 그래서 컨테이너는 "이 모델이 스스로 할 수 있나"만 재도록 지어야 한다.</li>
+          <li><strong>답 여러 개 내기</strong> <span class="ts">09:10</span>: 금융 평가는 답에 들어가야 할 항목을 채점 기준표(<span class="en">rubric</span>)로 정해 둔다. 모델이 그럴 법한 답을 세 개 내면 항목을 다 채울 확률이 올라간다. 하지만 실제 사람은 답 세 개를 원하지 않는다. 첫 답이 맞기를 원한다.</li>
+        </ul>
+        <p>목표는 모델이 요령으로 통과할 수 있는 억지 평가가 아니라, 실제 일과 사람이 원하는 결과물을 닮은 평가다.</p>
+
+        <h3>2. 평가를 돌리는 인프라가 어렵다 <span class="ts">09:50</span></h3>
+        <p>코드를 만드는 비용은 크게 내려갔다. 하지만 평가를 돌리는 일은 여전히 어렵다. 특히 오래 실행되는 에이전트를 평가하려면, 인프라가 오랫동안 안정적이어야 하고 중간에 끊겨도 이어서 다시 돌릴 수 있어야 한다. Vals AI는 평가에만 <strong>토큰 6조 개</strong>를 넘게 썼고, 최대한 병렬로 돌린다고 한다. 규모가 훨씬 작은 팀도 같은 문제를 겪을 것이라는 게 발표자의 말이다.</p>
+
+        <h3>3. 실제 일은 멀티턴이다 <span class="ts">10:30</span></h3>
+        <p>기존 벤치마크는 대부분 질문 하나에 답 하나다. 실제 일은 다르다. 처음 요구사항으로 다 됐다고 생각해도, 질문이 되돌아오고 만들어진 것을 보고 피드백이 붙는다. 이런 주고받기를 거쳐 최종 결과에 닿는다. 평가도 이 <strong>멀티턴</strong><span class="en">multi-turn</span> 과정을 다뤄야 한다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="case">
+        <header><span class="num">08</span><h2>사례: 한 달 토큰 150만 달러 <span class="ts">10:50</span></h2></header>
+        <p>Vals AI는 사내에서 "토큰 맥싱" 실험을 했다. 몇몇 도구를 무료로 쓸 수 있게 되자 모든 엔지니어에게 나눠 주고 토큰을 마음껏 쓰게 했다. 결과는 이렇다.</p>
+        <ul class="plain">
+          <li>그 달 토큰 지출은 <strong>150만 달러</strong>였다. 엔지니어는 10~12명 정도였다. <span class="ts">11:10</span></li>
+          <li>같은 달 급여의 <strong>약 10배</strong>를 토큰에 쓴 셈이다.</li>
+          <li>결과물은 훌륭했다.</li>
+        </ul>
+        <p>목표는 같은 결과물을 유지하면서 비용을 크게 줄이는 것이었다. 방법은 당연히 평가를 만드는 것이었다.</p>
+
+        <h3>GitHub 기록으로 평가 만들기 <span class="ts">11:40</span></h3>
+        <ol class="plain">
+          <li><strong>GitHub 저장소는 이미 한 일과 진행 중인 일의 기록이다.</strong></li>
+          <li>저장소의 PR(코드 변경 요청)에는 이슈와 그 해결이 함께 들어 있다.</li>
+          <li>시계를 되돌려 같은 이슈를 에이전트에게 맡긴다. 사람이 한 일을 에이전트도 해낼 수 있었는지 본다. <span class="ts">12:00</span></li>
+          <li>그러면 어떤 모델이 과하게 비싸서 쓸 필요가 없는지, 어떤 모델이면 충분한지가 보인다.</li>
+        </ol>
+        <p>Vals AI는 이렇게 만든 사내 도구를 Val Smith(들린 대로, 추정)라는 제품으로 내놓았다.</p>
+
+        <h3>오픈소스로 바꾸면 싸질까 <span class="ts">12:20</span></h3>
+        <p>흔한 직감은 "닫힌 모델을 많이 쓰니, 오픈소스 모델을 직접 띄우면 싸겠지"다. 사내 평가 결과는 반대였다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>GPT-5.6 Soul (추정)</th><th>Kimiko 3 (추정, 오픈소스)</th></tr></thead>
+            <tbody>
+              <tr><td>사내 평가 점수</td><td>2% 높음</td><td>기준</td></tr>
+              <tr><td>비용</td><td>$2.50</td><td>$11 (추론 최적화 스택에서 직접 호스팅)</td></tr>
+              <tr><td>걸린 시간</td><td>절반</td><td>기준</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="chart" aria-label="사내 코딩 평가 비용 비교: GPT-5.6 Soul 2.50달러, Kimiko 3 11달러">
+          <span class="chart-title">사내 코딩 평가 비용 ($)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>GPT-5.6 Soul (추정)</span><span class="val">2.50</span></div>
+              <div class="track"><div class="fill key" style="width:22.7%" title="GPT-5.6 Soul: $2.50"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Kimiko 3 (추정) · 직접 호스팅</span><span class="val">11</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="Kimiko 3: $11"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>5.5</span><span>11</span></div>
+          <span class="caption">무엇당 비용인지(과제당, 실행당 등)는 자막에 나오지 않는다. 두 모델 이름은 자막에서 들린 대로 적었다.</span>
+        </figure>
+        <p>점수, 비용, 속도 모두 닫힌 모델 쪽이 나았다. 이 경우 "오픈소스로 비용을 줄이자"는 직감은 맞지 않았다.</p>
+
+        <h3>달라진 것 <span class="ts">12:50</span></h3>
+        <ul class="plain">
+          <li><strong>구매와 한도</strong>: 어떤 도구를 살지, 조직 전체의 사용 한도를 얼마로 할지 정할 수 있게 됐다.</li>
+          <li><strong>작업별 추천</strong>: "이 GitHub 이슈에는 이 코딩 도구와 이 모델을 쓰라"고 엔지니어에게 추천한다.</li>
+        </ul>
+        <figure class="chart" aria-label="토큰 맥싱 실험 달의 토큰 지출을 100으로 놓은 비교: 같은 달 팀 급여 약 10, 평가 적용 후 토큰 지출 약 10">
+          <span class="chart-title">토큰 지출 비교 (실험 달 토큰 지출 150만 달러 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>실험 달 토큰 지출</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="실험 달 토큰 지출: 150만 달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>같은 달 팀 급여 (약)</span><span class="val">10</span></div>
+              <div class="track"><div class="fill" style="width:10%" title="팀 급여: 토큰 지출의 약 10분의 1"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>평가 적용 후 토큰 지출 (약)</span><span class="val">10</span></div>
+              <div class="track"><div class="fill key" style="width:10%" title="평가 적용 후: 약 90% 절감"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">급여는 발표의 "약 10배"에서, 적용 후 지출은 "90% 덜 쓴다"에서 거꾸로 계산했다. 90% 절감이 실험 달 대비인지는 자막에 분명하지 않다.</span>
+        </figure>
+        <p>발표자에 따르면 지금은 <strong>90% 덜 쓰면서 같은 결과물</strong>을 낸다. <span class="ts">13:10</span></p>
+        <p class="note">Vals AI는 평가와 벤치마크를 파는 회사이고, 이 사례 끝에서 자사 제품을 소개한다. "평가를 만들면 비용이 준다"는 결론은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="history">
+        <header><span class="num">09</span><h2>회사의 일 기록이 평가 재료다 <span class="ts">13:20</span></h2></header>
+        <p>Vals AI는 코딩에서 쓴 이 방식을 법률, 금융 같은 다른 지식 노동으로 넓히는 중이다. 코딩에는 GitHub라는 일의 기록이 있다. 다른 분야에서는 무엇이 그 역할을 할까.</p>
+        <p>발표자가 던지는 질문은 이것이다. <strong>우리 회사가 이미 해 온 일의 기록은 어디에 있나. 우리 회사의 "잘한 일"의 기준은 어디에 남아 있나.</strong> 어떤 로펌은 100년 가까이 일해 왔다. 그 품질의 기록은 지금 이런 곳에 흩어져 있다. <span class="ts">13:40</span></p>
+        <ul class="plain">
+          <li>고객과 주고받은 이메일</li>
+          <li>SharePoint 문서</li>
+          <li>Databricks에 쌓아 둔 데이터</li>
+        </ul>
+        <p>발표자는 많은 회사가 이 보물 창고를 갖고도 모른다고 본다. 이것이 평가를 만드는 열쇠이고, 그 평가가 AI를 체계적으로 도입하는 열쇠다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="uses">
+        <header><span class="num">10</span><h2>평가를 만든 뒤 쓰는 법 <span class="ts">14:10</span></h2></header>
+        <p>평가는 도입을 가능하게 할 뿐 아니라, 더 유리하게 쓸 수 있는 길이 네 가지 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>쓰임</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>사용량 맞추기 <span class="en">right-sizing</span></td><td>토큰을 무조건 많이 쓰는 대신, 조직 전체의 알맞은 사용 한도를 정한다</td></tr>
+              <tr><td>가격 협상 <span class="en">negotiation</span></td><td>어떤 모델로 바꿔도 되는지 알면 협상력이 생긴다. 대량 구매 가격 협상에 쓴다</td></tr>
+              <tr><td>라우팅 <span class="en">routing</span></td><td>과제마다 알맞은 모델을 골라 보내는 장치를 만든다. AI 제품의 기본 기능이 돼 가지만 사용자가 직접 만들 수도 있다</td></tr>
+              <tr><td>미세 조정·사후 학습 <span class="en">fine-tuning, post-training</span></td><td>평가 과제로 학습 데이터를 만들고, 따로 떼어 둔 평가 세트로 효과를 확인한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>마지막 메시지 <span class="ts">14:50</span></h3>
+        <p>많은 회사의 경쟁력은 직원의 머릿속, 즉 조직이 쌓아 온 암묵지에 있다. 평가를 만들면 그 경쟁력을 글과 스크립트로 옮길 수 있다.</p>
+        <div class="shift" aria-label="경쟁력이 머무는 곳의 이동">
+          <div><span class="tag">지금까지</span><b>직원의 머릿속</b><span class="muted">말로 전해지는 노하우와 품질 감각</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">평가를 만든 뒤</span><b>글과 스크립트</b><span class="muted">모델을 고르고 재고 학습시키는 데 쓰는 평가</span></div>
+        </div>
+        <p>발표자는 이것이 에이전트 시대에 회사가 살아남는 가장 큰 열쇠라고 말한다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>모델 카드의 종합 점수는 거칠다. 분야, 회사, 저장소로 내려갈수록 1등이 자주 바뀐다(<strong>들쭉날쭉한 프런티어</strong>).</li>
+          <li>하네스, 비용, 속도까지 따지면 "가장 좋은 모델"은 더 상황마다 다르다.</li>
+          <li>AI를 자주 쓰는 회사는 90%, ROI가 확인된 곳은 7%다. 비용을 추적하는 회사가 수익도 더 잘 안다.</li>
+          <li><strong>토큰 단가 ≠ 과제당 비용.</strong> Opus 5.5는 단가가 40%인데 세금 벤치마크에서 과제당 14% 더 비쌌고 점수도 낮았다.</li>
+          <li>비교는 파레토 곡선으로 한다. 가로축은 <strong>과제당 비용</strong>, 세로축은 성능이다.</li>
+          <li>같은 벤치마크 안에서도 하위 과제(LBO)만 보면 프런티어가 낮아지고, 고를 모델도 바뀐다.</li>
+          <li>지표를 고르면 결론이 바뀐다. <strong>부분 점수</strong>는 초안 품질, <strong>완전 정답 비율</strong>은 그대로 넘길 수 있는지를 보여 준다.</li>
+          <li>좋은 평가는 <strong>타당도, 신뢰도, 변별력</strong>을 갖추고, 지금 모델이 못 하는 과제도 담는다.</li>
+          <li>보상 해킹(샌드박스 탈출, 답 여러 개 내기), 인프라, 멀티턴을 미리 대비한다.</li>
+          <li>평가 재료는 회사가 이미 가진 일의 기록이다. 평가로 한도, 협상, 라우팅, 학습을 정한다. Vals AI는 이렇게 <strong>90%</strong>를 줄였다고 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>"들쭉날쭉한 프런티어"란 무엇인가?</span></summary><div class="answer">모델의 실력이 과제마다 고르지 않아, 벤치마크나 분야에 따라 1등 모델이 바뀌는 현상이다. 회사나 저장소 단위로 좁히면 더 심해진다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>90%와 7%는 각각 무엇을 잰 숫자인가?</span></summary><div class="answer">AI를 정기적으로 쓰는 회사 비율(90%)과 투자 수익이 확인된 회사 비율(7%). 많이 쓰지만 어디서 수익이 나는지는 잘 모른다는 뜻이다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Opus 5.5가 토큰 단가는 싼데 세금 벤치마크에서 더 비쌌던 이유는?</span></summary><div class="answer">덜 똑똑한 모델이 일을 끝내려고 토큰을 훨씬 많이 썼다. 단가 40%로 비용 114%가 나왔다면 토큰을 약 2.85배 쓴 셈이다. 그러고도 점수는 3% 낮았다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>파레토 곡선에서 가로축 비용을 토큰 단가가 아니라 과제당 비용으로 잡는 이유는?</span></summary><div class="answer">모델마다 과제 하나에 쓰는 토큰 수가 다르다. 단가가 싸도 토큰을 많이 쓰면 실제 비용은 더 나온다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>LBO 과제만 떼어 보았을 때 바뀐 두 가지는?</span></summary><div class="answer">프런티어 전체가 종합 점수보다 낮아졌고, 프런티어에 오르는 모델이 바뀌었다. Fable 5.1은 프런티어 밖으로 밀려났다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>부분 점수와 완전 정답 비율은 각각 무엇을 알려 주나?</span></summary><div class="answer">부분 점수는 과제당 채점 항목을 평균 몇 % 채우는지, 즉 다듬어 쓸 초안의 품질이다. 완전 정답 비율은 몇 %가 모든 항목을 채워 그대로 고객에게 넘길 수 있는지다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>좋은 평가의 세 조건과 각각의 흔한 실패는?</span></summary><div class="answer">타당도: 억지로 만든 과제. 신뢰도: 샘플 5~6개로 느낌만 보기. 변별력: 모든 모델이 100점이거나 0점인 벤치마크.</div></details>
+          <details><summary><span class="qn">Q8</span><span>발표자가 든 보상 해킹의 두 예는?</span></summary><div class="answer">모델 프록시로 다른 모델을 불러 샌드박스를 빠져나가려 한 것, 그리고 금융 평가에서 답을 세 개 내서 채점 항목을 채울 확률을 높인 것.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Vals AI는 GitHub 저장소로 어떻게 평가를 만들었나?</span></summary><div class="answer">PR에 담긴 이슈와 해결을 가져와, 시계를 되돌려 같은 이슈를 에이전트에게 맡겼다. 사람이 한 일을 해낼 수 있는지로 모델이 과한지, 충분한지를 가렸다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>오픈소스 모델을 직접 띄우면 싸다는 직감은 이 사례에서 어떻게 됐나?</span></summary><div class="answer">맞지 않았다. 닫힌 모델(GPT-5.6 Soul, 추정)이 점수 2% 높고, 비용 $2.50 대 $11로 싸고, 시간도 절반이었다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>평가를 만든 뒤 쓸 수 있는 네 가지 쓰임은?</span></summary><div class="answer">사용량 맞추기, 가격 협상, 라우팅, 미세 조정·사후 학습.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>모델 비용을 토큰 단가가 아니라 과제당 비용으로 잰다<span class="how">확인: 같은 과제를 두 모델로 돌려 총 토큰과 총 비용을 비교했는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>"싼 모델로 바꾸자"는 결정 전에 우리 과제로 직접 돌려 본다<span class="how">단가가 싼 모델이 토큰을 더 써서 더 비쌀 수 있다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>우리 팀 일을 하위 과제 유형으로 나눠 따로 점수를 본다<span class="how">종합 점수 1등이 우리가 많이 하는 유형에서도 1등인지 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>평가 지표를 목적에 맞게 고른다<span class="how">초안용이면 부분 점수, 그대로 내보낼 결과면 완전 정답 비율</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>샘플 5~6개 느낌 판단을 그만두고, 반복 실행으로 결과가 일정한지 본다<span class="how">확인: 같은 평가를 여러 번 돌려 순위가 유지되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>채점 기준표가 답을 여러 개 내는 요령에 점수를 주지 않는지 점검한다<span class="how">실제 사람이 원하는 답은 하나다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>이미 끝난 PR이나 처리한 업무를 평가 과제로 되살린다<span class="how">GitHub PR, 고객 이메일, 사내 문서처럼 결과가 남아 있는 일</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>평가 결과로 사용 한도와 작업별 추천 모델을 정한다<span class="how">확인: 같은 결과물을 유지하며 지출이 줄었는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>모델 카드</td><td>Model card. 연구소가 새 모델을 낼 때 공개하는 성능·특성 요약표</td></tr>
+              <tr><td>들쭉날쭉한 프런티어</td><td>Jagged frontier. 모델 실력이 과제마다 고르지 않아 과제별로 1등이 바뀌는 현상</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 실행 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>ROI</td><td>Return on investment. 들인 돈에 비해 얻은 이익</td></tr>
+              <tr><td>평가 (eval)</td><td>모델이나 시스템의 결과 품질을 재는 과제 묶음과 채점 방식</td></tr>
+              <tr><td>과제당 비용</td><td>Cost per task. 과제 하나를 끝내는 데 실제로 든 비용. 토큰 단가 × 쓴 토큰 수</td></tr>
+              <tr><td>파레토 프런티어</td><td>Pareto frontier. 비용과 성능 그림에서, 더 싸면서 더 좋은 모델이 없는 모델들을 이은 선</td></tr>
+              <tr><td>LBO</td><td>Leveraged buyout. 빌린 돈을 지렛대로 회사를 인수하는 거래. 금융 엑셀 모델링의 대표 과제</td></tr>
+              <tr><td>부분 점수</td><td>Partial credit. 채점 항목 중 채운 비율의 평균</td></tr>
+              <tr><td>완전 정답 비율</td><td>Fully correct answers. 모든 채점 항목을 채운 과제의 비율</td></tr>
+              <tr><td>루브릭</td><td>Rubric. 답에 무엇이 들어가야 하는지 정한 채점 기준표</td></tr>
+              <tr><td>타당도 · 신뢰도 · 변별력</td><td>Validity · reliability · discriminability. 실제 일을 재는가 · 반복해도 같은가 · 모델 차이를 가르는가</td></tr>
+              <tr><td>보상 해킹</td><td>Reward hacking. 채점 방식의 빈틈을 노려 실제 문제는 풀지 않고 점수만 따는 행동</td></tr>
+              <tr><td>샌드박스</td><td>Sandbox. 바깥과 격리해 모델을 돌리는 실행 환경</td></tr>
+              <tr><td>멀티턴</td><td>Multi-turn. 질문과 답, 피드백을 여러 번 주고받으며 일을 끝내는 방식</td></tr>
+              <tr><td>토큰 맥싱</td><td>Token maxing. 비용을 따지지 않고 토큰을 최대한 쓰게 하는 것</td></tr>
+              <tr><td>라우팅</td><td>Routing. 과제마다 알맞은 모델을 골라 보내는 것</td></tr>
+              <tr><td>사후 학습</td><td>Post-training. 이미 학습된 모델을 특정 목적에 맞게 추가로 학습시키는 것. 미세 조정(fine-tuning)이 그 한 방법</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>주제: 모델 카드 너머의 평가</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>모델 카드에 실린 Vals AI 벤치마크</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>Vals Index: 경제적 쓸모를 숫자 하나로</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>들쭉날쭉한 프런티어</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>저장소별 코딩 벤치마크: 더 잘게 갈리는 순위</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>하네스, 비용, 속도라는 변수</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>기업 AI 지출 2배, 사용 90%, ROI 확인 7%</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>비용 추적과 ROI, 평가가 핵심</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>Opus 5.5 대 Fable 5.1: 싼 모델이 더 비쌌다</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>금융 벤치마크: Finance Agent, Excel 모델링, Tax Agent</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>파레토 곡선: 과제당 비용과 성능</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>LBO 과제만 떼어 보기</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>Fable 5.1이 LBO 프런티어 밖으로</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>벤치마크를 만들며 얻은 교훈: 지표 선택</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>부분 점수와 완전 정답 비율</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>타당도, 신뢰도, 변별력</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>앞을 내다보는 벤치마크</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>보상 해킹: 샌드박스 탈출, 답 여러 개</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>평가 인프라의 어려움, 토큰 6조 개</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>멀티턴 평가</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>사례: 토큰 맥싱 실험, 한 달 150만 달러</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>사내 도구를 제품으로, GitHub PR로 평가 만들기</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>오픈소스 직접 호스팅 비교</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>구매·한도 결정과 작업별 추천, 90% 절감</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>다른 분야로: 회사의 일 기록은 어디에 있나</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>평가의 쓰임: 사용량, 협상, 라우팅, 학습</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>마무리: 경쟁력을 글과 스크립트로</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'rWtbOgl5FTU-cheaper-model-note:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

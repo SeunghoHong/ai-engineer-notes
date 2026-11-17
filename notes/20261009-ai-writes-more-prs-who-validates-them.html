@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PR 검증 자동화 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#gate">검증 단계가 하는 일</a></li>
+      <li><a href="#cost">실패하면 비싸다</a></li>
+      <li><a href="#worse">AI가 문제를 키운다</a></li>
+      <li><a href="#agent">검증을 맡는 에이전트</a></li>
+      <li><a href="#trust">신뢰만큼 자동화를 연다</a></li>
+      <li><a href="#insights">모든 PR에서 나오는 통계</a></li>
+      <li><a href="#inside">내부 구조</a></li>
+      <li><a href="#analysis">에이전트와 프로그램 분석</a></li>
+      <li><a href="#conclusion">효과와 결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-09 · 11분 · 영어 발표 한글 정리</span>
+      <h1>늘어난 PR은 누가 검증하나</h1>
+      <p class="lead">AI 덕분에 PR은 더 많아지고 커졌다. 그런데 CI와 코드 리뷰로 이루어진 검증 단계는 그 속도를 따라가지 못한다. 발표자의 답은 검증을 맡는 에이전트다. 리뷰부터 머지까지 맡기되, 신뢰가 쌓이는 만큼 한 단계씩 연다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=uuwDWRbxoYo" target="_blank" rel="noopener">AI Writes More PRs. Who Validates Them?</a></span>
+        <span>발표: Ali-Reza Adl-Tabatabai (Gitar 공동 창업자, 발표 약 한 달 전 Sonar에 인수되기 전까지 CEO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 자막에 "guitar"로 들린 회사 이름은 Gitar로, "sonar cube"는 SonarQube로, "NLM proxy"는 LLM 프록시로 바로잡았다. 발표에 비교할 만한 수치가 나오지 않아 차트는 넣지 않았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표의 대부분은 발표자 회사의 제품 소개다. 효과에 대한 주장에는 수치나 고객 사례가 붙어 있지 않다. 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>CI와 코드 리뷰로 이루어진 <strong>검증 단계</strong>는 모든 변경이 프로덕션으로 가는 길목이다. 팀이 커질수록 느려지고 비싸진다.</li>
+        <li>여기서 실패하면 <strong>몇 시간에서 며칠</strong>짜리 되돌이가 생긴다. 개발자의 시간과 집중이 함께 깨진다.</li>
+        <li>AI는 PR을 <strong>더 많이, 더 크게</strong> 만든다. 꼼꼼히 리뷰하면 느려지고, 대충 승인하면 사고가 난다.</li>
+        <li>발표자의 답은 <strong>검증을 맡는 에이전트</strong>다. 리뷰, CI 실패 분석, 자동 수정, 자동 승인과 머지까지 한다.</li>
+        <li>사용자들은 <strong>신뢰가 쌓이는 만큼 자동화를 한 단계씩 연다.</strong> 리뷰 → 머지 차단 → 자동 수정 → 자동 머지 순서다.</li>
+        <li>모든 PR을 AI가 보니 <strong>CI 실패 유형과 PR 유형 통계</strong>가 덤으로 나온다.</li>
+        <li>Sonar에 인수된 뒤에는 에이전트에 <strong>전통적인 프로그램 분석</strong>을 더하는 중이다. 발표자는 둘을 합치면 어느 한쪽보다 낫다고 본다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="gate">
+        <header><span class="num">01</span><h2>검증 단계가 하는 일 <span class="ts">00:40</span></h2></header>
+        <p>거의 모든 소프트웨어 팀에는 변경을 한곳에서 검사하는 단계가 있다. 발표자는 이를 <strong>중앙 검증 단계</strong><span class="en">centralized validation phase</span>라고 부른다. 내용은 <strong>CI와 코드 리뷰</strong>다. CI<span class="en">continuous integration</span>는 코드를 올릴 때마다 자동으로 빌드하고 테스트하는 장치다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>특징</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>품질 관문을 한곳에서 지킨다</td><td>보안, 컴플라이언스, 코드 품질 기준을 여기서 검사한다</td></tr>
+              <tr><td>출시의 길목에 있다</td><td>모든 변경이 이 단계를 지나야 프로덕션에 간다. 그래서 빠를수록 좋다</td></tr>
+              <tr><td>규모가 커지면 느려진다</td><td>빌드와 작업이 길어진다. 여러 지역과 팀에 걸친 리뷰가 비동기로 늘어진다</td></tr>
+              <tr><td>돈이 많이 든다</td><td>비싼 도구를 여러 개 붙이고, 조직이 커지는 만큼 늘린다. 모두 비싼 인프라 위에서 돈다</td></tr>
+              <tr><td>플랫폼 팀의 주 관심사</td><td>위 이유로 플랫폼 팀이 가장 많이 신경 쓰는 영역이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 AI 시대에 이 단계가 <strong>더 중요해진다</strong>고 강조한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="cost">
+        <header><span class="num">02</span><h2>실패하면 비싸다 <span class="ts">02:00</span></h2></header>
+        <p>검증 단계에서 실패가 나면 개발자는 고치고, 다시 올리고, 다시 기다린다. 이 바깥쪽 되돌이를 <strong>아우터 루프</strong><span class="en">outer loop</span>라고 한다. 발표자에 따르면 아우터 루프는 보통 <strong>몇 시간에서 며칠</strong> 단위다.</p>
+        <ul class="plain">
+          <li><strong>개발자 시간이 사라진다.</strong> 일의 흐름이 끊기는 손해가 거기에 더해진다.</li>
+          <li><strong>고치기도 비싸다.</strong> 흩어진 시스템을 맞춤 설정과 스크립트로 이어 붙여 놓았다. 인력이 모자란 플랫폼 팀이 그걸 지킨다.</li>
+          <li><strong>AI로 풀기도 복잡하다.</strong> 비동기로 오가는 상호작용, 팀의 작업 흐름, 여러 도구 연동을 함께 조율해야 한다.</li>
+        </ul>
+      </section>
+
+      <!-- 3 -->
+      <section id="worse">
+        <header><span class="num">03</span><h2>AI가 문제를 키운다 <span class="ts">02:50</span></h2></header>
+        <p>AI 덕분에 PR이 <strong>더 많아지고 더 커졌다.</strong> 그 PR 하나하나에 결함이 있을 수 있다.</p>
+        <p>발표자는 이를 개발 비용이 <strong>오른쪽으로 옮겨 간다</strong><span class="en">shifting to the right</span>고 표현한다. 코드를 쓰는 앞쪽은 싸졌다. 대신 리뷰할 코드가 늘고 프로덕션 장애 가능성이 커져 뒤쪽이 비싸졌다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">선택 1 · 꼼꼼히 리뷰한다 <span class="ts">03:20</span></span>
+            <p>개발자에게 모든 PR을 주의 깊게 보라고 한다.</p>
+            <p class="verdict"><b>결과</b>: 느려진다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">선택 2 · 도장만 찍는다</span>
+            <p>내용을 제대로 보지 않고 형식적으로 승인한다<span class="en">rubber stamp</span>.</p>
+            <p class="verdict"><b>결과</b>: 프로덕션 사고 위험이 커진다.</p>
+          </div>
+        </div>
+        <p>어느 쪽이든 개발자는 덜 만족하고, 생산성은 기대만큼 오르지 않는다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="agent">
+        <header><span class="num">04</span><h2>검증을 맡는 에이전트 <span class="ts">03:40</span></h2></header>
+        <p>발표자의 답은 "더 많은 AI"다. 검증 단계 전체를 에이전트가 자동으로 처리하는 <strong>에이전트 검증</strong><span class="en">agentic validation</span>이다. Gitar가 만들었고, 지금은 Sonar 제품으로도 나온다.</p>
+        <p>목표 결과물은 <strong>바로 머지할 수 있는 green PR</strong>이다. green PR은 모든 검사를 통과한 PR이다. 설정에 따라 머지까지 자동으로 끝낸다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기능</th><th>하는 일</th><th>세부</th></tr></thead>
+            <tbody>
+              <tr><td>리뷰 <span class="ts">04:10</span></td><td>PR을 리뷰하고 이슈와 인라인 코멘트를 단다</td><td>목표는 <strong>노이즈 없는 리뷰</strong>다. 화면 경험과 지적 내용 모두에서 진짜 중요한 문제만 올린다. 팀 규칙, 커스텀 체크, 커스텀 자동화를 더할 수 있다</td></tr>
+              <tr><td>머지 차단 <span class="ts">04:30</span></td><td>해결 안 된 리뷰 지적이 있으면 머지를 막는다</td><td>설정으로 켠다</td></tr>
+              <tr><td>CI 실패 분석 <span class="ts">04:40</span></td><td>CI 실패의 근본 원인을 요약해 올린다</td><td>flaky test를 특히 잘 잡는다. flaky test를 자동으로 다시 돌리는 규칙은 발표자가 꼽은 인기 기능이다</td></tr>
+              <tr><td>자동 수정 <span class="ts">05:00</span></td><td>리뷰 지적과 CI 실패를 고친다</td><td>특정 이슈만 고치게 할 수 있다. 모든 이슈가 고쳐져 PR이 green이 될 때까지 자동으로 반복하게 할 수도 있다</td></tr>
+              <tr><td>자동 승인·머지 <span class="ts">05:20</span></td><td>green PR을 승인하고 머지한다</td><td>언제 자동으로 승인하고 머지할지 규칙과 조건으로 정한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">이 섹션은 발표자 회사의 제품 소개다. "노이즈가 없다", "flaky test를 잘 잡는다" 같은 주장에 정확도 수치는 나오지 않았다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="trust">
+        <header><span class="num">05</span><h2>신뢰만큼 자동화를 연다 <span class="ts">05:40</span></h2></header>
+        <p>발표자는 사용자들에게서 뚜렷한 흐름을 본다고 말한다. AI가 정확하다는 믿음이 쌓일수록 <strong>완전 자동화된 PR</strong> 쪽으로 간다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>에이전트에게 맡기는 일</th><th>발표자의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>1. 리뷰만 받는다</td><td>이슈와 코멘트를 단다</td><td>지적이 정확한지, 실제로 중요한 문제인지 사용자가 확인하며 신뢰를 쌓는다</td></tr>
+              <tr><td>2. 머지를 막게 한다</td><td>해결 안 된 지적이 있으면 머지를 막는다</td><td>발표자의 표현으로 에이전트에게 "이빨을 준다"</td></tr>
+              <tr><td>3. 자동 수정</td><td>리뷰 지적과 CI 실패를 고쳐 PR을 green으로 만든다</td><td>사람이 하던 수정 작업이 빠진다</td></tr>
+              <tr><td>4. 자동 승인·머지</td><td>정해 둔 규칙에 맞으면 승인하고 머지한다</td><td>발표자가 "지금 막 일어나기 시작한" 흥미로운 도약이라고 부른 단계</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">핵심</span>
+          <span>자동화는 한 번에 켜지 않는다. 신뢰가 쌓일 때마다 한 단계씩 연다. 발표자는 단계가 올라갈수록 시스템에서 얻는 가치도 커진다고 말한다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="insights">
+        <header><span class="num">06</span><h2>모든 PR에서 나오는 통계 <span class="ts">06:50</span></h2></header>
+        <p>에이전트가 모든 PR을 AI로 처리하니, 새로운 종류의 통계를 뽑을 수 있다. 발표자는 두 가지 예를 들었다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">CI 실패 분류 · 플랫폼 팀용 <span class="ts">07:00</span></span>
+            <p>개발자가 CI 어디에서 가장 자주 실패하는지 유형별로 묶는다.</p>
+            <ul>
+              <li>flaky test 문제: 테스트의 안정성을 높여야 한다</li>
+              <li>인프라 문제: 인프라를 손봐야 한다</li>
+              <li>그 밖의 실패</li>
+            </ul>
+            <p class="verdict"><b>쓰임</b>: 무엇부터 고칠지 정한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">PR 분류 · 리더십용 <span class="ts">07:30</span></span>
+            <p>팀 전체에서 머지되는 PR이 어떤 일에 쓰이는지 나눈다.</p>
+            <ul>
+              <li>기능 개발</li>
+              <li>문제 수정</li>
+              <li>잡일<span class="en">chores</span></li>
+              <li>리팩터링</li>
+            </ul>
+            <p class="verdict"><b>쓰임</b>: 엔지니어링 시간이 어디로 가는지 본다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="inside">
+        <header><span class="num">07</span><h2>내부 구조 <span class="ts">07:50</span></h2></header>
+        <p>Gitar는 여러 구성 요소로 되어 있다. 발표자가 꼽은 흥미로운 부분은 세 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성 요소</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td>컨트롤 플레인 <span class="en">control plane</span></td><td>PR 작업 흐름을 지휘하고 조율하는 층</td></tr>
+              <tr><td>에이전트 하네스 <span class="en">agent runtime / harness</span></td><td>여러 에이전트 실행, 컨텍스트 관리, 메모리 관리, 도구 호출, 외부 연동을 맡는다. 직접 만들었다</td></tr>
+              <tr><td>LLM 프록시 <span class="ts">08:50</span></td><td>요청을 여러 모델로 나눠 보낸다. 한 모델이 안 되면 다른 모델로 넘긴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">하네스를 직접 만든 이유 <span class="ts">08:20</span></span>
+          <span>검증이라는 용도에 맞춰 최적화하기 위해서다. 최적화 대상은 토큰 비용, 정밀도, 커버리지 세 가지다. 발표자는 덕분에 <strong>PR당 정해진 가격</strong>으로 결과를 보장하면서도 품질을 지킬 수 있다고 말한다.</span>
+        </div>
+        <p class="note">가격, 정밀도, 커버리지의 실제 수치는 발표에 나오지 않았다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="analysis">
+        <header><span class="num">08</span><h2>에이전트와 프로그램 분석 <span class="ts">09:00</span></h2></header>
+        <p>Sonar에 인수된 뒤 Gitar를 SonarQube와 합치는 중이다. SonarQube는 Sonar의 코드 품질·보안 분석 도구다.</p>
+        <p>방향은 에이전트에 <strong>전통적인 프로그램 분석</strong><span class="en">program analysis</span>을 더하는 것이다. 프로그램 분석은 코드의 구조와 값의 흐름을 알고리즘으로 따져 문제를 찾는 기법이다. 발표자가 든 예는 네 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>분석</th><th>보는 것</th></tr></thead>
+            <tbody>
+              <tr><td>오염 분석 <span class="en">taint analysis</span></td><td>사용자 입력처럼 믿을 수 없는 값이 위험한 곳까지 흘러가는지</td></tr>
+              <tr><td>제어 흐름 분석 <span class="en">control flow analysis</span></td><td>코드가 실행될 수 있는 경로</td></tr>
+              <tr><td>데이터 흐름 분석 <span class="en">data flow analysis</span></td><td>값이 어디서 만들어져 어디로 흘러가는지</td></tr>
+              <tr><td>소프트웨어 구성 분석 <span class="en">SCA</span></td><td>가져다 쓰는 오픈소스 라이브러리의 알려진 취약점과 라이선스</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="shift" aria-label="검증 방식의 결합">
+          <div><span class="tag">지금까지</span><b>에이전트 또는 프로그램 분석</b><span class="muted">각자 따로 검사한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자가 보는 방향</span><b>둘을 합친다</b><span class="muted">정밀도와 커버리지를 함께 올리고, 가격도 좋게</span></div>
+        </div>
+        <p class="note">Sonar의 기존 제품과 새로 인수한 제품을 합치는 이야기다. 회사 제품에 대한 주장이라는 점을 감안하자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="conclusion">
+        <header><span class="num">09</span><h2>효과와 결론 <span class="ts">09:30</span></h2></header>
+        <p>발표자가 말한 효과는 다음과 같다.</p>
+        <ul class="plain">
+          <li><strong>품질과 보안</strong>이 좋아진다. AI가 만든 코드에서 특히 그렇다.</li>
+          <li>PR 생성부터 승인과 머지까지 자동으로 가니 <strong>배포가 빨라진다.</strong></li>
+          <li>개발자는 리뷰와 프로덕션 걱정에 쓰는 시간이 줄고, 잡일이 줄어 <strong>만족도가 오른다.</strong></li>
+          <li>플랫폼 팀은 문제를 고치고, 맞춤 설정을 더하고, 통계를 보는 <strong>힘을 얻는다.</strong> <span class="ts">10:10</span></li>
+        </ul>
+        <p class="note">효과는 모두 발표자 회사 제품에 대한 주장이다. 고객 사례나 도입 전후 수치는 제시되지 않았다.</p>
+
+        <h3>발표자의 정리 <span class="ts">10:20</span></h3>
+        <ol class="plain">
+          <li>PR 검증은 원래 중요했고 AI 시대에는 더 중요하다. 그런데 AI가 검증 단계를 <strong>마찰 지점</strong>으로 만든다.</li>
+          <li>PR 생성부터 머지까지 검증을 <strong>완전히 자동화</strong>하면 그 마찰이 사라진다. AI가 코드를 만드는 속도도 따라갈 수 있다.</li>
+          <li><strong>에이전트 검증과 알고리즘 기반 프로그램 분석을 합치면</strong> 어느 한쪽만 쓸 때보다 낫다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">정리자 메모: 발표가 답하지 않은 것</span>
+          <ul class="plain">
+            <li>제목은 "누가 검증하나"를 묻고, 답은 "에이전트"다. 리뷰하고 고치는 에이전트의 판단을 누가 다시 확인하는지는 다루지 않았다.</li>
+            <li>자동 승인·머지 규칙에 어떤 조건을 넣는지 구체적인 예가 없다.</li>
+            <li>리뷰 정확도, 거짓 경보 비율, 자동 머지 뒤 사고율 같은 수치가 없다.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="recap">
+        <header><span class="num">10</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>검증 단계는 <strong>CI와 코드 리뷰</strong>다. 보안, 컴플라이언스, 코드 품질 관문을 한곳에서 지킨다.</li>
+          <li>모든 변경이 지나는 길목이라 빠를수록 좋다. 하지만 조직이 커질수록 빌드는 길어지고 리뷰는 비동기로 늘어진다.</li>
+          <li>검증 실패는 <strong>몇 시간에서 며칠</strong>짜리 아우터 루프를 만든다. 개발자 시간과 집중을 함께 잃는다.</li>
+          <li>이 단계는 흩어진 도구를 설정과 스크립트로 엮어 놓은 것이라 고치기도 비싸다.</li>
+          <li>AI로 PR이 많아지고 커지면서 비용이 리뷰와 프로덕션 쪽으로 옮겨 갔다.</li>
+          <li>꼼꼼히 리뷰하면 느려지고, 도장만 찍으면 사고가 난다.</li>
+          <li>에이전트 검증은 <strong>리뷰 → CI 실패 분석 → 자동 수정 반복 → 규칙에 따른 자동 승인·머지</strong>까지 맡는다.</li>
+          <li>자동화는 <strong>신뢰가 쌓이는 만큼 한 단계씩</strong> 연다.</li>
+          <li>모든 PR을 AI가 보면 CI 실패 유형, PR 유형 같은 통계가 나온다.</li>
+          <li>검증 전용 하네스로 비용·정밀도·커버리지를 맞추고, 다음은 <strong>에이전트와 프로그램 분석의 결합</strong>이다.</li>
+        </ol>
+      </section>
+
+      <!-- 11 -->
+      <section id="quiz">
+        <header><span class="num">11</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 중앙 검증 단계는 무엇 두 가지로 이루어지나?</span></summary><div class="answer">CI와 코드 리뷰. 보안, 컴플라이언스, 코드 품질 관문을 한곳에서 지킨다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>조직이 커질수록 검증 단계가 느려지는 이유 두 가지는?</span></summary><div class="answer">빌드와 작업이 길어진다. 여러 지역과 팀에 걸친 리뷰가 비동기로 늘어진다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>검증 단계의 실패가 비싼 이유는?</span></summary><div class="answer">몇 시간에서 며칠 단위의 아우터 루프가 생긴다. 개발자 시간을 잃고, 일의 흐름도 끊긴다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>AI가 PR을 늘리면서 팀이 마주하는 두 가지 나쁜 선택은?</span></summary><div class="answer">모든 PR을 꼼꼼히 리뷰해 느려지거나, 도장만 찍고 프로덕션 사고 위험을 지는 것. 어느 쪽이든 개발자 만족도와 생산성이 떨어진다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>발표자가 리뷰 기능에서 가장 신경 썼다고 한 점은?</span></summary><div class="answer">노이즈 없는 리뷰. 화면 경험과 지적 내용 모두에서 진짜 중요한 문제만 올리려 했다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>CI 실패 분석에서 특히 잘 잡는 것과, 발표자가 꼽은 인기 기능은?</span></summary><div class="answer">flaky test를 잘 잡는다. 인기 기능은 flaky test를 자동으로 다시 돌리는 규칙이다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>자동 수정을 쓰는 두 가지 방식은?</span></summary><div class="answer">특정 이슈만 고치게 하거나, 모든 이슈가 고쳐져 PR이 green이 될 때까지 자동으로 반복하게 한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>사용자들이 자동화를 여는 순서는?</span></summary><div class="answer">리뷰만 받기 → 머지 차단 → 자동 수정 → 규칙에 따른 자동 승인·머지. 신뢰가 쌓일 때마다 한 단계씩 연다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>AI로 모든 PR을 처리해서 얻는 통계 두 가지와, 각각 누구에게 쓸모 있나?</span></summary><div class="answer">CI 실패 분류는 플랫폼 팀에게, PR 분류(기능 개발, 문제 수정, 잡일, 리팩터링)는 리더십에게 쓸모 있다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>Gitar가 하네스를 직접 만든 이유는?</span></summary><div class="answer">검증 용도에 맞춰 토큰 비용, 정밀도, 커버리지를 최적화하려고. 발표자는 덕분에 PR당 정해진 가격으로 결과를 보장할 수 있다고 말한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>SonarQube 통합에서 에이전트와 합치려는 프로그램 분석 네 가지는?</span></summary><div class="answer">오염 분석, 제어 흐름 분석, 데이터 흐름 분석, 소프트웨어 구성 분석(SCA).</div></details>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="apply">
+        <header><span class="num">12</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>PR이 만들어진 뒤 머지될 때까지 어디서 가장 오래 기다리는지 잰다<span class="how">확인: CI 대기, 리뷰 대기, 수정 후 재검사 중 어디가 가장 긴가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>최근 CI 실패를 유형별로 나눠 본다<span class="how">flaky test, 인프라 문제, 그 밖의 실패</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>flaky test 자동 재시도 규칙을 둔다<span class="how">확인: 재시도한 테스트를 따로 기록해 나중에 고치는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>AI 리뷰를 켜고, 지적이 정확하고 중요한지 먼저 확인한다<span class="how">확인: 팀이 받아들인 지적과 무시한 지적의 비율</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>리뷰를 믿을 수 있게 된 뒤에만 머지 차단을 켠다<span class="how">한 번에 다 켜지 않고 단계를 하나씩 올린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>팀 규칙과 커스텀 체크를 리뷰에 넣는다<span class="how">팀이 반복해서 지적하는 항목부터</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>자동 승인·머지 조건을 글로 쓴다<span class="how">예시: 변경 크기, 바뀐 경로, CI 통과, 해결 안 된 지적 0개</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>기존 정적 분석 결과를 AI 리뷰와 함께 본다<span class="how">에이전트와 프로그램 분석을 합치는 방향</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 13 -->
+      <section id="glossary">
+        <header><span class="num">13</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>CI</td><td>Continuous integration. 코드를 올릴 때마다 자동으로 빌드하고 테스트하는 장치</td></tr>
+              <tr><td>품질 관문</td><td>Quality gate. 통과해야 다음 단계로 갈 수 있는 기준. 보안, 컴플라이언스, 코드 품질 등</td></tr>
+              <tr><td>크리티컬 패스</td><td>Critical path. 전체 완료 시간을 결정하는 단계들의 줄. 여기가 느리면 전체가 느리다</td></tr>
+              <tr><td>아우터 루프</td><td>Outer loop. 코드를 올린 뒤 CI, 리뷰, 수정, 재제출을 도는 바깥쪽 되돌이. 몇 시간에서 며칠 단위</td></tr>
+              <tr><td>플랫폼 팀</td><td>개발 인프라, 빌드, 배포 도구를 맡아 다른 개발 팀을 지원하는 팀</td></tr>
+              <tr><td>러버 스탬프</td><td>Rubber stamp. 내용을 제대로 보지 않고 형식적으로 승인하는 것</td></tr>
+              <tr><td>비용의 오른쪽 이동</td><td>Shift right. 개발 비용이 코드 작성 쪽에서 리뷰와 운영 쪽으로 옮겨 가는 것</td></tr>
+              <tr><td>green PR</td><td>모든 검사를 통과해 바로 머지할 수 있는 PR</td></tr>
+              <tr><td>flaky test</td><td>코드가 그대로인데도 통과와 실패가 오락가락하는 테스트</td></tr>
+              <tr><td>근본 원인</td><td>Root cause. 증상이 아니라 실패를 일으킨 진짜 원인</td></tr>
+              <tr><td>에이전트 검증</td><td>Agentic validation. 리뷰, CI 실패 분석, 수정, 머지 같은 검증 단계를 에이전트가 자동으로 처리하는 방식</td></tr>
+              <tr><td>컨트롤 플레인</td><td>Control plane. 작업 흐름을 지휘하고 조율하는 층</td></tr>
+              <tr><td>하네스</td><td>모델을 감싸 실행, 컨텍스트, 메모리, 도구 호출을 맡는 실행 틀</td></tr>
+              <tr><td>LLM 프록시</td><td>모델 요청을 여러 모델로 나눠 보내고, 한 모델이 안 되면 다른 모델로 넘기는 중간층</td></tr>
+              <tr><td>페일오버</td><td>Failover. 한쪽이 실패하면 자동으로 다른 쪽으로 넘기는 것</td></tr>
+              <tr><td>정밀도 / 커버리지</td><td>Precision / coverage. 정밀도는 지적 중 진짜 문제의 비율. 커버리지는 진짜 문제를 얼마나 빠짐없이 잡는가</td></tr>
+              <tr><td>프로그램 분석</td><td>Program analysis. 코드의 구조와 값의 흐름을 알고리즘으로 따져 문제를 찾는 기법</td></tr>
+              <tr><td>오염 분석</td><td>Taint analysis. 믿을 수 없는 입력이 위험한 곳까지 흘러가는지 추적하는 분석</td></tr>
+              <tr><td>SCA</td><td>Software composition analysis. 가져다 쓰는 오픈소스 라이브러리의 취약점과 라이선스를 점검하는 분석</td></tr>
+              <tr><td>SonarQube</td><td>Sonar의 코드 품질·보안 분석 도구</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="timeline">
+        <header><span class="num">14</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개: Gitar 창업자, Sonar에 인수</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>중앙 검증 단계 = CI + 코드 리뷰</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>품질 관문, 출시의 길목, 규모가 커지면 느려짐</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>비싼 도구와 인프라, 플랫폼 팀의 주 관심사</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>실패는 아우터 루프를 만든다</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>최적화도 비싸다: 흩어진 시스템, 모자란 인력</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>AI가 문제를 키운다: 더 많고 큰 PR</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>꼼꼼한 리뷰 vs 형식적 승인</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>답: 에이전트 검증</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>리뷰, 노이즈 줄이기, 커스텀 규칙</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>머지 차단, CI 실패 분석, flaky test</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>자동 수정 반복</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>자동 승인·머지</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>완전 자동화로 가는 흐름: 신뢰의 단계</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>AI 통계: CI 실패 분류</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>AI 통계: PR 분류</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>내부 구조: 컨트롤 플레인, 에이전트 하네스</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>자체 하네스와 PR당 정해진 가격</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>LLM 프록시</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>SonarQube 통합: 에이전트 + 프로그램 분석</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>발표자가 말한 효과</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>정리</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>데모 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'uuwDWRbxoYo:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

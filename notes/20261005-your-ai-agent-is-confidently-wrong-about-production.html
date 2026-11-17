@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>프로덕션 디버깅 에이전트 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#backforth">자신 있게 틀리는 에이전트</a></li>
+      <li><a href="#nosignal">프로덕션에는 검증 신호가 없다</a></li>
+      <li><a href="#prodnature">프로덕션의 세 가지 성질</a></li>
+      <li><a href="#trained">모델은 반대로 훈련됐다</a></li>
+      <li><a href="#failures">실패 유형 4가지</a></li>
+      <li><a href="#techniques">근거를 붙이는 기법 5가지</a></li>
+      <li><a href="#results">결과와 비용</a></li>
+      <li><a href="#verify">진짜 고쳐졌는지 확인하기</a></li>
+      <li><a href="#calibration">확신과 정확도를 맞추기</a></li>
+      <li><a href="#next">다음 방향: 배포 전에 예측</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-05 · 15분 · 영어 발표 한글 정리</span>
+      <h1>에이전트는 프로덕션에서 자신 있게 틀린다</h1>
+      <p class="lead">코딩 에이전트는 컴파일 오류와 테스트 결과라는 빠른 신호 덕분에 잘 돌아간다. 프로덕션 장애를 진단할 때는 그런 신호가 없다. 그래서 에이전트는 처음 본 에러 로그를 근본 원인이라고 확신하며 내놓는다. 이 발표는 프로덕션에서도 신호를 만들어 에이전트에게 돌려주는 방법을 다룬다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=J17o5r5PKmw" target="_blank" rel="noopener">Your AI Agent Is Confidently Wrong About Production</a></span>
+        <span>발표: Willem Pienaar (Cleric 공동 창업자, CTO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 경우만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>코딩에는 컴파일러와 테스트가 있지만 <strong>프로덕션에는 에이전트의 답을 바로 검증해 주는 것이 없다.</strong> 그래서 사람이 매번 답을 의심하고 되묻는 일이 반복된다.</li>
+        <li>프로덕션은 <strong>경계가 흐리고, 계속 바뀌고, 장애가 순간적으로만 보인다.</strong> 코드베이스처럼 되돌려 다시 시도할 수 없다.</li>
+        <li>큰 언어 모델은 <strong>빨리 확신 있게 답하도록 훈련</strong>됐다. 디버깅에 필요한 것은 반대로 의심과 여러 가설이다.</li>
+        <li>자주 보는 실패는 네 가지다. <strong>증상을 원인으로 착각</strong>, <strong>정상 상태를 모름</strong>, <strong>하위 에이전트가 요약하며 근거를 버림</strong>, <strong>지난 사건에 끌려감</strong>.</li>
+        <li>해법은 다섯 가지다. <strong>가설을 여러 개 세우기, 기준선 계산하기, 의존 그래프로 따지기, 시간 순서 쓰기, 증거를 그대로 넘기기.</strong></li>
+        <li>원인과 증상이 다른 서비스에 있는 분산 장애에서 효과가 컸다. 대신 <strong>비용이 훨씬 많이 든다.</strong></li>
+        <li>진단 뒤에 <strong>사람이 실제로 그 수정을 반영했는지, 시스템이 정상으로 돌아왔는지 추적</strong>해야 에이전트의 확신 점수를 믿을 수 있게 된다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="backforth">
+        <header><span class="num">01</span><h2>자신 있게 틀리는 에이전트 <span class="ts">00:40</span></h2></header>
+        <p>Cleric는 시스템을 계속 켜 두는 일을 하는 에이전트를 만든다. 발표자는 코드를 쓰는 일과 프로덕션에서 돌리는 일은 다르다는 데서 시작한다.</p>
+        <p>요즘은 알림이 울리면 Claude Code 같은 코딩 에이전트에게 원인을 묻는 사람이 많다. 발표자가 보는 전형적인 장면은 이렇다.</p>
+        <ol class="plain">
+          <li>배포 뒤 500 오류가 급증한다.</li>
+          <li>에이전트가 아주 자신 있게 "방금 배포한 코드에 메모리 누수가 있다"고 답한다.</li>
+          <li>사람이 직접 확인해 보니 그렇지 않다.</li>
+          <li>에이전트가 이번에는 "준비 상태 점검(readiness probe) 문제"라고 한다. 이벤트를 보니 그것도 아니다.</li>
+          <li>몇 번을 주고받은 뒤에야 진짜 원인에 닿는다.</li>
+        </ol>
+        <p>에이전트가 일을 많이 해 주는데도 사람은 여전히 답을 의심하고 되묻는 자리에 묶여 있다. 발표의 목표는 이 자리에서 사람을 빼는 것이다. 그러려면 에이전트가 더 자율적으로 움직여도 믿을 수 있을 만큼 정확해져야 한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="nosignal">
+        <header><span class="num">02</span><h2>프로덕션에는 검증 신호가 없다 <span class="ts">02:10</span></h2></header>
+        <p>코딩 에이전트가 잘 되는 이유는 신호가 빠르고 또렷하기 때문이다. 코드를 바꾸면 컴파일러, 린터, 테스트가 곧바로 "틀렸다"거나 "통과했다"고 알려 준다. 그래서 반복이 빠르고 답도 대체로 정확하다.</p>
+        <div class="shift" aria-label="코딩 환경과 프로덕션 환경의 신호 차이">
+          <div><span class="tag">코딩 / CI</span><b>또렷한 신호</b><span class="muted">컴파일 오류, 린트, 테스트 결과가 바로 돌아온다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">프로덕션</span><b>흩어진 신호</b><span class="muted">여기 로그 조금, 저기 잡음, 누군가의 배포. 한곳에 모인 답이 없다</span></div>
+        </div>
+        <p>프로덕션에서 에이전트의 답이 맞았는지 알기까지는 몇 시간이 걸릴 수도 있다. 발표의 핵심 질문은 하나다. <strong>프로덕션 쪽에서 에이전트에게 돌려줄 신호를 어떻게 만들 것인가.</strong></p>
+      </section>
+
+      <!-- 3 -->
+      <section id="prodnature">
+        <header><span class="num">03</span><h2>프로덕션의 세 가지 성질 <span class="ts">02:50</span></h2></header>
+        <p>코드베이스는 저장소 하나로 경계가 분명하다. 프로덕션은 다르다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>성질</th><th>뜻</th><th>에이전트에게 생기는 문제</th></tr></thead>
+            <tbody>
+              <tr><td>경계가 흐리다</td><td>클라우드 계정은 하나여도 여러 팀, 여러 클러스터가 섞여 있다</td><td>얼마나 넓게 또는 좁게 봐야 할지 모른다</td></tr>
+              <tr><td>계속 바뀐다</td><td>사람들이 끊임없이 배포하고 상태가 바뀐다</td><td>조사하는 동안에도 대상이 움직인다</td></tr>
+              <tr><td>순간적이다</td><td>장애가 특정 시점에만 보이고 재현되지 않는다</td><td>코드처럼 되돌려 다시 시도할 수 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 셋 중 "순간적이다"를 가장 골치 아픈 성질로 꼽는다. 코드에서는 실패하면 초기화하고 다시 돌리면 된다. 프로덕션에서는 그 순간이 지나면 증거가 사라진다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="trained">
+        <header><span class="num">04</span><h2>모델은 반대로 훈련됐다 <span class="ts">03:50</span></h2></header>
+        <p>환경만 문제가 아니다. 모델 자체가 프로덕션 디버깅에 맞지 않게 훈련됐다고 발표자는 말한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">프로덕션 디버거에게 필요한 것</span>
+            <ul>
+              <li>의심과 불확실성</li>
+              <li>여러 가설을 세우고 하나씩 지우기</li>
+              <li>확신이 생길 때까지 더 파고들기</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">큰 언어 모델이 훈련된 방향</span>
+            <ul>
+              <li>단호하고 자신 있게</li>
+              <li>가능한 한 빨리 답을 내놓기</li>
+              <li>사람이 좋아하는 답에 맞추기</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">발표자가 인용한 근거</span>
+          <span>OpenAI가 낸 시스템 카드 중 하나에서 인간 선호 기반 강화 학습(RLHF) 과정을 거치며 모델의 확신과 실제 정확도가 벌어졌다는 내용이 있었다고 한다. 사후 훈련이 사람의 선호에 맞춰 최적화되기 때문이다. 이 성향은 모델 안에 들어 있으니 밖에서 상쇄 장치를 만들어야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="failures">
+        <header><span class="num">05</span><h2>실패 유형 4가지 <span class="ts">04:40</span></h2></header>
+        <p>Cleric가 여러 기업에서 에이전트의 진단 실패를 지켜보며 정리한 유형이다. Claude Code든 Cleric 제품이든 거의 같은 패턴이 나온다고 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1. 증상을 원인으로 착각 <span class="ts">04:50</span></span>
+            <p>가장 흔하다. 알림이 난 서비스로 달려가 바로 눈에 보이는 에러 로그를 찾고, 그것이 근본 원인이라고 선언한다. 스택 아래로 더 내려가지 않는다.</p>
+            <p class="verdict"><b>왜 어려운가</b>: 모델은 짚더미에서 바늘을 잘 찾는다. 하지만 짚더미가 어디까지인지, 얼마나 넓게 찾아야 하는지는 모른다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2. 정상을 모른다 <span class="ts">05:30</span></span>
+            <p>프로덕션의 평소 모습, 즉 기준선 <span class="en">baseline</span>이 없으면 처음 보는 것을 전부 이상하다고 여긴다. 그러면 거기서 탐색을 멈춘다.</p>
+            <p class="verdict"><b>예</b>: 매일 찍히는 무해한 에러 로그를 엔지니어는 무시하지만 에이전트는 모른다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3. 추상화로 근거가 사라진다 <span class="ts">05:40</span></span>
+            <p>새로 생긴 유형이다. 프로덕션 정보가 너무 많아 하위 에이전트를 여럿 두고 나눠 처리한다. 그런데 하위 에이전트가 원시 발견 내용을 다 올리지 않고 요약만 올린다.</p>
+            <p class="verdict"><b>결과</b>: 결정을 내리는 주 에이전트가 부분 정보로 판단하고도 과하게 확신한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">4. 지난 맥락에 닻을 내린다 <span class="ts">06:10</span></span>
+            <p>메모리 시스템과 과거 사건 기록을 조사에 쓰면 거기에 끌려간다. "지난주에 이런 일이 있었으니 이번도 같을 것"이라며 진단을 끝낸다.</p>
+            <p class="verdict"><b>발표자의 표현</b>: 에이전트는 빨리 답을 주고 싶어 하므로 조금 흔들어서 더 깊이 가게 만들어야 한다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="techniques">
+        <header><span class="num">06</span><h2>근거를 붙이는 기법 5가지 <span class="ts">06:40</span></h2></header>
+        <p>방향은 하나다. 코딩에서 잘 되는 것을 프로덕션에 옮긴다. 코딩 에이전트는 시도한 뒤 "컴파일 안 됨" 같은 결정적 신호를 받는다. 프로덕션에서도 에이전트가 조사 중간과 끝에 붙잡을 수 있는 근거 <span class="en">grounding</span>를 만들어 주고, 그것으로 확신 점수를 매기게 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기법</th><th>하는 일</th><th>왜 효과가 있나</th></tr></thead>
+            <tbody>
+              <tr><td>가설 여러 개 <span class="ts">07:10</span></td><td>원인 후보 이론을 여러 개 동시에 만들어 탐색한다</td><td>탐색의 폭이 넓어진다. 또 모델은 <strong>절대 점수 매기기는 못하지만 상대 순위 매기기는 잘한다.</strong> 후보가 여럿이어야 비교할 수 있다</td></tr>
+              <tr><td>기준선 계산 <span class="ts">07:40</span></td><td>로그를 묶어(클러스터링) 어떤 로그가 매일 반복되는 흔한 것인지 통계를 함께 준다</td><td>프로덕션은 늘 어느 정도 어수선하다. 사람 엔지니어가 아는 "무시해도 되는 것"을 에이전트도 알게 된다. 메트릭이나 객체 상태에도 같은 방법을 쓴다</td></tr>
+              <tr><td>의존 그래프 <span class="ts">08:30</span></td><td>서비스 간 의존 관계(토폴로지)를 그래프로 만들고, 에이전트가 주장한 인과 연결이 실제 연결에 있는지 다른 에이전트가 비판한다</td><td>에이전트는 "이 서비스가 캐시에 연결돼 있다"처럼 없는 인과를 자주 주장한다. 실제 연결과 맞지 않으면 의심을 심어 더 파게 한다</td></tr>
+              <tr><td>시간 순서 <span class="ts">09:00</span></td><td>원인은 증상보다 먼저 일어난다. 알림 시각에 가까운 발견에 더 높은 관련도 점수를 준다</td><td>단순하지만 많은 사람이 근본 원인 분석에 시간 축을 쓰지 않는다. 대개 원인과 증상은 시간상 가까이 있다</td></tr>
+              <tr><td>증거 전달 <span class="ts">09:40</span></td><td>하위 에이전트가 답만 넘기지 않고 사건 기록처럼 근거를 쌓아 넘긴다</td><td>SRE가 하는 일과 같다. "정상입니다" 대신 "이 메트릭이 이 시점에 이 값이었다"고 말한다. 증거가 빠지면 환각과 과신이 생긴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>에이전트는 상대 순위를 매기는 데는 매우 뛰어나지만, 자기 가설에 절대 점수를 매기는 데는 형편없다.<cite>발표자의 말을 옮김, <span class="ts">07:30</span></cite></blockquote>
+      </section>
+
+      <!-- 7 -->
+      <section id="results">
+        <header><span class="num">07</span><h2>결과와 비용 <span class="ts">10:10</span></h2></header>
+        <p>Cleric의 모의 환경(시뮬레이션)에서 근거 붙이기는 효과가 컸다고 한다. 장애 종류에 따라 차이가 갈린다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">국소 장애</span>
+            <p>알림이 난 서비스와 근본 원인이 한곳에 있는 경우. Claude Code와 차이가 거의 없었다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">분산 장애</span>
+            <p>원인과 증상이 다른 서비스에 있는 경우. Claude Code는 훨씬 덜 효과적이었다.</p>
+          </div>
+        </div>
+        <p class="note">발표자가 구체적 수치를 말하지 않아 차트는 그리지 않았다. 발표자도 모의 환경 결과라 그대로 믿지 말라고 했다. 스택을 모놀리스 하나로 유지하는 회사라면 문제가 덜하지만 대부분은 그럴 수 없다.</p>
+        <div class="callout warn">
+          <span class="title">단점은 비용</span>
+          <span>Claude Code를 직접 돌리면 한 가지를 콕 찍어 조사하므로 저렴하다. 대신 사람이 방향을 잡아 줘야 한다. 가설 다섯여섯 개를 동시에 돌리면 토큰이 훨씬 많이 든다. 대신 사람이 끼어들지 않는 시간이 훨씬 길어진다.</span>
+        </div>
+        <p class="note">발표자는 이 접근을 제품으로 파는 Cleric의 공동 창업자다. 비교 결과는 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="verify">
+        <header><span class="num">08</span><h2>진짜 고쳐졌는지 확인하기 <span class="ts">11:20</span></h2></header>
+        <p>여기까지는 에이전트에 맥락을 더 넣은 것뿐이다. 발표자 말로는 "그냥 감(vibes)"일 수 있다. 정말 효과가 있었는지 알려면 결과를 추적해야 한다.</p>
+        <p>장애 대응 흐름은 보통 <strong>감지, 진단, 수정</strong> 세 단계다. 대부분은 에이전트를 진단에만 쓴다. Cleric는 그 뒤에 <strong>검증과 결과</strong> 단계를 더 본다.</p>
+        <ol class="plain">
+          <li>에이전트가 진단을 제안한다.</li>
+          <li>엔지니어가 그 진단에 맞는 코드를 실제로 머지했는지 지켜본다.</li>
+          <li>서비스의 메트릭, 로그, 상태가 기준선으로 돌아왔는지 본다.</li>
+          <li>알림을 그냥 꺼 버려도 "정상 복귀"처럼 보이므로 <strong>여러 신호를 겹쳐 봐서</strong> 기대와 맞는지 확인한다.</li>
+        </ol>
+        <p>이렇게 여러 신호를 모아 "무슨 일이 있었나"를 삼각 측량한다. 이 장치가 필요한 이유는 다음 절에 있다. 평가를 교정하기 위해서다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="calibration">
+        <header><span class="num">09</span><h2>확신과 정확도를 맞추기 <span class="ts">12:30</span></h2></header>
+        <p>발표자가 보여 준 그래프는 가로축이 에이전트의 확신, 세로축이 실제 정확도다. 둘이 같으면 점들이 45도 대각선에 놓인다. "90% 확신"이라고 한 답이 실제로 90% 맞는 상태다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">근거 없이 (빨간 선)</span>
+            <p>선이 대각선 위로 크게 벗어난다. 감으로 답하는 에이전트는 언제나 아주 자신 있게 답한다. 확신은 높고 정확도는 그만큼 따라오지 않는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">근거 + 비판자 (파란 선)</span>
+            <p>대각선에 훨씬 가깝다. 앞에서 붙인 근거 장치가 사실상 비판자 <span class="en">critic</span> 역할을 한다.</p>
+          </div>
+        </div>
+        <p>이게 왜 중요한가. 확신이 정확도와 맞으면 <strong>에이전트가 "90% 확신"이라고 할 때 그 숫자를 믿고 다음 단계로 넘길 수 있다.</strong> 수정을 적용하는 쪽에 믿을 만한 신호가 전달된다. 프로덕션에서 나온 신호가 에이전트로 돌아가는 고리가 닫힌다.</p>
+        <p class="note">그래프에 수치 축이 없어 차트로 옮기지 않았다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="next">
+        <header><span class="num">10</span><h2>다음 방향: 배포 전에 예측 <span class="ts">13:30</span></h2></header>
+        <p>Cleric는 3년 동안 프로덕션에서 신호를 뽑아 에이전트에게 돌려주는 일을 해 왔다. 이미 운영 중인 시스템과 개발 과정 둘 다에 쓴다.</p>
+        <p>다음 목표는 그 신호를 <strong>개발 환경으로 가져오는 것</strong>이다. 애플리케이션을 배포하고 나서 터지기를 기다리지 않는다. 기준선 모델, 시스템 그래프, 온톨로지를 개발 환경에 가져와 변경을 만들기 전에 실패를 예측하게 한다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>코딩 에이전트가 잘 되는 이유는 컴파일러와 테스트라는 <strong>빠르고 또렷한 신호</strong>가 있기 때문이다. 프로덕션에는 그것이 없다.</li>
+          <li>프로덕션은 <strong>경계가 흐리고, 계속 바뀌고, 장애가 순간적</strong>이다. 되돌려 재시도할 수 없다.</li>
+          <li>모델은 <strong>빨리 확신 있게 답하도록</strong> 훈련됐다. 디버깅에는 반대로 의심과 여러 가설이 필요하다.</li>
+          <li>가장 흔한 실패는 <strong>증상을 원인으로 착각</strong>하는 것이다. 모델은 바늘은 잘 찾지만 짚더미의 크기를 모른다.</li>
+          <li><strong>기준선</strong>이 없으면 처음 본 것을 전부 이상하다고 여기고 멈춘다.</li>
+          <li>하위 에이전트가 요약만 올리면 주 에이전트는 <strong>부분 정보로 과신</strong>한다. 지난 사건 기록도 닻이 된다.</li>
+          <li>해법은 <strong>가설 여러 개, 기준선, 의존 그래프, 시간 순서, 증거 전달</strong>이다.</li>
+          <li>모델은 <strong>상대 순위는 잘 매기고 절대 점수는 못 매긴다.</strong> 그래서 가설이 여럿이어야 한다.</li>
+          <li>효과는 <strong>분산 장애</strong>에서 컸다. 대신 가설을 동시에 여럿 돌려 <strong>비용이 많이 든다.</strong></li>
+          <li>진단 뒤 <strong>실제 수정 반영과 정상 복귀를 추적</strong>해야 확신과 정확도를 맞출 수 있다. 그래야 "90% 확신"을 믿을 수 있다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>코딩 에이전트는 잘 되는데 프로덕션 진단 에이전트는 왜 자꾸 되묻게 만드나?</span></summary><div class="answer">코딩에는 컴파일러, 린터, 테스트가 바로 또렷한 신호를 돌려준다. 프로덕션에는 그런 검증 신호가 없어 사람이 답을 직접 확인해야 한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>발표자가 꼽은 프로덕션의 세 가지 성질은?</span></summary><div class="answer">경계가 흐리다(여러 팀, 여러 클러스터), 계속 바뀐다(끊임없는 배포), 순간적이다(장애가 특정 시점에만 보이고 재현되지 않는다).</div></details>
+          <details><summary><span class="qn">Q3</span><span>모델의 훈련 방향이 프로덕션 디버깅과 어긋나는 이유는?</span></summary><div class="answer">디버깅에는 의심, 여러 가설, 가설 제거가 필요하다. 모델은 단호하고 빨리 답하도록, 사람이 선호하는 답에 맞춰 훈련됐다. 발표자는 RLHF 과정에서 확신과 정확도가 벌어졌다는 OpenAI 시스템 카드를 인용했다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>가장 흔한 실패 유형과 그것이 어려운 이유는?</span></summary><div class="answer">증상을 원인으로 착각하는 것. 알림이 난 서비스의 첫 에러 로그를 근본 원인이라 선언한다. 모델은 바늘 찾기는 잘하지만 탐색 범위가 어디까지인지 모른다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>"추상화 문제"란 무엇인가?</span></summary><div class="answer">하위 에이전트들이 원시 발견 내용을 다 올리지 않고 요약만 올려서, 결정하는 주 에이전트가 부분 정보로 판단하고도 과하게 확신하는 문제다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>가설을 여러 개 세우는 것이 효과적인 두 가지 이유는?</span></summary><div class="answer">탐색의 다양성이 생긴다. 그리고 모델은 절대 점수는 못 매기지만 상대 순위는 잘 매기므로 후보가 여럿이어야 비교할 수 있다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>기준선을 로그에 적용하는 구체적 방법은?</span></summary><div class="answer">로그를 묶어(클러스터링) 어떤 로그가 매일 반복되는 흔한 것인지 통계를 함께 보여 준다. 원시 로그만 주지 않는다. 메트릭이나 객체 상태에도 같은 방법을 쓴다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>의존 그래프는 어떻게 의심을 심나?</span></summary><div class="answer">에이전트가 주장한 서비스 간 인과 연결을 실제 의존 관계와 비교하고, 다른 에이전트가 비판한다. 실제 연결에 없으면 더 깊이 조사하게 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>시간을 이용하는 두 가지 규칙은?</span></summary><div class="answer">원인은 증상보다 먼저 일어난다. 그리고 대개 원인과 증상은 시간상 가까우므로 알림 시각에 가까운 발견에 더 높은 관련도 점수를 준다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>진단이 맞았는지 확인할 때 알림 음소거를 어떻게 구별하나?</span></summary><div class="answer">알림만 꺼도 정상 복귀처럼 보이므로 메트릭, 로그, 상태 등 여러 신호를 겹쳐 보고 기대와 맞는지 확인한다. 엔지니어가 진단에 맞는 코드를 실제로 머지했는지도 본다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>확신과 정확도 그래프에서 45도 선은 무슨 뜻이고, 근거가 없으면 어디로 가나?</span></summary><div class="answer">45도 선은 확신과 정확도가 같은 상태다. 근거가 없으면 선 위로 크게 벗어나 과신 상태가 된다. 근거와 비판자를 붙이면 선에 가까워진다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>이 접근의 가장 큰 단점은?</span></summary><div class="answer">비용. 가설 다섯여섯 개를 동시에 돌리면 토큰이 훨씬 많이 든다. 대신 사람이 끼어들지 않는 시간이 길어진다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>진단 에이전트에게 원인 후보를 한 개가 아니라 여러 개 내게 한다<span class="how">확인: 후보들 사이의 순위와 제거 이유가 함께 나오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>평소 로그와 메트릭의 기준선을 만들어 에이전트에게 준다<span class="how">예: 반복 로그를 묶어 "매일 N회 나오는 흔한 로그"라고 표시</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>서비스 의존 관계를 문서나 그래프로 만들어 에이전트가 참조하게 한다<span class="how">확인: 에이전트가 주장한 인과 연결이 실제 의존 관계에 있는지 검사하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>발견한 단서에 알림 시각과의 시간 차이를 붙인다<span class="how">원인은 증상보다 먼저, 그리고 대개 가까운 시점에 있다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>하위 에이전트가 답만 아니라 증거(메트릭 값, 시각, 로그 원문)를 함께 넘기게 한다<span class="how">확인: 최종 진단에서 각 주장의 출처를 거슬러 갈 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>지난 사건 기록을 쓸 때 "이번도 같다"로 끝내지 못하게 추가 확인을 요구한다<span class="how">확인: 과거 사건과 다른 점을 적게 하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>진단 뒤 실제 수정 반영과 정상 복귀 여부를 기록한다<span class="how">여러 신호를 겹쳐 보고, 알림 음소거만으로 정상처럼 보이는 경우를 걸러 낸다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트의 확신 점수와 실제 정답률을 함께 모아 교정 상태를 본다<span class="how">확인: "90% 확신"이라고 한 답이 실제로 90%쯤 맞는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>프로덕션</td><td>Production. 실제 사용자가 쓰는 운영 환경</td></tr>
+              <tr><td>CI</td><td>Continuous Integration. 코드를 올릴 때마다 자동으로 빌드하고 테스트하는 과정</td></tr>
+              <tr><td>준비 상태 점검</td><td>Readiness probe. 쿠버네티스가 컨테이너가 트래픽을 받을 준비가 됐는지 확인하는 검사</td></tr>
+              <tr><td>근거 대기</td><td>Grounding. 모델의 답을 확인 가능한 사실이나 데이터에 묶어 두는 것</td></tr>
+              <tr><td>기준선</td><td>Baseline. 시스템이 정상일 때의 평소 모습. 비교 대상</td></tr>
+              <tr><td>근본 원인</td><td>Root cause. 증상을 만든 진짜 출발점</td></tr>
+              <tr><td>토폴로지 / 의존 그래프</td><td>서비스들이 서로 어떻게 연결되고 의존하는지 그린 지도</td></tr>
+              <tr><td>온톨로지</td><td>Ontology. 시스템 안의 개체와 관계를 정리한 구조화된 지식</td></tr>
+              <tr><td>닻 내림</td><td>Anchoring. 먼저 본 정보에 판단이 끌려가는 편향</td></tr>
+              <tr><td>RLHF</td><td>Reinforcement Learning from Human Feedback. 사람의 선호를 보상으로 삼아 모델을 추가 훈련하는 방법</td></tr>
+              <tr><td>시스템 카드</td><td>System card. 모델 공개 시 성능, 한계, 안전성 평가를 적은 문서</td></tr>
+              <tr><td>비판자</td><td>Critic. 다른 에이전트의 답을 검토하고 반박하는 역할의 에이전트</td></tr>
+              <tr><td>교정</td><td>Calibration. 확신 수준과 실제 정답률을 맞추는 것</td></tr>
+              <tr><td>SRE</td><td>Site Reliability Engineer. 서비스 안정성을 책임지는 엔지니어</td></tr>
+              <tr><td>삼각 측량</td><td>Triangulation. 여러 독립된 신호를 겹쳐 보고 결론을 확인하는 것</td></tr>
+              <tr><td>모놀리스</td><td>Monolith. 여러 서비스로 나누지 않고 하나로 묶은 애플리케이션 구조</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, Cleric</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>500 오류 사례: 자신 있게 틀리는 에이전트와 되묻기</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>코딩에는 검증 신호가 있고 프로덕션에는 없다</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>프로덕션의 성질: 흐린 경계, 변화, 순간성</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>모델은 확신 있게 답하도록 훈련됐다</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>실패 1: 증상을 원인으로 착각</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>실패 2: 기준선 부재</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>실패 3: 하위 에이전트의 추상화</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>실패 4: 과거 맥락에 닻 내림</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>코딩의 신호를 프로덕션에 재현하기</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>기법 1: 가설 여러 개, 상대 순위</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>기법 2: 기준선, 로그 클러스터링</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>기법 3: 의존 그래프와 비판 에이전트</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>기법 4: 시간 순서</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>기법 5: 증거 전달, SRE처럼</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>모의 환경 결과: 국소 vs 분산 장애</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>단점: 비용</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>감지, 진단, 수정 뒤의 검증과 결과</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>확신 vs 정확도 그래프, 45도 선</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>3년의 방향과 다음: 개발 환경으로 신호 가져오기</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'J17o5r5PKmw:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

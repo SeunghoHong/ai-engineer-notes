@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>미니맥스 M3 설계 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- memory layout strip ---------- */
+.mem { display: grid; gap: 4px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
+.mem .cells { display: flex; gap: 4px; height: 16px; margin-bottom: 6px; }
+.mem .cells span { flex: 1; border-radius: 3px; background: var(--accent); }
+.mem .cells.split span { background: var(--bar-context); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#pillars">M3의 세 기둥</a></li>
+      <li><a href="#sparse">희소 어텐션의 기본 구조</a></li>
+      <li><a href="#dsa">DSA를 그대로 쓰지 않은 이유</a></li>
+      <li><a href="#problems">GQA에서 생기는 세 문제</a></li>
+      <li><a href="#msa">MSA의 해법</a></li>
+      <li><a href="#native">처음부터 멀티모달</a></li>
+      <li><a href="#timing">멀티모달을 넣는 세 시점</a></li>
+      <li><a href="#attnmap">어텐션 맵으로 본 차이</a></li>
+      <li><a href="#vit">비전 구조와 3D 어텐션</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 작업에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-10 · 15분 · 영어 발표 한글 정리</span>
+      <h1>MiniMax M3를 만든 두 가지 선택</h1>
+      <p class="lead">MiniMax는 100만 토큰 문맥을 감당하려고 흔히 쓰는 GQA 구조에 맞춘 희소 어텐션을 새로 설계했다. 그리고 텍스트 성능을 지키려고 이미지 학습을 첫 단계부터 섞었다. 두 결정 모두 알고리즘만이 아니라 GPU와 학습 과정의 제약에서 출발했다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=htod7Nv1cBc" target="_blank" rel="noopener">How MiniMax M3 Was Built: Sparse Attention and Native Multimodality</a></span>
+        <span>발표: Olive Song (MiniMax 강화학습 연구원)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 용어는 확실한 것만 바로잡았다. soda는 SOTA로, large head beam은 large head dimension으로, top key는 top-k로 고쳤다. 발표 화면의 그림은 자막에 없어서 발표자의 설명만 옮겼다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>M3는 가중치를 공개한 모델이다. 발표자는 <strong>최상위 코딩·에이전트 능력, 100만 토큰 문맥, 처음부터 멀티모달</strong>을 함께 갖춘 첫 오픈 웨이트 모델이라고 소개한다.</li>
+        <li>긴 문맥은 <strong>MSA</strong>(MiniMax Sparse Attention)로 감당한다. 가벼운 인덱스 브랜치가 중요한 블록을 고르고, 메인 브랜치는 그 블록만 본다. full attention보다 <strong>prefill 9배, decode 15배</strong> 빠르다고 한다.</li>
+        <li>DeepSeek의 DSA는 MQA 구조에 맞춘 설계다. 흔히 쓰는 GQA에 그대로 얹으면 <strong>헤드 다양성이 사라지고, GPU 메모리 읽기가 쪼개지고, top-k 계산이 무겁다.</strong></li>
+        <li>MSA의 해법은 세 가지다. <strong>KV 헤드마다 따로 고르기, 토큰 대신 블록으로 고르기, 전용 커널.</strong> 알고리즘과 인프라를 함께 설계한 결과다.</li>
+        <li>멀티모달을 사전학습 뒤에 넣으면 텍스트 능력이 떨어졌다. 중간에 넣으면 설정에 따라 결과가 흔들렸다. <strong>첫 단계부터 넣으니 텍스트 성능이 거의 떨어지지 않았다.</strong></li>
+        <li>처음부터 학습한 모델은 어텐션 맵에서 <strong>텍스트와 이미지가 고르게 섞여 있다.</strong> 나중에 넣은 모델은 텍스트가 이미지를 거의 보지 않는다.</li>
+        <li>비전 쪽에서는 ViT 안에 <strong>여러 프레임을 함께 보는 3D 어텐션</strong>이 효과가 컸다. 4프레임이 성능과 효율의 균형점이었다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="pillars">
+        <header><span class="num">01</span><h2>M3의 세 기둥 <span class="ts">01:00</span></h2></header>
+        <p>MiniMax는 언어 모델 말고도 음성 모델, 영상 생성 모델, 코딩 에이전트 모델을 내 왔다. 발표자는 여러 모달리티<span class="en">modality</span>를 함께 다루는 몇 안 되는 연구소라고 소개한다. 모달리티는 텍스트, 이미지, 음성처럼 정보의 종류를 말한다.</p>
+        <p>M3는 가중치를 공개한 오픈 웨이트<span class="en">open weight</span> 모델이다. 발표자는 아래 세 가지를 한 모델에 담은 첫 오픈 웨이트 모델이라고 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기둥</th><th>내용</th><th>발표자가 든 근거</th></tr></thead>
+            <tbody>
+              <tr><td>코딩·에이전트</td><td>작업을 스스로 쪼개고, 코딩 에이전트 안에서 일한다</td><td>지금 하는 코딩 일의 90%를 대신할 수 있다</td></tr>
+              <tr><td>100만 토큰 문맥</td><td>코드베이스 전체를 한 번에 넣을 수 있다</td><td>MSA 덕분에 full attention보다 prefill 9배, decode 15배 빠르다</td></tr>
+              <tr><td>처음부터 멀티모달</td><td>학습 첫 단계부터 시각 이해와 언어 생성을 함께 배웠다</td><td>화면을 보고 컴퓨터를 조작하는 에이전트<span class="en">computer use</span> 같은 응용으로 이어진다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>prefill은 입력 전체를 처음 한 번에 읽어 들이는 단계다. decode는 답을 한 토큰씩 만들어 내는 단계다. 긴 문서를 넣는 일은 prefill이, 긴 답을 쓰는 일은 decode가 시간을 좌우한다.</p>
+
+        <figure class="chart" aria-label="full attention을 1로 놓은 MSA의 속도: prefill 9배, decode 15배">
+          <span class="chart-title">MSA의 속도 (full attention = 1배)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>prefill</span><span class="val">9배</span></div>
+              <div class="track"><div class="fill key" style="width:60%" title="prefill: full attention 대비 9배"></div><div class="baseline" style="left:6.67%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>decode</span><span class="val">15배</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="decode: full attention 대비 15배"></div><div class="baseline" style="left:6.67%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = full attention (1배)</span><span>15</span></div>
+          <span class="caption">발표자가 밝힌 수치다. 어떤 문맥 길이와 하드웨어에서 잰 값인지는 발표에서 말하지 않았다.</span>
+        </figure>
+        <p class="note">발표자는 MiniMax 소속이다. M3의 성능, 속도, "코딩 일의 90%" 같은 말은 자사 모델에 대한 주장이니 그 점을 감안해 읽자. 이 발표에는 다른 모델과 비교한 벤치마크 수치가 나오지 않는다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="sparse">
+        <header><span class="num">02</span><h2>희소 어텐션의 기본 구조 <span class="ts">02:30</span></h2></header>
+        <p>어텐션<span class="en">attention</span>은 토큰 하나가 다른 토큰들 가운데 어디를 얼마나 참고할지 정하는 계산이다. full attention은 모든 토큰을 빠짐없이 본다. 문맥이 100만 토큰이면 참고할 상대도 100만 개다. 계산과 메모리 읽기가 그만큼 늘어난다.</p>
+        <p>희소 어텐션<span class="en">sparse attention</span>은 중요한 일부만 골라서 본다. 두꺼운 책에서 답을 찾을 때 목차로 관련 장을 먼저 고르고 그 장만 정독하는 것과 비슷하다.</p>
+        <div class="callout">
+          <span class="title">설계 원칙 <span class="ts">02:40</span></span>
+          <span>구조가 단순할수록 규모를 키울 때 더 잘 된다. 발표자는 설계 전체에서 이 원칙을 따랐다고 말한다. 목표는 늘 더 깔끔하고 단순한 구조였다.</span>
+        </div>
+        <h3>두 갈래로 나뉜다 <span class="ts">02:50</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">인덱스 브랜치 · index branch</span>
+            <ul>
+              <li>가벼운 full attention을 돌린다</li>
+              <li>query 헤드 4개와 key 헤드 1개만 쓴다</li>
+              <li>메인 브랜치의 어텐션 점수와 비슷해지도록 <strong>KL loss</strong>로 학습한다</li>
+            </ul>
+            <p class="verdict"><b>역할</b>: 메인 브랜치가 어디를 중요하게 볼지 미리 흉내 내서, 점수가 높을 곳을 찾는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">메인 브랜치 · sparse branch</span>
+            <ul>
+              <li>모든 토큰을 보지 않는다</li>
+              <li>인덱스 브랜치가 고른 블록의 key와 value만 가져온다</li>
+              <li>그 일부로만 어텐션을 계산한다</li>
+            </ul>
+            <p class="verdict"><b>역할</b>: 실제 어텐션 계산. 볼 범위가 줄어든 만큼 빨라진다.</p>
+          </div>
+        </div>
+        <ol class="plain">
+          <li>인덱스 브랜치가 모든 토큰에 싸게 점수를 매긴다.</li>
+          <li>점수가 높은 블록을 고른다.</li>
+          <li>메인 브랜치가 그 블록의 key와 value로만 어텐션을 계산한다.</li>
+        </ol>
+        <p class="note">발표자는 "메인 브랜치"와 "희소 브랜치"를 같은 뜻으로 섞어 썼다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="dsa">
+        <header><span class="num">03</span><h2>DSA를 그대로 쓰지 않은 이유 <span class="ts">04:00</span></h2></header>
+        <p>발표자가 가장 강조한 점은 이 설계가 알고리즘만 보고 나온 게 아니라는 것이다. <strong>알고리즘과 인프라를 함께 설계했다</strong><span class="en">co-design</span>.</p>
+        <p>출발점은 DeepSeek의 희소 어텐션인 DSA<span class="en">DeepSeek Sparse Attention</span>다. 발표자는 DSA를 강한 설계로 평가한다. 다만 DeepSeek 자체 구조에 맞춰 최적화돼 있다고 본다. 특히 MQA와 큰 head 차원의 조합에 맞춰져 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>MQA</th><th>GQA</th></tr></thead>
+            <tbody>
+              <tr><td>원어</td><td>Multi-Query Attention</td><td>Grouped-Query Attention</td></tr>
+              <tr><td>KV 헤드</td><td>1개를 모든 query 헤드가 함께 쓴다</td><td>여러 개. query 헤드를 몇 묶음으로 나눠 묶음마다 하나씩 쓴다</td></tr>
+              <tr><td>발표의 예</td><td>1 × 512</td><td>4 × 128</td></tr>
+              <tr><td>발표에서의 위치</td><td>DSA가 맞춰진 DeepSeek 구조</td><td>발표자가 "더 흔히 쓰는" 구조로 꼽은 것. M3가 택한 쪽</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>GQA에 DSA를 그대로 얹으면 구현과 인프라 쪽에서 문제가 여럿 생긴다. 그래서 MiniMax는 기존 설계를 빌려 오는 대신, <strong>GQA와 실제 시스템 효율이라는 제약 안에서</strong> 구조를 다시 생각했다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="problems">
+        <header><span class="num">04</span><h2>GQA에서 생기는 세 문제 <span class="ts">05:00</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">① 알고리즘 · 헤드 다양성이 사라진다 <span class="ts">05:10</span></span>
+            <p>GQA는 KV 헤드가 여러 개라서, 묶음마다 서로 다른 곳을 볼 여지가 있다. 그런데 DSA처럼 인덱스 결과를 하나로 합쳐 모든 헤드에 똑같이 쓰면, 모든 KV 헤드가 같은 토큰만 본다.</p>
+            <p class="verdict"><b>결과</b>: GQA를 쓰는 이유인 다양성이 상쇄된다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">② 인프라 · 메모리 읽기가 쪼개진다 <span class="ts">05:40</span></span>
+            <p>GPU는 이어진 데이터를 한 번에 읽을 때 빠르다. MQA는 KV를 큰 덩어리 하나로 볼 수 있다. GQA는 같은 총 차원을 여러 헤드로 나눠 담아서 헤드마다 따로 읽어야 한다.</p>
+            <figure class="mem" aria-label="같은 512 차원을 MQA는 한 덩어리로 읽고, GQA는 128씩 네 번 따로 읽는다">
+              <span>MQA · 1 × 512 · 한 번에 이어서 읽는다</span>
+              <div class="cells"><span></span></div>
+              <span>GQA · 4 × 128 · 헤드마다 네 번 따로 읽는다</span>
+              <div class="cells split"><span></span><span></span><span></span><span></span></div>
+            </figure>
+            <p class="verdict"><b>결과</b>: 메모리 접근 부담이 늘고, 연산 대비 메모리 접근 비율이 떨어진다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">③ 계산 · top-k가 무겁다 <span class="ts">06:30</span></span>
+            <p>중요한 토큰을 고르려면 인덱스가 아주 많은 토큰 후보 중에서 점수 상위 k개를 뽑아야 한다. top-k는 데이터끼리 의존 관계가 있어서 GPU에서 완전히 병렬로 돌리기 어렵다.</p>
+            <p class="verdict"><b>결과</b>: 토큰 단위로 고르면 계산과 결과 합치기 비용이 무시할 수 없을 만큼 커진다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="msa">
+        <header><span class="num">05</span><h2>MSA의 해법 <span class="ts">06:50</span></h2></header>
+        <h3>KV 헤드마다 따로 고른다 <span class="ts">07:00</span></h3>
+        <div class="shift" aria-label="선택 결과 공유에서 헤드별 선택으로">
+          <div><span class="tag">DSA를 그대로 쓰면</span><b>인덱스 결과를 하나로 합친다</b><span class="muted">모든 KV 헤드가 같은 토큰을 본다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">MSA</span><b>합치지 않고 헤드마다 따로 고른다</b><span class="muted">헤드마다 다른 토큰 묶음을 봐서 GQA의 다양성이 남는다</span></div>
+        </div>
+
+        <h3>토큰 대신 블록으로 고른다 <span class="ts">07:40</span></h3>
+        <div class="shift" aria-label="토큰 단위 선택에서 블록 단위 검색으로">
+          <div><span class="tag">이전</span><b>토큰 단위 선택</b><span class="muted">후보가 토큰 수만큼 많다. top-k와 결과 합치기가 무겁다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">MSA</span><b>블록 단위 검색</b><span class="muted">여러 토큰을 묶은 블록이 후보라서 후보 수가 크게 준다. 이어진 덩어리를 읽으니 GPU 메모리 접근도 효율적이다</span></div>
+        </div>
+        <p>블록 단위 검색<span class="en">block-level retrieval</span>은 문제 ②와 ③을 함께 줄인다. 후보가 줄어 top-k와 합치기 비용이 내려간다. 메모리 접근 효율과 연산 대비 메모리 접근 비율은 올라간다.</p>
+        <p>발표자는 이렇게 바꿔도 성능이 크게 떨어지지 않는다는 것을 확인했다고 말한다.</p>
+        <p class="note">성능이 유지된다는 근거 수치는 자막에 나오지 않는다. 화면에 있었을 수도 있지만 이 노트에서는 확인하지 못했다.</p>
+
+        <h3>학습과 추론용 전용 커널 <span class="ts">08:20</span></h3>
+        <p>커널<span class="en">kernel</span>은 GPU에서 실제로 도는 저수준 계산 코드다. MiniMax는 학습용과 추론용 커널을 따로 설계했다. 발표에서 세부는 다루지 않았다. 발표자는 이 부분이 희소 어텐션을 실제로 빠르게 만드는 시스템 부품이라고 설명한다.</p>
+        <p>이 설계 덕분에 M3의 학습을 <strong>100만 토큰 문맥까지 효율적으로</strong> 늘릴 수 있었다.</p>
+
+        <div class="callout">
+          <span class="title">세 해법은 어디서 나왔나</span>
+          <span>헤드별 선택은 알고리즘 문제를 고친다. 블록 단위 검색과 전용 커널은 GPU 사정에서 나왔다. 좋은 알고리즘도 하드웨어가 읽기 좋은 모양이 아니면 실제로는 빠르지 않다. 발표자가 말하는 "알고리즘과 인프라를 함께 설계한다"는 이 뜻이다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="native">
+        <header><span class="num">06</span><h2>처음부터 멀티모달 <span class="ts">08:50</span></h2></header>
+        <p>M3는 학습 첫 스텝부터 텍스트와 시각 데이터를 함께 배웠다. 이를 네이티브 멀티모달<span class="en">native multimodal</span>이라 부른다. 발표자는 지금의 오픈 웨이트 모델들과 매우 다른 방식이라고 말한다.</p>
+        <p>출발점은 분명했다. 시각-언어 모델<span class="en">VL model</span>만 따로 두면 쓸 곳이 제한적이다. 텍스트 능력과 합쳐야 쓸모가 커지는데, 학습 중에 둘을 합치기가 어렵다.</p>
+        <div class="callout">
+          <span class="title">핵심 질문 <span class="ts">09:30</span></span>
+          <span>텍스트 핵심 성능을 해치지 않고 멀티모달 능력을 넣을 수 있는가. MiniMax는 이 질문에 답하려고 여러 학습 전략을 큰 규모에서 직접 시험했다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="timing">
+        <header><span class="num">07</span><h2>멀티모달을 넣는 세 시점 <span class="ts">09:50</span></h2></header>
+        <p>사전학습 끝에는 decay 단계가 있다. 학습률을 점점 낮춰 모델을 안정적으로 수렴시키는 구간이다. 세 전략은 멀티모달 데이터를 이 단계 기준으로 언제 넣느냐가 다르다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>전략</th><th>넣는 시점</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>① CPT 방식 <span class="ts">09:50</span></td><td>사전학습 decay 단계가 끝난 뒤. 가장 흔한 방법</td><td>모델이 이미 대부분 수렴한 상태다. 멀티모달 데이터가 배운 텍스트 능력을 방해해 성능이 떨어진다</td></tr>
+              <tr><td>② 중간 투입 <span class="ts">10:10</span></td><td>decay 단계 전. 텍스트 토큰을 어느 정도 본 뒤</td><td>결과가 데이터 혼합 비율과 학습률 같은 설정에 크게 흔들린다. 한 실험에서는 학습률을 낮추면 성능 하락이 줄었지만, 다른 실험에서는 그 결론이 맞지 않았다</td></tr>
+              <tr><td>③ 처음부터 <span class="ts">11:00</span></td><td>학습 첫 스텝</td><td>같은 텍스트 토큰 예산에서 텍스트 성능이 <strong>거의 떨어지지 않았다.</strong> 최종 채택</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>②가 탈락한 이유가 하나 더 있다. 대규모 사전학습 도중에는 멀티모달 하나 때문에 학습률 같은 설정을 마음대로 바꿀 수 없다. 설정에 민감한 방법은 큰 규모에서 쓰기 어렵다.</p>
+        <p class="note">"같은 텍스트 토큰 예산"은 텍스트 데이터 양을 똑같이 맞춘 조건이라는 뜻이다. 텍스트 성능을 비교한 구체적인 수치는 자막에 나오지 않는다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="attnmap">
+        <header><span class="num">08</span><h2>어텐션 맵으로 본 차이 <span class="ts">11:30</span></h2></header>
+        <p>어텐션 맵<span class="en">attention map</span>은 각 토큰이 다른 토큰을 얼마나 참고하는지 색으로 그린 그림이다. 밝을수록 많이 참고한다. 발표자는 두 방식으로 학습한 모델의 어텐션 맵을 비교했다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">CPT 방식 · 나중에 넣음</span>
+            <p>텍스트 토큰이 이미지 토큰을 거의 보지 않는다. 그림에서 이미지 토큰 구역이 대부분 어둡다.</p>
+            <p class="verdict"><b>해석</b>: 두 모달리티가 제대로 합쳐지지 않았다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">네이티브 · 처음부터</span>
+            <p>텍스트 토큰과 이미지 토큰 사이에 뚜렷한 경계가 보이지 않는다. 어텐션이 고르게 섞여 있다.</p>
+            <p class="verdict"><b>해석</b>: 모델이 처음부터 시각 정보와 텍스트 정보를 자연스럽게 섞는 법을 배웠다.</p>
+          </div>
+        </div>
+        <p>발표자의 정리는 이렇다. 이 학습 전략은 시각 능력을 덧붙이는 일이 아니다. <strong>가장 강한 텍스트 능력을 지키면서 멀티모달을 모델 안에 녹이는 일</strong>이다.</p>
+        <p class="note">어텐션 맵 그림은 영상 화면에만 있다. 여기서는 발표자의 설명만 옮겼다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="vit">
+        <header><span class="num">09</span><h2>비전 구조와 3D 어텐션 <span class="ts">12:30</span></h2></header>
+        <p>발표자는 전체 구조가 "비교적 표준적"이라고 말한다. 흐름은 세 단계다.</p>
+        <ol class="plain">
+          <li>이미지나 영상을 ViT<span class="en">Vision Transformer</span>가 처리해 비주얼 토큰을 만든다.</li>
+          <li>텍스트 시퀀스 안에 있던 이미지 자리표시자<span class="en">placeholder</span>를 비주얼 토큰으로 바꿔 끼운다.</li>
+          <li>비주얼 임베딩과 텍스트 임베딩을 함께 언어 모델에 넣는다.</li>
+        </ol>
+
+        <h3>ViT 안의 3D 어텐션 <span class="ts">13:00</span></h3>
+        <p>중요한 발견은 ViT 안에 3D 어텐션을 넣으면 시각 이해가 크게 좋아진다는 것이다.</p>
+        <div class="shift" aria-label="프레임 단위 어텐션에서 프레임을 가로지르는 3D 어텐션으로">
+          <div><span class="tag">일반 ViT</span><b>프레임 하나 안에서만 어텐션</b><span class="muted">영상이면 다른 프레임의 패치끼리 ViT 단계에서 직접 만나지 않는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">3D 어텐션</span><b>여러 프레임의 패치가 서로 본다</b><span class="muted">시간 흐름과 프레임 사이 관계를 더 잘 잡는다</span></div>
+        </div>
+        <p>효과는 영상에만 그치지 않았다. 일부 이미지 벤치마크에도 이득이 옮겨 갔다. 발표자는 이를 영상 전용 개선이 아니라 <strong>시각 표현 전체가 강해진 신호</strong>로 본다.</p>
+        <div class="callout">
+          <span class="title">프레임 수는 4개 <span class="ts">14:00</span></span>
+          <span>3D 어텐션을 프레임 수 제한 없이 늘릴 수는 없다. 시스템 부담과 부하 분산 문제가 생긴다. MiniMax의 실험에서는 4프레임이 성능과 효율의 균형이 가장 좋았다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="recap">
+        <header><span class="num">10</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>M3는 최상위 코딩·에이전트 능력, 100만 토큰 문맥, 처음부터 멀티모달을 함께 갖춘 오픈 웨이트 모델로 소개됐다.</li>
+          <li>설계 원칙은 <strong>"구조가 단순할수록 더 잘 확장된다"</strong>이다.</li>
+          <li>MSA에서는 가벼운 인덱스 브랜치가 블록을 고르고, 메인 브랜치는 그 블록만 본다. 발표자 수치로 prefill 9배, decode 15배 빠르다.</li>
+          <li>DSA는 MQA에 맞춘 설계라서 GQA에 그대로 쓰면 맞지 않는다.</li>
+          <li>세 문제는 <strong>헤드 다양성 상실, 쪼개진 메모리 읽기, 무거운 top-k</strong>다.</li>
+          <li>세 해법은 <strong>헤드별 선택, 블록 단위 검색, 전용 커널</strong>이다. 알고리즘과 인프라를 함께 설계했다.</li>
+          <li>멀티모달을 사전학습 뒤에 넣으면 텍스트가 떨어졌고, 중간에 넣으면 설정에 따라 결과가 흔들렸다.</li>
+          <li>첫 스텝부터 넣으면 같은 텍스트 토큰 예산에서 <strong>텍스트 성능이 거의 떨어지지 않았다.</strong></li>
+          <li>처음부터 학습한 모델은 어텐션 맵에서 텍스트와 이미지가 섞여 있다. 나중에 넣은 모델은 따로 논다.</li>
+          <li>ViT 안 <strong>3D 어텐션</strong>이 시각 이해를 끌어올렸고, 4프레임이 균형점이었다.</li>
+        </ol>
+      </section>
+
+      <!-- 11 -->
+      <section id="quiz">
+        <header><span class="num">11</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>M3의 세 기둥은?</span></summary><div class="answer">최상위 코딩·에이전트 능력, 100만 토큰 문맥 창, 학습 첫 단계부터의 멀티모달.</div></details>
+          <details><summary><span class="qn">Q2</span><span>인덱스 브랜치는 무엇을 하고, 어떻게 학습하나?</span></summary><div class="answer">query 헤드 4개, key 헤드 1개로 가벼운 full attention을 돌려 점수가 높을 곳을 찾는다. 메인 브랜치의 어텐션 점수와 비슷해지도록 KL loss로 학습한다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>DSA를 GQA에 그대로 쓰면 알고리즘 쪽에서 무엇을 잃나?</span></summary><div class="answer">헤드 다양성. 인덱스 결과를 하나로 합쳐 쓰면 모든 KV 헤드가 같은 토큰만 보게 되어 GQA의 다양성이 상쇄된다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>1 × 512와 4 × 128은 총 차원이 같은데 왜 GPU에서 차이가 나나?</span></summary><div class="answer">1 × 512는 한 덩어리로 이어서 읽는다. 4 × 128은 헤드마다 네 번 따로 읽어야 한다. 메모리 접근 부담이 늘고 연산 대비 메모리 접근 비율이 떨어진다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>토큰 단위 top-k가 무거운 이유는?</span></summary><div class="answer">후보가 토큰 수만큼 많고, top-k는 데이터 의존성이 있어 GPU에서 완전히 병렬화하기 어렵다. 결과를 합치는 비용도 든다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>MSA의 세 해법은?</span></summary><div class="answer">KV 헤드마다 따로 고르기, 토큰 대신 블록 단위로 검색하기, 학습과 추론용 전용 커널.</div></details>
+          <details><summary><span class="qn">Q7</span><span>블록 단위 검색이 좋아지게 하는 두 가지는?</span></summary><div class="answer">후보 수가 줄어 top-k와 결과 합치기 비용이 내려간다. 이어진 덩어리를 읽어 메모리 접근 효율과 연산 대비 메모리 접근 비율이 올라간다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>사전학습 decay 뒤에 멀티모달을 넣는 CPT 방식이 실패한 이유는?</span></summary><div class="answer">모델이 이미 대부분 수렴한 뒤라 멀티모달 데이터가 배운 텍스트 능력을 방해해 성능이 떨어졌다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>decay 전 중간 투입이 채택되지 않은 이유는?</span></summary><div class="answer">결과가 데이터 혼합과 학습률에 크게 흔들렸고, 한 실험의 결론이 다른 실험에서 맞지 않았다. 대규모 사전학습 중에는 멀티모달 때문에 설정을 마음대로 바꿀 수도 없다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>어텐션 맵에서 CPT 방식과 네이티브 방식은 어떻게 달랐나?</span></summary><div class="answer">CPT 방식은 텍스트 토큰이 이미지 토큰을 거의 보지 않아 이미지 구역이 어둡다. 네이티브 방식은 두 토큰 사이에 뚜렷한 경계 없이 섞여 있다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>ViT 안 3D 어텐션의 효과와, 프레임 수를 4개로 정한 이유는?</span></summary><div class="answer">프레임 사이 패치가 서로 직접 보게 되어 시간 흐름과 프레임 간 관계를 더 잘 잡는다. 일부 이미지 벤치마크도 좋아졌다. 프레임을 무한정 늘리면 시스템과 부하 분산 문제가 생겨, 실험상 균형이 가장 좋은 4프레임을 골랐다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>"prefill 9배, decode 15배"를 읽을 때 주의할 점은?</span></summary><div class="answer">비교 대상은 full attention이다. 어떤 문맥 길이와 하드웨어에서 잰 값인지 발표에 나오지 않았다. 자사 모델에 대한 발표자의 주장이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="apply">
+        <header><span class="num">12</span><h2>내 작업에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>긴 문맥 모델을 고를 때 prefill과 decode 속도를 따로 본다<span class="how">긴 문서를 넣고 짧게 답하는 일은 prefill이, 긴 답을 쓰는 일은 decode가 비용을 좌우한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>속도 배수를 볼 때 비교 조건을 확인한다<span class="how">무엇과 비교했나, 문맥 길이는 얼마인가, 어떤 하드웨어인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>희소 어텐션 모델은 내 긴 문맥 작업으로 직접 시험한다<span class="how">고르지 못한 블록은 메인 브랜치가 보지 않는다. 문서 깊숙한 정보를 찾아야 답할 수 있는 질문으로 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>다른 팀의 기법을 가져올 때 그 기법이 기대는 전제를 확인한다<span class="how">DSA는 MQA를 전제했고, GQA에서는 그대로 맞지 않았다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>GPU 성능을 따질 때 연산량과 함께 메모리를 읽는 모양을 본다<span class="how">한 번에 이어서 읽는가, 여러 번 쪼개 읽는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>새 능력을 더할 때 기존 능력의 회귀를 같은 조건에서 잰다<span class="how">MiniMax는 텍스트 토큰 예산을 맞추고 텍스트 성능을 비교했다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>한 번의 실험에서 얻은 하이퍼파라미터 결론을 다른 설정에서 다시 확인한다<span class="how">학습률을 낮추면 좋다는 결론이 다른 실행에서는 맞지 않았다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>화면을 보는 에이전트를 만든다면 처음부터 멀티모달로 학습한 모델도 후보에 넣는다<span class="how">시각 성능과 텍스트 성능을 함께 비교한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 13 -->
+      <section id="glossary">
+        <header><span class="num">13</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>오픈 웨이트</td><td>Open weight. 학습된 가중치를 공개해 누구나 받아서 돌릴 수 있는 모델</td></tr>
+              <tr><td>SOTA</td><td>State of the art. 현재 최고 수준</td></tr>
+              <tr><td>모달리티</td><td>Modality. 텍스트, 이미지, 음성처럼 정보의 종류</td></tr>
+              <tr><td>문맥 창</td><td>Context window. 모델이 한 번에 받아들일 수 있는 토큰의 양</td></tr>
+              <tr><td>prefill / decode</td><td>prefill은 입력 전체를 처음 한 번에 읽는 단계. decode는 답을 한 토큰씩 만드는 단계</td></tr>
+              <tr><td>full attention</td><td>모든 토큰이 다른 모든 토큰을 참고하는 기본 어텐션</td></tr>
+              <tr><td>희소 어텐션</td><td>Sparse attention. 중요한 일부 토큰만 골라 참고하는 어텐션</td></tr>
+              <tr><td>MSA / DSA</td><td>MiniMax Sparse Attention / DeepSeek Sparse Attention. 각 회사의 희소 어텐션 설계</td></tr>
+              <tr><td>인덱스 브랜치</td><td>Index branch. 어디를 볼지 싸게 미리 골라 주는 가벼운 어텐션 갈래</td></tr>
+              <tr><td>KL loss</td><td>두 확률 분포가 얼마나 다른지 재는 값을 줄이도록 하는 학습 목표</td></tr>
+              <tr><td>KV 헤드</td><td>어텐션에서 key와 value를 만드는 단위. 여러 query 헤드가 나눠 쓸 수 있다</td></tr>
+              <tr><td>MQA / GQA</td><td>MQA는 KV 헤드 하나를 모든 query 헤드가 같이 쓴다. GQA는 query 헤드를 묶음으로 나눠 묶음마다 KV 헤드를 하나씩 쓴다</td></tr>
+              <tr><td>top-k</td><td>점수가 가장 높은 k개를 뽑는 계산</td></tr>
+              <tr><td>연산 대비 메모리 접근 비율</td><td>Compute-to-memory access ratio. 메모리에서 한 번 읽어 온 데이터로 얼마나 많은 계산을 하는지. 높을수록 GPU를 잘 쓴다</td></tr>
+              <tr><td>커널</td><td>Kernel. GPU에서 실제로 도는 저수준 계산 코드</td></tr>
+              <tr><td>decay 단계</td><td>사전학습 끝에 학습률을 점점 낮춰 모델을 수렴시키는 구간</td></tr>
+              <tr><td>CPT</td><td>Continued pre-training. 사전학습을 마친 모델에 새 데이터를 더해 이어서 학습하는 방식</td></tr>
+              <tr><td>네이티브 멀티모달</td><td>Native multimodal. 학습 첫 단계부터 여러 모달리티 데이터를 함께 넣어 학습하는 것</td></tr>
+              <tr><td>어텐션 맵</td><td>Attention map. 각 토큰이 다른 토큰을 얼마나 참고하는지 색으로 그린 그림</td></tr>
+              <tr><td>ViT</td><td>Vision Transformer. 이미지를 작은 조각(패치)으로 나눠 트랜스포머로 처리하는 모델</td></tr>
+              <tr><td>3D 어텐션</td><td>여러 프레임의 패치가 서로를 참고하게 하는 어텐션. 가로, 세로에 시간 축이 더해진다</td></tr>
+              <tr><td>부하 분산</td><td>Load balancing. 계산을 여러 GPU에 고르게 나누는 일</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="timeline">
+        <header><span class="num">14</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 주제: MSA와 처음부터 멀티모달</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>MiniMax 팀 소개: 언어, 음성, 영상 생성, 코딩 에이전트 모델</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>M3 공개와 첫 번째 기둥: 코딩·에이전트</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>두 번째 기둥: 100만 토큰 문맥, prefill 9배, decode 15배</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>세 번째 기둥: 처음부터 멀티모달</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>설계 원칙: 단순한 구조가 더 잘 확장된다</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>희소 어텐션의 두 갈래: 인덱스 브랜치와 메인 브랜치</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>알고리즘과 인프라를 함께 설계, DSA와 MQA</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>GQA에 그대로 쓸 때 문제 ①: 헤드 다양성</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>문제 ②: GPU 메모리 접근, 1 × 512 vs 4 × 128</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>문제 ③: top-k 계산</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>해법: KV 헤드별 선택</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>해법: 블록 단위 검색</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>해법: 전용 커널, 100만 토큰 학습</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>처음부터 멀티모달</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>핵심 질문: 텍스트 성능을 지키며 넣을 수 있나</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>전략 ①: decay 뒤 CPT 방식</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>전략 ②: decay 전 중간 투입</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>전략 ③: 처음부터 학습</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>어텐션 맵 비교</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>비전 구조: ViT와 이미지 자리표시자</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>ViT 안 3D 어텐션</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>프레임 수 4개의 균형점</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>정리와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'htod7Nv1cBc:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

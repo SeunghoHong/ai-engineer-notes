@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>토큰은 싼 부분</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#tension">60배와 43%, 어느 쪽이 맞나</a></li>
+      <li><a href="#salary">빠져 있던 가장 큰 비용</a></li>
+      <li><a href="#cost-per-pr">PR 한 건의 비용은 26% 내렸다</a></li>
+      <li><a href="#quintiles">토큰을 얼마나 쓰는가: 5등분</a></li>
+      <li><a href="#heavy">많이 쓴 회사가 더 많이 얻었다</a></li>
+      <li><a href="#diminishing">수확은 줄어들지만 사라지지 않는다</a></li>
+      <li><a href="#developer">개발자 한 명 안에서도 같다</a></li>
+      <li><a href="#quality">두 가지 의문: 품질과 PR 크기</a></li>
+      <li><a href="#ratio">답은 비용을 산출로 나눈 값</a></li>
+      <li><a href="#budget">예산 회의에 가져갈 것</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-13 · 17분 · 영어 발표 한글 정리</span>
+      <h1>토큰은 싼 부분이다</h1>
+      <p class="lead">AI 비용은 1년 사이 60배가 됐다. 그런데 머지된 PR 한 건을 만드는 데 드는 돈은 오히려 26% 내렸다. 개발자 월급까지 합쳐서 보면 AI는 PR 비용의 2.5%에 불과하고, 토큰을 많이 쓴 회사가 더 빨라지고 더 싸졌다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=U7ZYBCcdJPg" target="_blank" rel="noopener">Tokens Are the Cheap Part</a></span>
+        <span>발표: Steve Jamison (Jellyfish AI 리서치·엔지니어링 리드)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 Jellyfish 플랫폼 데이터에서 인용한 것이고 원 출처를 따로 확인하지는 않았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>1년 동안 <strong>AI 비용은 60배</strong>, 엔지니어당 <strong>머지된 PR은 43%</strong> 늘었다. 두 숫자만으로는 잘 쓴 돈인지 알 수 없다.</li>
+        <li>두 숫자 모두 가장 큰 비용인 <strong>개발자 월급</strong>을 빼고 있다. 월급과 AI 비용을 합친 것이 PR 한 건의 진짜 비용이다.</li>
+        <li>그렇게 합치면 <strong>AI는 PR 비용의 2.5%</strong>, 월급이 97.5%다. 토큰은 싼 부분이다.</li>
+        <li>머지된 PR 한 건의 달러 비용은 <strong>1년 동안 26% 내렸다.</strong> 조사한 회사의 83%가 그랬다. PR이 늘어 월급이 더 얇게 나눠지는 속도가 AI 비용 증가보다 빨랐다.</li>
+        <li>토큰을 가장 많이 쓴 상위 20% 회사는 PR 처리량이 <strong>67%</strong> 늘고 PR 비용이 <strong>32%</strong> 내렸다. 나머지는 약 40%와 25%였다.</li>
+        <li>토큰을 더 쓸수록 추가 효과는 줄어든다. 그래도 상위 10%는 중간값의 8배를 쓰고도 PR 비용이 25% 더 낮았다. <strong>수확 체감은 수확 없음이 아니다.</strong></li>
+        <li>품질 걱정은 데이터에 나타나지 않았다. 되돌리기 비율은 오르지 않았고, PR이 잘게 쪼개진 것도 아니었다.</li>
+        <li>할 일: 토큰 청구서나 PR 증가율 대신 <strong>PR 한 건당 비용(월급 + AI)</strong>을 매달 추적하고 예산 회의에 가져간다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="tension">
+        <header><span class="num">01</span><h2>60배와 43%, 어느 쪽이 맞나 <span class="ts">00:20</span></h2></header>
+        <p>발표자는 Jellyfish 플랫폼에 모인 엔지니어링 워크플로 데이터와 AI 사용 기록을 합쳐 분석했다. 거기서 나온 큰 숫자 두 개가 서로 다른 이야기를 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">비용 쪽</span>
+            <p>AI 비용은 1년 전보다 <strong>60배</strong> 올랐다. 이제 CFO와 이사회가 영수증을 요구할 만큼 큰 돈이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">산출 쪽</span>
+            <p>엔지니어 한 명당 머지된 PR은 같은 기간 <strong>43%</strong> 늘었다. 이런 규모와 속도의 생산성 변화는 처음이다. 차트에서도 2026년 초 AI 지출이 뛴 시점부터 처리량이 꾸준히 오른다.</p>
+          </div>
+        </div>
+        <p>43%는 큰 숫자다. 그러나 60배도 큰 숫자다. 이 둘만 놓고는 다음 질문에 답할 수 없다.</p>
+        <ul class="plain">
+          <li>지출을 더 늘리면 생산성이 더 올라가나? 50%? 2배?</li>
+          <li>반대로 지출에 상한을 두면 낭비를 막는 건가, 아니면 효율 향상을 막는 건가?</li>
+          <li>다른 회사의 청구서와 비교하는 것은 조직 규모가 달라 의미가 없다.</li>
+        </ul>
+        <p>발표자가 들은 사례로는 10만 달러, 50만 달러, 수백만 달러를 쓰다가 예산을 다시 짜는 회사들이 있다. 두 숫자는 그 자체로 답이 되지 않는다. 더 큰 문제는 둘 모두 비용 쪽에서 가장 큰 항목을 빼놓고 있다는 점이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="salary">
+        <header><span class="num">02</span><h2>빠져 있던 가장 큰 비용: 개발자 월급 <span class="ts">02:50</span></h2></header>
+        <p>발표의 핵심 전환은 AI 비용을 보는 자리를 바꾸는 것이다. AI는 그냥 하나의 도구가 아니라 지능이고, 개발자 한 명이 만들어 내는 양을 크게 바꾼다. 그러니 AI 비용을 옆에 떼어 둔 간접비가 아니라 <strong>PR 한 건을 만드는 데 들어가는 원가의 일부</strong>로 봐야 한다.</p>
+        <div class="callout">
+          <span class="title">PR 한 건의 지능 비용 <span class="en">intelligence cost of a PR</span></span>
+          <span>엔지니어에게 주는 월급 + AI에 내는 돈. 이 둘을 한 버킷에 넣고 머지된 PR 수로 나눈다.</span>
+        </div>
+
+        <figure class="chart" aria-label="머지된 PR 한 건의 비용 구성: 월급 97.5%, AI 2.5%">
+          <span class="chart-title">머지된 PR 한 건의 비용 구성 (%, 2026년 8월 데이터)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>개발자 월급</span><span class="val">97.5</span></div>
+              <div class="track"><div class="fill" style="width:97.5%" title="월급: 97.5%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>AI 비용</span><span class="val">2.5</span></div>
+              <div class="track"><div class="fill key" style="width:2.5%" title="AI: 2.5%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자는 이 비율이 다른 곳에서 보고된 수치와 비슷하다고 말했다.</span>
+        </figure>
+        <p>머지된 코드 한 단위를 더 만드는 비용 중 AI는 약 2.5%다. 나머지 97.5%는 월급이다. 여기서 "토큰은 싼 부분"이라는 제목이 나온다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="cost-per-pr">
+        <header><span class="num">03</span><h2>PR 한 건의 비용은 26% 내렸다 <span class="ts">04:00</span></h2></header>
+        <p>비율은 현재 시점의 상대 비용이다. 이번에는 달러 기준으로 지난 1년의 변화를 본다.</p>
+        <ul class="plain">
+          <li>머지된 PR 한 건의 달러 비용은 1년 동안 <strong>26% 내렸다.</strong></li>
+          <li>만든 PR이 아니라 <strong>머지된 PR</strong>이다. 리뷰 시간이 포함되고 어느 정도의 품질 관문을 통과한 것이다.</li>
+          <li>이 하락에는 같은 기간 60배로 늘어난 AI 비용이 이미 포함되어 있다.</li>
+          <li>조사한 회사의 <strong>83%</strong>에서 PR당 비용이 내렸다. 거의 보편적인 변화다.</li>
+        </ul>
+        <p>이유는 단순하다. PR이 늘어나면서 같은 월급이 더 많은 PR에 얇게 나눠진다. 그 속도가 AI 비용이 오르는 속도보다 빨랐다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="quintiles">
+        <header><span class="num">04</span><h2>토큰을 얼마나 쓰는가: 5등분 <span class="ts">05:00</span></h2></header>
+        <p>회사를 토큰 사용량 순으로 세워 다섯 그룹으로 나눴다. 양 끝의 차이가 매우 크다.</p>
+
+        <figure class="chart" aria-label="PR 비용 중 AI 비율: 최소 사용 그룹 0.3%, 전체 평균 2.5%, 최다 사용 그룹 8.5%">
+          <span class="chart-title">PR 한 건의 비용 중 AI가 차지하는 비율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>가장 적게 쓴 20%</span><span class="val">0.3</span></div>
+              <div class="track"><div class="fill" style="width:3.5%" title="최소 사용 그룹: 0.3%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>전체 평균</span><span class="val">2.5</span></div>
+              <div class="track"><div class="fill" style="width:29.4%" title="전체 평균: 2.5%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>가장 많이 쓴 20%</span><span class="val">8.5</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="최다 사용 그룹: 8.5%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>4.25</span><span>8.5</span></div>
+        </figure>
+
+        <figure class="chart" aria-label="개발자 한 명당 월 토큰 사용량: 최소 사용 그룹 약 6천만, 최다 사용 그룹 약 25억">
+          <span class="chart-title">개발자 한 명당 월 토큰 사용량 (개)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>가장 적게 쓴 20%</span><span class="val">약 6천만</span></div>
+              <div class="track"><div class="fill" style="width:2.4%" title="최소 사용 그룹: 약 6천만 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>가장 많이 쓴 20%</span><span class="val">약 25억</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="최다 사용 그룹: 약 25억 토큰"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>12.5억</span><span>25억</span></div>
+        </figure>
+        <p class="note">발표자는 두 그룹의 차이를 "약 두 자릿수 배(100배 정도)"라고 말했다. 발표자가 말한 숫자로 계산하면 25억 ÷ 6천만은 약 42배다. 100배보다는 작지만 차이가 크다는 요지는 같다.</p>
+        <p>가장 많이 쓴 20%를 발표자는 "많이 쓰는 그룹"이라고 부른다. 이 그룹에서도 AI는 PR 비용의 10% 미만이다. 다음 두 절에서는 이 그룹 구분으로 다른 지표가 어떻게 달라지는지 본다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="heavy">
+        <header><span class="num">05</span><h2>많이 쓴 회사가 더 많이 얻었다 <span class="ts">05:50</span></h2></header>
+        <p>같은 다섯 그룹으로 PR 처리량 변화를 비교했다. 처리량은 개발자 한 명당 머지된 PR 수다.</p>
+
+        <figure class="chart" aria-label="개발자당 머지된 PR 증가율: 하위 4개 그룹 약 40%, 전체 평균 43%, 최다 사용 그룹 67%">
+          <span class="chart-title">개발자당 머지된 PR 증가율, 1년 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>하위 4개 그룹 (토큰 사용량 하위 80%)</span><span class="val">약 40</span></div>
+              <div class="track"><div class="fill" style="width:59.7%" title="하위 4개 그룹: 약 40%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>전체 평균</span><span class="val">43</span></div>
+              <div class="track"><div class="fill" style="width:64.2%" title="전체 평균: 43%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>가장 많이 쓴 20%</span><span class="val">67</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="최다 사용 그룹: 67%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>33.5</span><span>67</span></div>
+        </figure>
+
+        <figure class="chart" aria-label="PR 한 건당 비용 감소율: 하위 4개 그룹 약 25%, 전체 평균 26%, 최다 사용 그룹 32%">
+          <span class="chart-title">PR 한 건당 비용 감소율, 1년 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>하위 4개 그룹</span><span class="val">약 25</span></div>
+              <div class="track"><div class="fill" style="width:78.1%" title="하위 4개 그룹: 약 25% 감소"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>전체 평균</span><span class="val">26</span></div>
+              <div class="track"><div class="fill" style="width:81.3%" title="전체 평균: 26% 감소"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>가장 많이 쓴 20%</span><span class="val">32</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="최다 사용 그룹: 32% 감소"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>16</span><span>32</span></div>
+          <span class="caption">모든 그룹에서 PR 비용이 내렸다. 그중 토큰을 가장 많이 쓴 그룹이 가장 많이 내렸다.</span>
+        </figure>
+
+        <p>두 차트가 같은 이야기를 한다. AI에 더 많이 투자한 회사가 처리량도 더 많이 늘었고 PR 비용도 더 많이 내렸다. 전체 평균에서 본 것과 마찬가지로, PR 비용의 변화를 만드는 것은 AI 지출이 아니라 <strong>PR 처리량</strong>이다. 같은 월급을 한 달에 더 많은 PR로 나누는 효과가 오르는 AI 비용보다 크다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="diminishing">
+        <header><span class="num">06</span><h2>수확은 줄어들지만 사라지지 않는다 <span class="ts">07:40</span></h2></header>
+        <p>그렇다고 토큰을 마음껏 태우라는 말은 아니다. 가로축에 토큰 사용량, 세로축에 PR 비용을 놓은 곡선은 이렇게 생겼다.</p>
+        <ul class="plain">
+          <li>처음에는 가파르게 떨어진다. 적은 AI 지출이 큰 효과를 낸다.</li>
+          <li>토큰이 늘어날수록 PR 비용의 추가 개선폭은 줄어든다. 전형적인 수확 체감 <span class="en">diminishing returns</span>이다.</li>
+          <li>그래도 곡선은 계속 내려간다. 발표자가 강조한 말은 "수확 체감은 수확 없음과 다르다"는 것이다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">상위 10% 회사-월의 경우</span>
+          <span>토큰 사용량 기준 상위 10%는 중간값의 <strong>8배</strong>를 쓰고, PR 비용은 중간값보다 <strong>25% 낮다.</strong></span>
+        </div>
+        <p class="note">발표자는 이 수치를 처음 말할 때 "27, 25%"라고 고쳐 말했고, 마무리에서는 25%로 정리했다. 이 노트는 25%를 쓴다.</p>
+        <p>토큰이 싼 부분이 아니게 되는 시점은 언젠가 온다. 그러나 발표자가 본 대부분의 회사는 그 문턱에 가깝지 않다. 토큰을 더 쓰면 PR이 늘고, PR이 늘면 전달 비용이 내린다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="developer">
+        <header><span class="num">07</span><h2>개발자 한 명 안에서도 같다 <span class="ts">08:50</span></h2></header>
+        <p>지금까지는 회사 단위였다. 발표자는 개발자 단위로도 같은 현상이 나는지 봤다. 한 개발자의 토큰을 많이 쓴 주와 적게 쓴 주를 같은 사람 안에서 비교했다. 자막에서는 "에이전트 스킬을 많이 쓴 주"와 "스킬을 안 쓴 주"로 표현했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>토큰을 많이 쓴 주 vs 적게 쓴 주 (같은 개발자)</th></tr></thead>
+            <tbody>
+              <tr><td>토큰 지출</td><td>약 2배</td></tr>
+              <tr><td>머지된 PR</td><td>27% 더 많음</td></tr>
+              <tr><td>PR 한 건당 비용 (월급 + 토큰)</td><td>약 18% 더 낮음</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>회사 수준에서 본 것과 같은 모양이다. 같은 사람이 같은 월급을 받으면서 토큰을 더 쓰면, PR이 늘고 PR당 비용은 내린다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="quality">
+        <header><span class="num">08</span><h2>두 가지 의문: 품질과 PR 크기 <span class="ts">09:50</span></h2></header>
+        <p>이 연구를 소개하면 발표자가 늘 받는 질문이 두 개 있다. 더 빠르고 싼 작업은 더 나쁜 작업이 아닌가. 그리고 PR이 늘어난 것은 일을 잘게 쪼갠 결과가 아닌가.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">의문 1 · 더 빠르면 더 나쁜가? <span class="ts">10:10</span></span>
+            <p>대리 지표로 <strong>되돌리기</strong> <span class="en">revert</span>를 봤다. 이전 PR을 취소하는 머지된 PR이다.</p>
+            <ul>
+              <li>토큰을 가장 많이 쓴 그룹은 토큰이 늘기 전부터 되돌리기 비율이 가장 낮았다.</li>
+              <li>모든 그룹에서 되돌리기 비율이 조금 내렸다. 다만 그 차이는 데이터의 잡음보다 약간 작다.</li>
+            </ul>
+            <p class="verdict"><b>판단</b>: 품질이 좋아졌다는 증거는 아니다. 그러나 토큰을 많이 쓰고 PR이 빨라져서 품질이 심각하게 나빠졌다는 신호도 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">의문 2 · PR이 작아진 것 아닌가? <span class="ts">11:00</span></span>
+            <p>데이터로 보면 분명히 아니다. 오히려 <strong>PR 한 건당 코드 줄 수가 늘고 있다.</strong></p>
+            <ul>
+              <li>생성 AI는 코드를 많이 만든다. 장황한 인라인 주석과 거의 쓸모없는 테스트 파일이 그 예다.</li>
+              <li>만들기가 쉬워져서 티켓을 새로 여는 대신 한 PR에 더 담는다. "프롬프트 한두 번이면 이 엣지 케이스도 처리하지"가 된다.</li>
+              <li>AI가 유능해지면서 사람도 더 큰 일을 시도한다.</li>
+            </ul>
+            <p class="verdict"><b>판단</b>: 줄 수가 늘어나는 원인 분석은 이 발표의 범위 밖이다. 다만 처리량 증가가 작은 PR에서 온 것은 아니다. 큰 PR은 요즘 리뷰 부담을 키우는 문제이기도 하다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="ratio">
+        <header><span class="num">09</span><h2>답은 비용을 산출로 나눈 값 <span class="ts">12:20</span></h2></header>
+        <p>처음 질문으로 돌아간다. 60배 더 쓴 돈은 43% 더 나온 산출만큼의 가치가 있나. 따로 보면 알 수 없다. 두 숫자는 모두 추적해야 하지만 <strong>보조 지표</strong>다.</p>
+        <p class="note">발표자는 이 대목에서 "60% 더 쓴 지출"이라고 말했다. 발표 앞부분과 결론에서는 일관되게 60배라고 했으므로 말실수로 보고 60배로 적었다.</p>
+        <div class="shift" aria-label="지표의 이동">
+          <div><span class="tag">보조 지표</span><b>PR당 AI 지출</b><span class="muted">개발자를 빠르게 하기 위해 사는 지능의 양</span></div>
+          <span class="arrow" aria-hidden="true">+</span>
+          <div><span class="tag">보조 지표</span><b>엔지니어당 PR 수</b><span class="muted">그 지출로 얻는 것</span></div>
+        </div>
+        <div class="shift" aria-label="주 지표">
+          <div><span class="tag">빠진 것</span><b>개발자 월급</b><span class="muted">비용의 97.5%</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">주 지표</span><b>PR 한 건당 비용</b><span class="muted">(월급 + AI 비용) ÷ 머지된 PR 수. 1년 동안 26% 하락</span></div>
+        </div>
+        <p>월급을 식에 넣고 비용을 처리량으로 나누면 답이 나온다. PR당 비용은 26% 내렸다. 청구서가 늘어도 AI는 비용 효율을 만들고 있다. 그리고 그 효율을 얻는 데 필요한 AI 지출은 상대적으로 작다. 평균 2.5%, 많이 쓰는 그룹도 10% 미만이다.</p>
+        <blockquote>청구서는 무엇을 썼는지 말해 준다. PR당 비용은 그게 효과가 있었는지 말해 준다.<cite>발표자의 표현을 옮김, 16:20</cite></blockquote>
+      </section>
+
+      <!-- 10 -->
+      <section id="budget">
+        <header><span class="num">10</span><h2>예산 회의에 가져갈 것 <span class="ts">15:00</span></h2></header>
+        <p>발표자는 아무렇게나 쓰라는 뜻이 아니라고 거듭 말한다. 폭주하는 작업은 잡아야 하고 AI 지출도 추적해야 한다. 다만 PR당 AI 지출을 <strong>운전대를 잡는 지표</strong>로 삼지 말라는 것이다.</p>
+        <ul class="plain">
+          <li><strong>매달 PR당 총 지능 비용을 추적한다.</strong> 사람 + AI를 합친 값을 AI 청구서, PR 처리량 옆에 나란히 둔다.</li>
+          <li><strong>추세를 본다.</strong> 처리량이 계속 오르는가, 전달 비용은 계속 내리는가.</li>
+          <li><strong>되돌리기와 품질 지표를 균형추로 같이 본다.</strong> 엉성한 AI 코드가 쌓이면 안 된다.</li>
+          <li><strong>투자 판단의 틀을 바꾼다.</strong> 모델 라우터 도입, 자체 모델 사후 학습, 토큰 한도 같은 비용 통제에서 효율이 더 나올지, AI 활용을 더 늘리는 쪽에서 나올지 이 틀로 묻는다.</li>
+          <li><strong>예산 시즌에는 PR당 비용을 가져간다.</strong> 토큰 청구서만도, 처리량 증가만도 아니다. 지금 대부분의 회사에서 이 숫자는 "계속 투자하라"고 말한다.</li>
+        </ul>
+        <p class="note">발표자는 엔지니어링 지표 플랫폼 회사 Jellyfish 소속이고, 발표 끝에 PR당 비용 추적을 위한 데모 신청을 안내했다. 데이터와 결론 모두 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>1년 동안 AI 비용은 60배, 엔지니어당 머지된 PR은 43% 늘었다. 두 숫자만으로는 투자 판단을 할 수 없다.</li>
+          <li>두 숫자 모두 가장 큰 비용인 개발자 월급을 빼고 있다.</li>
+          <li>월급과 AI 비용을 합친 것이 PR 한 건의 지능 비용이다. AI는 그중 <strong>2.5%</strong>다.</li>
+          <li>머지된 PR 한 건의 달러 비용은 1년 동안 <strong>26% 내렸다.</strong> 회사의 83%가 그랬다.</li>
+          <li>이유는 PR이 늘어 같은 월급이 더 얇게 나눠지기 때문이다. 그 속도가 AI 비용 증가보다 빠르다.</li>
+          <li>토큰 사용량 상위 20%는 처리량 <strong>+67%</strong>, PR 비용 <strong>-32%</strong>. 나머지는 약 +40%, -25%였다.</li>
+          <li>토큰을 더 쓸수록 추가 효과는 줄지만 사라지지 않는다. 상위 10%는 중간값의 8배를 쓰고 PR 비용이 25% 낮았다.</li>
+          <li>개발자 한 명 안에서도 토큰을 2배 쓴 주에 PR이 27% 늘고 PR당 비용은 18% 내렸다.</li>
+          <li>되돌리기 비율은 오르지 않았고, PR이 작아진 것도 아니다. 오히려 PR당 코드 줄 수는 늘고 있다.</li>
+          <li>매달 PR당 총 지능 비용을 추적하고, 품질 지표를 균형추로 두고, 예산 회의에는 PR당 비용을 가져간다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표 첫머리의 두 숫자 60배와 43%는 각각 무엇인가?</span></summary><div class="answer">1년 동안 AI 비용이 60배 올랐고, 엔지니어 한 명당 머지된 PR은 43% 늘었다. 둘만으로는 돈을 잘 썼는지 알 수 없다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>두 숫자가 빼놓고 있는 가장 큰 비용은?</span></summary><div class="answer">개발자 월급. PR 한 건의 비용 중 약 97.5%를 차지한다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>"PR 한 건의 지능 비용"은 어떻게 계산하나?</span></summary><div class="answer">엔지니어 월급과 AI 비용을 한 버킷에 합친 뒤 머지된 PR 수로 나눈다. AI를 간접비가 아니라 원가의 일부로 보는 틀이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>지난 1년 동안 머지된 PR 한 건의 달러 비용은 어떻게 변했나? 몇 %의 회사가 그랬나?</span></summary><div class="answer">26% 내렸다. 조사한 회사의 83%에서 PR당 비용이 떨어졌다. 60배 오른 AI 비용을 포함한 결과다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>PR당 비용이 내린 주된 이유는 AI 비용인가, 처리량인가?</span></summary><div class="answer">처리량. PR이 늘어 같은 월급이 더 많은 PR에 얇게 나눠지는 효과가 AI 비용 증가보다 컸다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>토큰을 가장 많이 쓴 20%와 나머지 80%의 처리량 증가와 PR 비용 감소는?</span></summary><div class="answer">많이 쓴 20%는 처리량 +67%, PR 비용 -32%. 나머지는 약 +40%, 약 -25%였다. 더 투자한 회사가 더 많이 얻었다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>가장 많이 쓴 그룹에서도 AI가 PR 비용에서 차지하는 비율은?</span></summary><div class="answer">약 8.5%. 개발자 한 명당 월 약 25억 토큰에 해당한다. 가장 적게 쓴 그룹은 0.3%, 약 6천만 토큰이었다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>"수확 체감은 수확 없음이 아니다"를 뒷받침하는 숫자는?</span></summary><div class="answer">토큰 사용량 상위 10% 회사-월은 중간값의 8배를 쓰고도 PR 비용이 25% 더 낮았다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>개발자 단위 비교에서 토큰을 많이 쓴 주는 어떻게 달랐나?</span></summary><div class="answer">같은 개발자가 토큰을 약 2배 쓴 주에 머지된 PR이 27% 많았고, 월급과 토큰을 합친 PR당 비용은 약 18% 낮았다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>품질이 나빠졌는지 보기 위해 쓴 대리 지표와 그 결과는?</span></summary><div class="answer">되돌리기(revert) 비율. 모든 그룹에서 약간 내렸지만 잡음 범위 안이다. 개선의 증거는 아니지만 심각한 품질 문제의 신호도 없었다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>처리량 증가가 작은 PR 때문이라는 의심은 데이터에서 어떻게 나왔나?</span></summary><div class="answer">아니었다. 오히려 PR 한 건당 코드 줄 수가 늘고 있다. 생성 AI가 코드를 많이 만들고, 사람도 한 PR에 더 많이 담는다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 예산 회의에 가져가라고 한 숫자는 무엇이고, 같이 봐야 할 균형추는?</span></summary><div class="answer">PR 한 건당 비용(월급 + AI). 토큰 청구서나 처리량 증가가 아니다. 되돌리기와 품질 지표를 균형추로 같이 본다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>지난달 PR 한 건당 비용을 한 번 계산한다<span class="how">(엔지니어 인건비 + AI 청구서) ÷ 머지된 PR 수. 예시: 인건비 1억 원, AI 250만 원, PR 200건이면 약 51만 원</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>우리 팀의 AI 비용 비율을 발표 수치와 비교한다<span class="how">평균 2.5%, 적게 쓰는 그룹 0.3%, 많이 쓰는 그룹 8.5%. 우리는 어디쯤인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>PR당 비용, AI 청구서, 엔지니어당 PR 수를 매달 한 장에 나란히 기록한다<span class="how">확인: 세 숫자의 추세가 한눈에 보이는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>되돌리기 비율을 같은 장에 균형추로 넣는다<span class="how">확인: 처리량이 오르는 동안 되돌리기가 오르지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>PR 한 건당 코드 줄 수의 추세를 본다<span class="how">PR이 커지고 있다면 리뷰 부담 대책을 함께 세운다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>토큰 한도나 비용 통제 안이 나오면 PR당 비용 기준으로 다시 묻는다<span class="how">질문: 이 통제가 PR당 비용을 내리는가, 처리량 증가를 막는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>폭주하는 작업을 잡는 알림은 따로 둔다<span class="how">발표자도 추적은 하라고 했다. 통제 지표가 아니라 안전장치로 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>다음 예산 회의 자료에 PR당 비용 추세를 넣는다<span class="how">토큰 청구서와 PR 증가율만 보여주지 않는다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>토큰</td><td>Token. AI 모델이 글을 처리하는 최소 단위. AI 사용료는 대개 토큰 수로 매긴다</td></tr>
+              <tr><td>PR</td><td>Pull Request. 코드 변경을 합쳐 달라고 올리는 요청. 머지된 PR은 리뷰를 거쳐 실제로 합쳐진 것</td></tr>
+              <tr><td>처리량</td><td>Throughput. 여기서는 개발자 한 명당 머지된 PR 수</td></tr>
+              <tr><td>PR당 지능 비용</td><td>Intelligence cost of a PR. 엔지니어 월급과 AI 비용을 합쳐 머지된 PR 수로 나눈 값</td></tr>
+              <tr><td>간접비</td><td>Overhead. 특정 산출물에 직접 붙이지 않고 따로 관리하는 비용</td></tr>
+              <tr><td>5분위</td><td>Quintile. 순서대로 세운 뒤 20%씩 다섯 그룹으로 나눈 것</td></tr>
+              <tr><td>자릿수 배</td><td>Order of magnitude. 10배를 한 자릿수로 세는 표현. 두 자릿수 배는 약 100배</td></tr>
+              <tr><td>수확 체감</td><td>Diminishing returns. 투입을 늘릴수록 추가로 얻는 효과가 점점 줄어드는 현상</td></tr>
+              <tr><td>중간값</td><td>Median. 순서대로 세웠을 때 한가운데 값. 평균보다 극단값에 덜 흔들린다</td></tr>
+              <tr><td>되돌리기</td><td>Revert. 이전 PR의 변경을 취소하는 PR. 품질 문제의 대리 지표로 쓰인다</td></tr>
+              <tr><td>대리 지표</td><td>Proxy. 재고 싶은 것을 직접 못 재서 대신 쓰는 지표</td></tr>
+              <tr><td>잡음</td><td>Noise. 데이터의 우연한 흔들림. 차이가 잡음보다 작으면 결론을 내릴 수 없다</td></tr>
+              <tr><td>모델 라우터</td><td>Model router. 요청마다 싸거나 적합한 모델로 자동으로 보내는 장치</td></tr>
+              <tr><td>사후 학습</td><td>Post-training. 이미 학습된 모델을 자기 데이터로 더 다듬는 것</td></tr>
+              <tr><td>텔레메트리</td><td>Telemetry. 도구 사용 기록을 자동으로 모은 데이터</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 데이터 출처</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>AI 비용 60배, 예산 대화의 어려움</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>엔지니어당 머지된 PR 43% 증가</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>두 숫자의 긴장: 더 써야 하나, 줄여야 하나</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>빠진 비용: 개발자 월급</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>PR당 지능 비용: AI 2.5%, 월급 97.5%</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>머지된 PR 비용 26% 하락, 회사의 83%</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>토큰 사용량 5분위: 0.3%에서 8.5%</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>처리량: 하위 80% 약 40%, 상위 20% 67%</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>PR 비용: 하위 80% 약 25%, 상위 20% 32% 하락</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>수확 체감 곡선, 상위 10%는 8배 토큰에 25% 저렴</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>개발자 단위 비교: 토큰 2배, PR +27%, 비용 -18%</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>두 가지 의문</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>되돌리기 비율: 잡음 범위 안</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>PR이 작아진 것이 아니다, 줄 수 증가</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>처음 질문으로: 보조 지표와 주 지표</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>월급을 식에 넣으면 PR당 비용 26% 하락</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>결과 요약</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>아무렇게나 쓰라는 뜻은 아니다, 투자 판단의 틀</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>매달 추적할 것, 품질 지표를 균형추로</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>예산 시즌에 PR당 비용을 가져가라</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>마무리, 연구 구독과 데모 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'U7ZYBCcdJPg:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

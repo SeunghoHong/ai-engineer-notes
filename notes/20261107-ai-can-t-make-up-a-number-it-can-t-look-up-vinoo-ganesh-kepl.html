@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>포인터로 막는 숫자 환각</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#verify-late">검증은 끝에 붙일 수 없다</a></li>
+      <li><a href="#structure">문제는 환각보다 구조</a></li>
+      <li><a href="#three-sources">틀린 숫자의 세 출처</a></li>
+      <li><a href="#code-writes">코드가 모든 숫자를 쓴다</a></li>
+      <li><a href="#lookup-vs-search">조회할 것과 구할 것</a></li>
+      <li><a href="#wide">넓게 찾고 좁힌다</a></li>
+      <li><a href="#security">검색 범위에 보안을 넣는다</a></li>
+      <li><a href="#missing-key">없는 키는 아무것도 주지 않는다</a></li>
+      <li><a href="#fear">월가가 끝내 못 믿을까 봐</a></li>
+      <li><a href="#production">운영 데이터와 남은 구멍</a></li>
+      <li><a href="#ask">도구에 물을 질문</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-07 · 18분 · 영어 발표 한글 정리</span>
+      <h1>조회할 수 없는 숫자는 만들 수 없다</h1>
+      <p class="lead">금융권이 AI를 믿지 못하는 진짜 이유는 숫자가 어디서 왔는지 따라갈 수 없는 구조에 있다. Kepler는 숫자를 모델이 아니라 코드가 쓰게 만든다. 모델은 미리 저장된 사실을 가리키는 포인터만 쓸 수 있고, 그 포인터를 풀지 못하면 숫자를 내지 못한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=RdQCY_-SXbA" target="_blank" rel="noopener">AI Can't Make Up a Number It Can't Look Up</a></span>
+        <span>발표: Vinoo Ganesh (Kepler CEO·공동 창업자, 전 Citadel 비즈니스 엔지니어링 총괄)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막의 "Venu Ganesh"는 영상 제목에 맞춰 Vinoo Ganesh로, "Turbo puffer"는 벡터 검색 DB인 turbopuffer로 바로잡았다. 발표 전체가 발표자 회사의 제품 구조를 설명하는 내용이니, 효과에 대한 주장은 그 점을 감안해 읽자. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>월가가 AI를 못 믿는 핵심은 환각 자체가 아니다. <strong>숫자의 출처를 추적할 수 없는 구조</strong>가 문제다.</li>
+        <li>환각을 아예 없애자는 말은 틀렸다. 금융에서 창의성은 <strong>알파(초과 수익)</strong>의 원천이다. 막아야 할 것은 근거 없는 숫자다.</li>
+        <li>틀린 숫자는 세 곳에서 나온다. <strong>잘못된 문서, 맞는 문서의 잘못된 숫자, 모델의 암산</strong>이다.</li>
+        <li>Kepler의 원칙은 <strong>"숫자는 모두 코드가 쓴다"</strong>이다. 전처리에서 사실마다 포인터를 붙이고, 모델은 계획만 세우고, 코드가 조회와 계산을 한다.</li>
+        <li>모델은 <strong>포인터를 풀어야만</strong> 숫자를 쓸 수 있다. 조회는 틀릴 수 없고, 검색은 틀린다.</li>
+        <li>검색은 넓게 퍼서 좁힌다. <strong>ANN+BM25로 최대 200개 → RRF로 약 60개 → 크로스 인코더</strong>.</li>
+        <li>도구를 고를 때는 <strong>"어디서도 오지 않은 숫자는 어떻게 되나"</strong>를 묻는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="verify-late">
+        <header><span class="num">01</span><h2>검증은 끝에 붙일 수 없다 <span class="ts">00:50</span></h2></header>
+        <p>발표자는 3개월 전 AI Engineer World's Fair에서 검증을 주제로 발표했다. 대부분의 기관이 AI를 믿으려면 어떤 형태로든 검증이 필요하다는 내용이었다.</p>
+        <p>이 발표 전날에는 Jack과 함께 무대에 올랐다. Jack은 Citadel에서 가장 큰 운용 포트폴리오를 맡았고, Candlestick Capital을 세웠다. 그런 사람도 아직 AI를 믿지 않는다는 이야기였다.</p>
+        <ul class="plain">
+          <li>그 3개월 동안 형식 검증 계층<span class="en">formal verification layer</span>에 VC 자금 약 2억 7천만 달러가 들어갔다.</li>
+          <li>한 VC는 Kepler의 투자 설명 자료를 경쟁사에 넘겼다. 그 경쟁사는 Kepler와 같은 태그라인을 내걸었다.</li>
+          <li>발표자는 그 회사가 <strong>틀린 부분을 베꼈다</strong>고 말한다. 출력 끝에 붙는 검증만 가져갔고, 그 앞의 구조는 가져가지 않았다는 뜻이다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">이 발표의 주장</span>
+          <span>검증은 맨 끝에 덧붙이는 기능이 아니다. 숫자가 만들어지는 구조부터 바꿔야 한다.</span>
+        </div>
+        <p class="note">발표자는 Anthropic이 Kepler의 방식을 다룬 글을 냈다고 말했다 <span class="ts">01:20</span>. 이 노트에서는 그 글을 확인하지 않았다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="structure">
+        <header><span class="num">02</span><h2>문제는 환각보다 구조다 <span class="ts">01:40</span></h2></header>
+        <p>흔한 설명은 AI가 숫자를 추정하거나 지어낸다는 것이다. 발표자도 그게 한 원인이라고 인정한다. 하지만 더 근본적인 문제는 이 기술의 구조에 있다고 본다.</p>
+
+        <h3>"환각을 없애자"가 틀린 이유 <span class="ts">02:00</span></h3>
+        <p>RAG<span class="en">Retrieval-Augmented Generation</span>는 질문과 관련된 문서를 찾아 모델 입력에 함께 넣는 방식이다. RAG 플랫폼을 만드는 사람들은 흔히 "모델이 좋아지면 환각<span class="en">hallucination</span>이 사라진다"고 말한다. 발표자는 이 말이 말이 안 된다고 본다.</p>
+        <blockquote>환각의 다른 이름이 뭔지 아십니까? 알파입니다.<cite>발표자, 02:10 (옮김)</cite></blockquote>
+        <p>알파<span class="en">alpha</span>는 시장 평균을 넘는 초과 수익이다. 회사와 애널리스트의 창의성이 그 원천이다. 모두가 같은 답만 낸다면 지구에 회사는 하나만 있으면 된다.</p>
+        <p>발표자의 논리를 따르면 막아야 할 것은 상상력이 아니다. 근거 없이 튀어나온 숫자다. 발표자가 꼽은 구조적 문제는 둘이다.</p>
+        <ul class="plain">
+          <li>모델이 일부 내용을 그냥 지어낸다.</li>
+          <li>회사 내부 데이터가 이 구조 안에 전혀 반영되지 않는다.</li>
+        </ul>
+
+        <h3>돈은 쏟아지는데 왜 다 Jane Street가 되지 않나 <span class="ts">02:40</span></h3>
+        <p>예산이 있는 회사는 할 수 있는 건 다 사들이고 있다. RAG 플랫폼을 사고, 직접 만들고, 에이전트 시범 사업을 돌린다. 발표자가 그날 아침 만난 고객은 스스로를 "AI 우선 회사"라 불렀다. 실제로는 코파일럿 에이전트 하나로 모든 일을 돌리고 있었다.</p>
+        <p>그런데도 펀더멘털 투자<span class="en">fundamental investing</span>는 Jane Street 같은 기술 중심 트레이딩 회사처럼 바뀌지 않았다. 발표자의 답은 신뢰다. 결과물을 믿으려면 <strong>틀렸을 때 책임을 물을 대상</strong>이 있어야 한다.</p>
+
+        <figure class="chart" aria-label="재무 임원 조사: 숫자를 믿는다 80%, 그 숫자에서 오류를 발견했다 31%">
+          <span class="chart-title">재무 임원 조사 (%) <span class="ts">03:20</span></span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>숫자를 믿는다</span><span class="val">80</span></div>
+              <div class="track"><div class="fill" style="width:80%" title="숫자를 믿는다: 80%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>그 숫자에서 오류를 발견했다</span><span class="val">31</span></div>
+              <div class="track"><div class="fill key" style="width:31%" title="오류를 발견했다: 31%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자가 인용한 수치다. 자막에는 조사 이름과 정확한 문항이 나오지 않는다. 문맥상 AI가 낸 숫자에 대한 조사로 보인다(추정).</span>
+        </figure>
+
+        <h3>데모는 좋은데 마지막 10%가 틀린다 <span class="ts">03:40</span></h3>
+        <p>발표자가 다른 업체들에 대해 모은 평가는 이렇다.</p>
+        <ul class="plain">
+          <li>"데모는 아주 잘 되고, 아주 똑똑한 인턴처럼 행동한다."</li>
+          <li>"구조화된 정보를 제대로 연결하면 맞는다. 하지만 마지막 10%는 여전히 틀린다."</li>
+        </ul>
+        <p>발표자가 원하는 것은 문서를 RAG에 붙이는 수준을 넘는 시스템이다. <strong>구조적으로 숫자 환각이 생길 수 없는 시스템</strong>이다.</p>
+        <p class="note">경쟁 업체에 대한 평가를 발표자가 골라 인용했다는 점도 감안하자.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="three-sources">
+        <header><span class="num">03</span><h2>틀린 숫자의 세 출처 <span class="ts">04:10</span></h2></header>
+        <p>틀린 숫자나 틀린 사실은 세 곳 중 하나에서 나온다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>실패</th><th>예</th><th>흔한 해결책과 한계</th></tr></thead>
+            <tbody>
+              <tr><td>1. 잘못된 문서를 가져온다 <span class="ts">04:20</span></td><td>엉뚱한 곳의 문서를 끌어온다</td><td>맞는 문서를 가져오면 된다. 하지만 "맞는 문서"부터 정하기 어렵다. 우리 회사 내부 분석인가, 가장 믿는 애널리스트의 보고서인가</td></tr>
+              <tr><td>2. 맞는 문서에서 틀린 숫자를 뽑는다 <span class="ts">04:40</span></td><td>Palantir의 2023년 매출을 2025년 10-K에서 찾는다. 같은 보고서에 2025년 숫자도 있으니, 2023년 숫자를 정확히 집어야 한다</td><td>인용마다 검사하는 필터를 단다. 하지만 필터는 이미 만들어진 답을 나중에 거를 뿐이다. 형식 검증도 같은 이유로 도움이 안 된다</td></tr>
+              <tr><td>3. 모델이 암산한다 <span class="ts">05:20</span></td><td>모델은 계산하지 않는다. 다음 토큰을 예측할 뿐이다</td><td>계산은 결정론적 도구에 맡긴다. 두 수를 더하는 일은 CPU 한 사이클이면 된다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>10-K는 미국 상장사가 매년 증권거래위원회(SEC)에 내는 연차 보고서다. 한 보고서에 여러 해의 숫자가 함께 실려 있어서 2번 실패가 쉽게 일어난다.</p>
+        <p>결정론적<span class="en">deterministic</span>이란 같은 입력에 늘 같은 출력을 낸다는 뜻이다. 발표자는 "결정론적 모델도 있다"는 반론을 예상하고 이렇게 답한다. 그런 모델이 있어도, 덧셈을 잘하는 CPU 사이클을 두고 굳이 모델을 쓸 이유가 없다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="code-writes">
+        <header><span class="num">04</span><h2>코드가 모든 숫자를 쓴다 <span class="ts">05:40</span></h2></header>
+        <p>Kepler 구조의 출발점은 한 문장이다. <strong>숫자는 모두 코드가 쓴다.</strong></p>
+        <ol class="plain">
+          <li><strong>전처리</strong>: 큰 전처리·맥락화 단계에서 비정형 문서를 정형 저장소로 바꾼다. 10-K의 숫자 같은 사실 하나하나에 고유 ID를 붙인다. 이 ID가 포인터<span class="en">pointer</span>다.</li>
+          <li><strong>계획</strong> <span class="ts">06:10</span>: 모델은 똑똑한 애널리스트 역할을 한다. "이 출처로 가서, 이 항목을 가져오고, 이걸 계산한다"는 계획을 세운다. 문제를 직접 풀지는 않는다.</li>
+          <li><strong>조회</strong>: 실제로 값을 꺼내는 일은 코드와 수학이 한다.</li>
+          <li><strong>역참조</strong> <span class="ts">06:50</span>: 출력에 숫자가 들어가려면 모델이 포인터를 풀어야<span class="en">dereference</span> 한다. 풀 수 없으면 그 숫자는 출력에 나올 수 없다.</li>
+          <li><strong>사후 검증</strong> <span class="ts">07:10</span>: 마지막에 검증 단계를 한 번 더 돌린다. 경쟁사가 베낀 것은 이 마지막 단계뿐이었다.</li>
+        </ol>
+
+        <div class="shift" aria-label="숫자를 쓰는 주체의 이동">
+          <div><span class="tag">흔한 RAG</span><b>모델이 숫자를 직접 쓴다</b><span class="muted">문서를 읽고 숫자를 골라 문장에 넣는다. 틀려도 구조가 막지 못한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Kepler</span><b>모델은 포인터만, 숫자는 코드가</b><span class="muted">모델은 계획하고 포인터를 고른다. 코드가 저장소에서 값을 꺼내 넣는다</span></div>
+        </div>
+
+        <p>비용 문제도 있다. 검색 시점에 모델이 10-K를 읽고 숫자를 뽑게 하면 토큰이 아주 많이 든다. 발표자는 "Anthropic과 OpenAI는 고마워하겠지만, 여러분 회사는 이제 그걸 싫어한다"고 농담했다.</p>
+
+        <h3>예시: 포인터가 숫자로 바뀌는 과정</h3>
+        <p class="note">예시: 발표 내용을 바탕으로 이 노트가 만든 그림이다. Kepler의 실제 형식은 발표에 나오지 않는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>예시</th></tr></thead>
+            <tbody>
+              <tr><td>모델이 쓰는 문장</td><td><code>Palantir의 2023년 매출은 {fact:7c2e…}였다</code></td></tr>
+              <tr><td>코드가 하는 일</td><td>저장소에서 <code>7c2e…</code> 키를 조회한다. 값, 출처 문서, 회계 기간이 함께 나온다</td></tr>
+              <tr><td>키가 있을 때</td><td>값을 문장에 넣고, 누르면 출처가 보이는 칩을 단다</td></tr>
+              <tr><td>키가 없을 때</td><td>숫자를 넣지 않는다. "이 숫자를 찾을 수 없다"고 거절한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>사용자 화면에서는 "매출은 얼마에서 얼마" 같은 문장 옆에 칩<span class="en">chip</span>이 붙는다 <span class="ts">07:20</span>. 칩을 누르면 그 숫자를 어디서 어떻게 가져왔는지 볼 수 있다.</p>
+        <p class="note">이 구조가 숫자 환각을 막는다는 것은 발표자가 자사 제품에 대해 한 주장이다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="lookup-vs-search">
+        <header><span class="num">05</span><h2>조회할 것과 구할 것 <span class="ts">07:30</span></h2></header>
+        <p>발표자는 Citadel에서 비즈니스 엔지니어링 총괄을 지냈다. 알파를 만드는 데 필요한 소프트웨어가 무엇인지 회사 전반에서 찾는 일이었다.</p>
+        <p>그때 본 것은 이렇다. Citadel의 PM<span class="en">portfolio manager</span>은 아주 뛰어나다. 그래도 결정론적 도구와 짝지어질 때 제 실력을 낸다. 펀더멘털 투자자는 데이터를 해석하는 데 강하지만, 그 데이터가 맞아야 한다.</p>
+        <p>그래서 시스템이 할 일은 둘이다. <strong>맞는 정보는 조회한다. 없는 정보는 영리하게 구한다.</strong> 발표자는 사람 애널리스트가 일하는 방식과 나란히 놓고 설명한다 <span class="ts">08:10</span>.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>바이사이드 애널리스트</th><th>Kepler</th></tr></thead>
+            <tbody>
+              <tr><td>가진 정보</td><td>직접 DCF 모델을 만든다</td><td>결정론적으로 저장할 수 있는 정보는 그렇게 저장한다</td></tr>
+              <tr><td>없는 정보</td><td>GLG, Guidepoint 같은 전문가 네트워크로 통화를 잡는다. 경영진과 이야기한다</td><td>비슷한 전처리로 정보를 모아 하이브리드 저장소에 넣는다. turbopuffer와 다른 장치를 섞어 쓴다</td></tr>
+              <tr><td>꺼내는 법</td><td>필요한 사람과 자료를 찾아간다</td><td>재정렬<span class="en">re-ranking</span>과 옛날식 포인터 역참조(<code>.get</code> 같은 메서드)를 함께 쓴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">turbopuffer는 발표자가 파트너라고 소개한 회사다. 발표 중 칭찬은 그 관계를 감안해 읽자.</p>
+
+        <div class="callout">
+          <span class="title">조회는 틀릴 수 없다. 검색은 틀린다. <span class="ts">09:00</span></span>
+          <span>같은 질의로 같은 검색을 10번 돌려도, 모델이 확률적이라 결과가 흔들린다. 발표자는 이 흔들림을 기회로 봤다. 흔들리는 검색을 흔들리지 않는 조회로 바꾸는 것이 Kepler가 바꾼 지점이다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="wide">
+        <header><span class="num">06</span><h2>넓게 찾고 좁힌다 <span class="ts">09:20</span></h2></header>
+        <p>SEC 공시처럼 문서가 많은 곳에서는 후보 문서를 자주 버려야 한다. 두 가지를 계속 판단한다.</p>
+        <ul class="plain">
+          <li>어떤 정보에는 어떤 출처가 맞는가.</li>
+          <li>어떤 문서는 전체적으로 그만 봐야 하는가.</li>
+        </ul>
+        <ol class="plain">
+          <li><strong>ANN + BM25</strong>로 문서를 최대 200개 가져온다. ANN<span class="en">approximate nearest neighbor</span>은 의미가 비슷한 문서를 빠르게 찾는 벡터 검색이다. BM25는 단어가 겹치는 정도로 순위를 매기는 키워드 검색이다.</li>
+          <li><strong>상호 순위 융합</strong><span class="en">Reciprocal Rank Fusion, RRF</span>으로 두 순위를 합친다. 발표자는 "사실상 약 60개가 남는다"고 설명했다.</li>
+          <li><strong>크로스 인코더</strong><span class="en">cross-encoder</span>로 질의와 문서 조각을 한꺼번에 모델에 넣어 관련도를 다시 매긴다.</li>
+        </ol>
+
+        <figure class="chart" aria-label="검색 단계별 남는 문서 수: ANN+BM25 최대 200개, RRF 뒤 약 60개">
+          <span class="chart-title">검색 단계별로 남는 후보 문서 수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>ANN + BM25</span><span class="val">최대 200</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="ANN + BM25: 최대 200개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>RRF로 순위를 합친 뒤</span><span class="val">약 60</span></div>
+              <div class="track"><div class="fill key" style="width:30%" title="RRF 뒤: 약 60개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>100</span><span>200</span></div>
+          <span class="caption">크로스 인코더 단계 뒤에 남는 문서 수는 발표에 나오지 않아 그리지 않았다.</span>
+        </figure>
+        <p class="note">참고: RRF 공식에서 흔히 쓰는 상수 k도 60이다. 자막만으로는 발표의 "60"이 남는 문서 수인지 이 상수를 말한 것인지 가릴 수 없다(추측). 이 노트는 발표자의 말대로 문서 수로 적었다.</p>
+
+        <h3>LLM은 넓게 찾지 않는다 <span class="ts">10:10</span></h3>
+        <p>발표자에 따르면 LLM은 계획을 세운 뒤 가장 빠르고 쉬운 길을 고른다. 결과적으로 깊이 우선 탐색<span class="en">depth-first search</span>처럼 움직인다. 첫 문서를 잡고 거기서 앞으로 나아가는 식이다.</p>
+        <p>이유는 비용이다. 여러 출처를 두루 훑는 것보다 첫 결과에서 바로 보상을 얻는 쪽이 모델에게 낫다. 그래서 Kepler는 검색 단계에서 아주 넓게 찾고, 거기서 좁혀 간다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="security">
+        <header><span class="num">07</span><h2>검색 범위에 보안을 넣는다 <span class="ts">10:40</span></h2></header>
+        <p>고객 문서를 다루는 시스템에서는 보안이 먼저다. 발표자는 이 부분을 이야기하는 사람이 거의 없다고 지적한다. 어떤 OAuth 토큰으로 문서를 가져오는지, 어떤 사용자 범위로 가져오는지다.</p>
+        <p>발표자가 꼽은 실패는 다섯 가지다 <span class="ts">11:10</span>. 오른쪽 열은 발표에 없는 대응 예시다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>실패</th><th>무슨 일이 생기나</th><th>대응 예시 (발표에 없음)</th></tr></thead>
+            <tbody>
+              <tr><td>1. 테넌트 필터를 빠뜨린다</td><td>Citadel이 Millennium의 문서를 검색할 수 있게 된다</td><td>모든 질의에 서버가 테넌트 조건을 강제로 붙인다</td></tr>
+              <tr><td>2. 다른 회사를 사칭한다</td><td>호출자가 다른 회사인 척하고 그 회사 문서를 조회한다</td><td>호출자가 보낸 값이 아니라 인증 토큰에서 회사를 확인한다</td></tr>
+              <tr><td>3. 오래된 정보가 돌아온다</td><td>검색이 최신이 아닌 결과를 준다. Google 검색에서도 흔한 문제다</td><td>문서마다 기준 시점을 저장하고 최신 여부로 거른다</td></tr>
+              <tr><td>4. 직접 읽기가 검색 규칙을 건너뛴다</td><td>문서를 바로 읽는 경로에는 허용 목록 같은 검색 규칙이 걸리지 않는다</td><td>ID로 바로 읽을 때도 검색과 같은 권한 검사를 거친다</td></tr>
+              <tr><td>5. 비어 있는 인덱스를 친다</td><td>데이터가 아직 채워지지 않은 인덱스를 검색한다</td><td>빈 인덱스는 "결과 없음"이 아니라 오류로 알린다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">발표자의 처방 <span class="ts">11:50</span></span>
+          <span>보안이 들어간 범위로 검색한다. 질의마다 돌려받을 수 있는 문서 집합을 제한한다. 월가에서 알파는 가장 귀한 것이라, 결국 모두가 이 문제를 신경 쓰게 된다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="missing-key">
+        <header><span class="num">08</span><h2>없는 키는 아무것도 주지 않는다 <span class="ts">12:20</span></h2></header>
+        <p>검증 방식을 다시 정리하면 이렇다.</p>
+        <ul class="plain">
+          <li>정보를 미리 처리해 결정론적으로 저장한다.</li>
+          <li>코드가 포인터를 하나하나 쓴다.</li>
+          <li>모델은 포인터를 읽을 수만 있다. 그 값이 저장소에 있을 때만 정보를 돌려받는다.</li>
+        </ul>
+        <p>해시 맵<span class="en">hash map</span>에 없는 키를 조회하면 아무것도 돌아오지 않는다. 이 단순한 성질이 가져온 정보가 정말 그 출처에서 왔음을 보장한다.</p>
+        <p>Kepler의 출처 ID는 해시값이다 <span class="ts">13:00</span>. 발표자는 누구나 자기 시스템에 쉽게 넣을 수 있는 방법이라고 말한다.</p>
+
+        <h3>인용의 세 가지 결말 <span class="ts">13:50</span></h3>
+        <p>이 구조에서 모든 인용은 셋 중 하나로 끝난다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>결말</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>검증됨</td><td>포인터가 풀렸고 출처가 확인됐다</td></tr>
+              <tr><td>정정됨</td><td>검색 시점에 틀린 인용을 바로잡았다</td></tr>
+              <tr><td>거절됨</td><td>포인터를 풀 수 없어 숫자를 내지 않았다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>포인터를 풀 수 없으면 숫자를 출력할 수 없다. 발표자는 이 성질을 두고 "생각해 보면 말도 안 되게 강력하다"고 말한다.</p>
+
+        <h3>숫자 너머로 <span class="ts">14:20</span></h3>
+        <p>같은 방법은 숫자가 아닌 사실에도 쓸 수 있다. 존재하지 않는 판례를 AI가 지어낸 법정 사건들이 있었다. 판례 목록을 결정론적으로 저장하고 그 안에서만 찾게 하면, 없는 판례가 갑자기 생겨날 수 없다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="fear">
+        <header><span class="num">09</span><h2>월가가 끝내 못 믿을까 봐 <span class="ts">14:40</span></h2></header>
+        <p>발표자가 회사의 방법을 무대에서 공개하는 이유는 두려움이다. 많은 업체와 사내 개발 시도가 남긴 불신 때문에, 월가가 이 기술을 끝내 믿지 않게 될까 봐서다.</p>
+        <ul class="plain">
+          <li>지금 금융 AI 도구 대부분은 PowerPoint 서식을 맞추는 데 쓰인다 <span class="ts">15:00</span>.</li>
+          <li>많은 이들이 하는 말과 달리, DCF를 처음부터 끝까지 만드는 AI는 아직 없다.</li>
+          <li>그런 게 있었다면 월가의 모든 회사가 하룻밤 사이에 도입했을 것이다.</li>
+        </ul>
+        <p>DCF<span class="en">Discounted Cash Flow</span>는 회사가 앞으로 벌 현금을 지금 가치로 할인해 기업 가치를 추정하는 모형이다.</p>
+        <p>발표자의 결론은 이렇다. 이 기술에서 가치를 얻으려면 사람이 믿고 검증할 수 있게 만들어야 한다. 금융만의 이야기가 아니다. 발표자는 "그렇지 않으면 우리 모두 일자리를 잃는다"고 말한다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="production">
+        <header><span class="num">10</span><h2>운영 데이터와 남은 구멍 <span class="ts">15:40</span></h2></header>
+        <p>발표자는 Kepler의 실제 운영 데이터를 슬라이드로 보여 줬다.</p>
+        <p>거절<span class="en">refusal</span>은 모델이 숫자를 내지 못한 경우다. 이때 모델은 "이 포인터를 풀 수 없어서 이 숫자를 낼 수 없다"고 답한다.</p>
+        <p>발표자는 수치가 "아주 크게 떨어졌다"고 했다. 0이 되지 않은 이유로는 모델이 여전히 확률적이라는 점을 들었다. 모델은 추론 중에 숫자를 지어낼 수 있다. 그래서 그 뒤에 사후 처리 단계를 하나 더 둔다.</p>
+        <p class="note">자막에는 슬라이드의 수치가 나오지 않는다. 무엇이 떨어졌는지도 말이 엇갈린다. 거절이 줄었다고 들리지만, 0이 안 된 이유로 "모델이 숫자를 지어낼 수 있다"를 들었다. 문맥상 근거 없는 숫자가 크게 줄었다는 뜻으로 보인다(추정). 자사 제품의 운영 데이터라는 점도 감안해 읽자.</p>
+        <div class="callout">
+          <span class="title">발표자의 요점 <span class="ts">16:20</span></span>
+          <span>모델이 자기 포인터를 직접 풀어야 하는 구조만 만들어도, 강력하고 검증 가능한 AI 플랫폼을 만들 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="ask">
+        <header><span class="num">11</span><h2>도구에 물을 질문 <span class="ts">16:30</span></h2></header>
+        <p>발표자의 부탁은 단순하다. 어떤 도구를 쓰든 숫자를 검증할 수 있는지 물어라. 출처를 볼 수 있는지 물어라.</p>
+        <p>사후에 붙인 주석으로는 부족하다. 숫자를 직접 눌러 확인할 수 있어야 한다. 그 숫자가 계산이든, 문서에서 뽑은 값이든, 둘의 조합이든 마찬가지다.</p>
+        <ol class="plain">
+          <li>모델이 실제로 포인터를 쓰는가?</li>
+          <li>출력을 검증하는 장치가 있는가?</li>
+          <li>모든 인용의 출처를 확인하는가?</li>
+          <li>계산도 출처를 확인하는가?</li>
+          <li>받으면 안 되는 고객에게 파일이 가는 것을 막는 장치가 있는가?</li>
+          <li><strong>가장 중요한 질문</strong>: 어디서도 오지 않은 숫자나 사실은 어떻게 처리되는가?</li>
+        </ol>
+
+        <h3>검색의 시대는 끝났다 <span class="ts">17:30</span></h3>
+        <p>모델이 아무리 똑똑해져도 데이터베이스 문제는 처음과 같다. 없는 행과 열을 조회하면 아무것도 돌아오지 않는다. 발표자는 바로 이 오래된 성질을 이용하자고 말한다.</p>
+        <blockquote>우리는 AI의 검색 단계를 지났습니다. 이제 인프라를 만들어야 합니다.<cite>발표자, 17:50 (옮김)</cite></blockquote>
+        <p>발표자는 스캐폴딩, 하네스, "요즘 VC가 쓰는 멋진 말이 무엇이든" 이 기술을 실제로 쓸 수 있게 하는 기반을 만들라고 한다. 마지막 부탁은 <strong>믿을 수 있는</strong> 무언가를 만들라는 것이다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>월가가 AI를 못 믿는 핵심은 환각보다 구조다. 숫자의 출처를 추적할 수 없다.</li>
+          <li>환각을 아예 없애자는 말은 틀렸다. 창의성은 알파의 원천이고, 막을 것은 <strong>근거 없는 숫자</strong>다.</li>
+          <li>결과물을 믿으려면 틀렸을 때 책임을 물을 대상이 있어야 한다.</li>
+          <li>틀린 숫자는 <strong>잘못된 문서, 맞는 문서의 잘못된 숫자, 모델의 암산</strong>에서 나온다.</li>
+          <li>사후 필터와 형식 검증은 이미 만들어진 답을 거를 뿐이다. <strong>검증은 끝에 덧붙일 수 없다.</strong></li>
+          <li>Kepler 구조: 전처리에서 사실마다 포인터를 붙이고, 모델은 계획하고, 코드가 조회와 계산을 한다.</li>
+          <li>모델은 <strong>포인터를 풀어야만</strong> 숫자를 쓸 수 있다. 조회는 틀릴 수 없고 검색은 틀린다.</li>
+          <li>검색은 넓게 퍼서 좁힌다. ANN+BM25 최대 200개 → RRF 약 60개 → 크로스 인코더.</li>
+          <li>보안은 검색 범위에 넣는다. 테넌트 누락, 사칭, 오래된 결과, 직접 읽기 우회, 빈 인덱스를 막는다.</li>
+          <li>도구를 고를 때 <strong>"어디서도 오지 않은 숫자는 어떻게 되나"</strong>를 묻는다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 "모델이 좋아지면 환각이 사라진다"는 말을 틀렸다고 본 이유는?</span></summary><div class="answer">환각의 다른 얼굴이 알파이기 때문이다. 창의성은 회사가 돈을 버는 원천이다. 없앨 것은 상상력이 아니라 근거 없는 숫자다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>발표자가 말한 신뢰의 조건은?</span></summary><div class="answer">결과가 틀렸을 때 책임을 물을 대상이 있어야 한다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>틀린 숫자가 나오는 세 출처는?</span></summary><div class="answer">잘못된 문서를 가져온다. 맞는 문서에서 틀린 숫자를 뽑는다. 모델이 암산한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Palantir 2023년 매출 예시가 보여 주는 실패는?</span></summary><div class="answer">맞는 문서(2025년 10-K)를 가져와도 그 안의 틀린 기간 숫자를 집을 수 있다. 숫자가 2023년 것인지 확인해야 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>인용 필터나 형식 검증으로는 왜 부족한가?</span></summary><div class="answer">둘 다 답이 이미 만들어진 뒤에 적용된다. 틀린 숫자가 만들어지는 구조 자체는 그대로다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Kepler에서 모델과 코드는 각각 무슨 일을 하나?</span></summary><div class="answer">모델은 애널리스트처럼 계획을 세우고 포인터를 고른다. 코드는 전처리로 포인터를 만들고, 조회와 계산을 해서 실제 숫자를 넣는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>모델이 포인터를 풀지 못하면 어떻게 되나?</span></summary><div class="answer">그 숫자는 출력에 나올 수 없다. 모델은 "이 숫자를 낼 수 없다"고 거절한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>"조회는 틀릴 수 없고 검색은 틀린다"는 무슨 뜻인가?</span></summary><div class="answer">같은 질의의 검색도 모델이 확률적이라 결과가 흔들린다. 키 조회는 값이 있거나 없거나 둘 중 하나다. 없는 키는 아무것도 돌려주지 않는다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Kepler 검색의 세 단계와 각 단계의 숫자는?</span></summary><div class="answer">ANN+BM25로 최대 200개, RRF로 순위를 합쳐 약 60개, 그다음 크로스 인코더로 다시 순위를 매긴다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>발표자가 본 LLM의 검색 습관과 그 이유는?</span></summary><div class="answer">넓게 찾지 않고 첫 문서를 잡아 깊이 파고든다. 넓게 찾기는 비싸고, 첫 결과에서 바로 보상을 얻는 쪽이 모델에게 낫기 때문이다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>보안 실패 다섯 가지는?</span></summary><div class="answer">테넌트 필터 누락, 다른 회사 사칭, 오래된 정보 반환, 직접 읽기의 검색 규칙 우회, 빈 인덱스 조회.</div></details>
+          <details><summary><span class="qn">Q12</span><span>경쟁사가 "틀린 부분을 베꼈다"는 말의 뜻은?</span></summary><div class="answer">출력 끝의 사후 검증만 따라 했다. 전처리와 포인터라는 앞단의 구조는 따라 하지 않았다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>출력에서 모델이 숫자를 직접 쓰는 곳을 모두 찾는다<span class="how">확인: 모든 숫자가 저장소 조회나 코드 계산에서 나오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>문서의 숫자를 미리 뽑아 고유 ID와 함께 저장한다<span class="how">값, 출처 문서, 기간을 함께 저장한다. ID는 해시로 만든다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>모델 출력에는 숫자 대신 ID를 쓰게 하고, 코드가 풀어 넣는다<span class="how">확인: 풀리지 않는 ID는 숫자 없이 거절되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>계산은 모델이 아니라 코드로 한다<span class="how">더하기, 비율, 증가율 같은 계산을 도구 호출로 바꾼다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>인용마다 기간과 출처가 맞는지 확인한다<span class="how">예: 2025년 보고서에서 2023년 숫자를 집었는지</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>검색을 넓게 한 뒤 좁힌다<span class="how">벡터 검색 + 키워드 검색 → 순위 합치기 → 재정렬</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>검색과 직접 읽기 모두에 테넌트·권한 범위를 서버에서 강제한다<span class="how">확인: 다른 회사 문서가 어떤 경로로도 돌아오지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>오래된 문서와 빈 인덱스를 감지한다<span class="how">확인: 빈 인덱스가 "결과 없음"으로 조용히 넘어가지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>도입하려는 도구에 발표자의 질문 여섯 개를 묻는다<span class="how">특히 "어디서도 오지 않은 숫자는 어떻게 되나"</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>환각</td><td>Hallucination. 모델이 근거 없는 내용을 사실처럼 만들어 내는 것</td></tr>
+              <tr><td>알파</td><td>Alpha. 시장 평균을 넘는 초과 수익. 발표에서는 회사만의 독창적 판단을 함께 가리킨다</td></tr>
+              <tr><td>RAG</td><td>질문과 관련된 문서를 찾아 모델 입력에 함께 넣는 방식</td></tr>
+              <tr><td>형식 검증</td><td>Formal verification. 원래는 프로그램이 명세를 지키는지 수학적으로 증명하는 기법. 발표에서는 AI 출력을 검사하는 검증 계층을 넓게 가리킨다</td></tr>
+              <tr><td>펀더멘털 투자</td><td>회사의 재무와 사업을 분석해 가치를 판단하는 투자</td></tr>
+              <tr><td>바이사이드</td><td>Buy-side. 자산운용사, 헤지펀드처럼 직접 투자하는 쪽</td></tr>
+              <tr><td>PM</td><td>Portfolio manager. 펀드 자금 운용을 책임지는 사람</td></tr>
+              <tr><td>10-K</td><td>미국 상장사가 매년 SEC(증권거래위원회)에 내는 연차 보고서</td></tr>
+              <tr><td>DCF</td><td>Discounted Cash Flow. 미래 현금흐름을 현재 가치로 할인해 기업 가치를 추정하는 모형</td></tr>
+              <tr><td>전문가 네트워크</td><td>GLG, Guidepoint처럼 투자자와 업계 전문가의 통화를 연결해 주는 회사</td></tr>
+              <tr><td>결정론적</td><td>Deterministic. 같은 입력에 늘 같은 출력을 내는 성질</td></tr>
+              <tr><td>포인터</td><td>Pointer. 실제 값 대신 그 값이 저장된 위치나 ID를 가리키는 것</td></tr>
+              <tr><td>역참조</td><td>Dereference. 포인터가 가리키는 실제 값을 꺼내는 것</td></tr>
+              <tr><td>해시 맵</td><td>Hash map. 키로 값을 바로 찾는 자료구조. 없는 키는 아무것도 돌려주지 않는다</td></tr>
+              <tr><td>해시</td><td>Hash. 데이터에서 계산한 고정 길이 값. 발표에서는 출처 ID로 쓴다</td></tr>
+              <tr><td>토큰</td><td>Token. 모델이 글을 처리하는 단위. 사용 요금이 이 단위로 매겨진다</td></tr>
+              <tr><td>ANN</td><td>Approximate nearest neighbor. 의미가 비슷한 벡터를 빠르게 찾는 검색</td></tr>
+              <tr><td>BM25</td><td>질의와 문서의 단어가 겹치는 정도로 순위를 매기는 키워드 검색 공식</td></tr>
+              <tr><td>RRF</td><td>Reciprocal Rank Fusion. 여러 검색 결과의 순위를 합쳐 하나의 순위로 만드는 방법</td></tr>
+              <tr><td>크로스 인코더</td><td>Cross-encoder. 질의와 문서를 한꺼번에 모델에 넣어 관련도를 매기는 재정렬 모델</td></tr>
+              <tr><td>깊이 우선 탐색</td><td>Depth-first search. 한 갈래를 끝까지 파고든 뒤 다른 갈래로 가는 탐색</td></tr>
+              <tr><td>테넌트</td><td>Tenant. 한 시스템을 함께 쓰는 고객사 각각. 테넌트 필터는 자기 회사 데이터만 보이게 막는 조건</td></tr>
+              <tr><td>OAuth 토큰</td><td>사용자가 허락한 범위 안에서만 다른 서비스에 접근하게 해 주는 증표</td></tr>
+              <tr><td>허용 목록</td><td>Allow list. 접근해도 되는 대상만 적어 둔 목록</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 3개월 전 World's Fair 발표</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>Jack과의 대담, 검증 계층에 몰린 VC 자금 2억 7천만 달러</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>경쟁사는 틀린 부분을 베꼈다</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>Anthropic이 Kepler를 다룬 글 (발표자의 말)</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>문제는 환각보다 구조</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>환각의 다른 이름: 알파</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>너도나도 사들이는 AI 도구, 왜 다 Jane Street가 아닌가</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>신뢰는 책임질 대상, 80% vs 31%</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>"똑똑한 인턴", "마지막 10%"</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>틀린 숫자의 세 출처</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>맞는 문서의 틀린 숫자: Palantir 예</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>모델은 암산하지 못한다</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>Kepler: 코드가 모든 숫자를 쓴다</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>모델은 계획, 코드는 조회. 토큰 비용</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>포인터를 풀지 못하면 숫자를 쓸 수 없다</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>클릭할 수 있는 출처 칩</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>Citadel 경험: 결정론적 도구와 짝지은 PM</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>없는 정보는 전문가와 경영진에게서 구한다</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>하이브리드 저장소, 재정렬과 <code>.get</code> 조회</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>조회는 틀릴 수 없고 검색은 틀린다</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>후보 문서 버리기: 200 → 60 → 크로스 인코더</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>LLM은 넓게 찾지 않는다</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>보안: 어떤 토큰, 어떤 사용자 범위로 가져오나</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>보안 실패 다섯 가지</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>검색 범위에 보안을 넣기</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>검증: 결정론적 저장과 포인터</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>없는 키, 해시 출처 ID</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>검증·정정·거절이라는 계약</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>숫자 너머: 판례 환각</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>월가가 끝내 못 믿을까 봐</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>PowerPoint 서식에 쓰이는 금융 AI</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>운영 데이터: 거절과 사후 처리</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>도구에 물을 질문</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>검색의 시대는 끝났다, 인프라를 만들자</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>마무리: 믿을 수 있는 것을 만들라</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'RdQCY_-SXbA:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

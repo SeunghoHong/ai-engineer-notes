@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>코드베이스로 슬롭 막기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- code block (added for this note's lint example; reuses existing tokens) ---------- */
+pre {
+  margin: 0; padding: 14px 16px; overflow-x: auto; max-width: 100%;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.6;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#trust">PR 3,000개와 신뢰</a></li>
+      <li><a href="#pyramid">어디에 시간을 쓰나</a></li>
+      <li><a href="#garden">코드베이스는 정원이다</a></li>
+      <li><a href="#ban">잘 쓰기 어려운 API는 막는다</a></li>
+      <li><a href="#dirs">디렉토리로 경계를 긋는다</a></li>
+      <li><a href="#comments">주석은 변명이 된다</a></li>
+      <li><a href="#rule">교정할 때마다 검사로</a></li>
+      <li><a href="#verify">리뷰 대신 검증 산출물</a></li>
+      <li><a href="#formal">형식 검증과 속성 테스트</a></li>
+      <li><a href="#golden">테스트와 검증의 황금기</a></li>
+      <li><a href="#results">결과: PR 11,000개</a></li>
+      <li><a href="#order">자동화는 기반 다음에</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-14 · 17분 · 영어 발표 한글 정리</span>
+      <h1>에이전트의 슬롭을 막는 코드베이스</h1>
+      <p class="lead">에이전트가 한 달에 PR 수천 개를 내도 품질을 지키려면, 규칙 문서보다 코드베이스와 검증에 먼저 투자해야 한다. 에이전트를 고칠 때마다 그 교정을 린트 규칙 같은 검사로 바꾸면, 사람이 리뷰할 거리가 점점 줄고 엉성한 코드(슬롭<span class="en">slop</span>)도 줄어든다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=O_zcc6Xl12g" target="_blank" rel="noopener">All Code Is Slop (Except Mine)</a></span>
+        <span>발표: Lauren Tan (SpaceXSI에서 Grokbot(추정) 개발. 발표에서는 'Potato'라는 별명으로 소개)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 제품 이름이 Grokbot, Graph Bot, Grabot, Growth Bot 등으로 매번 다르게 들려서 Grokbot(추정)으로 통일했다. 자막의 Brett Taylor는 Bret Taylor로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>발표자는 지난달 혼자 <strong>PR 3,000개</strong>를 배포했다. 비결은 맹목적인 믿음이 아니라 <strong>에이전트 환경에 투자해서 얻은 신뢰</strong>다.</li>
+        <li>투자 순서는 <strong>코드 자체 → 결정적 검사 → 검증 → 글(규칙 문서)</strong>이다. 규칙 문서는 마지막에 조금만 쓴다.</li>
+        <li>에이전트는 코드베이스를 보고 따라 한다. 그래서 <strong>나쁜 패턴은 복제된다.</strong> 코드베이스를 깨끗하게 지켜야 한다.</li>
+        <li>에이전트를 고칠 때마다 규칙 문서에 한 줄을 더하지 말고 <strong>린트 규칙이나 API 설계로 그 실수를 못 하게</strong> 만든다. 예: 제품 코드에서 useEffect 금지.</li>
+        <li><strong>주석의 99%를 금지했다.</strong> 주석은 금방 낡고, 강제할 수 없고, 에이전트가 변명을 적는 곳이 된다.</li>
+        <li>사람의 리뷰는 <strong>검증 산출물</strong>(영상, 스크린샷, 다이어그램, 형식 검증 결과)을 보는 일로 줄었다. 토큰 대부분은 검증에 쓴다.</li>
+        <li>발표자가 밝힌 결과: 팀 PR 월 11,000개, 되돌림 약 0.5%, 성능은 오히려 개선. <strong>자동화는 이 기반을 다진 다음에</strong> 한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="trust">
+        <header><span class="num">01</span><h2>PR 3,000개와 신뢰 <span class="ts">00:40</span></h2></header>
+        <p>발표자는 지난달 혼자 PR 3,000개를 프로덕션에 배포했다고 말한다.</p>
+        <p>에이전트가 나오기 전에는 작업량이 큰 관심사가 아니었다. 예외는 엄청나게 생산적인 소수였다. 발표자의 이전 회사에서는 이런 사람을 '코딩 기계'<span class="en">coding machine</span>라고 불렀다. 발표자가 든 예는 Google Maps를 주말 동안 통째로 다시 썼다는 Bret Taylor다.</p>
+        <p>발표자는 이제 에이전트 덕분에 누구나 코딩 기계가 될 수 있다고 본다.</p>
+        <div class="callout">
+          <span class="title">발표자의 핵심 주장 <span class="ts">01:10</span></span>
+          <span>이제 소프트웨어 엔지니어의 일은 생산성을 크게 늘리면서도 코드 품질을 지키거나 더 높이는 방법을 찾는 것이다.</span>
+        </div>
+        <p>이런 체계를 '소프트웨어 공장'<span class="en">software factory</span>이라 부르는 사람도 있다. 발표자는 더 단순하게 <strong>신뢰</strong>의 문제로 본다.</p>
+        <p>맹목적으로 믿으라는 말이 아니다. 에이전트가 일하는 환경에 투자해서, 에이전트가 옳은 일을 할 거라고 믿을 수 있게 만들라는 뜻이다.</p>
+        <p>발표자는 여기까지 오는 데 6개월이 걸렸다. 지금은 PR 수천 개를 내고, 그중 상당수는 자는 동안 나간다. 발표자는 다른 사람은 이보다 훨씬 빨리 도달할 수 있다고 말한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="pyramid">
+        <header><span class="num">02</span><h2>어디에 시간을 쓰나: 역피라미드 <span class="ts">02:00</span></h2></header>
+        <p>신뢰가 낮은 환경에서 높은 환경으로 가려면, 에이전트 환경의 어디에 시간을 써야 할까. 발표자는 위가 넓은 역피라미드로 설명한다. 먼저 나오는 층에 시간을 더 쓰고, 마지막 층인 글은 조금만 얹는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>예</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1. 코드 자체</td><td>좋은 API 설계, 아키텍처, 리팩터링</td><td>잘못된 길을 처음부터 없앤다</td></tr>
+              <tr><td>2. 정적 검사와 테스트</td><td>린트 규칙, 타입 시스템, 컴파일러, 여러 종류의 테스트</td><td>규칙을 어기면 바로 실패한다</td></tr>
+              <tr><td>3. 검증</td><td>런타임 검증, 형식 검증</td><td>버그를 찾고, 에이전트가 의도를 이해했는지 확인한다</td></tr>
+              <tr><td>4. 글</td><td>규칙, 스킬, AGENTS.md</td><td>판단이 필요한 것만 맡는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>위의 두 층은 결정적<span class="en">deterministic</span>이다. 같은 코드를 넣으면 늘 같은 결과가 나온다는 뜻이다. 이 두 층으로 에이전트가 할 수 있는 일을 좁히고, 기본으로 옳은 일을 하게 만든다.</p>
+        <p>검증 층은 버그를 찾는다. 시스템이 언제나 지켜야 할 성질(불변식<span class="en">invariant</span>)이 지켜지는지도 확인한다.</p>
+        <p>규칙 문서 같은 글은 사람의 판단이 필요한 것에만 쓴다. 발표자는 그다음 순서대로 코드베이스부터 이야기한다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="garden">
+        <header><span class="num">03</span><h2>코드베이스는 정원이다 <span class="ts">03:00</span></h2></header>
+        <p>에이전트의 출력은 입력에 따라 달라진다. 그리고 코드베이스는 에이전트가 받는 가장 큰 입력 중 하나다.</p>
+        <div class="callout">
+          <span class="title">발표자의 원칙</span>
+          <span>에이전트를 교정할 때마다, 규칙 문서나 AGENTS.md에 한 줄을 더하기 전에 결정적 검사로 만들 수 있는지 먼저 생각한다. 코드에 들어간 규칙은 매번 똑같이 작동해서 더 믿을 수 있다.</span>
+        </div>
+
+        <h3>PR이 흐르는 물처럼 들어온다 <span class="ts">03:30</span></h3>
+        <p>2024년에 발표자는 출근하면 동료가 쓴 PR 3개를 리뷰했다. 지금은 그 숫자가 300개쯤이다.</p>
+        <figure class="chart" aria-label="발표자가 출근해서 마주하는 PR 수 비교: 2024년 3개, 지금 약 300개">
+          <span class="chart-title">발표자가 출근해서 마주하는 PR 수 (개)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>2024년</span><span class="val">3</span></div>
+              <div class="track"><div class="fill" style="width:1%" title="2024년: PR 3개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>지금</span><span class="val">약 300</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="지금: PR 약 300개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>150</span><span>300</span></div>
+          <span class="caption">100배 차이라서 2024년 막대는 거의 보이지 않는다.</span>
+        </figure>
+        <p>엔지니어 한 명이 에이전트 수백, 수천 개로 이뤄진 팀이 된 셈이다. 발표자는 코드가 너무 빨리 들어와서 끊기지 않는 흐름처럼, 살아 있는 것처럼 느껴진다고 말한다.</p>
+        <p>이 비유에서 코드베이스의 제약과 안전장치는 콘크리트 기초다. 에이전트가 쓰는 새 코드는 그 기초를 따라 자란다. 그래서 발표자는 소프트웨어 엔지니어의 일이 점점 정원 가꾸기를 닮아 간다고 본다.</p>
+        <div class="callout warn">
+          <span class="title">잡초는 퍼진다 <span class="ts">04:20</span></span>
+          <span>에이전트는 코드베이스에 있는 것을 '이 코드베이스의 정해진 패턴'으로 보고 따라 한다. 임시방편, 안티패턴<span class="en">anti-pattern</span>, 폐기 예정 코드, 기술 부채<span class="en">tech debt</span>도 그대로 복제된다. 정원의 잡초처럼 어느새 곳곳에 퍼진다. 에이전트가 늘 좋은 코드만 베끼도록 코드베이스를 최대한 깨끗하게 지켜야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="ban">
+        <header><span class="num">04</span><h2>잘 쓰기 어려운 API는 막는다 <span class="ts">05:00</span></h2></header>
+        <p>Dune은 발표자의 팀이 Grokbot(추정)을 만들며 직접 만든 클라이언트 프레임워크다. 발표자는 'Electron 앱을 위한 Next.js' 정도로 생각하면 된다고 설명한다. 기술적으로 특별한 것은 없다고 한다.</p>
+        <p>Dune의 핵심은 제약과 린트 규칙<span class="en">lint rule</span>이다. 데스크톱 앱을 만들며 배운 교훈을 규칙으로 담았다.</p>
+        <p>그 교훈 하나는 이렇다. <strong>잘 쓰려면 미묘한 판단이 필요한 것은 슬롭으로 이어지기 쉽다.</strong></p>
+
+        <h3>예: React의 useEffect <span class="ts">05:30</span></h3>
+        <p><code>useEffect</code>는 React에서 화면을 그린 뒤 부수 효과를 실행하는 훅이다. 쓸 곳이 있지만 자주 잘못 쓰인다. "useEffect를 쓰려면 박사 학위가 필요하다"는 농담이 있을 정도다. 에이전트도 이걸 잘 못 쓴다.</p>
+        <p>팀의 해법은 제품 코드에서 useEffect를 아예 금지하는 것이다. Dune API 안쪽의 몇 곳에서만 쓸 수 있다.</p>
+        <p>그 결과 이 문제는 <strong>종류째 사라졌다.</strong> 코드 리뷰에서 다시 잡을 필요가 없다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="dirs">
+        <header><span class="num">05</span><h2>디렉토리 구조로 경계를 긋는다 <span class="ts">06:10</span></h2></header>
+        <p>두 번째 패턴은 디렉토리 구조로 맥락을 주는 것이다.</p>
+        <p>Cursor도 Electron 앱이다. 발표자는 Cursor에서 이런 안티패턴을 봤다. 에이전트가 main 쪽 코드를 renderer 쪽으로 자주 import했다. 그러면 화면을 그리는 쪽이 오래 붙잡히는 작업(롱 태스크<span class="en">long task</span>)이 생기고 화면이 버벅였다(<span class="en">jank</span>).</p>
+        <p>Grokbot과 Dune 앱에서는 이걸 아주 뻔한 규칙으로 만들었다. 최상위에 electron-renderer와 electron-main 디렉토리를 둔다. 둘 사이의 import는 의존성 그래프 분석기와 린트 규칙으로 막는다.</p>
+        <p>설정은 간단하다. 그래도 코드 리뷰에서 신경 쓸 일이 하나 줄어든다.</p>
+        <p class="note">디렉토리 이름은 자막에서 "Electron renderer", "Electron main"으로 들린 것을 옮겼다. 실제 표기는 다를 수 있다.</p>
+
+        <h3>예시: 두 규칙을 린트로 쓰면</h3>
+        <p class="muted">발표에 나온 코드가 아니다. ESLint 기본 규칙 <code>no-restricted-imports</code>로 쓴 예시다. 에러 메시지에 금지 이유와 올바른 방법을 함께 적는 점이 핵심이다.</p>
+<pre><code>// eslint.config.js — 예시. 발표에 나온 코드가 아니다.
+export default [
+  {
+    files: ['src/electron-renderer/**'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [{
+          name: 'react',
+          importNames: ['useEffect'],
+          message: 'useEffect는 제품 코드에서 금지. 데이터 로딩과 구독은 프레임워크 API를 쓴다.',
+        }],
+        patterns: [{
+          group: ['**/electron-main/**'],
+          message: 'renderer에서 main 코드를 가져오면 화면이 멈춘다. IPC로 요청한다.',
+        }],
+      }],
+    },
+  },
+];</code></pre>
+      </section>
+
+      <!-- 6 -->
+      <section id="comments">
+        <header><span class="num">06</span><h2>주석은 변명이 된다 <span class="ts">06:50</span></h2></header>
+        <p>발표자가 놀랐던 점이 있다. 에이전트가 마크다운을 '옳은 일을 하지 않은 이유'를 적는 곳으로 쓴다는 것이다. 문서, 코드 주석, 규칙, 스킬이 모두 해당한다.</p>
+        <p>반대 방향의 문제도 있다. 에이전트가 작은 교정 하나를 과하게 받아들여서, 절대 깨면 안 되는 규칙처럼 다룬다.</p>
+
+        <h3>Cursor의 타이머 문제 <span class="ts">07:20</span></h3>
+        <ol class="plain">
+          <li><strong>증상</strong>: 에이전트가 <code>setTimeout</code>, <code>requestAnimationFrame</code>, <code>requestIdleCallback</code> 같은 타이머를 땜질용으로 즐겨 썼다.</li>
+          <li><strong>진짜 원인</strong>: VS Code의 명령형<span class="en">imperative</span> 스타일과 React의 선언형<span class="en">declarative</span> 스타일이 부딪치는 아키텍처 문제였다. 타이머는 그 충돌을 덮는 임시방편이었다.</li>
+          <li><strong>비용</strong>: 타이머를 빠르게 만들고 없애면 큰 가비지 컬렉션<span class="en">garbage collection</span>이 자주 일어난다. 그러면 앱이 버벅인다. 아키텍처 선택 하나가 앱과 에이전트 양쪽의 성능을 떨어뜨렸다.</li>
+          <li><strong>가장 나쁜 점</strong>: 에이전트가 이 임시방편이 왜 정당한지 설명하는 주석을 잔뜩 달았다. 그사이 타이머는 곳곳에 퍼졌고 앱 성능이 크게 나빠졌다.</li>
+        </ol>
+
+        <h3>주석 99% 금지 <span class="ts">08:20</span></h3>
+        <p>Grokbot 팀은 이 교훈을 받아들여 주석의 99%를 금지했다. 이유는 네 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>이유</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td>금방 낡는다</td><td>코드는 바뀌는데 주석은 그대로 남는다</td></tr>
+              <tr><td>사람이 안 읽는다</td><td>발표자 표현으로, 사람은 '주석 슬롭'을 굳이 읽지 않는다</td></tr>
+              <tr><td>핑계가 된다</td><td>어려운 일을 피하고 싶은 에이전트에게 빠져나갈 구멍이 된다</td></tr>
+              <tr><td>강제할 수 없다</td><td>"다음 에이전트에게 이건 하지 말라고 알려 줘야지" 하는 선의의 주석도 지켜진다는 보장이 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>대신 Grokbot과 Dune에는 친절한 에러 메시지를 내는 린트 규칙이 있다. 그 메시지는 에이전트에게 겉을 땜질하지 말고 <strong>근본 원인을 고치라</strong>고 알려 준다. <span class="ts">09:00</span></p>
+      </section>
+
+      <!-- 7 -->
+      <section id="rule">
+        <header><span class="num">07</span><h2>교정할 때마다 검사로 바꾼다 <span class="ts">09:10</span></h2></header>
+        <p>팀의 일반 원칙은 이렇다. 에이전트를 교정할 때마다 그 교정을 결정적 검사로 바꾼다. 아니면 더 나은 API 설계나 아키텍처로 그 문제를 종류째 없앨 방법을 찾는다.</p>
+        <div class="shift" aria-label="에이전트 교정 방식의 변화">
+          <div><span class="tag">흔한 방식</span><b>규칙 문서에 한 줄 추가</b><span class="muted">에이전트가 읽고 지켜 주기를 바란다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 방식</span><b>검사나 설계로 막는다</b><span class="muted">어기면 린트가 실패하고, 메시지가 고칠 방향을 알려 준다</span></div>
+        </div>
+        <p>이걸 충분히 반복하면 코드 리뷰에서 볼 거리가 줄어든다. 어느 시점에는 리뷰할 게 거의 남지 않는다. 그러면 에이전트가 낸 PR 대부분을 에이전트가 직접 머지하게 둘 수 있다고 발표자는 말한다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="verify">
+        <header><span class="num">08</span><h2>리뷰 대신 검증 산출물을 본다 <span class="ts">09:40</span></h2></header>
+        <p>검증은 에이전트를 더 자율적으로 만든다. 에이전트의 작업을 더 믿게 해 주기도 한다.</p>
+        <p>팀의 코드 리뷰는 이제 검증 산출물<span class="en">verification artifact</span>을 보는 일로 줄었다. 영상, 스크린샷, 다이어그램, 형식 검증 결과 같은 것이다.</p>
+
+        <h3>런타임 검증 <span class="ts">10:00</span></h3>
+        <p>가장 기본은 런타임 검증<span class="en">runtime verification</span>이다. 에이전트가 코드를 직접 실행하고, 사람 개발자가 쓰는 디버깅 도구를 똑같이 쓰게 하는 것이다. 발표자는 Chrome DevTools Protocol을 예로 들었다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">피처 맵 · feature map <span class="ts">10:10</span></span>
+            <p>사용자 관점에서 앱의 모든 기능을 정리한 사이트맵 같은 것이다. 팀의 런타임 검증 스킬 안에 들어 있다.</p>
+            <p class="verdict">사람이 "왼쪽 사이드바의 그거"라고 말해도 에이전트가 추측할 필요가 없다. 사람과 에이전트 사이에 <b>공유 어휘</b>가 생긴다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">스킬 안의 전용 CLI <span class="ts">10:30</span></span>
+            <p>검증 스킬 안에 전용 명령줄 도구를 넣는다. 에이전트는 같은 CLI와 드라이버를 매번 다시 쓴다.</p>
+            <p class="verdict">매번 새로 짜지 않으니 <b>토큰을 덜 쓴다.</b> CLI 자체를 <b>테스트할 수도 있다.</b></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="formal">
+        <header><span class="num">09</span><h2>형식 검증과 속성 기반 테스트 <span class="ts">10:50</span></h2></header>
+        <p>팀은 최근 형식 검증<span class="en">formal verification</span>도 쓰기 시작했다. 형식 검증은 수학적 방법으로 시스템이 어떤 성질을 늘 지키는지 확인하는 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>도구</th><th>쓰는 곳</th></tr></thead>
+            <tbody>
+              <tr><td>TLA+</td><td>주요 사용자 흐름의 모델 검사<span class="en">model checking</span>. 예: 여러 기기와 플랫폼에 걸친 알림</td></tr>
+              <tr><td>Lean</td><td>알고리즘 증명. 예: 직접 만든 가상화 라이브러리에서 화면 깜빡임이나 떨림이 없는지 확인</td></tr>
+              <tr><td>Bombadil <span class="ts">11:30</span></td><td>UI용 속성 기반 테스트<span class="en">property-based testing</span>. 지켜야 할 성질을 적어 두면 도구가 조작을 대량으로 만들어 깨지는 경우를 찾는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 형식 검증으로 이미 버그를 꽤 찾았다고 한다. Bombadil도 UI 버그를 몇 개 잡았다고 한다.</p>
+        <p>하지만 발표자는 형식 검증이 만능이 아니라고 선을 긋는다. 팀은 아직 실험 중이다. 에이전트 환경에 더하는 또 하나의 층, 또 하나의 도구로 다룬다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="golden">
+        <header><span class="num">10</span><h2>테스트와 검증의 황금기 <span class="ts">11:50</span></h2></header>
+        <p>발표자는 Cindy라는 사람이 6개월 간격으로 쓴 트윗 두 개를 소개한다. 발표에서 성은 나오지 않았다.</p>
+        <div class="shift" aria-label="Cindy의 6개월 전과 지금">
+          <div><span class="tag">6개월 전</span><b>에이전트를 못 믿겠다</b><span class="muted">미묘한 버그가 계속 머지됐다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">지금</span><b>하루 토큰의 70%를 검증에 쓴다</b><span class="muted">빠져 있던 조각은 검증 과정이었다</span></div>
+        </div>
+        <p>발표자도 토큰 대부분을 검증에 쓴다고 말한다.</p>
+        <p>Cindy의 방법에는 새로운 기법이 없다. 모두 원래 있던 좋은 소프트웨어 공학 도구다. 다만 이해하고, 쓰고, 유지하기 어려워서 너무 비쌌을 뿐이다.</p>
+        <p>에이전트가 그 비용을 크게 낮췄다. 그래서 발표자는 지금을 <strong>테스트와 검증의 황금기</strong>라고 부른다. 예전에는 돈이 맞지 않던 수준까지 모든 것을 테스트할 수 있기 때문이다. <span class="ts">12:40</span></p>
+
+        <h3>의도를 확인하는 도구 <span class="ts">12:50</span></h3>
+        <p>형식 검증은 제품이 어떻게 동작해야 하는지 따져 보는 데도 도움이 된다. 에이전트가 의도와 목표를 정말 이해했는지도 확인할 수 있다.</p>
+        <p>발표자는 직접 만든 플러그인 P stack(potato stack, 추정)에 statechart라는 스킬을 넣었다. 이 스킬은 사용자 관점의 상태 기계를 그림으로 보여 준다. 발표자는 이 그림을 영상, 스크린샷과 함께 보면 리뷰가 훨씬 쉽다고 한다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="results">
+        <header><span class="num">11</span><h2>결과: 속도는 오르고 되돌림은 낮게 <span class="ts">13:20</span></h2></header>
+        <p>이 투자로 무엇을 얻었나. 발표자가 밝힌 Grokbot 팀의 수치다.</p>
+        <figure class="chart" aria-label="지난달 프로덕션에 배포한 PR 수: 팀 전체 11,000개, 발표자 혼자 3,000개">
+          <span class="chart-title">지난달 프로덕션에 배포한 PR (개)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>팀 전체</span><span class="val">11,000</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="팀 전체: PR 11,000개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>발표자 혼자</span><span class="val">3,000</span></div>
+              <div class="track"><div class="fill key" style="width:27.3%" title="발표자 혼자: PR 3,000개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>5,500</span><span>11,000</span></div>
+          <span class="caption">두 숫자 모두 발표자가 '지난달' 값이라고 말했다. 같은 달이라면 발표자 한 명이 팀 전체의 약 27%를 낸 셈이다(이 노트의 계산).</span>
+        </figure>
+        <ul class="plain">
+          <li><strong>릴리스</strong>: 안정 버전을 하루에 한 번꼴로 낸다.</li>
+          <li><strong>기여자</strong>: 10월에 PR을 하나 이상 낸 사람이 약 227명이다. 맥락을 많이 모르는 가끔 기여자도 포함된다. <span class="ts">14:00</span></li>
+          <li><strong>되돌림</strong><span class="en">revert</span>: 되돌린 PR의 비율은 오히려 줄었고, 약 0.5%에서 안정적이다. <span class="ts">14:20</span></li>
+          <li><strong>성능</strong>: 출시 때보다 여러 면에서 빨라졌다. 앱 시작, 타이핑, 새 채팅 열기, 채팅 전환이 모두 해당한다. <span class="ts">14:30</span></li>
+        </ul>
+        <p>발표자는 Grokbot이 아직 Electron 앱이라 성능에 한계가 있다고 인정한다. 그래도 다른 많은 에이전트 UI보다 이미 훨씬 빠르다고 주장한다.</p>
+        <p class="note">Grokbot은 발표자 회사의 제품이다. 위 수치와 "다른 에이전트 UI보다 빠르다"는 주장은 회사가 직접 낸 것이고, 비교 대상과 측정 방법은 발표에 나오지 않았다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="order">
+        <header><span class="num">12</span><h2>자동화는 기반을 다진 다음에 <span class="ts">15:10</span></h2></header>
+        <p>소프트웨어 공장을 짓고 모든 것을 자동화하기 전에, 발표자가 권하는 순서다.</p>
+        <ol class="plain">
+          <li>에이전트를 교정할 때는 먼저 코드베이스를 고친다.</li>
+          <li>린트 규칙으로 안티패턴이 새로 생기지 않게 막는다.</li>
+          <li>이미 있는 옛 패턴도 정리한다.</li>
+          <li>검증을 튼튼하게 만든다.</li>
+        </ol>
+        <blockquote>안쪽 코딩 루프가 슬롭을 만든다면, 그 루프를 자동화해도 슬롭이 더 늘어날 뿐이다.<cite>Lauren Tan, 15:30 발언을 옮김</cite></blockquote>
+        <p>그러면 문제에 토큰을 점점 더 쏟아부어야 하고, 비용이 커진다. 위의 작업 대부분은 어차피 자동화의 전제 조건이다.</p>
+        <p>코드베이스, 정적 분석, 런타임 검증과 형식 검증에 투자해 두면 많은 것이 가능해진다. 그 기반 위에 팀만의 공장을 쉽게 지을 수 있다고 발표자는 말한다.</p>
+
+        <h3>바깥 루프의 예 <span class="ts">16:00</span></h3>
+        <p>발표자는 바깥 루프<span class="en">outer loop</span>를 만드는 도구로 Grokbot을 소개한다. 커넥터, 루틴, 프로젝트 기능이 있고, 클라우드 에이전트를 띄워 에이전트 수백~수천 개를 조율할 수 있다고 한다.</p>
+        <p>발표자가 든 흐름은 이렇다. <span class="ts">16:20</span></p>
+        <ol class="plain">
+          <li>새 릴리스를 만든다.</li>
+          <li>Grokbot이 새 프로젝트를 자동으로 띄운다. 자막에는 "cursor project"로 들렸다.</li>
+          <li>그 프로젝트가 실제 사용자처럼 앱 전체를 써 보며 퍼징<span class="en">fuzzing</span>한다.</li>
+          <li>찾은 버그마다 수정 PR을 연다.</li>
+          <li>그 PR을 자동으로 머지한다.</li>
+        </ol>
+        <p>발표자는 코드베이스가 충분히 좋아서 PR이 기본적으로 좋게 나오기 때문에 자동 머지가 가능하다고 설명한다. 이제 제품 코드 대부분은 사람이 깊이 리뷰할 필요가 없다고 말한다.</p>
+        <p class="note">이 대목은 발표자 회사 제품의 소개다. 자동 머지가 안전하다는 판단도 발표자 팀의 자기 평가다.</p>
+        <p>발표자의 마무리는 이렇다. 기반이 튼튼하고 구조가 좋으면 슬롭을 금으로 바꿀 수 있고, 품질을 지키면서 빠르게 배포할 수 있다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트 시대 엔지니어의 일은 생산성을 크게 늘리면서 품질을 지키는 것이다. 열쇠는 환경에 투자해서 얻는 <strong>신뢰</strong>다.</li>
+          <li>투자 순서는 <strong>코드 자체 → 결정적 검사 → 검증 → 글</strong>이다. 규칙 문서는 마지막에 조금만 쓴다.</li>
+          <li>코드베이스는 에이전트의 가장 큰 입력이다. 나쁜 패턴은 '정해진 패턴'으로 보여서 복제된다.</li>
+          <li>에이전트를 교정할 때마다 규칙 문서에 한 줄을 더하지 말고 <strong>결정적 검사</strong>로 바꾼다.</li>
+          <li>잘 쓰려면 미묘한 판단이 필요한 API(useEffect)는 제품 코드에서 금지해 문제를 종류째 없앤다.</li>
+          <li>섞이면 안 되는 코드는 디렉토리로 나누고, 둘 사이의 import를 린트로 막는다.</li>
+          <li>주석은 낡고, 강제할 수 없고, 에이전트의 변명 장소가 된다. 대신 <strong>근본 원인을 알려 주는 린트 메시지</strong>를 쓴다.</li>
+          <li>리뷰는 영상, 스크린샷, 다이어그램, 형식 검증 같은 <strong>검증 산출물</strong>을 보는 일로 바뀐다. 피처 맵과 전용 CLI가 이를 돕는다.</li>
+          <li>검증 기법은 새롭지 않다. 에이전트가 비용을 낮춰서 지금이 <strong>테스트와 검증의 황금기</strong>다.</li>
+          <li>슬롭을 만드는 루프를 자동화하면 슬롭만 늘어난다. <strong>자동화는 기반을 다진 다음에</strong> 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 소프트웨어 엔지니어의 새 일은? 그걸 가능하게 하는 것은?</span></summary><div class="answer">생산성을 크게 늘리면서 코드 품질을 지키거나 높이는 방법을 찾는 것. 맹목적인 믿음이 아니라, 에이전트 환경에 투자해서 얻는 신뢰가 그걸 가능하게 한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>역피라미드의 네 층을 시간을 많이 쓰는 순서대로 말하면?</span></summary><div class="answer">코드 자체(API 설계, 아키텍처, 리팩터링) → 정적 검사와 테스트(린트, 타입, 컴파일러) → 검증(런타임, 형식) → 글(규칙, 스킬, AGENTS.md).</div></details>
+          <details><summary><span class="qn">Q3</span><span>에이전트를 교정할 때 규칙 문서 대신 결정적 검사를 쓰라는 이유는?</span></summary><div class="answer">코드에 들어간 규칙은 매번 똑같이 작동해서 재현할 수 있고 더 믿을 수 있다. 글로 쓴 규칙은 지켜진다는 보장이 없다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>에이전트 시대에 기술 부채와 안티패턴이 더 위험한 이유는?</span></summary><div class="answer">코드베이스가 에이전트의 가장 큰 입력이라서, 에이전트가 그것을 이 코드베이스의 정해진 패턴으로 보고 복제한다. 잡초처럼 금방 퍼진다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>useEffect 금지와 main/renderer import 금지가 공통으로 노리는 것은?</span></summary><div class="answer">리뷰에서 매번 잡아야 했던 실수를 규칙으로 아예 못 하게 만들어, 그 문제를 종류째 없앤다. 리뷰에서 신경 쓸 일이 하나씩 줄어든다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Cursor의 타이머 문제에서 진짜 원인은 무엇이었고, 주석은 어떤 역할을 했나?</span></summary><div class="answer">VS Code의 명령형 스타일과 React의 선언형 스타일이 부딪치는 아키텍처 문제였다. 타이머는 그걸 덮는 임시방편이었고, 에이전트가 단 주석이 그 임시방편을 정당화하면서 타이머가 퍼졌다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>Grokbot 팀이 주석의 99%를 금지한 이유 네 가지는?</span></summary><div class="answer">금방 낡는다. 사람이 잘 안 읽는다. 에이전트가 옳은 일을 피하는 핑계가 된다. 강제할 수 없다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>피처 맵과 스킬 안의 전용 CLI는 각각 무엇을 해결하나?</span></summary><div class="answer">피처 맵은 사람과 에이전트가 같은 기능 이름을 쓰게 해서 에이전트가 추측하지 않게 한다. 전용 CLI는 같은 드라이버를 매번 다시 써서 토큰을 아끼고, 그 자체를 테스트할 수 있게 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>TLA+, Lean, Bombadil은 각각 어디에 쓰였나?</span></summary><div class="answer">TLA+는 여러 기기와 플랫폼에 걸친 알림 같은 주요 사용자 흐름의 모델 검사. Lean은 직접 만든 가상화 라이브러리에 깜빡임이나 떨림이 없다는 증명. Bombadil은 UI 속성 기반 테스트.</div></details>
+          <details><summary><span class="qn">Q10</span><span>발표자가 지금을 테스트와 검증의 황금기라고 부르는 이유는?</span></summary><div class="answer">검증 기법 자체는 새롭지 않지만, 예전에는 이해하고 쓰고 유지하는 비용이 너무 컸다. 에이전트가 그 비용을 크게 낮춰서 모든 것을 훨씬 넓게 테스트할 수 있게 됐다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>속도가 빨라졌는데도 품질이 유지된다는 근거로 든 것은? 어떻게 읽어야 하나?</span></summary><div class="answer">되돌린 PR 비율이 상대적으로 줄어 약 0.5%에서 안정적이고, 앱 시작과 채팅 전환 등 성능이 출시 때보다 좋아졌다는 것. 회사가 자기 제품에 대해 낸 수치라 그 점을 감안해 읽는다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>소프트웨어 공장을 짓기 전에 먼저 할 일은? 순서를 건너뛰면 어떻게 되나?</span></summary><div class="answer">코드베이스를 고치고(린트로 새 안티패턴을 막고 옛 패턴을 정리), 검증을 튼튼하게 한다. 건너뛰면 슬롭을 만드는 루프를 자동화하게 되어 슬롭과 토큰 비용만 늘어난다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>최근 에이전트에게 한 교정 하나를 골라 린트 규칙이나 타입으로 바꾼다<span class="how">에러 메시지에 금지 이유와 올바른 방법을 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>새 린트 규칙을 켠 뒤 기존 위반 코드도 정리한다<span class="how">남겨 두면 에이전트가 그 코드를 정해진 패턴으로 보고 따라 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>잘못 쓰기 쉬운 API 목록을 만들고, 제품 코드에서 금지할지 정한다<span class="how">발표의 예: useEffect, 땜질용 타이머</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>섞이면 안 되는 코드를 디렉토리로 나누고 import를 막는다<span class="how">의존성 그래프 검사나 린트 규칙으로 강제한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>주석과 규칙 문서에서 "이번만 예외"라고 변명하는 문장을 찾는다<span class="how">그 예외가 아키텍처 문제를 덮고 있지 않은지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>에이전트가 앱을 직접 실행하고 확인하게 한다<span class="how">디버깅 도구를 열어 주고, 결과를 영상이나 스크린샷으로 받는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>사용자 관점의 피처 맵을 쓴다<span class="how">화면과 기능 이름을 정해 사람과 에이전트가 같은 말을 쓰게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>반복되는 검증 절차를 전용 CLI로 굳힌다<span class="how">확인: 에이전트가 매번 같은 도구를 쓰고, 그 도구에 테스트가 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>자동화 루프를 만들기 전에 되돌림 비율과 성능 지표를 잰다<span class="how">속도를 올린 뒤 품질이 떨어지는지 비교할 기준선이 된다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>슬롭 <span class="en">slop</span></td><td>대충 만든 질 낮은 결과물. AI가 쏟아 내는 엉성한 코드를 가리킬 때 많이 쓴다</td></tr>
+              <tr><td>결정적 검사 <span class="en">deterministic check</span></td><td>같은 코드면 늘 같은 결과를 내는 검사. 린트, 타입 검사, 컴파일러, 테스트</td></tr>
+              <tr><td>린트 규칙 <span class="en">lint rule</span></td><td>코드를 실행하지 않고 읽어서 금지된 패턴을 찾는 규칙</td></tr>
+              <tr><td>안티패턴 <span class="en">anti-pattern</span></td><td>흔히 쓰이지만 결국 문제를 일으키는 코드 습관</td></tr>
+              <tr><td>기술 부채 <span class="en">tech debt</span></td><td>당장 편하려고 미룬 정리 작업. 나중에 비용으로 돌아온다</td></tr>
+              <tr><td>AGENTS.md</td><td>저장소의 규칙을 에이전트에게 글로 알려 주는 파일</td></tr>
+              <tr><td>스킬 <span class="en">skill</span></td><td>에이전트가 특정 작업을 할 때 불러 쓰는 지침과 도구의 묶음</td></tr>
+              <tr><td>main / renderer</td><td>Electron(웹 기술로 데스크톱 앱을 만드는 프레임워크)에서 main은 앱 수명과 OS 기능을, renderer는 화면 그리기를 맡는다. 원래는 프로세스지만 발표에서는 스레드라고 불렀다</td></tr>
+              <tr><td>롱 태스크 <span class="en">long task</span></td><td>화면을 그리는 스레드를 50ms 넘게 붙잡는 작업. 그동안 입력에 반응하지 못한다</td></tr>
+              <tr><td>버벅임 <span class="en">jank</span></td><td>화면이 끊기거나 멈칫하는 현상</td></tr>
+              <tr><td>가비지 컬렉션 <span class="en">garbage collection</span></td><td>더는 쓰지 않는 메모리를 자동으로 치우는 작업. 크게 일어나면 앱이 잠깐 멈춘다</td></tr>
+              <tr><td>명령형 / 선언형</td><td>명령형<span class="en">imperative</span>은 무엇을 어떤 순서로 할지 직접 지시한다. 선언형<span class="en">declarative</span>은 원하는 결과 상태를 적고 프레임워크가 맞춰 준다</td></tr>
+              <tr><td>useEffect</td><td>React에서 화면을 그린 뒤 데이터 요청, 구독 같은 부수 효과를 실행하는 훅</td></tr>
+              <tr><td>런타임 검증 <span class="en">runtime verification</span></td><td>에이전트가 코드를 직접 실행하고 디버깅 도구로 동작을 확인하는 것</td></tr>
+              <tr><td>검증 산출물 <span class="en">verification artifact</span></td><td>작업이 맞게 됐다는 증거물. 영상, 스크린샷, 다이어그램, 형식 검증 결과</td></tr>
+              <tr><td>피처 맵 <span class="en">feature map</span></td><td>사용자 관점에서 앱의 기능을 모두 정리한 지도. 사람과 에이전트가 같은 이름을 쓰게 한다</td></tr>
+              <tr><td>형식 검증 <span class="en">formal verification</span></td><td>수학적 방법으로 시스템이 어떤 성질을 늘 지키는지 확인하는 것</td></tr>
+              <tr><td>모델 검사 <span class="en">model checking</span></td><td>시스템이 가질 수 있는 상태를 전부 탐색해 규칙 위반을 찾는 형식 검증 방법</td></tr>
+              <tr><td>TLA+</td><td>시스템 설계를 명세하고 모델 검사하는 언어</td></tr>
+              <tr><td>Lean</td><td>증명이 맞는지 컴퓨터가 검사해 주는 언어이자 증명 보조 도구</td></tr>
+              <tr><td>불변식 <span class="en">invariant</span></td><td>시스템이 언제나 지켜야 하는 성질</td></tr>
+              <tr><td>속성 기반 테스트 <span class="en">property-based testing</span></td><td>늘 성립해야 할 성질을 적어 두면 도구가 입력을 대량으로 만들어 깨지는 경우를 찾는 테스트</td></tr>
+              <tr><td>가상화 라이브러리</td><td>여기서는 긴 목록에서 화면에 보이는 항목만 그려 성능을 지키는 라이브러리로 보인다(추정)</td></tr>
+              <tr><td>statechart</td><td>시스템의 상태와 상태 사이의 이동을 그린 상태 기계를, 계층과 병렬로 확장한 표기법</td></tr>
+              <tr><td>퍼징 <span class="en">fuzzing</span></td><td>예상 밖의 입력이나 조작을 대량으로 넣어 버그를 찾는 테스트</td></tr>
+              <tr><td>안쪽 루프 / 바깥 루프</td><td>안쪽 루프<span class="en">inner loop</span>는 코드를 쓰고 확인하는 기본 반복이다. 바깥 루프<span class="en">outer loop</span>는 그 위에서 여러 에이전트를 띄우고 조율하는 반복이다</td></tr>
+              <tr><td>되돌림 <span class="en">revert</span></td><td>머지한 변경을 문제 때문에 다시 빼는 것</td></tr>
+              <tr><td>소프트웨어 공장 <span class="en">software factory</span></td><td>에이전트가 코드 작성부터 머지까지 대량으로 자동 처리하는 체계</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>지난달 PR 3,000개</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>'코딩 기계'와 Bret Taylor</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>주장: 품질을 지키며 생산성 높이기</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>소프트웨어 공장보다 신뢰</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>역피라미드: 코드, 결정적 검사, 검증, 글</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>코드베이스는 가장 큰 입력</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>정원 비유: PR 3개에서 300개로</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>안티패턴은 복제된다</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>Dune 소개</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>제품 코드에서 useEffect 금지</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>디렉토리 구조로 맥락 주기: main과 renderer</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>에이전트가 마크다운에 변명을 쓴다</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>Cursor의 타이머 문제</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>주석 99% 금지</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>근본 원인을 알려 주는 린트 메시지</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>교정을 결정적 검사로 바꾸기</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>리뷰 대신 검증 산출물</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>런타임 검증과 피처 맵</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>스킬 안의 전용 CLI</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>형식 검증: TLA+와 Lean</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>Bombadil로 UI 속성 기반 테스트</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>Cindy의 트윗: 토큰 70%가 검증</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>테스트와 검증의 황금기</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>statechart 스킬</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>결과: 팀 PR 11,000개, 하루 한 번 릴리스</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>기여자 약 227명</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>되돌림 비율 약 0.5%</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>성능 개선</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>자동화보다 코드베이스 먼저</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>Grokbot으로 바깥 루프 만들기</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>릴리스마다 퍼징하고 자동 머지</td></tr>
+              <tr><td><span class="ts">16:50</span></td><td>마무리: 슬롭을 금으로</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'O_zcc6Xl12g:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

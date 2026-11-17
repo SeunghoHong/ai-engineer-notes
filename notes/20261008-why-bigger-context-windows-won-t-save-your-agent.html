@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>컨텍스트 엔지니어링 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- code example ---------- */
+pre {
+  margin: 0; padding: 14px 16px; overflow-x: auto;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.6;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#myth">무한 컨텍스트 창은 신화다</a></li>
+      <li><a href="#bigger">창을 키우면 해결될까</a></li>
+      <li><a href="#engineering">컨텍스트 엔지니어링</a></li>
+      <li><a href="#strategies">네 가지 전략</a></li>
+      <li><a href="#conversation">대화 관리자로 줄이기</a></li>
+      <li><a href="#memory">기억을 세 층으로</a></li>
+      <li><a href="#pointer">메모리 포인터</a></li>
+      <li><a href="#swarm">에이전트끼리는 포인터만</a></li>
+      <li><a href="#loop">도구 무한 반복 막기</a></li>
+      <li><a href="#async">느린 외부 API는 비동기로</a></li>
+      <li><a href="#antipatterns">피해야 할 패턴</a></li>
+      <li><a href="#playbook">상황별 처방</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 에이전트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-08 · 16분 · 영어 발표 한글 정리</span>
+      <h1>큰 컨텍스트 창이 에이전트를 구하지 못하는 이유</h1>
+      <p class="lead">도구가 큰 데이터를 돌려줄 때마다 에이전트의 컨텍스트 창은 불어난다. 창을 키워도 모델은 긴 입력의 가운데를 놓친다. 발표자는 데이터를 밖에 두고, 필요한 것만 고르고, 줄이고, 에이전트끼리 나누는 방법을 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=DrfyORO8RqA" target="_blank" rel="noopener">Why Bigger Context Windows Won't Save Your Agent</a></span>
+        <span>발표: Elizabeth Fuentes Leone (AWS)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 주장은 모두 발표자의 것이고 따로 확인하지 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다(Strands, Amazon Bedrock, Neo4j, API Gateway, MCP). 슬라이드의 코드는 자막에 없다. 그래서 노트의 코드는 모두 같은 구조로 다시 쓴 예시다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>도구가 로그 같은 큰 데이터를 돌려줄 때마다 <strong>컨텍스트 창이 불어난다.</strong> 창이 넘치면 모델이 환각을 일으키고 필요한 정보를 잘 못 찾는다.</li>
+        <li><strong>창을 키우는 건 답이 아니다.</strong> 모델은 긴 입력의 앞과 끝만 잘 기억하고 가운데를 놓친다.</li>
+        <li>해법은 컨텍스트 엔지니어링이다. 전략은 네 가지다. <strong>외부화, 선택, 압축, 분리.</strong></li>
+        <li>압축: <strong>대화 관리자</strong>로 최근 메시지는 남기고 오래된 메시지는 요약한다. 기억은 단기, 장기, 그래프의 세 층으로 나눈다.</li>
+        <li>외부화: 큰 도구 결과는 저장소에 넣고 <strong>컨텍스트에는 포인터 ID만</strong> 남긴다. 여러 에이전트도 컨텍스트 대신 포인터를 나눈다.</li>
+        <li>같은 도구를 끝없이 부르면 <strong>호출 횟수 제한</strong>으로 막는다. 느린 외부 API는 <strong>비동기</strong>로 부른다.</li>
+        <li>피할 것: <strong>다 넣기, 단순 요약, 컨텍스트 오염.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="myth">
+        <header><span class="num">01</span><h2>무한 컨텍스트 창은 신화다 <span class="ts">00:30</span></h2></header>
+        <p>발표자는 "무한한 컨텍스트 창은 신화"라는 말로 시작한다. 에이전트 시스템은 도구가 큰 데이터를 돌려줄 때 무너진다.</p>
+        <p><strong>컨텍스트 창</strong> <span class="en">context window</span>은 모델이 한 번에 읽는 입력 공간이다. 지시문, 대화 기록, 도구 결과가 모두 여기에 들어간다. 이 공간이 넘치면 모델이 없는 내용을 지어내기 시작한다. 이를 환각 <span class="en">hallucination</span>이라 한다. 창 안의 정보를 찾아 쓰는 능력 <span class="en">recall</span>도 떨어진다.</p>
+
+        <h3>예: 로그를 감시하는 에이전트 <span class="ts">01:10</span></h3>
+        <ol class="plain">
+          <li>에이전트가 애플리케이션을 감시하려고 로그를 가져온다.</li>
+          <li>가져온 로그는 컨텍스트 창에 들어간다.</li>
+          <li>같은 세션에서 다시 부르면 앞의 기록을 모두 안고 시작한다.</li>
+          <li>그래서 창은 부를 때마다 커진다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">에이전트의 기억 = 컨텍스트 창</span>
+          <span>에이전트는 지난 대화를 컨텍스트 창에 다시 넣는 방식으로 기억한다. 기억할 것이 늘수록 창도 커진다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="bigger">
+        <header><span class="num">02</span><h2>창을 키우면 해결될까 <span class="ts">01:50</span></h2></header>
+        <p>발표자에 따르면 약 1년 전에는 "창을 키워 토큰을 더 넣으면 된다"고 봤다. 에이전트가 본격적으로 쓰이기 전 이야기다. 지금은 그게 틀렸다는 걸 안다고 발표자는 말한다.</p>
+
+        <h3>U자 주의 곡선 <span class="ts">02:10</span></h3>
+        <p>데이터가 아주 크면 모델은 창의 가운데를 잊는다. 처음과 마지막에 넣은 내용만 잘 기억한다. 위치별로 기억하는 정도를 그리면 U자 모양이 된다. 그래서 U자 주의 곡선 <span class="en">attention U-curve</span>이라 부른다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>창 안의 위치</th><th>모델이 기억하는 정도</th></tr></thead>
+            <tbody>
+              <tr><td>앞부분</td><td>잘 기억한다</td></tr>
+              <tr><td>가운데</td><td>잘 놓친다</td></tr>
+              <tr><td>끝부분</td><td>잘 기억한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>창을 키워 더 많이 넣으면 놓치는 가운데도 같이 길어진다. 문제는 창의 크기가 아니다. <strong>창에 무엇을 넣느냐</strong>가 문제다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="engineering">
+        <header><span class="num">03</span><h2>컨텍스트 엔지니어링 <span class="ts">02:40</span></h2></header>
+        <blockquote>컨텍스트 엔지니어링은 모델에게 필요한 정보를, 필요한 때에 주는 일이다.<cite>발표자의 정의를 옮김</cite></blockquote>
+        <p>창에 모든 정보를 넣으면 안 되는 이유는 두 가지다.</p>
+        <ul class="plain">
+          <li><strong>다 필요하지 않다.</strong> 에이전트가 매번 창 안의 모든 정보를 쓰지는 않는다.</li>
+          <li><strong>창이 모델을 오염시킬 수 있다.</strong> 창 안에 프롬프트 인젝션 <span class="en">prompt injection</span>이 섞여 들어올 수 있다. 입력 속에 숨긴 지시문으로 모델을 조종하는 공격이다.</li>
+        </ul>
+        <p>컨텍스트 엔지니어링은 창에 넣을 것을 골라 담는 일이다. 목표는 두 가지다. 결과의 품질을 높이고, 토큰 사용량을 줄인다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="strategies">
+        <header><span class="num">04</span><h2>네 가지 전략 <span class="ts">03:10</span></h2></header>
+        <p>발표자는 기법들을 네 가지 전략으로 묶었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>전략</th><th>하는 일</th><th>발표에서 다룬 기법</th></tr></thead>
+            <tbody>
+              <tr><td>외부화 <span class="en">Externalize</span></td><td>큰 데이터를 영구 저장소로 옮긴다. 창에는 그 위치를 가리키는 포인터만 둔다</td><td><a href="#pointer">메모리 포인터</a></td></tr>
+              <tr><td>선택 <span class="en">Select</span></td><td>지금 필요한 것만 꺼내 온다</td><td><a href="#memory">장기 기억 검색</a>, <a href="#pointer">포인터로 원문 꺼내기</a></td></tr>
+              <tr><td>압축 <span class="en">Compress</span></td><td>요약하거나 줄여서 토큰을 아낀다</td><td><a href="#conversation">대화 관리자</a></td></tr>
+              <tr><td>분리 <span class="en">Isolate</span></td><td>에이전트마다 컨텍스트를 따로 둔다</td><td><a href="#swarm">Swarm과 호출 상태</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">세 번째 열의 연결은 발표 흐름을 보고 이 노트가 정리한 것이다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="conversation">
+        <header><span class="num">05</span><h2>대화 관리자로 오래된 대화 줄이기 <span class="ts">04:00</span></h2></header>
+        <p>가장 쉬운 기법부터 시작한다. 대화 관리자 <span class="en">conversation manager</span>는 대화 기록이 창을 얼마나 차지할지 정하는 장치다. 발표자는 Strands Agents라는 프레임워크로 보여 줬다. AWS가 관리하는 오픈소스이고, 무료이며, 특정 모델에 묶이지 않는다고 소개했다.</p>
+        <p class="note">발표자는 AWS 소속이고 Strands Agents는 AWS가 관리하는 프레임워크다. 기본 모델 제공자도 AWS의 Amazon Bedrock이다. 예시가 모두 자사 도구 기준이라는 점을 감안해 읽자. 네 가지 전략 자체는 프레임워크와 상관없이 쓸 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Strands의 대화 관리 방식</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>슬라이딩 윈도 <span class="en">sliding window</span></td><td>가장 최근 메시지만 남긴다</td></tr>
+              <tr><td>요약 <span class="en">summarization</span></td><td>오래된 메시지를 요약해 남긴다</td></tr>
+              <tr><td>둘의 조합</td><td>오래된 메시지는 요약하고, 최근 메시지는 그대로 둔다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">자막으로는 두 번째와 세 번째의 차이가 분명하지 않다. 아래 06:00의 설정 예는 세 번째 설명과 같은 동작이다.</p>
+
+        <h3>Strands 에이전트는 코드 한 줄 <span class="ts">05:10</span></h3>
+        <ul class="plain">
+          <li>코드 한 줄로 에이전트 루프 <span class="en">agent loop</span>가 만들어진다. 노드나 그래프를 직접 짤 필요가 없다.</li>
+          <li>넣을 것은 시스템 프롬프트와 도구 목록이다.</li>
+          <li>기본으로는 Amazon Bedrock을 통해 모델을 부른다.</li>
+          <li>Llama, Gemini, Anthropic, OpenAI 같은 다른 모델도 쓸 수 있다. 해당 라이브러리를 불러오고 모델을 지정하는 줄 하나만 더하면 된다고 발표자는 말했다.</li>
+        </ul>
+
+        <h3>요약 대화 관리자 설정 <span class="ts">06:00</span></h3>
+        <p>대화 관리자를 붙이는 것도 한 줄이다. 발표 예에서는 두 값을 정했다.</p>
+        <ul class="plain">
+          <li>요약 비율 <span class="en">summary ratio</span>: 50%</li>
+          <li>그대로 남길 최근 메시지: 4개</li>
+        </ul>
+        <p>이렇게 하면 같은 세션에서 에이전트를 부를 때마다 창이 관리된다. 최근 메시지 4개는 원문으로 남고, 나머지는 요약된다.</p>
+        <p class="note">예시. Strands Python SDK 기준으로 다시 쓴 코드다. 인자 이름은 쓰기 전에 공식 문서로 확인한다.</p>
+<pre><code>from strands import Agent
+from strands.agent.conversation_manager import SummarizingConversationManager
+
+agent = Agent(
+    system_prompt="애플리케이션 로그를 감시하고 이상을 알린다.",
+    tools=[fetch_application_logs, summarize_logs],  # 07절 메모리 포인터 예시의 도구
+    conversation_manager=SummarizingConversationManager(
+        summary_ratio=0.5,           # 요약 비율 50%
+        preserve_recent_messages=4,  # 최근 메시지 4개는 원문 유지
+    ),
+)</code></pre>
+      </section>
+
+      <!-- 6 -->
+      <section id="memory">
+        <header><span class="num">06</span><h2>기억을 세 층으로 나누기 <span class="ts">06:30</span></h2></header>
+        <p>대화 관리자는 지금 세션 안에서만 통한다. 세션이 바뀌거나 오래 남길 기억이 많으면 층을 나눠 저장한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기억</th><th>담는 것</th><th>저장 방식</th></tr></thead>
+            <tbody>
+              <tr><td>단기 기억 <span class="en">short-term</span></td><td>지금 세션의 최근 대화</td><td>컨텍스트 창. 대화 관리자로 크기를 관리한다</td></tr>
+              <tr><td>장기 기억 <span class="en">long-term</span> <span class="ts">07:00</span></td><td>지난 세션에서 남길 만한 내용</td><td>벡터 데이터베이스. 서로 다른 프롬프트로 대화를 읽어 여러 종류의 기억을 만든다</td></tr>
+              <tr><td>관계 기억 <span class="en">relational</span> <span class="ts">07:20</span></td><td>대상끼리 어떻게 이어지는지</td><td>엔티티 그래프. 연결을 따라가며 찾는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>세 가지를 함께 쓸 수 있다. 세션 안에서는 단기 기억을 쓴다. 지난 일은 장기 기억에서 꺼낸다. 관계로 남길 정보는 그래프 기억에 둔다.</p>
+        <p class="note">발표자는 그래프 기억을 짧게 넘겼다. 자세한 내용은 행사장의 Neo4j 쪽에 물어보라고 했다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="pointer">
+        <header><span class="num">07</span><h2>메모리 포인터: 큰 데이터는 밖에 두기 <span class="ts">08:00</span></h2></header>
+        <p>로그 감시 에이전트로 돌아간다. 에이전트를 부를 때마다 로그를 창에 넣고 싶지는 않다. 그럴 때 메모리 포인터 <span class="en">memory pointer</span>를 쓴다.</p>
+        <ol class="plain">
+          <li>도구가 로그 묶음을 가져온다.</li>
+          <li>다른 도구가 그 로그를 저장소에 넣는다. 저장소는 ID를 돌려준다.</li>
+          <li>Strands에서는 이 저장소로 에이전트 상태 <span class="en">agent state</span>를 쓴다.</li>
+          <li>창에는 ID만 남는다. 이 ID가 메모리 포인터다.</li>
+          <li>로그를 읽는 또 다른 도구가 에이전트에게 핵심만 알려 준다. 에이전트는 원문 없이도 상황을 안다.</li>
+          <li>원문이 꼭 필요하면 에이전트가 ID를 대고 로그를 다시 꺼낸다.</li>
+        </ol>
+        <div class="shift" aria-label="메모리 포인터 적용 전후">
+          <div><span class="tag">전</span><b>로그 원문이 창에 쌓인다</b><span class="muted">부를 때마다 창이 커지고 가운데 내용은 묻힌다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">후</span><b>포인터 ID와 핵심만 남는다</b><span class="muted">원문은 저장소에 있고, 필요할 때만 꺼낸다</span></div>
+        </div>
+
+        <h3>코드로 보면 <span class="ts">09:10</span></h3>
+        <p>발표 슬라이드에서는 <code>@tool</code> 데코레이터로 도구 두 개를 만들었다. 그중 로그를 가져오는 도구(fetch application logs)가 도구 컨텍스트로 에이전트 상태에 접근한다. 거기에 로그를 저장하고 포인터 ID를 만든다. 이 ID만 창에 남는다.</p>
+        <p class="note">예시. 슬라이드 코드를 옮긴 것이 아니라 같은 구조로 다시 쓴 것이다. <code>read_log_store</code>는 로그 저장소에서 읽는 함수라고 가정했다.</p>
+<pre><code>from strands import tool, ToolContext
+
+@tool(context=True)
+def fetch_application_logs(app_name: str, tool_context: ToolContext) -&gt; str:
+    """로그를 가져와 에이전트 상태에 저장하고 포인터 ID만 돌려준다."""
+    logs = read_log_store(app_name)
+    pointer_id = f"logs:{app_name}"
+    tool_context.agent.state.set(pointer_id, logs)
+    return f"로그 {len(logs)}줄을 저장했다. 포인터: {pointer_id}"
+
+@tool(context=True)
+def summarize_logs(pointer_id: str, tool_context: ToolContext) -&gt; str:
+    """포인터로 로그를 꺼내 핵심만 돌려준다. 원문은 창에 넣지 않는다."""
+    logs = tool_context.agent.state.get(pointer_id)
+    errors = [line for line in logs if "ERROR" in line]
+    return f"전체 {len(logs)}줄 중 에러 {len(errors)}줄. 최근 에러: {errors[-3:]}"</code></pre>
+      </section>
+
+      <!-- 8 -->
+      <section id="swarm">
+        <header><span class="num">08</span><h2>에이전트끼리는 포인터만 나눈다 <span class="ts">09:40</span></h2></header>
+        <p>도구만으로 부족할 만큼 애플리케이션이 복잡하면 에이전트를 여러 개 쓴다. Strands에서는 Swarm으로 여러 에이전트를 묶는다.</p>
+        <div class="callout warn">
+          <span class="title">컨텍스트 창을 통째로 나누지 않는다</span>
+          <span>발표자는 이를 다른 에이전트에게 쓰레기를 넘기는 일에 비유했다. 모든 에이전트가 서로의 정보를 다 필요로 하지는 않는다.</span>
+        </div>
+        <p>대신 호출 상태 <span class="en">invocation state</span>를 쓴다. 한 번의 호출 동안 여러 에이전트가 함께 보는 공유 값이다.</p>
+        <ol class="plain">
+          <li>Swarm 안에서 큰 데이터를 저장하고 ID를 하나 만든다.</li>
+          <li>그 메모리 포인터를 호출 상태에 싣는다.</li>
+          <li>에이전트들은 창이 아니라 호출 상태로 포인터를 주고받는다.</li>
+          <li>원문이 필요한 에이전트만 포인터로 꺼내 쓴다.</li>
+        </ol>
+      </section>
+
+      <!-- 9 -->
+      <section id="loop">
+        <header><span class="num">09</span><h2>도구 무한 반복 막기 <span class="ts">10:40</span></h2></header>
+        <p>에이전트가 같은 도구를 끝없이 다시 부르며 루프에서 못 빠져나올 때가 있다. 발표자가 짚은 원인은 도구가 분명한 답을 돌려주지 않는 경우다. 대책은 두 가지다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">대책 1 · 분명한 도구 응답</span>
+            <p>도구가 무엇을 했고 결과가 어떤지 분명히 돌려주게 만든다. 에이전트가 같은 도구를 다시 부를 이유가 사라진다.</p>
+            <p class="verdict"><b>예시</b>: 검색 결과가 없을 때 빈 값 대신 "결과 없음"이라고 분명히 돌려준다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">대책 2 · 호출 횟수 제한 <span class="ts">11:20</span></span>
+            <p>도구마다 최대 호출 횟수를 정한다. 발표 예에서는 항공편 검색 도구(추정)를 3번까지만 부를 수 있게 했다. 다른 도구도 3번으로 묶었다.</p>
+            <p class="verdict">한도에 닿으면 에이전트는 그 도구를 더 부르지 못한다. <b>끝없는 내부 루프가 생기지 않는다.</b></p>
+          </div>
+        </div>
+        <p class="note">"항공편 검색 도구"는 자막의 "search fly"를 보고 추정한 이름이다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="async">
+        <header><span class="num">10</span><h2>느린 외부 API는 비동기로 <span class="ts">11:50</span></h2></header>
+        <p>이 기법은 컨텍스트 창을 직접 줄이지 않는다. 대신 창을 쓰는 에이전트가 멈추지 않게 돕는다.</p>
+        <p>MCP 도구나 외부 API가 제때 답하지 않을 때가 있다. 예를 들어 AWS API Gateway는 응답을 기다리는 최대 시간이 정해져 있다. 그 시간을 넘기면 지연 때문에 애플리케이션이 멈춘다.</p>
+        <div class="shift" aria-label="동기 호출과 비동기 호출 비교">
+          <div><span class="tag">동기 <span class="en">synchronous</span></span><b>답이 올 때까지 기다린다</b><span class="muted">에이전트는 외부 API의 답을 하염없이 기다린다. 게이트웨이 제한 시간에 걸리면 앱이 멈춘다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">비동기 <span class="en">async</span></span><b>작업을 시작만 하고 나중에 확인한다</b><span class="muted">결과는 저장해 두고, 다음 호출 때나 필요할 때 가져온다</span></div>
+        </div>
+
+        <h3>MCP 서버로 만들기 <span class="ts">13:00</span></h3>
+        <p>발표자는 MCP 서버에 도구 두 개를 만들었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>도구</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>작업 시작 <span class="en">start job</span></td><td>외부 작업을 시작하고 작업 ID를 돌려준다</td></tr>
+              <tr><td>작업 상태 확인 <span class="en">check job status</span></td><td>작업 ID로 진행 상태나 결과를 확인한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>서버는 FastAPI로 만들었다고 들린다. MCP 서버라는 점에서 FastMCP일 수도 있다(추정). 어느 쪽이든 도구만 정의하면 된다고 발표자는 말했다.</p>
+        <p>발표자는 비동기 처리를 여러 번 시험해 봤고 차이가 컸다고 말했다. 에이전트가 답을 기다리느라 멈추지 않고 계속 응답했다고 한다. 구체적인 수치는 말하지 않았다. 비동기가 맞는지는 만드는 서비스에 따라 다르다고 덧붙였다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="antipatterns">
+        <header><span class="num">11</span><h2>피해야 할 패턴 3가지 <span class="ts">13:40</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>패턴</th><th>무슨 일이 생기나</th><th>대신 쓸 기법</th></tr></thead>
+            <tbody>
+              <tr><td>다 넣기 <span class="en">context stuffing</span></td><td>혹시 몰라 모든 것을 창에 넣는다. 모델은 답에 필요한 것만 있으면 된다</td><td>선택, 메모리 포인터</td></tr>
+              <tr><td>단순 요약 <span class="en">naive summarization</span></td><td>대충 요약하면 모델이 답하는 데 필요한 정보가 빠진다</td><td>최근 메시지는 원문 유지, 원문은 포인터로 보관</td></tr>
+              <tr><td>컨텍스트 오염 <span class="en">context pollution</span></td><td>필요 없는 정보까지 에이전트에 넘긴다. 발표자는 여기서도 "다 넘기지 말라"고 반복했다</td><td>분리, 포인터만 공유</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">자막에는 "native summarization", "context population"으로 들린다. 설명을 보면 naive summarization, context pollution이다. 세 번째 열은 앞의 기법과 이 노트가 연결한 것이다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="playbook">
+        <header><span class="num">12</span><h2>상황별 처방 <span class="ts">14:30</span></h2></header>
+        <p>발표 마지막 정리를 상황과 처방으로 옮겼다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>상황</th><th>처방</th></tr></thead>
+            <tbody>
+              <tr><td>도구가 큰 데이터를 돌려준다</td><td>로그, DB 결과, 경보 정보 같은 것. 외부화와 선택을 쓰고 메모리 포인터로 넘긴다</td></tr>
+              <tr><td>여러 에이전트가 같은 큰 데이터를 쓴다</td><td>호출 상태로 포인터를 나눈다</td></tr>
+              <tr><td>에이전트가 같은 도구를 계속 부른다</td><td>도구가 분명한 답을 주게 하고, 호출 횟수를 제한한다</td></tr>
+              <tr><td>외부 API가 느리다</td><td>비동기로 부르고 결과는 나중에 확인한다</td></tr>
+              <tr><td>대화가 길어진다</td><td>대화 관리자로 최근 메시지는 남기고 오래된 메시지는 요약한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">마지막 줄은 발표 마지막 정리에 없다. 04:00의 내용을 이 노트가 더했다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>도구가 큰 데이터를 돌려줄 때마다 컨텍스트 창이 불어난다. 넘치면 환각이 생기고 recall이 떨어진다.</li>
+          <li><strong>창을 키워도 해결되지 않는다.</strong> 모델은 긴 입력의 앞과 끝만 잘 기억하고 가운데를 놓친다.</li>
+          <li>컨텍스트 엔지니어링은 <strong>필요한 정보를 필요한 때에</strong> 주는 일이다. 품질과 토큰 비용을 함께 잡는다.</li>
+          <li>전략은 네 가지다. <strong>외부화, 선택, 압축, 분리.</strong></li>
+          <li>가장 쉬운 출발점은 대화 관리자다. 최근 메시지는 남기고 오래된 메시지는 버리거나 요약한다.</li>
+          <li>기억은 세 층으로 나눈다. 세션 안의 단기 기억, 벡터 DB의 장기 기억, 그래프의 관계 기억.</li>
+          <li>큰 도구 결과는 저장소에 두고 창에는 <strong>포인터 ID만</strong> 남긴다. 원문은 필요할 때 ID로 꺼낸다.</li>
+          <li>여러 에이전트가 창을 통째로 나누면 쓰레기를 나누는 셈이다. <strong>포인터를 호출 상태로</strong> 나눈다.</li>
+          <li>같은 도구를 끝없이 부르는 루프는 <strong>분명한 도구 응답과 호출 횟수 제한</strong>으로 막는다.</li>
+          <li>느린 외부 API는 <strong>비동기</strong>로 부른다. 그리고 다 넣기, 단순 요약, 컨텍스트 오염을 피한다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>로그 감시 에이전트의 컨텍스트 창은 왜 부를 때마다 커지나?</span></summary><div class="answer">가져온 로그가 창에 들어가고, 같은 세션의 다음 호출은 앞의 기록을 모두 안고 시작하기 때문이다. 에이전트는 창에 지난 대화를 다시 넣는 방식으로 기억한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>U자 주의 곡선이란 무엇이고, 왜 창을 키워도 소용없나?</span></summary><div class="answer">긴 입력에서 모델이 앞과 끝은 잘 기억하고 가운데는 놓치는 경향이다. 창을 키워 더 많이 넣으면 놓치는 가운데도 같이 길어진다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>발표자가 말한 컨텍스트 엔지니어링의 정의는?</span></summary><div class="answer">모델에게 필요한 정보를 필요한 때에 주는 일. 결과 품질과 토큰 사용량을 함께 최적으로 만드는 것이 목표다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>창에 모든 정보를 넣으면 안 되는 이유 두 가지는?</span></summary><div class="answer">에이전트가 매번 모든 정보를 쓰지는 않는다. 그리고 창 안에 프롬프트 인젝션이 섞여 들어와 모델을 오염시킬 수 있다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>네 가지 전략의 이름과 각각이 하는 일은?</span></summary><div class="answer">외부화: 큰 데이터를 저장소로 옮긴다. 선택: 필요한 것만 꺼낸다. 압축: 요약해 토큰을 줄인다. 분리: 에이전트마다 컨텍스트를 따로 둔다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>발표의 요약 대화 관리자 설정에서 50%와 4는 무엇인가?</span></summary><div class="answer">50%는 요약 비율이고, 4는 원문으로 남길 최근 메시지 수다. 최근 4개는 그대로 두고 나머지를 요약한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>단기, 장기, 관계 기억은 각각 어디에 두나?</span></summary><div class="answer">단기 기억은 컨텍스트 창(대화 관리자로 관리), 장기 기억은 벡터 데이터베이스, 관계 기억은 엔티티 그래프.</div></details>
+          <details><summary><span class="qn">Q8</span><span>메모리 포인터를 쓰면 창에는 무엇이 남고, 원문은 어떻게 다시 보나?</span></summary><div class="answer">창에는 포인터 ID와 핵심 요약만 남는다. 원문이 꼭 필요하면 에이전트가 ID를 대고 저장소(Strands에서는 에이전트 상태)에서 꺼낸다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Swarm에서 컨텍스트 창을 통째로 나누면 안 되는 이유와 대안은?</span></summary><div class="answer">모든 에이전트가 서로의 정보를 다 필요로 하지 않아서, 쓰레기를 나누는 셈이 된다. 대신 메모리 포인터를 호출 상태에 실어 나눈다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>에이전트가 같은 도구를 끝없이 부를 때 쓰는 두 가지 대책은?</span></summary><div class="answer">도구가 분명한 답을 돌려주게 만든다. 그리고 도구마다 최대 호출 횟수를 정한다(발표 예에서는 3번).</div></details>
+          <details><summary><span class="qn">Q11</span><span>느린 외부 API를 비동기로 부를 때 필요한 도구 두 개는?</span></summary><div class="answer">작업을 시작하고 ID를 돌려주는 도구, 그리고 ID로 상태나 결과를 확인하는 도구. 에이전트는 기다리느라 멈추지 않는다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 꼽은 피해야 할 패턴 3가지는?</span></summary><div class="answer">다 넣기(context stuffing), 단순 요약(naive summarization), 컨텍스트 오염(context pollution).</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 에이전트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>큰 데이터를 돌려주는 도구를 찾는다<span class="how">확인: 도구 응답 하나가 창에서 차지하는 토큰 수</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>대화 관리 방식을 정한다<span class="how">슬라이딩 윈도인지 요약인지, 원문으로 남길 최근 메시지가 몇 개인지</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>큰 도구 결과는 저장하고 포인터 ID만 돌려준다<span class="how">확인: 같은 로그를 여러 번 불러도 창이 거의 늘지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>원문을 다시 꺼내는 도구를 따로 둔다<span class="how">평소에는 요약만 쓰고, 원문은 꼭 필요할 때만</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>세션을 넘는 기억을 따로 저장한다<span class="how">지난 일은 장기 기억, 대상끼리의 관계는 그래프 기억</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>멀티 에이전트는 창 대신 포인터를 공유한다<span class="how">확인: 각 에이전트 창에 그 에이전트가 쓰지 않는 데이터가 들어가 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>도구마다 최대 호출 횟수를 둔다<span class="how">빈 결과나 실패도 분명한 문장으로 돌려주게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>오래 걸리는 외부 호출은 시작과 상태 확인으로 나눈다<span class="how">확인: 게이트웨이 제한 시간보다 오래 걸리는 호출이 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>요약 뒤에 빠진 정보가 없는지 점검한다<span class="how">요약만 보고 답한 결과와 원문을 보고 답한 결과를 비교한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>컨텍스트 창</td><td>Context window. 모델이 한 번에 읽을 수 있는 입력의 크기. 지시문, 대화 기록, 도구 결과가 모두 여기에 들어간다</td></tr>
+              <tr><td>토큰</td><td>Token. 모델이 글을 나눠 세는 단위. 창의 크기와 비용을 이 단위로 잰다</td></tr>
+              <tr><td>컨텍스트 엔지니어링</td><td>Context engineering. 모델에게 필요한 정보를 필요한 때에 주도록 창에 넣을 것을 설계하는 일</td></tr>
+              <tr><td>환각</td><td>Hallucination. 모델이 사실이 아닌 내용을 그럴듯하게 지어내는 것</td></tr>
+              <tr><td>recall</td><td>창 안에 있는 정보를 제대로 찾아 쓰는 능력</td></tr>
+              <tr><td>U자 주의 곡선</td><td>Attention U-curve. 긴 입력에서 앞과 끝은 잘 기억하고 가운데는 놓치는 경향</td></tr>
+              <tr><td>프롬프트 인젝션</td><td>입력 안에 지시문을 숨겨 모델이 원래 지시 대신 그걸 따르게 만드는 공격</td></tr>
+              <tr><td>에이전트 루프</td><td>Agent loop. 모델이 판단하고, 도구를 부르고, 결과를 읽는 과정을 반복하는 구조</td></tr>
+              <tr><td>대화 관리자</td><td>Conversation manager. 대화 기록이 창을 얼마나 차지할지 관리하는 장치</td></tr>
+              <tr><td>슬라이딩 윈도</td><td>Sliding window. 최근 메시지 몇 개만 남기고 오래된 것은 버리는 방식</td></tr>
+              <tr><td>단기 / 장기 기억</td><td>단기: 지금 세션의 최근 대화. 장기: 세션이 끝나도 저장해 두었다가 다음 세션에 꺼내 쓰는 기억</td></tr>
+              <tr><td>벡터 데이터베이스</td><td>글을 숫자 벡터로 바꿔 저장하고, 뜻이 비슷한 것을 찾아 주는 데이터베이스</td></tr>
+              <tr><td>엔티티 그래프</td><td>Entity graph. 사람, 사물 같은 대상과 그 관계를 점과 선으로 저장한 구조</td></tr>
+              <tr><td>메모리 포인터</td><td>Memory pointer. 저장소에 둔 데이터를 가리키는 ID. 원문 대신 이것만 창에 둔다</td></tr>
+              <tr><td>에이전트 상태</td><td>Agent state. Strands에서 에이전트가 대화 기록과 따로 들고 다니는 키-값 저장 공간</td></tr>
+              <tr><td>Swarm</td><td>Strands에서 여러 에이전트를 묶어 함께 일하게 하는 방식</td></tr>
+              <tr><td>호출 상태</td><td>Invocation state. 한 번의 호출 동안 여러 에이전트가 함께 보는 공유 값. 발표에서는 여기에 포인터를 실어 나눴다</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 모델이 외부 도구와 데이터에 연결하는 표준 규약</td></tr>
+              <tr><td>동기 / 비동기</td><td>동기: 답이 올 때까지 기다린다. 비동기: 요청만 보내고 다른 일을 하다가 나중에 결과를 확인한다</td></tr>
+              <tr><td>API Gateway</td><td>AWS의 API 관문 서비스. 응답을 기다리는 최대 시간이 정해져 있다</td></tr>
+              <tr><td>Amazon Bedrock</td><td>여러 회사의 모델을 API로 부를 수 있는 AWS 서비스. Strands의 기본 모델 제공자</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개. 일정표에는 다른 발표자 이름이 적혀 있었다고 밝힌다</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>무한 컨텍스트 창은 신화다. 창이 넘치면 환각과 recall 저하</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>예: 로그를 감시하는 에이전트</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>"창을 키우면 된다"는 1년 전의 믿음</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>U자 주의 곡선</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>컨텍스트 엔지니어링의 정의, 프롬프트 인젝션</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>네 가지 전략: 외부화, 선택, 압축, 분리</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>출발점: 대화 관리자</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>Strands Agents와 대화 관리 방식 3가지</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>Strands 에이전트는 코드 한 줄, 다른 모델로 바꾸기</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>요약 대화 관리자 설정: 50%, 최근 4개</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>단기 기억</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>장기 기억: 벡터 데이터베이스</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>관계 기억: 엔티티 그래프</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>메모리 포인터</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>도구 두 개와 에이전트 상태로 구현</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>멀티 에이전트: Swarm과 호출 상태</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>같은 도구를 끝없이 부르는 루프</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>도구별 최대 호출 횟수</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>느린 외부 API와 API Gateway 제한 시간</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>동기와 비동기 비교</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>MCP 서버: 작업 시작, 작업 상태 확인</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>피해야 할 패턴 3가지</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>상황별 처방 정리</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>마무리와 Strands 부스 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'DrfyORO8RqA:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

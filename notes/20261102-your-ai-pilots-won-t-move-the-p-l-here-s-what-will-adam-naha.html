@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>손익을 움직이는 AI 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#desk">스케줄러에게 주어진 15분</a></li>
+      <li><a href="#gap">도구는 되는데 이익은 그대로</a></li>
+      <li><a href="#ratio">엔지니어링 1, 변화 관리 5</a></li>
+      <li><a href="#layers">AI의 세 층</a></li>
+      <li><a href="#move1">수 1: 문제는 한두 개만</a></li>
+      <li><a href="#move2">수 2: 과정을 다시 설계한다</a></li>
+      <li><a href="#move3">수 3: CEO부터</a></li>
+      <li><a href="#move4">수 4: 현업과 함께 만든다</a></li>
+      <li><a href="#move5">수 5: 모두가 직접 써 본다</a></li>
+      <li><a href="#move6">수 6: 중단 기준을 먼저</a></li>
+      <li><a href="#wrap">여섯 수를 세 묶음으로</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-02 · 16분 · 영어 발표 한글 정리</span>
+      <h1>AI가 손익을 움직이게 하려면</h1>
+      <p class="lead">AI 도구는 잘 돌아가는데 대부분의 회사에서 이익은 그대로다. 발표자는 AI 전환에서 변화 관리가 엔지니어링보다 다섯 배 큰 일이라고 본다. 화물 항공사의 승무원 배정 사례로 손익을 움직이는 여섯 가지 수를 설명한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=vUJDyDnqT4c" target="_blank" rel="noopener">Your AI Pilots Won't Move the P&amp;L. Here's What Will</a></span>
+        <span>발표: Adam Nahari (Apollo)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 발표자는 사례의 항공사 이름을 밝히지 않았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI 도구는 빠르게 퍼졌다. 기업 약 90%가 AI를 쓴다. 그런데 <strong>의미 있는 이익 효과를 본 곳은 6%</strong>다.</li>
+        <li>발표자의 경험칙: AI 전환은 <strong>변화 관리 5, 엔지니어링 1</strong>이다. 실패도 변화 관리 쪽에서 난다.</li>
+        <li>누구나 쓰는 챗봇과 코파일럿의 이득은 경쟁 속에 사라진다. <strong>마진에 남는 건 사업의 핵심 과정에 박힌 AI</strong>다.</li>
+        <li>문제 고르기: 손익계산서에서 거꾸로 내려와 <strong>한두 개만</strong> 고른다. 기존 과정을 자동화하지 말고 <strong>처음부터 다시 설계</strong>한다.</li>
+        <li>주인 정하기: <strong>CEO가 공개적으로 약속</strong>하지 않은 과제에는 돈을 대지 않는다. 현장 사용자를 <strong>첫날부터 설계에 넣는다.</strong></li>
+        <li>자리 잡게 하기: 결정하는 사람이 <strong>도구를 직접 써 보게</strong> 한다. <strong>중단 기준</strong>(90일, 기준값 대비 A/B, 사용률 50% 초과)을 시작 전에 정한다.</li>
+        <li>화물 항공사 사례: 해법 하나를 찾는 데 15분 걸리던 승무원 재배정이 <strong>1분 안에 비용순 해법 목록</strong>을 내는 일로 바뀌었다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="desk">
+        <header><span class="num">01</span><h2>스케줄러에게 주어진 15분 <span class="ts">00:00</span></h2></header>
+        <p>발표는 대형 화물 항공사의 스케줄링 데스크에서 시작한다. 항공기 한 대에 고장이 난다. 스케줄러는 15분 안에 그 비행편의 승무원을 다시 짜야 한다. 이 일을 재배정 <span class="en">re-crew</span>이라고 한다.</p>
+        <p>이 과정은 전부 손으로 한다. 스케줄러는 다음을 한꺼번에 따진다.</p>
+        <ul class="plain">
+          <li>휴식 규정 <span class="en">rest rules</span>: 조종사가 얼마나 쉬어야 다시 비행할 수 있나</li>
+          <li>자격 <span class="en">qualifications</span>: 그 기종과 노선을 맡을 수 있나</li>
+          <li>위치: 지금 각 조종사가 어디에 있나</li>
+        </ul>
+        <p>스케줄러는 규정에 맞는 해법을 하나 찾아낸다. 그게 가장 싼 해법이라는 보장은 없다. 규정에 맞는 해법을 하나도 못 찾을 때도 많다. 그러면 할증 수당 <span class="en">premium pay</span>을 준다. 돈을 더 써서 문제를 없애는 방법이다.</p>
+        <div class="callout">
+          <span class="title">왜 이 장면이 중요한가</span>
+          <span>이런 일이 항공 노선 전체에서 매일 일어난다. 발표자에 따르면 승무원 비용은 연료 다음으로 큰 비용이다. 발표자는 발표 마지막에 이 스케줄러로 돌아온다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="gap">
+        <header><span class="num">02</span><h2>도구는 되는데 이익은 그대로 <span class="ts">01:10</span></h2></header>
+        <p>AI 도구가 작동한다는 건 다들 안다. 보급 속도도 과거 기술보다 빠르다.</p>
+
+        <figure class="chart" aria-label="보급 곡선의 같은 시점에서 미국 성인 사용률: 생성형 AI 55%, 인터넷 30%, PC 20%">
+          <span class="chart-title">보급 곡선의 같은 시점에서 써 본 미국 성인 비율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>생성형 AI <span class="en">generative AI</span></span><span class="val">55</span></div>
+              <div class="track"><div class="fill key" style="width:55%" title="생성형 AI: 55%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>인터넷</span><span class="val">30</span></div>
+              <div class="track"><div class="fill" style="width:30%" title="인터넷: 30%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>PC</span><span class="val">20</span></div>
+              <div class="track"><div class="fill" style="width:20%" title="PC: 20%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">생성형 AI는 최근 3년 안에 써 본 비율이다. 발표자는 "55%가 넘는다"고 말했다.</span>
+        </figure>
+
+        <p>기업도 마찬가지다. 그런데 쓰는 것과 돈을 버는 것은 다르다.</p>
+
+        <figure class="chart" aria-label="기업 비율: AI를 한 곳 이상에서 쓴다 약 90%, 의미 있는 EBIT 효과를 봤다 6%">
+          <span class="chart-title">AI를 쓰는 기업과 이익이 바뀐 기업 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>AI를 업무 한 곳 이상에서 쓴다</span><span class="val">약 90</span></div>
+              <div class="track"><div class="fill" style="width:90%" title="AI를 한 곳 이상에서 쓴다: 약 90%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>의미 있는 EBIT 효과를 봤다</span><span class="val">6</span></div>
+              <div class="track"><div class="fill key" style="width:6%" title="의미 있는 EBIT 효과: 6%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자는 "거의 90%"라고 말해서 90으로 그렸다. EBIT은 이자와 세금을 빼기 전 이익이다.</span>
+        </figure>
+
+        <p>시간 절약은 진짜다. 사람들이 실제로 시간이 줄었다고 말한다. 발표자가 인용한 계산으로는 다 더하면 미국 전체 근로 시간의 약 2%다. 그런데 그 시간이 손익계산서 <span class="en">P&amp;L</span>에는 거의 나타나지 않는다.</p>
+
+        <h3>생산성 역설, 다시 <span class="ts">02:10</span></h3>
+        <blockquote>컴퓨터 시대는 생산성 통계만 빼고 어디서나 보인다.<cite>경제학자 Robert Solow, 1987년. 발표자가 인용</cite></blockquote>
+        <p>발표자는 같은 일이 지금 더 큰 규모로, 더 빠르게 되풀이된다고 본다. 그래서 질문은 이렇다. <strong>이익이 실제로 바뀐 6%는 무엇을 다르게 하나?</strong></p>
+      </section>
+
+      <!-- 3 -->
+      <section id="ratio">
+        <header><span class="num">03</span><h2>엔지니어링 1, 변화 관리 5 <span class="ts">02:40</span></h2></header>
+        <p>발표자가 이끌었거나 가까이서 본 AI 전환에서는 늘 엔지니어링이 작은 쪽이었다. 발표자는 이걸 비율로 기억한다.</p>
+
+        <figure class="chart" aria-label="AI 전환에 드는 일의 비율: 변화 관리 5단위, 엔지니어링 1단위">
+          <span class="chart-title">AI 전환에 드는 일의 양 (발표자의 경험칙, 단위)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>변화 관리 <span class="en">change management</span></span><span class="val">5</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="변화 관리: 5단위"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>엔지니어링</span><span class="val">1</span></div>
+              <div class="track"><div class="fill" style="width:20%" title="엔지니어링: 1단위"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>5 단위</span></div>
+          <span class="caption">잰 값이 아니라 발표자의 마음속 모델이다.</span>
+        </figure>
+
+        <p>이 비율은 고정돼 있지 않다. 모델이 좋아질수록 엔지니어링 몫은 더 줄어든다고 발표자는 말한다.</p>
+        <p>변화 관리에 들어가는 일은 네 가지다.</p>
+        <ul class="plain">
+          <li>올바른 문제 고르기</li>
+          <li>지지 얻기 <span class="en">buy-in</span></li>
+          <li>실제로 쓰게 만들기 <span class="en">adoption</span></li>
+          <li>효과 재기</li>
+        </ul>
+        <p>시간과 노력이 실제로 드는 곳이 여기다. 실패가 나는 곳도 여기다. 그래서 발표의 나머지는 이 다섯 단위에 집중한다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="layers">
+        <header><span class="num">04</span><h2>AI의 세 층 <span class="ts">03:30</span></h2></header>
+        <p>도구가 작동하는데 왜 이익은 안 바뀔까. 발표자는 기업 안의 AI를 세 층으로 나눠 설명한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>무엇인가</th><th>예</th><th>이득이 가는 곳</th></tr></thead>
+            <tbody>
+              <tr><td>1층 일반 생산성 <span class="en">general productivity</span></td><td>모두가 쓰는 범용 도구</td><td>코파일럿, 챗봇</td><td>가격. 경쟁자도 다 쓰니 경쟁 속에 사라진다. 마진에는 안 남는다</td></tr>
+              <tr><td>2층 도메인 특화 AI <span class="en">domain-specific AI</span></td><td>업무 기능별 도구. 사내 지식을 더 빠르고 깊게 쓰게 한다</td><td>기능별 코파일럿, 사내 문서 검색</td><td class="muted">발표에서 따로 말하지 않음</td></tr>
+              <tr><td>3층 핵심 운영 AI <span class="en">core operational AI</span></td><td>그 회사를 그 회사로 만드는 업무 과정 안에 박힌 업종 전용 시스템</td><td>항공사 승무원 배정</td><td>마진. 이런 도구와 그에 따른 변화 관리는 기성품으로 살 수 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>대부분의 기업은 1층에 투자한다. 발표자가 인용한 수치로는, 이익이 크게 바뀐 기업은 새 도구 하나를 들이는 대신 <strong>업무 흐름 전체를 처음부터 끝까지 다시 설계할 가능성이 3배</strong> 높다. 이 기업들은 1층에 더해 3층에도 투자한다.</p>
+        <h3>여섯 가지 수 <span class="ts">05:20</span></h3>
+        <p>발표자는 손익을 움직이는 데 핵심이라고 보는 여섯 가지 수를 하나씩 설명한다. 모두 앞의 화물 항공사 사례로 든다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="move1">
+        <header><span class="num">05</span><h2>수 1: 문제는 40개 말고 한두 개 <span class="ts">05:30</span></h2></header>
+        <p>출발점은 손익계산서다. 거기서 거꾸로 내려와 과제를 찾는다.</p>
+        <p>항공사의 북극성 지표 <span class="en">North Star metric</span>는 EBITDA다. 이자, 세금, 감가상각비를 빼기 전 이익이다. 이 지표를 움직이는 동인은 넷이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>동인</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td>노선 <span class="en">routes</span></td><td>수요</td></tr>
+              <tr><td>기체 <span class="en">tails</span></td><td>공급</td></tr>
+              <tr><td>정비 <span class="en">maintenance</span></td><td>제약 조건</td></tr>
+              <tr><td>승무원 <span class="en">crew</span></td><td>비용. 연료 다음으로 큰 비용이라 여기서 시작했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 회사에서는 파일럿을 40개 돌리지 않았다. 제대로 하면 판이 바뀔 과제 하나만 골랐다.</p>
+        <h3>좋은 과제의 다섯 조건 <span class="ts">06:30</span></h3>
+        <ol class="plain">
+          <li><strong>CFO가 알아보는 줄을 움직인다.</strong> 손익계산서의 특정 항목에 닿는다.</li>
+          <li><strong>잴 수 있다.</strong> 기준값 <span class="en">baseline</span>을 나중이 아니라 미리 합의한다.</li>
+          <li><strong>기술과 데이터 인프라가 준비돼 있다.</strong> 그 데이터를 회사가 가지고 있다.</li>
+          <li><strong>원하는 사용자가 이름으로 있다.</strong> 부서가 아니라 사람이다. 이 사람이 과제를 앞장서 끈다.</li>
+          <li><strong>CEO의 우선순위 다섯 개 안에 든다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 6 -->
+      <section id="move2">
+        <header><span class="num">06</span><h2>수 2: 과정을 처음부터 다시 설계한다 <span class="ts">07:10</span></h2></header>
+        <p>기존 과정을 그대로 두고 자동화하면 얻는 건 조금이다. 새 기술에 맞춰 과정 전체를 다시 짜면 얻는 게 판을 바꾼다.</p>
+        <div class="shift" aria-label="10% 방식에서 10배 방식으로">
+          <div><span class="tag">10% 방식</span><b>기존 과정에 도구를 얹는다</b><span class="muted">스케줄러가 하던 일을 그대로 하되 조금 빨라지게 돕는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">10배 방식 <span class="ts">08:00</span></span><b>최적화 엔진을 만들고 과정을 바꾼다</b><span class="muted">모든 제약을 반영해 가능한 해법을 전부 뽑고, 비용순으로 줄 세운다. 1분이 안 걸린다</span></div>
+        </div>
+        <p class="note">10%와 10배는 발표자가 "예시용 숫자"라고 밝힌 값이다.</p>
+
+        <h3>실제로 한 일 <span class="ts">08:30</span></h3>
+        <ul class="plain">
+          <li>회사 데이터를 한곳에 모았다. 비행편, 승무원, 정비 데이터다.</li>
+          <li>최적화 엔진 <span class="en">optimization engine</span>을 만들었다.</li>
+          <li>스케줄러용 의사결정 지원 앱 <span class="en">decision support app</span>을 만들었다.</li>
+          <li>스케줄러가 일하는 흐름 자체를 다시 설계했다.</li>
+        </ul>
+
+        <figure class="chart" aria-label="승무원 재배정 해법을 찾는 시간: 이전 15분, 이후 1분 미만">
+          <span class="chart-title">승무원 재배정 해법을 찾는 시간 (분)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>이전: 사람이 손으로, 해법 하나</span><span class="val">15</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="이전: 15분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>이후: 최적화 엔진, 가능한 해법 전부를 비용순으로</span><span class="val">&lt; 1</span></div>
+              <div class="track"><div class="fill key" style="width:6.7%" title="이후: 1분 미만"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>15분</span></div>
+          <span class="caption">"1분 미만"이라 1에 맞춰 그렸다. 15분은 발표 첫머리에서는 주어진 시간 한도로, 마지막에서는 걸리던 시간으로 쓰였다.</span>
+        </figure>
+
+        <div class="callout">
+          <span class="title">그래도 엔지니어링은 작은 쪽이었다</span>
+          <span>데이터 통합, 엔진, 앱을 다 만들었는데도 이 프로젝트에서 엔지니어링은 작은 부분이었다. 더 큰 일은 사람들이 실제로 쓰게 만드는 것이었다. 다음 네 가지 수가 그 이야기다.</span>
+        </div>
+        <p class="note">이 사례의 성과는 발표자가 직접 이끈 프로젝트에 대한 자기 보고다. 발표에는 이 프로젝트로 비용이나 EBIT가 얼마나 바뀌었는지 숫자가 나오지 않는다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="move3">
+        <header><span class="num">07</span><h2>수 3: CEO부터 <span class="ts">09:00</span></h2></header>
+        <p>발표자는 과제에 돈을 대는 쪽에서 말한다. 돈을 걸기 전에 묻는 질문은 하나다. <strong>CEO는 어디 있나?</strong> CEO가 이 과제를 회사의 우선순위라고 공개적으로 약속했나?</p>
+        <p>약속하지 않았다면 발표자는 자금을 대지 않는다. 성공과의 상관관계가 그만큼 강하다고 한다.</p>
+        <div class="callout warn">
+          <span class="title">CEO 없이 시작하면 생기는 일</span>
+          <span>회사가 대놓고 안 된다고 하지는 않는다. 대신 일정이 계속 부딪힌다. 데이터 요청 하나가 몇 주씩 걸린다. 파일럿이 미뤄지고 늦어진다.</span>
+        </div>
+        <p>모두 CEO를 보고 움직이기 때문이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>역할</th><th>CEO가 밀어줄 때 하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>P&amp;L 책임자</td><td>사람을 붙인다</td></tr>
+              <tr><td>CFO</td><td>돈을 대고 성과를 추적한다</td></tr>
+              <tr><td>CTO</td><td>엔지니어링과 기술 자원을 우선 배정한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 정렬은 시간이 지나면 닳는다. 한 번 얻고 끝나지 않는다. 계속 다시 다져야 한다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="move4">
+        <header><span class="num">08</span><h2>수 4: 현업과 함께 만든다 <span class="ts">10:10</span></h2></header>
+        <p>큰 전환은 손익을 책임지는 사람이 직접 끌어야 한다. 이 항공사에서는 승무원 스케줄링 담당 VP가 공동 후원자였다.</p>
+        <h3>AI 챔피언 <span class="ts">10:30</span></h3>
+        <p>실제 스케줄러들을 AI 챔피언 <span class="en">AI champions</span>으로 정했다. 이들은 첫날부터 설계에 들어왔다.</p>
+        <ul class="plain">
+          <li>이틀에 한 번 엔지니어링 팀과 만났다.</li>
+          <li>화면을 엔지니어링 팀과 함께 설계했다.</li>
+          <li>A/B 테스트에 참여했다.</li>
+          <li>동료들에게 새 방식을 퍼뜨렸다.</li>
+        </ul>
+        <p>스케줄러들이 새 도구를 받아들인 이유는 단순하다. <strong>만드는 데 직접 손을 보탰기 때문이다.</strong></p>
+        <h3>인재 <span class="ts">11:00</span></h3>
+        <p>플랫폼과 AI를 만들 새 리더십도 데려왔다. CIO, 데이터·AI 담당 VP, 데이터 과학 시니어 디렉터다. 이들은 기술 전문성과 항공 업계 전문성을 함께 갖췄다. 그래서 스케줄러가 어떻게 일하는지 알았고, 그에 맞는 도구를 함께 설계할 수 있었다.</p>
+        <div class="callout">
+          <span class="title">발표자가 꼽은 교훈</span>
+          <span>조직에 들인 투자가 기술에 들인 투자보다 컸다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="move5">
+        <header><span class="num">09</span><h2>수 5: 모두가 직접 써 본다 <span class="ts">11:40</span></h2></header>
+        <p>발표자는 임원 30명쯤과 함께 AI 워크숍에 참석했다. 과제는 "AI로 우리 사업을 어떻게 다시 설계할까"였다. 그런데 그 방에 있던 사람 4명 중 3명은 그 주 전까지 AI 도구를 한 번도 써 본 적이 없었다.</p>
+        <blockquote>AI를 써 본 적이 없으면 AI로 업무 흐름을 다시 설계할 수 없다.<cite>발표자 <span class="ts">12:00</span></cite></blockquote>
+        <p>어디에 가치가 있는지, 어떤 일이 새로 가능해지는지에 대한 감은 직접 써 봐야 생긴다. 도구를 만져 보는 건 선택이 아니라 <strong>최소 조건</strong>이다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="move6">
+        <header><span class="num">10</span><h2>수 6: 중단 기준을 먼저 정하고 CFO가 점수를 매긴다 <span class="ts">12:30</span></h2></header>
+        <p>파일럿을 시작하기 전에 중단 기준 <span class="en">kill metrics</span>을 글로 쓴다. 파일럿을 계속할지 멈출지를 정하는 기준이다. 이 프로젝트에서는 관문을 셋 뒀다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>관문</th><th>이 프로젝트의 기준</th></tr></thead>
+            <tbody>
+              <tr><td>시간 관문 <span class="ts">13:00</span></td><td>단계마다 90일을 준다. 그 안에 가치가 안 보이면 멈춘다</td></tr>
+              <tr><td>지표 관문</td><td>단계마다 A/B 테스트를 한다. 비교 대상은 미리 정한 기준값이다</td></tr>
+              <tr><td>사용 관문</td><td>승무원 스케줄러의 50%를 넘게 이 도구를 쓰고 있나</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>규모를 키웠을 때 남는가 <span class="ts">13:30</span></h3>
+        <p>CFO와 함께 한 가지를 더 시험했다. 이 과제를 전사 규모로 키웠을 때 드는 비용이 만들어 낼 효과보다 확실히 낮은가. 비용에는 컴퓨팅, 토큰, 이 일에 들어가는 사람이 모두 들어간다. 이걸 단위 경제성 <span class="en">unit economics</span> 검토라고 한다.</p>
+        <div class="callout warn">
+          <span class="title">많은 파일럿이 여기서 죽는다</span>
+          <span>발표자에 따르면 많은 파일럿이 이 시험을 통과하지 못해 멈춘다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="wrap">
+        <header><span class="num">11</span><h2>여섯 수를 세 묶음으로 <span class="ts">14:00</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>묶음</th><th>수</th><th>핵심</th></tr></thead>
+            <tbody>
+              <tr><td>문제를 고른다</td><td>1, 2</td><td>한두 개만 고른다. 이미 낡았을지 모르는 과정 위에 짓지 말고 처음부터 다시 설계한다</td></tr>
+              <tr><td>주인을 정한다</td><td>3, 4</td><td>CEO부터 시작한다. 현업과 함께 만든다</td></tr>
+              <tr><td>자리 잡게 한다</td><td>5, 6</td><td>관련된 사람이 도구를 써 보게 한다. 중단 기준을 미리 정하고 CFO와 단위 경제성을 따진다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>맺음말 <span class="ts">14:50</span></h3>
+        <p>도구와 모델은 모두에게 열려 있다. 차이를 만드는 건 그 모델을 조직이 흡수하는 능력이다. 모델은 계속 좋아진다. 그 개선을 제대로 받아 쓸 수 있는 회사가 살아남는다는 게 발표자의 결론이다.</p>
+        <p>그리고 처음의 스케줄러로 돌아온다. 예전에는 답 하나를 찾는 데 15분이 걸렸다. 지금은 1분이 안 걸린다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>AI는 PC나 인터넷보다 빨리 퍼졌다. 기업 약 90%가 쓰지만 <strong>의미 있는 EBIT 효과는 6%</strong>만 봤다.</li>
+          <li>시간 절약(미국 근로 시간의 약 2%)은 진짜지만 손익계산서에는 거의 안 나타난다. 1987년 솔로의 역설이 되풀이된다.</li>
+          <li>AI 전환은 <strong>변화 관리 5, 엔지니어링 1</strong>이다. 모델이 좋아질수록 엔지니어링 몫은 더 줄어든다.</li>
+          <li>누구나 쓰는 1층 도구의 이득은 경쟁 속에 가격으로 흘러간다. <strong>마진에 남는 건 살 수 없는 3층</strong>, 핵심 운영 AI다.</li>
+          <li>수 1: 손익계산서에서 거꾸로 내려와 과제를 <strong>한두 개만</strong> 고른다. 다섯 조건으로 걸러 낸다.</li>
+          <li>수 2: 기존 과정을 자동화하면 10%, <strong>과정을 다시 설계하면 10배</strong>다(예시용 숫자).</li>
+          <li>수 3: CEO가 <strong>공개적으로 약속하지 않은 과제에는 돈을 대지 않는다.</strong> 정렬은 닳으니 계속 다진다.</li>
+          <li>수 4: 손익 책임자와 현장 챔피언이 첫날부터 함께 만든다. <strong>조직 투자가 기술 투자보다 크다.</strong></li>
+          <li>수 5: <strong>AI를 써 보지 않은 사람은 AI로 업무를 다시 설계할 수 없다.</strong></li>
+          <li>수 6: 시간·지표·사용 관문과 <strong>단위 경제성 시험</strong>을 시작 전에 정하고, CFO가 점수를 매긴다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>화물 항공사 스케줄러가 승무원을 다시 짤 때 따지는 세 가지는? 규정에 맞는 해법이 없으면 어떻게 하나?</span></summary><div class="answer">휴식 규정, 자격, 각 조종사의 현재 위치. 해법이 없으면 할증 수당을 줘서 돈으로 문제를 없앤다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>AI를 쓰는 기업 비율과 의미 있는 EBIT 효과를 본 기업 비율은?</span></summary><div class="answer">약 90%가 업무 한 곳 이상에서 AI를 쓴다. 의미 있는 EBIT 효과를 본 곳은 6%다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>발표자가 Robert Solow의 1987년 말을 꺼낸 이유는?</span></summary><div class="answer">"컴퓨터 시대는 생산성 통계만 빼고 어디서나 보인다." 기술은 퍼졌는데 성과 숫자에 안 나타나는 현상이 지금 AI에서 더 큰 규모로, 더 빠르게 되풀이된다는 뜻이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>5대 1은 무엇과 무엇의 비율이고, 앞으로 어느 쪽으로 움직이나?</span></summary><div class="answer">변화 관리 5, 엔지니어링 1. 모델이 좋아질수록 엔지니어링 몫은 더 줄어든다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>1층 도구의 이득은 왜 마진에 남지 않고, 3층은 왜 남나?</span></summary><div class="answer">1층 도구는 누구나 쓸 수 있어서 이득이 경쟁 속에 가격으로 사라진다. 3층의 도구와 그에 맞는 변화 관리는 기성품으로 살 수 없어서 이득이 마진에 남는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>좋은 과제의 다섯 조건은?</span></summary><div class="answer">CFO가 알아보는 줄을 움직인다. 미리 합의한 기준값으로 잴 수 있다. 기술·데이터 인프라가 준비돼 있고 데이터를 회사가 가졌다. 이름이 있는 사용자(부서가 아닌 사람)가 원하고 앞장선다. CEO의 우선순위 다섯 개 안에 든다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>항공사 사례에서 10% 방식과 10배 방식은 각각 무엇이었나?</span></summary><div class="answer">10% 방식은 기존 과정에 도구를 얹어 스케줄러를 조금 빠르게 하는 것. 10배 방식은 모든 제약을 반영해 가능한 해법을 전부 뽑고 비용순으로 정렬하는 최적화 엔진을 만들고, 업무 흐름까지 다시 설계한 것이다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>CEO가 공개적으로 약속하지 않은 과제에서는 어떤 일이 생기나?</span></summary><div class="answer">대놓고 거절당하지는 않는다. 대신 일정 충돌이 이어지고, 데이터 요청이 몇 주씩 걸리고, 파일럿이 미뤄진다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>스케줄러들이 새 도구를 받아들인 이유는?</span></summary><div class="answer">첫날부터 설계에 참여했기 때문이다. 이틀에 한 번 엔지니어링 팀과 만났고, 화면을 함께 설계했고, A/B 테스트에 참여했다. 만드는 데 손을 보탰으니 받아들였다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>임원 AI 워크숍에서 발표자가 본 문제는?</span></summary><div class="answer">임원 4명 중 3명이 그 주 전까지 AI 도구를 써 본 적이 없었다. 써 보지 않은 사람은 AI로 업무를 다시 설계할 감이 없다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>중단 기준의 세 관문과, CFO와 함께 한 추가 시험은?</span></summary><div class="answer">시간 관문(단계마다 90일), 지표 관문(미리 정한 기준값 대비 A/B 테스트), 사용 관문(스케줄러 50% 초과 사용). 추가 시험은 규모를 키웠을 때 컴퓨팅·토큰·인력 비용이 효과보다 확실히 낮은지 보는 단위 경제성 검토다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 말하는 경쟁 우위는 무엇인가?</span></summary><div class="answer">모델 자체는 모두에게 열려 있다. 차이는 그 모델을 조직이 흡수해 계속 좋아지는 모델을 받아 쓰는 능력에서 난다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>지금 돌리는 AI 파일럿을 모두 적고, 각각 손익계산서의 어느 줄을 움직이는지 옆에 쓴다<span class="how">줄을 적지 못하는 파일럿은 우선순위에서 뺀다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>남은 과제 하나를 다섯 조건으로 점검한다<span class="how">CFO가 아는 줄, 미리 합의한 기준값, 데이터 준비와 소유, 이름 있는 사용자, CEO 우선순위 다섯 개 안</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>이 과제가 기존 과정 자동화인지 과정 재설계인지 적는다<span class="how">재설계라면 바뀐 업무 흐름을 처음부터 끝까지 그려 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>최고 책임자가 이 과제를 공개적으로 우선순위라고 말했는지 확인한다<span class="how">말하지 않았다면 예산을 걸기 전에 그 약속부터 받는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>실제 사용자 가운데 챔피언을 정하고 첫날부터 설계 회의에 넣는다<span class="how">발표 사례: 이틀에 한 번 회의, 화면 공동 설계, A/B 테스트 참여</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>과제를 결정하는 사람들이 AI 도구를 직접 써 봤는지 확인한다<span class="how">써 보지 않았다면 재설계 논의 전에 먼저 써 보게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>시작 전에 중단 기준 세 가지를 글로 쓴다<span class="how">단계별 기한(발표 사례 90일), 미리 정한 기준값 대비 A/B 결과, 사용률 기준(발표 사례 50% 초과)</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>재무 담당과 함께 규모를 키웠을 때의 비용과 효과를 계산한다<span class="how">컴퓨팅, 토큰, 투입 인력 비용을 모두 넣는다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>손익계산서 (P&amp;L)</td><td>Profit and Loss. 일정 기간의 매출, 비용, 이익을 보여 주는 재무제표</td></tr>
+              <tr><td>EBIT</td><td>이자와 세금을 빼기 전 이익. 영업으로 번 이익에 가깝다</td></tr>
+              <tr><td>EBITDA</td><td>이자, 세금, 감가상각비를 빼기 전 이익</td></tr>
+              <tr><td>마진</td><td>매출에서 비용을 빼고 남는 이익의 몫</td></tr>
+              <tr><td>파일럿</td><td>Pilot. 본격 도입 전에 작은 규모로 해 보는 시범 과제. 이 발표는 항공사 사례라 조종사와 같은 단어가 겹쳐 쓰인다</td></tr>
+              <tr><td>변화 관리</td><td>Change management. 새 방식이 조직에 실제로 자리 잡게 만드는 일. 문제 고르기, 지지 얻기, 사용 확산, 효과 측정</td></tr>
+              <tr><td>생산성 역설</td><td>Productivity paradox. 기술은 어디서나 보이는데 생산성 통계에는 안 나타나는 현상. 솔로의 역설이라고도 한다</td></tr>
+              <tr><td>코파일럿</td><td>Copilot. 사람 옆에서 작업을 돕는 범용 AI 도구</td></tr>
+              <tr><td>핵심 운영 AI</td><td>Core operational AI. 회사의 핵심 업무 과정 안에 박힌 업종 전용 AI 시스템</td></tr>
+              <tr><td>북극성 지표</td><td>North Star metric. 회사가 가장 중요하게 보는 하나의 지표</td></tr>
+              <tr><td>기체 (tail)</td><td>항공기 한 대. 꼬리에 적힌 등록번호로 구분해 이렇게 부른다</td></tr>
+              <tr><td>할증 수당</td><td>Premium pay. 급한 배정이나 규정 밖 근무에 얹어 주는 추가 보수</td></tr>
+              <tr><td>기준값</td><td>Baseline. 바뀌기 전 상태를 잰 값. 효과는 이 값과 비교해 잰다</td></tr>
+              <tr><td>의사결정 지원 앱</td><td>Decision support app. 사람이 최종 판단을 하도록 선택지와 근거를 보여 주는 도구</td></tr>
+              <tr><td>AI 챔피언</td><td>현장에서 새 도구를 앞장서 쓰고 동료에게 퍼뜨리는 사람</td></tr>
+              <tr><td>A/B 테스트</td><td>두 방식을 나눠 적용하고 결과를 비교하는 실험</td></tr>
+              <tr><td>중단 기준</td><td>Kill metrics. 파일럿을 계속할지 멈출지 미리 정해 둔 기준</td></tr>
+              <tr><td>단위 경제성</td><td>Unit economics. 한 단위당 비용과 효과. 여기서는 규모를 키웠을 때 비용이 효과보다 충분히 낮은지를 본다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 화물 항공사 스케줄링 데스크</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>승무원은 연료 다음으로 큰 비용</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>AI 도구는 작동한다: 생성형 AI 55%, PC 20%, 인터넷 30%</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>기업 약 90% 사용, 6%만 의미 있는 EBIT 효과</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>시간 절약은 근로 시간의 약 2%</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>Solow의 생산성 역설 (1987)</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>엔지니어링 1, 변화 관리 5</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>AI의 세 층</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>성과를 낸 기업은 업무 흐름 재설계 가능성 3배</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>여섯 가지 수</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>수 1: 문제는 한두 개만</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>항공사 EBITDA의 네 동인</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>좋은 과제의 다섯 조건</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>수 2: 과정을 처음부터 다시 설계</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>10% 방식과 10배 방식</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>데이터 통합, 최적화 엔진, 의사결정 지원 앱</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>수 3: CEO부터</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>P&amp;L 책임자, CFO, CTO의 역할</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>수 4: 현업과 함께 만든다, AI 챔피언</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>새 리더십 영입, 조직 투자 &gt; 기술 투자</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>수 5: 모두가 직접 써 본다</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>수 6: 중단 기준을 먼저</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>시간·지표·사용 관문</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>CFO와 단위 경제성 검토</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>여섯 수를 세 묶음으로 정리</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>모델을 흡수하는 능력이 경쟁 우위</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>15분에서 1분 미만으로</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'vUJDyDnqT4c:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

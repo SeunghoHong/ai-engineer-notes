@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>실시간 웹 데이터 에이전트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#intro">발표자와 Bright Data</a></li>
+      <li><a href="#scale">사이트가 늘면 스크래핑이 무너진다</a></li>
+      <li><a href="#selector">셀렉터 하나가 바뀌면</a></li>
+      <li><a href="#antibot">사이트마다 다르고, 모두 막는다</a></li>
+      <li><a href="#pipeline">전통 스크래핑 파이프라인</a></li>
+      <li><a href="#paths">AI는 언제 웹에 나가나</a></li>
+      <li><a href="#mcp">robots.txt 벽과 MCP</a></li>
+      <li><a href="#jobs">사용 사례: 채용 데이터</a></li>
+      <li><a href="#demo">실습: 살까 말까 에이전트</a></li>
+      <li><a href="#qna">질문: 왜 봇은 막히는가</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 프로젝트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-11 · 27분 · 영어 발표 한글 정리</span>
+      <h1>에이전트에게 실시간 웹을 열어 주기</h1>
+      <p class="lead">웹 스크래핑은 사이트 수가 늘수록 사람 손으로 유지하기 어려워진다. 발표자는 그 일을 AI 에이전트에 맡기고, 에이전트가 차단 없이 웹에 닿게 하는 도구로 Bright Data의 MCP 서버를 소개한다. 마지막에는 Amazon 상품과 Reddit 반응을 모아 "살까 말까"를 판단하는 에이전트를 직접 돌려 본다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=IK8cC4FScps" target="_blank" rel="noopener">Building AI Agents with Real-Time Web Data</a></span>
+        <span>발표: Yohan Raju (Bright Data 솔루션 아키텍트)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 웹 데이터 수집 회사 Bright Data 소속이다. 발표 후반은 자사 제품 설명과 데모가 중심이다. "우리는 차단을 뚫는다"는 식의 주장은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>스크래퍼는 사이트 하나당 <strong>3~5일</strong>이 든다. 사이트가 10개에서 100개, 1,000개로 늘면 만드는 일보다 <strong>고치는 일</strong>이 팀을 잡아먹는다.</li>
+        <li>사이트마다 화면 구조가 다르고, 모두 자기 데이터를 지키려고 <strong>봇 차단</strong>을 건다. 데이터센터 IP로 되는 곳도 있지만 Cloudflare나 Akamai가 지키는 곳은 <strong>주거용 IP와 진짜 브라우저</strong>가 필요하다.</li>
+        <li>전통 파이프라인은 트리거, 프록시, 봇 차단 우회, 파싱과 검증, 후처리, 저장으로 이어진다. <strong>어느 한 단계가 깨지면 처음부터 다시</strong> 돌린다.</li>
+        <li>AI 모델은 질문에 따라 두 길을 간다. 학습된 지식으로 답하는 <strong>비동기 경로</strong>와 지금 웹에 나가 찾는 <strong>동기 경로</strong>다. "올해"처럼 시점이 붙으면 웹에 나가야 한다.</li>
+        <li>많은 사이트가 robots.txt로 ClaudeBot과 GPTBot을 막는다. 발표자는 <strong>Bright Data의 MCP 서버</strong>가 60개 넘는 도구로 그 벽을 넘게 해 준다고 말한다.</li>
+        <li>실습 에이전트는 Amazon 상품 데이터와 Reddit 검색 결과를 받아 Gemini로 분석하고, <strong>"할인 중이고 반응이 좋으니 사라"</strong>는 판단을 내놓았다.</li>
+        <li>질문에 대한 답: 봇이 막히는 이유는 같은 IP로 아무 행동 없이 페이지만 긁기 때문이다. 이를 계속 피하려면 <strong>대규모 프록시와 매번 바뀌는 접근 방식</strong>이 필요하다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="intro">
+        <header><span class="num">01</span><h2>발표자와 Bright Data <span class="ts">00:10</span></h2></header>
+        <p>발표자 Yohan Raju는 Bright Data에서 약 6년간 데이터 수집과 웹 스크래핑 분야의 솔루션 아키텍트로 일했다. Bright Data는 주거용 IP 프록시 회사로 시작해 데이터 수집 플랫폼으로 넘어왔다. 발표자는 자사가 매달 페타바이트 단위 데이터를 모으며 그 규모가 Google 다음이라고 말한다.</p>
+        <p class="note">"Google 다음"이라는 규모 비교는 발표자의 자사 소개다. 비교 기준은 발표에 나오지 않는다.</p>
+        <p>발표는 두 부분이다. 앞부분은 실시간 웹 데이터로 에이전트를 만들 때 쓰는 도구와, 미리 색인한 데이터에 기대는 RAG<span class="en">retrieval-augmented generation</span>와의 차이다. 뒷부분은 따라 할 수 있는 실습이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="scale">
+        <header><span class="num">02</span><h2>사이트가 늘면 스크래핑이 무너진다 <span class="ts">01:40</span></h2></header>
+        <p>스크래핑은 보통 작게 시작한다. 전자상거래 데이터를 모은다면 Amazon과 Walmart 두 곳만으로도 상품 대부분의 가격과 리뷰를 얻을 수 있다. 문제는 그 다음이다. Shopee, Shopify 상점들, Etsy처럼 대상 사이트가 계속 늘어난다.</p>
+        <p>발표자는 개발자가 사이트 하나의 스크래퍼<span class="en">scraper</span>를 만드는 데 <strong>3~5일</strong>이 든다고 본다. 개발만이 아니라 QA, 개발 환경 실행, 끝까지 흐르는 파이프라인 테스트를 포함한 시간이다. 10개 사이트는 참을 만하다. 100개, 1,000개가 되면 이야기가 달라진다.</p>
+
+        <figure class="chart" aria-label="사이트 수에 따른 스크래퍼 개발 기간 예시 계산: 10개 30일, 100개 300일, 1,000개 3,000일">
+          <span class="chart-title">스크래퍼를 처음 만드는 데 드는 사람·일 (사이트당 3일로 계산한 예시)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>사이트 10개</span><span class="val">30일</span></div>
+              <div class="track"><div class="fill" style="width:1%" title="10개 × 3일 = 30일"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>사이트 100개</span><span class="val">300일</span></div>
+              <div class="track"><div class="fill" style="width:10%" title="100개 × 3일 = 300일"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>사이트 1,000개</span><span class="val">3,000일</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="1,000개 × 3일 = 3,000일"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>1,500일</span><span>3,000일</span></div>
+          <span class="caption">발표자가 말한 "사이트당 3~5일"의 최소값과 "10, 100, 1,000개"로 이 노트에서 계산한 예시다. 발표에 이 표는 없다. 유지보수 시간은 넣지 않았다.</span>
+        </figure>
+
+        <p>만드는 비용보다 큰 문제는 <strong>유지보수</strong>다. 1,000개 사이트를 돌리는데 Amazon과 다른 두 곳이 내일 화면을 바꾸면, 무엇이 바뀌었는지 찾고 고치고 고객 SLA와 데이터 품질에 영향이 있는지 확인해야 한다. 발표자는 예전에는 이 일을 감당하려면 엔지니어를 2배, 4배로 늘려야 했다고 말한다.</p>
+        <div class="callout">
+          <span class="title">발표자의 주장</span>
+          <span>AI 에이전트는 사이트를 스스로 탐색하고 스크래퍼를 만들 수 있다. 그래서 사이트 수에 비례해 엔지니어를 늘리던 병목이 사라진다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="selector">
+        <header><span class="num">03</span><h2>셀렉터 하나가 바뀌면 <span class="ts">04:40</span></h2></header>
+        <p>스크래퍼는 보통 페이지 안에서 가격과 제목이 있는 위치를 셀렉터<span class="en">selector</span>로 가리킨다. 사이트가 가격의 위치를 바꾸면 그날부터 가격이 비어 들어온다. 가격에 기대는 뒷단 분석도 함께 멈춘다.</p>
+        <p>예전에는 팀이 들어가 고치고, 빠진 기간의 데이터를 다시 채워 넣었다. 발표자는 이 과정을 에이전트가 자동으로 처리할 수 있다고 말한다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="antibot">
+        <header><span class="num">04</span><h2>사이트마다 다르고, 모두 막는다 <span class="ts">05:20</span></h2></header>
+        <p>Amazon과 Walmart는 둘 다 가격, 제목, 설명을 보여 주지만 화면 구조는 전혀 다르다. 그래서 사이트마다 다른 스크래퍼가 필요하다. 더 큰 문제는 <strong>사이트가 자기 데이터를 지키려 한다</strong>는 점이다. 경쟁자가 같은 상품 정보를 갖는 것을 원하지 않으므로 봇 차단<span class="en">anti-bot</span>과 캡차<span class="en">CAPTCHA</span>를 건다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>차단 수준</th><th>통과에 필요한 것</th></tr></thead>
+            <tbody>
+              <tr><td>기본 사이트</td><td>데이터센터 IP로도 들어간다</td></tr>
+              <tr><td>Cloudflare, Akamai 등이 지키는 사이트</td><td>주거용 IP, 진짜 브라우저, 진짜 사용자처럼 보이는 행동</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>"진짜 사용자처럼"의 기준은 세밀하다. 너무 빨리 클릭하거나 스크롤하거나, 이미지를 내려받지 않으면 차단이 걸릴 수 있다. 사이트가 데이터를 일부러 어렵게 숨기므로, 사람이 하던 때는 사이트별 깊은 도메인 지식이 필요했다.</p>
+        <p class="note">자막의 "Okami"는 문맥상 봇 차단 업체 Akamai로 보고 바로잡았다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="pipeline">
+        <header><span class="num">05</span><h2>전통 스크래핑 파이프라인 <span class="ts">07:00</span></h2></header>
+        <p>발표자가 그린 전통 아키텍처는 왼쪽에서 오른쪽으로 여섯 단계를 지난다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th><th>발표자의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>1. 트리거</td><td>크롤을 시작한다</td><td>cron 같은 스케줄러로 매일 또는 매주 받거나, 특정 URL 설정으로 직접 시작한다</td></tr>
+              <tr><td>2. 프록시</td><td>탐지를 피한다</td><td>데이터센터나 ISP의 고정 IP, 또는 노트북·태블릿·TV에서 나오는 회전식 주거용 IP. 실제 기기에 등록된 IP라 사이트가 더 쉽게 들여보낸다</td></tr>
+              <tr><td>3. 봇 차단 우회</td><td>차단과 재시도를 처리한다</td><td>요청이 막혔는지, 재시도할지, 맞는 IP를 쓰는지 판단한다. Bright Data의 Web Unlocker와 Browser API가 이 층에 해당한다</td></tr>
+              <tr><td>4. 파싱과 검증</td><td>데이터가 진짜인지 확인한다</td><td>가격이 90%의 경우에 돌아오는지, 리뷰와 평점이 필요한지 같은 검증 규칙을 세운다</td></tr>
+              <tr><td>5. 후처리</td><td>정제하고 적재한다</td><td>중복 제거, 보강, 배치 처리. 클라우드 저장소나 내부 시스템에 넘긴다</td></tr>
+              <tr><td>6. 저장</td><td>데이터베이스에 넣는다</td><td>메달리온 구조<span class="en">medallion architecture</span>의 bronze, silver를 거쳐 최종 DB로 옮긴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          <span class="title">약점</span>
+          <span>어느 단계가 실패하면 전체를 처음부터 다시 돌려야 한다. 봇 차단 층이 깨지거나 셀렉터가 바뀌면 다시 수집하고 빠진 데이터를 채우며 SLA를 놓칠 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="paths">
+        <header><span class="num">06</span><h2>AI는 언제 웹에 나가나 <span class="ts">09:50</span></h2></header>
+        <p>Claude나 GPT에 질문을 던지면 가끔 "생각 중" 또는 "웹 검색 중"이라는 표시가 뜬다. 그 순간 모델은 학습된 지식만으로는 답할 수 없다고 판단하고 밖으로 나간다. 발표자는 이 둘을 두 경로로 나눈다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">비동기 경로 <span class="en">async</span></span>
+            <p>미리 학습하거나 색인한 데이터에 기대어 답한다. RAG가 여기에 속한다.</p>
+            <ul>
+              <li>질문: "샌프란시스코에 가기 좋은 때는?"</li>
+              <li>답: "보통 여름이 좋다"처럼 일반 지식으로 충분하다</li>
+            </ul>
+            <p class="verdict"><b>맞는 경우</b>: 사전 지식으로 답해도 괜찮은 질문</p>
+          </div>
+          <div class="card">
+            <span class="tag">동기 경로 <span class="en">sync</span></span>
+            <p>지금 웹에 나가 찾는다. 시점이나 현재 상황이 답을 바꾸는 질문이다.</p>
+            <ul>
+              <li>질문: "<strong>올해</strong> 샌프란시스코에 가기 좋은 때는?"</li>
+              <li>올해 어떤 행사가 있는지 실시간으로 확인해야 한다</li>
+            </ul>
+            <p class="verdict"><b>맞는 경우</b>: 정말로 지금의 웹을 봐야 하는 질문</p>
+          </div>
+        </div>
+        <p>두 경로는 준비해야 할 것이 다르다. 발표자는 동기 경로를 위해 모델이 웹에 나갈 수 있게 하는 자사 도구를 다음 절에서 소개한다.</p>
+        <div class="callout">
+          <span class="title">캐시할 수 있는 답</span>
+          <span>"오늘 뉴욕 날씨"를 하루에 여러 사람이 묻는다면 한 번만 웹에 나가 답을 저장해 두면 된다. 그러면 매번 토큰과 비용을 쓰지 않는다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="mcp">
+        <header><span class="num">07</span><h2>robots.txt 벽과 MCP <span class="ts">12:40</span></h2></header>
+        <p>많은 사이트가 robots.txt로 ClaudeBot과 GPTBot을 막는다. 그래서 모델이 웹에 나가 답을 찾으려 해도 그 사이트의 데이터는 가져오지 못한다. 발표자는 바로 이 자리에 Bright Data가 들어간다고 말한다. 스크래퍼든 에이전트든 Claude나 GPT든, 차단되지 않고 웹에 닿게 하는 도구가 있다는 것이다.</p>
+
+        <h3>Bright Data의 MCP 서버 <span class="ts">13:30</span></h3>
+        <p>MCP<span class="en">Model Context Protocol</span>는 모델이 외부 도구와 대화하는 규약이다. Claude Code나 LangChain 같은 "두뇌"가 Bright Data의 MCP 엔드포인트에 연결하면 발표자가 말하는 60개 넘는 API를 도구로 쓸 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>도구 묶음</th><th>예시</th></tr></thead>
+            <tbody>
+              <tr><td>검색 엔진</td><td>Google 검색 결과를 받아온다</td></tr>
+              <tr><td>페이지 수집</td><td>페이지를 Markdown이나 HTML로 받아온다</td></tr>
+              <tr><td>특정 사이트</td><td>Amazon, Reddit, LinkedIn, Instagram 등</td></tr>
+              <tr><td>브라우저 자동화</td><td>클릭, 스크롤. 음식 주문이나 항공권 예약처럼 브라우저가 필요한 일</td></tr>
+              <tr><td>영역별 묶음 <span class="ts">22:30</span></td><td>전자상거래, 소셜 미디어, 금융, 리서치, 비즈니스 인텔리전스, 앱스토어, 여행</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>스크래퍼를 직접 고르는 사람도 있지만, MCP로 묶어 두면 <strong>에이전트가 상황에 맞는 도구를 스스로 고른다</strong>. 발표자는 이쪽이 더 간결하다고 본다.</p>
+
+        <h3>사례: 소셜 미디어 리스너 <span class="ts">14:20</span></h3>
+        <p>발표 2주 전, 한 사용자가 Claude Code에서 이 MCP로 "내 이름으로 내 소셜 프로필을 모두 찾아 팔로워 수를 알려 달라"고 요청했다. 흐름은 이렇다.</p>
+        <ol class="plain">
+          <li>검색 엔진 도구로 Instagram, TikTok, LinkedIn 프로필 페이지를 찾는다.</li>
+          <li>각 페이지에 데이터 파이프라인 API를 호출한다.</li>
+          <li>팔로워 수를 모아 답으로 돌려준다.</li>
+        </ol>
+
+        <h3>영상 비교: Glassdoor <span class="ts">15:30</span></h3>
+        <p>같은 프롬프트 "브라우저로 이 Glassdoor 페이지 내용을 가져와"를 두 Claude에 넣었다. MCP를 붙인 쪽은 결과를 가져왔고, 붙이지 않은 쪽은 차단됐다. 발표자는 Glassdoor가 데이터 수집 업무에서도 보호가 강한 사이트로 알려져 있다고 말한다.</p>
+        <p class="note">이 비교는 발표자가 자사 제품을 보여 주려고 고른 데모다. 어떤 조건에서 찍었는지는 발표에 나오지 않는다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="jobs">
+        <header><span class="num">08</span><h2>사용 사례: 채용 데이터 <span class="ts">16:30</span></h2></header>
+        <p>발표자가 만나는 AI 회사들은 모델 학습, 미세 조정, 에이전트의 실시간 접근, RAG 보강에 웹 데이터를 쓴다. 예로 든 것은 이력서 매칭 모델을 위한 채용 데이터다.</p>
+        <p>채용 데이터는 한 번 모아 두고 잊을 수 있는 데이터가 아니다. 어느 회사가 무엇을 뽑는지, 자리가 몇 개인지, 연봉과 위치가 어떤지 계속 바뀐다. 발표자는 네 가지 요건을 꼽는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>요건</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>구조화되고 일관된 출력</td><td>형식이 흔들리면 모델 학습과 분석이 꼬인다</td></tr>
+              <tr><td>성능</td><td>채용 시장 패턴을 분석하려면 데이터가 끊임없이 흘러와야 한다</td></tr>
+              <tr><td>신뢰성</td><td>중단이 생기면 전체 파이프라인이 멈춘다</td></tr>
+              <tr><td>과거 데이터</td><td>소프트웨어 엔지니어 연봉이 왜 올랐는지 같은 추세를 보려면 지난 몇 달이나 몇 년의 데이터가 필요하다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="demo">
+        <header><span class="num">09</span><h2>실습: 살까 말까 에이전트 <span class="ts">19:10</span></h2></header>
+        <p>Google Colab 노트북으로 진행한다. 준비물은 Bright Data API 토큰과 Gemini API 키 두 개다. 설정 방법은 발표자가 Google Drive에 올려 두었다.</p>
+        <div class="shift" aria-label="실습 에이전트의 세 단계">
+          <div><span class="tag">1단계</span><b>Amazon 상품 데이터</b><span class="muted">Bright Data API로 가격, 평점, 이미지, URL, 다른 판매자, 상품 특징을 받는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">2단계 → 3단계</span><b>Reddit 검색 → AI 분석</b><span class="muted">상품명으로 Reddit 게시글을 검색하고, 두 데이터를 Gemini에 넘겨 "살 만한가"를 판단한다</span></div>
+        </div>
+        <p>발표자가 고른 상품은 Stanley Quencher 텀블러다. Amazon 쪽에서는 가격, 평점, 다른 판매자, 상품 특징이 돌아왔다. Reddit 검색은 시간이 걸려 그동안 질문을 받았다.</p>
+
+        <h3>결과 <span class="ts">25:30</span></h3>
+        <ul class="plain">
+          <li>Reddit 게시글 몇 개가 잡혔다. "창피하다"는 반응과 "푹 빠졋다"는 반응이 섞여 있었다.</li>
+          <li>최종 판단은 <strong>"사라"</strong>였다. 근거는 적당한 할인, 압도적으로 긍정적인 리뷰와 약간의 엇갈린 의견, 높은 수요에 비해 적은 Amazon 재고였다.</li>
+          <li>재고 정보는 Amazon API 응답에서 그대로 읽어 낸 것이다. 모델이 API가 돌려준 데이터 항목들을 하나씩 해석해 결론을 냈다.</li>
+        </ul>
+        <p>발표자는 이 구조가 전자상거래에 묶이지 않는다고 말한다. 페이지에 닿아 데이터를 꺼내는 도구만 있으면 어떤 용도로도 같은 흐름을 만들 수 있다. 어떤 논리로 파이프라인을 짜고 규모를 키울지는 사용자 몫이다.</p>
+        <p class="note">자막의 "Tumblr cup"은 상품 종류인 텀블러<span class="en">tumbler</span>로, "Stanley Quenter"는 Stanley Quencher로 바로잡았다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="qna">
+        <header><span class="num">10</span><h2>질문: 왜 봇은 막히는가 <span class="ts">24:00</span></h2></header>
+        <p>청중 질문은 "왜 일반 봇은 못 가져오는 데이터를 Bright Data는 가져올 수 있나"였다. 발표자의 답은 이렇다.</p>
+        <ol class="plain">
+          <li>처음 며칠은 데이터센터 IP로 Glassdoor 같은 사이트를 긁어도 된다.</li>
+          <li>곧 사이트가 알아챈다. 같은 데이터센터 IP가 페이지에서 아무 행동도 하지 않고 계속 접근하기 때문이다. 그때부터 봇 차단 층이 겹겹이 추가된다.</li>
+          <li>이를 계속 피하려면 스크래퍼만으로는 안 된다. 사이트가 어떤 방어를 쓰는지 파악하고 차단을 일으키지 않으면서 <strong>꾸준히</strong> 통과해야 한다.</li>
+          <li>Bright Data는 세계 최대 프록시 인프라와, 사이트마다 접근 방식을 매번 바꾸는 봇 차단 우회 로직을 수년간 쌓아 왔다고 말한다.</li>
+        </ol>
+        <p>발표자는 스크래핑을 직접 운영하는 팀에 대해 한 가지를 덧붙인다. 사이트가 무엇을 바꿨는지 알아내는 시간이 스크래퍼를 관리하는 시간보다 더 들 수 있다는 것이다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>스크래퍼 하나에 <strong>3~5일</strong>. 사이트가 1,000개면 만드는 일보다 고치는 일이 팀을 잡아먹는다.</li>
+          <li>셀렉터 하나가 바뀌면 데이터가 비고, 뒷단 분석까지 멈춘다. 고친 뒤 빠진 기간을 다시 채워야 한다.</li>
+          <li>사이트마다 화면 구조가 다르다. 사이트별 스크래퍼와 사이트별 도메인 지식이 필요했다.</li>
+          <li>모든 사이트가 데이터를 지키려 한다. 기본 사이트는 데이터센터 IP로 되지만, Cloudflare나 Akamai 뒤의 사이트는 <strong>주거용 IP와 진짜 브라우저</strong>가 필요하다.</li>
+          <li>전통 파이프라인은 트리거, 프록시, 봇 차단 우회, 파싱과 검증, 후처리, 저장의 여섯 단계다. <strong>하나가 깨지면 처음부터</strong>다.</li>
+          <li>AI 모델은 학습 지식으로 답하는 <strong>비동기 경로</strong>와 지금 웹에 나가는 <strong>동기 경로</strong>를 택한다. "올해"처럼 시점이 붙으면 동기 경로다.</li>
+          <li>자주 묻는 실시간 질문은 한 번 가져와 <strong>캐시</strong>하면 토큰과 비용을 아낀다.</li>
+          <li>많은 사이트가 robots.txt로 ClaudeBot과 GPTBot을 막는다. 발표자는 <strong>Bright Data MCP</strong>의 60개 넘는 도구가 그 벽을 넘게 해 준다고 말한다.</li>
+          <li>실습 에이전트는 Amazon 상품 데이터와 Reddit 반응을 Gemini로 분석해 <strong>"사라"</strong>는 판단을 냈다. 같은 흐름은 어떤 용도로도 쓸 수 있다.</li>
+          <li>봇이 막히는 이유는 같은 IP로 아무 행동 없이 긁기 때문이다. 꾸준히 통과하려면 큰 프록시 인프라와 매번 바뀌는 접근 방식이 필요하다는 것이 발표자의 답이다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말한 스크래퍼 하나의 개발 기간과, 그 안에 포함되는 일은?</span></summary><div class="answer">3~5일. 개발뿐 아니라 QA, 개발 환경 실행, 끝까지 흐르는 파이프라인 테스트가 들어간다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>사이트가 1,000개가 되면 왜 "만들기"보다 "고치기"가 문제인가?</span></summary><div class="answer">사이트 몇 곳이 동시에 화면을 바꾸면 무엇이 바뀌었는지 찾고, 고치고, SLA와 데이터 품질 영향을 확인해야 한다. 예전에는 엔지니어를 2배, 4배로 늘려야 했다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>가격 셀렉터가 바뀌면 어떤 일이 연쇄로 일어나나?</span></summary><div class="answer">가격이 비어 들어오고, 가격에 기대는 뒷단 분석이 멈춘다. 고친 뒤 빠진 기간의 데이터를 다시 채워야 한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Cloudflare나 Akamai가 지키는 사이트에 들어가려면 무엇이 필요하다고 했나?</span></summary><div class="answer">주거용 IP, 진짜 브라우저, 진짜 사용자처럼 보이는 행동. 너무 빠른 클릭이나 스크롤, 이미지 차단은 봇으로 의심받는다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>데이터센터 IP와 주거용 IP의 차이는?</span></summary><div class="answer">데이터센터와 ISP IP는 고정 IP다. 주거용 IP는 노트북, 태블릿, TV 같은 실제 기기에서 나오는 회전식 IP라 사이트가 더 쉽게 들여보낸다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>전통 스크래핑 파이프라인의 여섯 단계와 가장 큰 약점은?</span></summary><div class="answer">트리거, 프록시, 봇 차단 우회, 파싱과 검증, 후처리, 저장. 어느 단계가 실패하면 전체를 처음부터 다시 돌려야 한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>"샌프란시스코에 가기 좋은 때"와 "올해 샌프란시스코에 가기 좋은 때"는 어느 경로로 가나?</span></summary><div class="answer">앞은 비동기 경로다. 학습된 일반 지식으로 "여름"이라 답할 수 있다. 뒤는 동기 경로다. 올해 행사를 실시간으로 확인해야 한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>모델이 웹에 나가도 특정 사이트의 데이터를 못 가져오는 이유로 발표자가 든 것은?</span></summary><div class="answer">많은 사이트가 robots.txt로 ClaudeBot과 GPTBot을 막는다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>소셜 미디어 리스너 사례에서 에이전트가 거친 순서는?</span></summary><div class="answer">검색 엔진 도구로 Instagram, TikTok, LinkedIn 프로필을 찾고, 각 페이지에 데이터 API를 호출해 팔로워 수를 모아 돌려줬다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>실습 에이전트의 세 단계와 필요한 두 키는?</span></summary><div class="answer">Amazon 상품 데이터 수집, Reddit 키워드 검색, Gemini 분석. 필요한 키는 Bright Data API 토큰과 Gemini API 키다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>실습 결과 "사라"의 근거 세 가지는?</span></summary><div class="answer">적당한 할인, 압도적으로 긍정적인 리뷰에 약간의 엇갈린 의견, 높은 수요에 비해 적은 Amazon 재고.</div></details>
+          <details><summary><span class="qn">Q12</span><span>청중 질문에 발표자가 설명한, 봇이 결국 막히는 이유는?</span></summary><div class="answer">같은 데이터센터 IP가 페이지에서 아무 행동도 하지 않고 계속 접근하면 사이트가 알아채고 봇 차단 층을 겹겹이 추가한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 프로젝트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>내 에이전트의 질문을 비동기 경로와 동기 경로로 나눈다<span class="how">시점이나 현재 상황이 답을 바꾸는 질문만 웹에 나가게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>반복되는 실시간 질문은 캐시한다<span class="how">예: 오늘 날씨, 오늘 환율. 하루에 한 번만 가져온다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>대상 사이트의 robots.txt와 봇 차단 수준을 먼저 확인한다<span class="how">데이터센터 IP로 되는 곳인지, 주거용 IP와 진짜 브라우저가 필요한 곳인지</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>수집한 데이터에 검증 규칙을 둔다<span class="how">예: 가격이 90% 이상 돌아오는가. 비면 바로 알린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>한 단계가 실패해도 처음부터 다시 돌리지 않게 단계별 결과를 저장한다<span class="how">bronze, silver처럼 중간 결과를 남긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>사이트별 스크래퍼 대신 에이전트가 도구를 고르는 구조를 검토한다<span class="how">MCP 서버로 도구를 묶고, 에이전트가 상황에 맞게 선택하게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>실습 흐름을 내 도메인으로 바꿔 한 번 돌려 본다<span class="how">상품 데이터 → 사용자 반응 → 모델 판단. 전자상거래가 아니어도 같은 구조다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>외부 수집 도구를 쓸 때 대상 사이트의 약관과 법적 조건을 확인한다<span class="how">발표에는 없는 항목이다. 차단을 우회하는 수집은 사이트 정책과 충돌할 수 있다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>스크래퍼</td><td>Scraper. 웹 페이지에서 원하는 데이터를 뽑아내는 프로그램</td></tr>
+              <tr><td>크롤러</td><td>Crawler. 링크를 따라 여러 페이지를 돌며 수집하는 프로그램. 발표에서는 스크래퍼와 비슷한 뜻으로 쓰였다</td></tr>
+              <tr><td>셀렉터</td><td>Selector. 페이지 안에서 특정 요소의 위치를 가리키는 식. 가격이나 제목을 찍어 내는 데 쓴다</td></tr>
+              <tr><td>봇 차단</td><td>Anti-bot. 자동화 프로그램의 접근을 막는 기술 묶음</td></tr>
+              <tr><td>캡차</td><td>CAPTCHA. 사람인지 확인하는 퍼즐</td></tr>
+              <tr><td>데이터센터 IP</td><td>서버 호스팅 업체에서 나오는 고정 IP. 봇으로 의심받기 쉽다</td></tr>
+              <tr><td>주거용 IP</td><td>Residential IP. 가정의 노트북, 태블릿, TV 같은 실제 기기에 할당된 IP</td></tr>
+              <tr><td>프록시</td><td>Proxy. 내 요청을 다른 IP를 거쳐 보내 출처를 가리는 중계 서버</td></tr>
+              <tr><td>SLA</td><td>Service Level Agreement. 데이터를 언제까지 어떤 품질로 주겠다는 약속</td></tr>
+              <tr><td>메달리온 구조</td><td>Medallion architecture. 데이터를 bronze(원본), silver(정제), gold(분석용) 층으로 나눠 다듬는 방식</td></tr>
+              <tr><td>RAG</td><td>Retrieval-augmented generation. 미리 색인한 문서를 찾아 모델의 답에 보태는 방식</td></tr>
+              <tr><td>동기 / 비동기 경로</td><td>발표자의 구분. 동기는 지금 웹에 나가 찾는 길, 비동기는 미리 학습하거나 색인한 데이터로 답하는 길</td></tr>
+              <tr><td>robots.txt</td><td>사이트가 어떤 봇의 접근을 허용하거나 막는지 적어 둔 파일</td></tr>
+              <tr><td>ClaudeBot, GPTBot</td><td>Anthropic과 OpenAI가 웹을 수집할 때 쓰는 봇 이름</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. AI 모델이 외부 도구와 데이터에 접근하는 표준 규약</td></tr>
+              <tr><td>엔드포인트</td><td>Endpoint. API를 호출하는 주소</td></tr>
+              <tr><td>Web Unlocker, Browser API</td><td>발표자가 말한 Bright Data 제품. 차단 감지와 재시도, 브라우저 자동화를 대신 처리한다</td></tr>
+              <tr><td>소셜 미디어 리스너</td><td>소셜 미디어에서 특정 이름이나 주제가 언급되는 것을 모아 보는 도구</td></tr>
+              <tr><td>Google Colab</td><td>브라우저에서 Python 노트북을 실행하는 Google 서비스</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자와 Bright Data 소개</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>발표의 두 부분: 개념과 실습</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>스크래핑은 작게 시작하고 사이트가 늘며 어려워진다</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>스크래퍼 하나에 3~5일, 10개에서 1,000개로</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>유지보수 부담과 엔지니어 2배, 4배</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>가격 셀렉터가 바뀌면</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>사이트마다 다른 구조, 데이터를 지키는 사이트</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>차단 수준: 데이터센터 IP부터 Cloudflare, Akamai까지</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>전통 스크래핑 아키텍처 다이어그램</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>프록시 종류와 봇 차단 우회 층</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>파싱과 검증 규칙</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>후처리, 메달리온 구조, 실패 시 처음부터</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>AI가 "생각 중"일 때 일어나는 일</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>샌프란시스코 여행 예시: 비동기와 동기</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>응답 캐시로 토큰 절약</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>robots.txt가 ClaudeBot과 GPTBot을 막는다</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>Bright Data MCP: 60개 넘는 API</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>사례: 소셜 미디어 리스너</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>브라우저 자동화 활용</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>영상 비교: Glassdoor</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>사용 사례: 채용 데이터의 네 요건</td></tr>
+              <tr><td><span class="ts">19:10</span></td><td>실습 시작: 준비물과 세 단계</td></tr>
+              <tr><td><span class="ts">21:30</span></td><td>Amazon 데이터 도착, Reddit 검색 시작</td></tr>
+              <tr><td><span class="ts">22:30</span></td><td>MCP 도구 묶음: 전자상거래, 소셜, 금융, 리서치</td></tr>
+              <tr><td><span class="ts">24:00</span></td><td>질문: 왜 봇은 막히고 Bright Data는 되나</td></tr>
+              <tr><td><span class="ts">25:30</span></td><td>결과: Reddit 반응과 "사라" 판단</td></tr>
+              <tr><td><span class="ts">26:30</span></td><td>같은 흐름을 다른 용도로</td></tr>
+              <tr><td><span class="ts">27:00</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'IK8cC4FScps:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>추론 최적화 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#demand">토큰 수요는 끝이 없다</a></li>
+      <li><a href="#memory">토큰 하나에 모델 전체를 읽는다</a></li>
+      <li><a href="#pareto">속도냐 처리량이냐</a></li>
+      <li><a href="#batching">배칭과 연속 배칭</a></li>
+      <li><a href="#kv">메모리를 먹는 KV 캐시</a></li>
+      <li><a href="#prefill-decode">프리필과 디코드</a></li>
+      <li><a href="#chunked">청크 프리필</a></li>
+      <li><a href="#workloads">요청마다 다른 자원</a></li>
+      <li><a href="#disagg">프리필·디코드 분리</a></li>
+      <li><a href="#multi-silicon">칩을 섞어 쓰는 클라우드</a></li>
+      <li><a href="#speculative">추측 디코딩</a></li>
+      <li><a href="#attention-ffn">어텐션·FFN 분리</a></li>
+      <li><a href="#agents">에이전트가 만드는 커널과 칩</a></li>
+      <li><a href="#future">앞으로 더 줄일 곳</a></li>
+      <li><a href="#overview">한눈에 보는 기법</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 서비스에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-12 · 23분 · 영어 발표 한글 정리</span>
+      <h1>토큰 수요를 따라잡는 추론 기술</h1>
+      <p class="lead">추론의 병목은 연산이 아니라 메모리다. 업계는 서버 한 대 안의 낭비를 줄이는 기법에서 시작해, 이제 작업을 잘게 쪼개 가장 잘 맞는 칩에 나눠 맡기는 단계로 가고 있다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=_cRgl3maiT8" target="_blank" rel="noopener">How Inference Keeps Up with Our Insatiable Need for Tokens</a></span>
+        <span>발표: Daniel (Cerebras, AI와 AI 에이전트 담당), Michelle (Gimlet Labs 공동 창업자)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 두 발표자는 각자 회사의 하드웨어와 서비스를 소개하므로 그 대목은 감안해 읽자. 자막에서 뭉개진 이름(Llama 3.3 70B, Trainium, d-Matrix 등)은 확실한 것만 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI가 쓰는 토큰이 폭증한다. 발표자가 인용한 구글의 월 처리량은 <strong>480조 개에서 3,200조 개</strong>로 약 6.7배가 됐다.</li>
+        <li>추론의 병목은 <strong>메모리</strong>다. 토큰 하나를 만들 때마다 모델 전체를 읽느라 연산 장치는 최대 90%의 시간을 기다린다.</li>
+        <li><strong>속도와 처리량은 맞바꾸는 관계</strong>다. 모든 최적화의 목표는 이 경계선을 오른쪽으로 미는 것이다.</li>
+        <li>서버 한 대 안에서는 <strong>연속 배칭, 페이지드 KV 캐시, 프롬프트 캐싱, 청크 프리필</strong>로 노는 시간과 노는 메모리를 줄였다.</li>
+        <li>여러 서버로 넓히면 <strong>작업을 쪼개 맞는 장비에 맡긴다.</strong> 프리필은 연산을, 디코드는 메모리를 많이 쓴다. 단계, 모델, 층 단위로 나눌 수 있다.</li>
+        <li>디코드는 Cerebras, 프리필은 Trainium에 맡기는 식으로 <strong>칩을 섞는다.</strong> Gimlet Labs는 같은 전력에서 3~10배 빠르다고 주장한다.</li>
+        <li><strong>가장 좋은 하드웨어는 없다.</strong> 다음 단계는 에이전트가 커널, 컴파일러, 칩 설계까지 최적화하는 것이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="demand">
+        <header><span class="num">01</span><h2>토큰 수요는 끝이 없다 <span class="ts">00:30</span></h2></header>
+        <p>AI에 쓰는 돈이 빠르게 늘고 있다. 발표자가 인용한 전망에 따르면 올해 컴퓨트(AI 연산 장비)에 7,650억 달러가 들어간다. 2031년에는 최대 1.6조 달러까지 늘어난다.</p>
+
+        <figure class="chart" aria-label="AI 컴퓨트 지출 전망: 올해 7,650억 달러, 2031년 최대 1조 6천억 달러">
+          <span class="chart-title">AI 컴퓨트 지출 전망 (10억 달러)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>올해</span><span class="val">765</span></div>
+              <div class="track"><div class="fill" style="width:47.8%" title="올해: 7,650억 달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>2031년 (최대)</span><span class="val">1,600</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="2031년: 최대 1조 6천억 달러"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>800</span><span>1,600</span></div>
+          <span class="caption">발표자가 인용한 전망치.</span>
+        </figure>
+
+        <p>최전선 모델을 만드는 연구소<span class="en">frontier lab</span>들은 여러 하드웨어 업체에서 연산 장비를 최대한 사들이고 있다. 새 모델을 학습시키는 데도 쓰고, 사용자에게 답을 내는 데도 쓴다. 이 장비는 결국 모두 토큰을 만드는 데 들어간다. <span class="ts">01:00</span></p>
+
+        <figure class="chart" aria-label="구글이 한 달에 처리한 토큰: 작년 I/O 발표 480조 개, 지난달 발표 3,200조 개">
+          <span class="chart-title">구글이 한 달에 처리하는 토큰 (조 개)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>작년 Google I/O 발표</span><span class="val">480</span></div>
+              <div class="track"><div class="fill" style="width:15%" title="작년 I/O: 월 480조 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>지난달 발표</span><span class="val">3,200</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="지난달: 월 3,200조 토큰"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>1,600</span><span>3,200</span></div>
+          <span class="caption">발표에서는 3.2 quadrillion이라고 했다. quadrillion은 1,000조이므로 3,200조다. 약 6.7배로 늘었다.</span>
+        </figure>
+
+        <p>수요만 는 게 아니다. 모델은 같은 기간에 더 싸지고 더 빨라졌다. 발표자에 따르면 Llama 3.3 70B는 처음 나왔을 때보다 지금 25% 싸고 3.6배 빠르다.</p>
+        <div class="callout">
+          <span class="title">이 발표가 답하는 두 질문</span>
+          <span>1. 추론을 싸고 빠르게 만들려고 지금까지 무엇을 했나.</span>
+          <span>2. 속도와 처리량을 더 끌어올리려면 앞으로 무엇을 하나.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="memory">
+        <header><span class="num">02</span><h2>토큰 하나에 모델 전체를 읽는다 <span class="ts">02:00</span></h2></header>
+        <p>LLM은 토큰을 한 번에 하나씩 만든다. 방금 만든 토큰을 입력 뒤에 붙이고, 다시 다음 토큰을 만든다. 이를 자기회귀 루프<span class="en">autoregressive loop</span>라고 한다.</p>
+        <p>토큰을 하나 더 만들 때마다 모델의 가중치 전체를 메모리에서 연산 장치로 읽어 와야 한다. 계산 자체는 금방 끝난다. 그래서 연산 장치는 대부분의 시간을 가중치가 다 들어오기를 기다리며 보낸다. 발표자는 이 대기 시간이 최대 90%라고 했다.</p>
+
+        <h3>GPU를 늘리면 내는 세금 <span class="ts">02:30</span></h3>
+        <p>첫 번째 해법은 연산 장치를 더 붙이는 것이다. 모델을 넷으로 나눠 GPU 4개가 4분의 1씩 맡으면, 이론상 토큰 하나를 만드는 시간이 4분의 1로 준다. 이렇게 모델을 나눠 싣는 방식을 보통 텐서 병렬화<span class="en">tensor parallelism</span>라고 부른다. 발표에서는 이름을 말하지 않았다.</p>
+        <p>문제는 각 GPU가 전체 그림을 모른다는 점이다. 어텐션 블록과 FFN 블록이 끝날 때마다 GPU 4개의 부분 결과를 모아 합쳐야 한다. 이 통신을 all-reduce라고 한다. 층마다 두 번씩 일어난다.</p>
+
+        <figure class="chart" aria-label="GPU 4개로 모델을 나눴을 때 속도 향상: 이론 4배, 실제 2배">
+          <span class="chart-title">GPU 4개로 나눴을 때 속도 향상 (배)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>이론</span><span class="val">4</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="이론: 4배"></div><div class="baseline" style="left:25%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>실제 (발표자 설명)</span><span class="val">2</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="실제: 2배"></div><div class="baseline" style="left:25%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = GPU 1개 (1배)</span><span>4</span></div>
+          <span class="caption">장비는 4배인데 속도는 2배다. 나머지는 GPU끼리 결과를 모으는 통신에 쓰인다.</span>
+        </figure>
+
+        <p>GPU를 더 넣으면 토큰은 빨라진다. 하지만 토큰 하나에 드는 에너지는 통신 비용 때문에 가파르게 늘어난다. 발표자는 이를 "기하급수적"이라고 표현했다. <span class="ts">03:20</span></p>
+      </section>
+
+      <!-- 3 -->
+      <section id="pareto">
+        <header><span class="num">03</span><h2>속도냐 처리량이냐 <span class="ts">03:30</span></h2></header>
+        <p>앞의 그래프에서 세로축을 처리량으로 바꾸면 곡선 하나가 나온다. 이를 파레토 경계<span class="en">Pareto frontier</span>라고 한다. 곡선 위의 점은 모두 그 나름의 최선이다. 대신 한쪽을 얻으려면 다른 쪽을 내줘야 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">속도 · interactivity</span>
+            <p>사용자 한 명이 받는 토큰이 얼마나 빨리 나오나.</p>
+          </div>
+          <div class="card">
+            <span class="tag">처리량 · throughput</span>
+            <p>같은 장비가 전체 사용자에게 토큰을 얼마나 많이 내나.</p>
+          </div>
+        </div>
+        <p>추론 업체는 이 둘 사이에서 골라야 한다. 발표자가 든 예는 Claude Code의 fast mode다. 발표자 기억으로는 일반 Claude보다 토큰 하나에 약 6배를 쓰고, 속도는 2배를 얻는다. 처리량을 포기하고 경계의 속도 쪽 끝을 고른 상품이다. <span class="ts">03:50</span></p>
+        <p class="note">fast mode 수치는 발표자가 "그런 것 같다"며 말한 것이다.</p>
+        <div class="shift" aria-label="최적화의 목표">
+          <div><span class="tag">경계 위에서 고르기</span><b>속도와 처리량을 맞바꾼다</b><span class="muted">곡선은 그대로 두고 위치만 옮긴다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이 발표의 목표</span><b>경계 자체를 오른쪽으로 민다</b><span class="muted">같은 처리량에서 더 빠르게, 같은 속도에서 더 많이</span></div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="batching">
+        <header><span class="num">04</span><h2>한 번 읽고 여럿에게: 배칭 <span class="ts">04:30</span></h2></header>
+        <p>토큰마다 모델 전체를 읽어야 한다면, 한 번 읽은 가중치로 여러 요청을 같이 처리하면 된다. 이것이 배칭<span class="en">batching</span>이다.</p>
+        <p>단순한 배칭에는 빈틈이 있다. 요청마다 길이가 다르다. 짧은 요청이 먼저 끝나면 그 자리는 빈 채로 돈다. 긴 요청이 끝날 때까지 연산 장치 일부가 논다.</p>
+        <p>연속 배칭<span class="en">continuous batching</span>은 이 빈자리를 바로 채운다. 요청 하나가 끝나면 그 자리에 대기 중인 새 요청을 넣는다. 같은 가중치 읽기로 처리하는 요청 수가 최대가 된다. <span class="ts">05:00</span></p>
+      </section>
+
+      <!-- 5 -->
+      <section id="kv">
+        <header><span class="num">05</span><h2>메모리를 잡아먹는 KV 캐시 <span class="ts">05:20</span></h2></header>
+        <p>배칭에는 대가가 있다. 어텐션은 앞선 모든 토큰의 K(키) 벡터와 V(값) 벡터를 참고해 다음 토큰을 정한다. 그래서 토큰을 하나 처리할 때마다 그 K와 V를 메모리에 저장해 둔다. 이 저장 공간이 KV 캐시<span class="en">KV cache</span>다.</p>
+        <div class="callout">
+          <span class="title">발표자의 어림셈 (파라미터 700억 개 모델 기준)</span>
+          <span>요청 하나에 토큰 3,000개마다 KV 캐시 1GB가 필요하다.</span>
+          <span>컨텍스트가 128K 토큰인 코딩 에이전트 요청 하나면 약 42GB다.</span>
+        </div>
+        <p>이건 요청 하나의 양이다. 이런 요청 8개를 한꺼번에 배칭하면 KV 캐시가 폭발한다. 메모리가 모자라 요청을 다 받지 못한다.</p>
+        <p class="note">예시 계산: 42GB × 8 ≈ 340GB. 발표의 어림셈을 그대로 곱한 값이다.</p>
+
+        <h3>페이지드 KV 캐시 <span class="ts">06:10</span></h3>
+        <p>예전에는 요청마다 KV 캐시를 넣을 실제 메모리를 미리 잡아 뒀다. 모자라지 않게 넉넉히 예약하다 보니, 잡아만 두고 쓰지 않는 메모리 블록이 많이 생겼다.</p>
+        <p>페이지드 KV 캐시<span class="en">paged KV cache</span>는 운영체제의 가상 메모리처럼 동작한다. 메모리 전체를 가상 공간으로 잡아 둔다. 각 요청의 KV 캐시는 빈 곳이 있는 아무 데나 나눠 저장한다. 예약만 하고 놀리는 공간이 크게 준다. 발표자는 같은 메모리로 요청을 3배 더 처리할 수 있다고 했다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="prefill-decode">
+        <header><span class="num">06</span><h2>프롬프트 캐싱, 그리고 프리필과 디코드 <span class="ts">07:10</span></h2></header>
+        <p>바로 이어 나온 기법이 프롬프트 캐싱<span class="en">prompt caching</span>이다. 코딩 에이전트나 채팅 앱은 요청마다 같은 긴 시스템 프롬프트를 붙인다. 이 부분의 KV 캐시를 매번 새로 계산할 필요는 없다. 이전 요청에서 계산해 둔 것을 다음 요청에 다시 쓰면 된다. 그만큼 시간이 많이 드는 프리필 단계를 건너뛴다.</p>
+
+        <h3>추론의 두 단계 <span class="ts">07:30</span></h3>
+        <p>추론은 크게 프리필<span class="en">prefill</span>과 디코드<span class="en">decode</span> 두 단계로 나뉜다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>프리필</th><th>디코드</th></tr></thead>
+            <tbody>
+              <tr><td>구간</td><td>요청이 도착한 뒤 첫 토큰이 나올 때까지</td><td>첫 토큰 이후 답이 끝날 때까지</td></tr>
+              <tr><td>하는 일</td><td>입력한 모든 토큰의 K, V를 계산하고 첫 출력 토큰을 만든다</td><td>프리필에서 만든 KV 캐시를 다시 쓰며 토큰을 하나씩 만든다</td></tr>
+              <tr><td>병목</td><td>연산 <span class="en">compute-bound</span></td><td>메모리 <span class="en">memory-bound</span></td></tr>
+              <tr><td>특징</td><td>아주 잘게 나눠 병렬로 돌릴 수 있다</td><td>한 번에 한 토큰씩 순서대로 간다</td></tr>
+              <tr><td>체감</td><td>ChatGPT에 입력하고 첫 글자가 뜨기까지 걸리는 몇 초</td><td>그 뒤 글자가 매끄럽게 이어지는 구간</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 구분이 중요한 이유는 다음 절의 문제 때문이다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="chunked">
+        <header><span class="num">07</span><h2>긴 프롬프트가 길을 막는다 <span class="ts">08:30</span></h2></header>
+        <p>요즘 추론 파이프라인을 크게 흔드는 것은 토큰을 엄청나게 먹는 코딩 에이전트다. 컨텍스트가 20만, 50만, 100만 토큰에 이른다.</p>
+        <p>프리필이 도는 동안에는 다른 프리필도, 디코드도 지나가지 못한다. 코딩 요청 여러 개가 들어와 있으면, 채팅으로 간단한 수학 문제를 묻는 사용자까지 한참 기다린다. 발표자는 이를 "재앙"에 가깝다고 했다.</p>
+        <p>청크 프리필<span class="en">chunked prefill</span>은 긴 프리필을 작은 조각으로 자른다. 그리고 조각 사이사이에 다른 요청의 디코드와 프리필을 끼워 넣는다. 요청 하나가 오래 붙잡고 있는 일이 없어진다. <span class="ts">09:10</span></p>
+        <div class="shift" aria-label="청크 프리필 전후">
+          <div><span class="tag">청크 없이</span><b>긴 프리필 하나가 통째로 돈다</b><span class="muted">그동안 다른 요청은 모두 기다린다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">청크 프리필</span><b>프리필 조각, 디코드, 프리필 조각, 디코드</b><span class="muted">짧은 요청도 중간에 지나간다</span></div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="workloads">
+        <header><span class="num">08</span><h2>요청마다 필요한 자원이 다르다 <span class="ts">09:30</span></h2></header>
+        <p>여기서 발표가 Michelle에게 넘어간다. 지금까지 본 기법은 모두 런타임 수준 최적화다. 서버 한 대(워커<span class="en">worker</span>) 안에서 추론을 효율적으로 만드는 방법이다.</p>
+        <p>경계를 더 밀려면 시스템 수준 최적화가 필요하다. 작업을 여러 워커에 어떻게 나눌지의 문제다. 출발점은 요청이 저마다 다르다는 사실이다. <span class="ts">10:00</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>사용 예</th><th>입력과 출력</th><th>주로 걸리는 단계</th><th>병목</th></tr></thead>
+            <tbody>
+              <tr><td>문서 요약</td><td>문서를 잔뜩 주고 질문 하나에 대한 답을 받는다. 긴 입력, 짧은 출력</td><td>프리필</td><td>연산</td></tr>
+              <tr><td>긴 이야기 쓰기</td><td>주제 몇 개만 주고 책 한 권을 받는다. 짧은 입력, 긴 출력</td><td>디코드</td><td>메모리</td></tr>
+              <tr><td>둘 다 긴 작업</td><td>긴 입력, 긴 출력</td><td>둘 다</td><td>연산과 메모리 모두</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>작업 모양에 따라 하드웨어에 필요한 자원이 꽤 달라진다. 그렇다면 연산이나 메모리 한쪽에 묶이지 않으려면 어떻게 해야 할까.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="disagg">
+        <header><span class="num">09</span><h2>프리필과 디코드를 다른 장비에 <span class="ts">11:00</span></h2></header>
+        <p>답은 분리<span class="en">disaggregation</span>다. 작업을 쪼개 서로 다른 워커 노드에 맡긴다. 가장 흔한 형태는 단계별로 나누는 프리필·디코드 분리<span class="en">prefill-decode disaggregation</span>다.</p>
+        <ul class="plain">
+          <li><strong>프리필 풀</strong>: 프리필만 맡는 워커 묶음</li>
+          <li><strong>디코드 풀</strong>: 디코드만 맡는 워커 묶음</li>
+        </ul>
+        <p>두 풀은 따로 늘리고 줄일 수 있다. 요약 작업이 많다면 프리필 풀을 늘려 연산에 막히지 않게 한다. 할 일이 적은 디코드 풀은 줄여 자원을 아낀다. 어느 쪽도 다른 쪽을 붙잡지 않는다.</p>
+        <p>디코드가 메모리에 묶이는 이유도 다시 짚었다. 디코드는 토큰을 하나씩 밟아 간다. 그리고 한 걸음마다 KV 캐시 전체를 다시 읽는다.</p>
+
+        <h3>메모리 대역폭이 디코드 속도를 정한다 <span class="ts">12:20</span></h3>
+        <p>다시 Daniel의 설명이다. 메모리에서 연산 장치로 데이터를 옮기는 속도를 메모리 대역폭<span class="en">memory bandwidth</span>이라고 한다. 디코드가 메모리에 묶인다는 말은 이 숫자가 디코드 속도를 좌우한다는 뜻이다.</p>
+        <p>NVIDIA H100의 메모리 대역폭은 초당 3.35TB다. Daniel에 따르면 Cerebras는 초당 21,000TB다. Cerebras 칩은 칩 위에 SRAM 기반 메모리를 올린 특수한 구조이기 때문이다. 그래서 Daniel은 Cerebras가 디코드에 맞게 만들어진 장비라고 설명한다.</p>
+        <p class="note">발표에서는 Cerebras의 대역폭이 H100의 "7,000배"라고 했다. 발표에서 말한 두 숫자로 계산하면 21,000 ÷ 3.35 ≈ 6,300배다.</p>
+
+        <figure class="chart" aria-label="디코드 속도 비교: H100 초당 600 토큰, Cerebras 초당 3,000 토큰">
+          <span class="chart-title">디코드 속도 (초당 토큰)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>NVIDIA H100</span><span class="val">600</span></div>
+              <div class="track"><div class="fill" style="width:20%" title="H100: 초당 600 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Cerebras</span><span class="val">3,000</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="Cerebras: 초당 3,000 토큰"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>1,500</span><span>3,000</span></div>
+          <span class="caption">발표자가 인용한 값. 5배 차이다. 어떤 모델에서 잰 값인지는 발표에 나오지 않았다.</span>
+        </figure>
+
+        <h3>AWS Trainium과 Cerebras를 잇는다 <span class="ts">13:00</span></h3>
+        <p>Cerebras는 AWS와 손잡고 이 분리를 실제 서비스로 만들고 있다.</p>
+        <div class="shift" aria-label="AWS Trainium과 Cerebras CS-3의 단계별 분담">
+          <div><span class="tag">프리필 · 연산</span><b>AWS Trainium 칩</b><span class="muted">입력을 처리하고 KV 캐시를 만든다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">디코드 · 메모리</span><b>Cerebras CS-3 시스템</b><span class="muted">KV 캐시를 받아 토큰을 낸다</span></div>
+        </div>
+        <p>KV 캐시는 AWS의 고속 네트워크인 EFA<span class="en">Elastic Fabric Adapter</span>로 넘긴다. Daniel은 이렇게 하면 같은 공간에서 고속 토큰 처리 용량이 5배가 된다고 했다.</p>
+        <p class="note">Daniel은 Cerebras 소속이다. 대역폭, 디코드 속도, 5배 용량은 모두 자기 회사 제품에 대한 주장이니 감안해 읽자.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="multi-silicon">
+        <header><span class="num">10</span><h2>여러 칩을 섞어 쓰는 클라우드 <span class="ts">13:30</span></h2></header>
+        <p>Michelle의 회사 Gimlet Labs는 이 생각을 Trainium과 Cerebras 너머로 넓힌다. 만드는 것은 멀티 실리콘 추론 클라우드<span class="en">multi-silicon inference cloud</span>다.</p>
+        <ol class="plain">
+          <li>작업을 더 잘게 쪼갠다.</li>
+          <li>조각마다 어떤 자원을 많이 쓰는지 파악한다.</li>
+          <li>각 조각을 가장 효율적으로 돌릴 하드웨어에 배치한다. 후보는 Nvidia, AMD, Trainium, Cerebras, d-Matrix, Intel Gaudi 등이다.</li>
+        </ol>
+        <p>Michelle에 따르면 같은 전력 예산을 쓰는 동종 시스템(한 종류 칩만 쓴 시스템)보다 3~10배 빠른 추론이 나온다.</p>
+        <p class="note">Gimlet Labs 자사 서비스의 결과다. 어떤 모델과 워크로드에서 잰 값인지는 발표에 나오지 않았다.</p>
+        <p>분리는 단계별로만 하는 게 아니다. 발표에서는 세 가지 방식을 소개했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>나누는 기준</th><th>나뉘는 두 쪽</th><th>기법</th><th>위치</th></tr></thead>
+            <tbody>
+              <tr><td>단계</td><td>프리필 / 디코드</td><td>프리필·디코드 분리</td><td><span class="ts">11:00</span></td></tr>
+              <tr><td>모델</td><td>작은 드래프트 모델 / 전체 모델</td><td>추측 디코딩</td><td><span class="ts">14:20</span></td></tr>
+              <tr><td>층</td><td>어텐션 층 / FFN 층</td><td>어텐션·FFN 분리</td><td><span class="ts">17:00</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="speculative">
+        <header><span class="num">11</span><h2>작은 모델이 먼저 추측한다: 추측 디코딩 <span class="ts">14:20</span></h2></header>
+        <p>보통 디코드는 토큰 하나를 얻을 때마다 전체 모델을 한 번 통과시킨다. 이 한 번의 계산을 포워드 패스<span class="en">forward pass</span>라고 한다.</p>
+        <p>추측 디코딩<span class="en">speculative decoding</span>에는 드래프트 모델<span class="en">draft model</span>이 하나 더 있다. 전체 모델을 작게 만든 버전으로, 결과를 대략 흉내 낸다. 작아서 빨리 돌고 자원도 덜 쓴다.</p>
+        <ol class="plain">
+          <li><strong>추측</strong>: 드래프트 모델이 다음 토큰 여러 개를 먼저 만든다. 이를 후보 토큰<span class="en">candidate tokens</span>이라고 한다. 드래프트 모델은 보통 전체 모델을 바탕으로 학습시켜서 대체로 맞는다.</li>
+          <li><strong>검증</strong>: 전체 모델이 후보 토큰 중 어디까지 맞는지 확인한다. 이를 검증 단계<span class="en">verify</span>라고 한다.</li>
+          <li><strong>반복</strong>: 필요한 토큰이 다 나올 때까지 되풀이한다.</li>
+        </ol>
+
+        <figure class="chart" aria-label="토큰 9개를 얻는 데 전체 모델을 돌린 횟수: 기본 디코드 9회, 추측 디코딩 3회">
+          <span class="chart-title">토큰 9개를 얻는 데 전체 모델을 돌린 횟수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>기본 디코드</span><span class="val">9</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="기본 디코드: 9회"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>추측 디코딩</span><span class="val">3</span></div>
+              <div class="track"><div class="fill key" style="width:33.3%" title="추측 디코딩: 3회"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>9회</span></div>
+          <span class="caption">발표 슬라이드의 예. 드래프트 모델을 아주 빨리 돌릴 수 있으면 토큰을 얻는 시간이 크게 준다.</span>
+        </figure>
+
+        <h3>결과: 경계가 오른쪽으로 간다 <span class="ts">16:00</span></h3>
+        <p>Michelle은 처음의 파레토 그래프로 결과를 보여 줬다. 가로축은 속도, 세로축은 처리량이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>동종 GPU에서 프리필·디코드 분리 (기준)</td><td>처리량은 좋다. 하지만 속도를 올리면 처리량이 급격히 떨어진다</td></tr>
+              <tr><td>같은 GPU에서 추측 디코딩 추가</td><td>곡선이 오른쪽으로 간다. 전체 모델로 디코드하는 횟수가 줄었기 때문이다</td></tr>
+              <tr><td>드래프트 모델을 d-Matrix나 Cerebras에서 실행</td><td>같은 처리량에서 동종 장비보다 상호작용성(사용자가 체감하는 속도)이 10배 높다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>핵심은 작은 모델을 아주 빨리 돌리는 장비에 드래프트 모델을 맡긴 것이다. 앞에서 말한 "작업마다 가장 잘 맞는 하드웨어"가 여기서도 통한다.</p>
+        <p class="note">10배는 Gimlet Labs가 보여 준 자사 결과다. 비교에 쓰인 Cerebras도 다른 발표자의 회사다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="attention-ffn">
+        <header><span class="num">12</span><h2>층마다 다른 장비에: 어텐션·FFN 분리 <span class="ts">17:00</span></h2></header>
+        <p>마지막 분리 방식은 어텐션·FFN 분리<span class="en">attention-FFN disaggregation</span>다. 파라미터가 3조 개쯤 되는 아주 큰 모델에서 의미가 커진다. 이런 모델은 층 하나를 돌리는 데도 자원이 많이 든다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">어텐션 층 · 메모리</span>
+            <p>KV 캐시를 많이 읽는다.</p>
+            <p class="verdict">→ <b>메모리 대역폭이 큰 장비</b>로 보낸다</p>
+          </div>
+          <div class="card">
+            <span class="tag">FFN 층 · 연산</span>
+            <p>큰 행렬 곱셈을 많이 한다.</p>
+            <p class="verdict">→ <b>행렬 곱셈이 빠른 장비</b>로 보낸다</p>
+          </div>
+        </div>
+        <p>그러면 모델 하나를 추론하는 동안에도 층마다 여러 장비를 탁구공처럼 오간다. 모든 층을 쪼개 맡기는 셈이다.</p>
+        <blockquote>가장 좋은 분리 방식은 없다. 가장 좋은 하드웨어도 없다.<cite>Michelle의 말을 옮김 <span class="ts">18:00</span></cite></blockquote>
+        <p>답은 모델, 워크로드, 필요한 지연 시간, 보장해야 할 처리량에 따라 달라진다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="agents">
+        <header><span class="num">13</span><h2>에이전트가 커널과 칩을 만든다 <span class="ts">18:20</span></h2></header>
+        <p>에이전트는 일상과 업무에 점점 깊이 들어온다. 그만큼 더 많고 더 빠른 토큰이 필요하다. 목표는 터무니없어 보인다. 하지만 두 발표자는 이 문제를 푸는 데에도 에이전트를 쓸 수 있다고 본다.</p>
+
+        <h3>KForge: 커널을 만드는 에이전트 <span class="ts">18:50</span></h3>
+        <p>커널<span class="en">kernel</span>은 칩 위에서 실제 계산을 하는 작은 프로그램이다. 지금은 사람이 붙어 앉아 손으로 커널을 튜닝한다. 그런데 가장 좋은 커널은 조건에 따라 크게 달라진다.</p>
+        <ul class="plain">
+          <li>돌리는 모델</li>
+          <li>하드웨어 종류, 같은 하드웨어의 세대</li>
+          <li>워크로드의 모양</li>
+        </ul>
+        <p>Gimlet처럼 여러 하드웨어를 지원하려면 이 문제를 감당할 만한 크기로 줄여야 한다. 그래서 만든 것이 커널 생성 에이전트 KForge다. 하드웨어 프로필, 워크로드 프로필 등 커널 최적화에 쓸 수 있는 정보를 모두 받는다. 그리고 문제를 무차별 탐색<span class="en">brute force</span>으로 푼다.</p>
+        <div class="callout">
+          <span class="title">발표 직전 주의 결과 <span class="ts">20:00</span></span>
+          <span>에이전트를 일주일이 채 안 되게 돌렸다. AMD 하드웨어에서 GPT-OSS-120B가 전체 추론 기준<span class="en">end-to-end</span>으로 33% 빨라졌다. 이미 최적화된 커널 위에서 얻은 개선이다.</span>
+        </div>
+        <p class="note">KForge는 Gimlet Labs 자사 도구다. 결과도 자사 발표이니 감안해 읽자.</p>
+
+        <h3>칩을 설계하는 에이전트 <span class="ts">20:10</span></h3>
+        <p>Michelle은 한 걸음 더 나간다. 에이전트로 특정 모델이나 워크로드에 딱 맞춘 칩을 설계하자는 것이다.</p>
+        <ol class="plain">
+          <li>에이전트가 맞춤 칩을 설계한다.</li>
+          <li>그 칩으로 더 똑똑하고 빠른 AI를 학습시킨다.</li>
+          <li>그 AI가 다음 세대 맞춤 칩을 설계한다.</li>
+        </ol>
+        <p>이 고리는 계속 되풀이된다. Michelle은 이를 재귀 루프라고 불렀다.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="future">
+        <header><span class="num">14</span><h2>앞으로 더 줄일 곳 <span class="ts">20:40</span></h2></header>
+        <p>두 발표자는 추론 최적화가 이제 막 시작됐다고 말한다. 그리고 에이전트를 붙일 곳을 번갈아 꼽았다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>영역</th><th>에이전트가 하는 일</th><th>말한 사람</th></tr></thead>
+            <tbody>
+              <tr><td>장애 대응</td><td>시스템을 더 안정적으로 만들고 가동 시간을 늘린다. 멈추는 시간이 줄면 처리량과 토큰이 는다</td><td>Daniel</td></tr>
+              <tr><td>모델 올리기</td><td>새 모델이 나온 첫날, 모든 종류의 하드웨어에서 돌게 만든다</td><td>Michelle</td></tr>
+              <tr><td>맞춤 컴파일러</td><td>워크로드와 모델에 맞춘 추론 소프트웨어를 그때그때 만든다. Anthropic 사람들이 컴파일러를 2주 만에 만든 사례를 근거로 들었다</td><td>Daniel</td></tr>
+              <tr><td>칩 설계</td><td>맞춤 칩의 테이프아웃(설계를 마치고 제조로 넘기는 단계)을 앞당긴다</td><td>Michelle</td></tr>
+              <tr><td>백오피스</td><td>조달, 법무 등 추론 서비스를 둘러싼 비기술 업무를 자동화한다</td><td>Daniel</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>두 발표자의 결론은 같다. 이 모든 층에서 낭비를 줄이면 토큰은 더 빠르고 싸진다. 마지막 인사는 "가서 토큰을 드세요"였다. <span class="ts">22:20</span></p>
+      </section>
+
+      <!-- 15 -->
+      <section id="overview">
+        <header><span class="num">15</span><h2>한눈에 보는 기법</h2><p class="muted">발표에 나온 기법을 푸는 문제 기준으로 모았다.</p></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기법</th><th>푸는 문제</th><th>방법</th><th>수준</th></tr></thead>
+            <tbody>
+              <tr><td>GPU에 모델 나눠 싣기</td><td>메모리를 기다리는 시간</td><td>모델을 여러 GPU에 나눈다. 대가로 all-reduce 통신이 생긴다</td><td>런타임</td></tr>
+              <tr><td>연속 배칭</td><td>길이가 다른 요청 때문에 생기는 빈자리</td><td>끝난 자리에 새 요청을 바로 넣는다</td><td>런타임</td></tr>
+              <tr><td>페이지드 KV 캐시</td><td>예약만 하고 안 쓰는 메모리</td><td>가상 메모리처럼 빈 곳 아무 데나 저장한다</td><td>런타임</td></tr>
+              <tr><td>프롬프트 캐싱</td><td>같은 프롬프트를 매번 다시 프리필</td><td>이전 요청의 KV 캐시를 다시 쓴다</td><td>런타임</td></tr>
+              <tr><td>청크 프리필</td><td>긴 프리필이 다른 요청을 막음</td><td>잘게 잘라 사이사이 다른 요청을 끼운다</td><td>런타임</td></tr>
+              <tr><td>프리필·디코드 분리</td><td>단계마다 다른 자원 요구</td><td>두 풀로 나눠 따로 늘리고 줄인다</td><td>시스템</td></tr>
+              <tr><td>추측 디코딩</td><td>토큰마다 전체 모델을 돌림</td><td>작은 모델이 추측하고 전체 모델은 검증만 한다</td><td>시스템</td></tr>
+              <tr><td>어텐션·FFN 분리</td><td>층 하나도 무거운 거대 모델</td><td>층 종류별로 맞는 장비에 맡긴다</td><td>시스템</td></tr>
+              <tr><td>커널 생성 에이전트</td><td>손으로 하는 커널 튜닝</td><td>에이전트가 탐색해 더 빠른 커널을 찾는다</td><td>에이전트</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="recap">
+        <header><span class="num">16</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>토큰 수요가 폭증한다. 구글의 월 처리 토큰은 480조 개에서 3,200조 개로 약 6.7배가 됐다.</li>
+          <li>추론의 병목은 <strong>메모리</strong>다. 토큰마다 가중치 전체를 읽느라 연산 장치는 최대 90%를 기다린다.</li>
+          <li>GPU를 늘리면 빨라지지만 all-reduce 통신 때문에 효율이 떨어진다. 장비 4배로 속도 2배를 얻는 식이다.</li>
+          <li>속도와 처리량은 맞바꾸는 관계(<strong>파레토 경계</strong>)다. 목표는 경계를 오른쪽으로 미는 것이다.</li>
+          <li>배칭은 한 번 읽은 가중치를 여러 요청에 쓴다. <strong>연속 배칭</strong>은 빈자리를 바로 채운다.</li>
+          <li>KV 캐시는 70B 모델에서 3,000토큰당 1GB다. <strong>페이지드 KV 캐시</strong>와 <strong>프롬프트 캐싱</strong>이 메모리와 계산 낭비를 줄인다.</li>
+          <li>프리필은 연산에, 디코드는 메모리에 묶인다. 긴 프리필이 길을 막으면 <strong>청크 프리필</strong>로 잘라 끼운다.</li>
+          <li>시스템 수준에서는 작업을 나눠 맞는 장비에 맡긴다. 기준은 <strong>단계, 모델, 층</strong> 세 가지다.</li>
+          <li>디코드는 메모리 대역폭이 큰 장비가 유리하다. 그래도 <strong>가장 좋은 하드웨어는 없다.</strong> 모델, 워크로드, 지연, 처리량 요구에 따라 다르다.</li>
+          <li>에이전트가 커널 최적화(KForge, 33%), 모델 올리기, 컴파일러, 칩 설계까지 맡는 쪽으로 가고 있다.</li>
+        </ol>
+      </section>
+
+      <!-- 17 -->
+      <section id="quiz">
+        <header><span class="num">17</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>토큰을 만들 때 연산 장치가 오래 노는 이유는?</span></summary><div class="answer">토큰 하나를 만들 때마다 모델 가중치 전체를 메모리에서 읽어 와야 하기 때문이다. 발표자는 최대 90%가 대기 시간이라고 했다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>GPU 4개로 모델을 나눴는데 왜 2배만 빨라지나?</span></summary><div class="answer">각 GPU가 모델의 일부만 가지고 있어서, 어텐션과 FFN 블록이 끝날 때마다 부분 결과를 모으는 all-reduce가 필요하다. 이 통신이 층마다 두 번 일어난다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>파레토 경계에서 속도와 처리량은 어떤 관계인가? 이 발표의 목표는?</span></summary><div class="answer">한쪽을 얻으면 다른 쪽을 내줘야 한다. 목표는 경계 자체를 오른쪽으로 밀어 같은 처리량에서 더 빠르게 만드는 것이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>연속 배칭은 일반 배칭의 어떤 빈틈을 메우나?</span></summary><div class="answer">짧은 요청이 먼저 끝나서 생긴 빈자리다. 그 자리에 대기 중인 새 요청을 바로 넣는다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>KV 캐시가 배칭을 어렵게 만드는 이유는? 페이지드 KV 캐시는 어떤 낭비를 줄이나?</span></summary><div class="answer">요청마다 토큰의 K, V를 저장해야 한다. 70B 모델에서 3,000토큰당 1GB, 128K 컨텍스트면 약 42GB다. 페이지드 KV 캐시는 미리 예약만 하고 쓰지 않는 메모리를 줄인다. 발표자는 요청을 3배 더 받을 수 있다고 했다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>프리필과 디코드는 각각 무엇에 묶이나? 이유는?</span></summary><div class="answer">프리필은 연산에 묶인다. 입력 토큰 전체의 K, V를 한꺼번에 병렬로 계산하기 때문이다. 디코드는 메모리에 묶인다. 토큰을 하나씩 만들며 매번 KV 캐시 전체를 다시 읽기 때문이다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>긴 컨텍스트 코딩 에이전트가 짧은 채팅 사용자에게 주는 피해와 해결책은?</span></summary><div class="answer">긴 프리필이 도는 동안 다른 프리필과 디코드가 지나가지 못해 짧은 요청도 오래 기다린다. 청크 프리필로 프리필을 잘게 잘라 사이사이 다른 요청을 끼운다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>문서 요약 요청이 많다면 프리필·디코드 분리에서 어떻게 조정하나?</span></summary><div class="answer">요약은 긴 입력, 짧은 출력이라 프리필이 무겁다. 프리필 풀을 늘리고 디코드 풀은 줄인다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Daniel이 Cerebras를 디코드용 장비라고 한 근거는? 발표의 계산에서 바로잡을 점은?</span></summary><div class="answer">칩 위의 SRAM 덕분에 메모리 대역폭이 초당 21,000TB로 H100(3.35TB)보다 훨씬 크다. 디코드 속도는 초당 3,000토큰 대 600토큰이라고 했다. 발표에서는 "7,000배"라고 했지만 두 숫자로 계산하면 약 6,300배다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>추측 디코딩에서 드래프트 모델과 전체 모델은 각각 무슨 일을 하나?</span></summary><div class="answer">드래프트 모델은 후보 토큰 여러 개를 빠르게 추측한다. 전체 모델은 그중 어디까지 맞는지 검증한다. 슬라이드 예에서는 토큰 9개에 전체 모델을 9번 돌리던 것이 3번으로 줄었다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>어텐션·FFN 분리에서 두 층을 각각 어떤 장비에 보내나?</span></summary><div class="answer">어텐션 층은 KV 캐시를 많이 읽어 메모리에 묶이므로 메모리 대역폭이 큰 장비로 보낸다. FFN 층은 행렬 곱셈이 많아 연산이 빠른 장비로 보낸다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>KForge가 보여 준 결과와 그 의미는?</span></summary><div class="answer">일주일이 채 안 되게 돌려서 AMD 하드웨어의 GPT-OSS-120B를 전체 추론 기준 33% 빠르게 했다. 이미 최적화된 커널 위에서 얻은 결과라, 사람의 손 튜닝 뒤에도 남은 여지가 있다는 뜻이다. 단, Gimlet Labs의 자사 발표다.</div></details>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="apply">
+        <header><span class="num">18</span><h2>내 서비스에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 요청의 입력·출력 토큰 비율을 재 본다<span class="how">긴 입력·짧은 출력이면 프리필이, 짧은 입력·긴 출력이면 디코드가 병목이 되기 쉽다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>기능마다 속도와 처리량 중 무엇이 중요한지 정한다<span class="how">예: 대화형 화면은 속도, 밤새 도는 일괄 요약은 처리량</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>긴 시스템 프롬프트가 프롬프트 캐싱을 탈 수 있게 한다<span class="how">확인: 공통 시스템 프롬프트가 요청마다 똑같이 반복되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>컨텍스트 길이별 KV 캐시 메모리를 어림한다<span class="how">발표의 어림셈: 70B 모델에서 3,000토큰당 1GB. 여기에 동시 요청 수를 곱한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>모델을 직접 서빙한다면 연속 배칭, 페이지드 KV 캐시, 청크 프리필이 켜져 있는지 확인한다<span class="how">서빙 엔진의 설정과 문서를 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>긴 컨텍스트 요청과 짧은 대화 요청이 섞일 때 첫 토큰 지연을 따로 잰다<span class="how">확인: 긴 요청이 몰릴 때 짧은 요청의 첫 토큰이 늦어지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>하드웨어나 추론 업체를 우리 워크로드 기준으로 비교한다<span class="how">모델, 워크로드, 필요한 지연, 처리량 요구를 먼저 적는다. 가장 좋은 하드웨어는 없다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>업체가 말하는 배수는 우리 워크로드로 다시 잰다<span class="how">발표의 3~10배, 10배, 33%도 각 회사가 고른 조건에서 잰 값이다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 19 -->
+      <section id="glossary">
+        <header><span class="num">19</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>토큰</td><td>모델이 읽고 쓰는 글 조각 단위</td></tr>
+              <tr><td>추론</td><td>Inference. 학습을 마친 모델로 답을 만들어 내는 일</td></tr>
+              <tr><td>자기회귀 루프</td><td>Autoregressive loop. 만든 토큰을 입력에 붙여 다음 토큰을 하나씩 만드는 방식</td></tr>
+              <tr><td>가중치</td><td>Weights. 모델이 학습으로 얻은 숫자 묶음. 토큰을 만들 때마다 메모리에서 읽는다</td></tr>
+              <tr><td>메모리 대역폭</td><td>Memory bandwidth. 메모리에서 연산 장치로 1초에 옮길 수 있는 데이터 양</td></tr>
+              <tr><td>연산에 묶임 / 메모리에 묶임</td><td>Compute-bound / memory-bound. 속도를 정하는 쪽이 계산량인지, 데이터를 옮기는 속도인지</td></tr>
+              <tr><td>텐서 병렬화</td><td>Tensor parallelism. 모델을 나눠 여러 GPU에 싣는 방식. 발표에서는 이름 없이 설명했다</td></tr>
+              <tr><td>all-reduce</td><td>여러 GPU가 계산한 부분 결과를 모아 합치는 통신</td></tr>
+              <tr><td>파레토 경계</td><td>Pareto frontier. 한쪽을 더 얻으려면 다른 쪽을 내줘야 하는 최선의 조합들을 이은 선</td></tr>
+              <tr><td>처리량 / 상호작용성</td><td>Throughput: 장비가 전체 사용자에게 내는 토큰 양. Interactivity: 사용자 한 명이 체감하는 토큰 속도</td></tr>
+              <tr><td>배칭 / 연속 배칭</td><td>Batching: 한 번 읽은 가중치로 여러 요청을 함께 처리한다. Continuous batching: 끝난 요청 자리에 새 요청을 바로 넣는다</td></tr>
+              <tr><td>KV 캐시</td><td>어텐션이 참고하는, 토큰마다의 K(키) 벡터와 V(값) 벡터를 저장해 둔 공간</td></tr>
+              <tr><td>페이지드 KV 캐시</td><td>Paged KV cache. 가상 메모리처럼 KV 캐시를 빈 곳 아무 데나 나눠 저장하는 방식</td></tr>
+              <tr><td>프롬프트 캐싱</td><td>Prompt caching. 같은 프롬프트의 KV 캐시를 다음 요청에서 다시 쓰는 것</td></tr>
+              <tr><td>프리필 / 디코드</td><td>Prefill: 입력 전체를 처리해 첫 토큰을 내는 단계. Decode: 그 뒤 토큰을 하나씩 만드는 단계</td></tr>
+              <tr><td>청크 프리필</td><td>Chunked prefill. 긴 프리필을 잘게 잘라 다른 요청과 번갈아 처리하는 방식</td></tr>
+              <tr><td>워커</td><td>Worker. 추론을 실제로 수행하는 서버 단위</td></tr>
+              <tr><td>분리</td><td>Disaggregation. 추론 작업을 쪼개 서로 다른 워커나 장비에 맡기는 것</td></tr>
+              <tr><td>동종 시스템</td><td>Homogeneous system. 한 종류 칩만으로 만든 시스템</td></tr>
+              <tr><td>포워드 패스</td><td>Forward pass. 입력을 모델의 처음부터 끝까지 한 번 통과시키는 계산</td></tr>
+              <tr><td>추측 디코딩</td><td>Speculative decoding. 작은 드래프트 모델이 후보 토큰을 추측하고, 전체 모델은 검증만 하는 방식</td></tr>
+              <tr><td>어텐션 / FFN</td><td>어텐션: 앞 토큰들과의 관계를 계산하는 층. FFN(feedforward network): 큰 행렬 곱셈을 하는 층</td></tr>
+              <tr><td>SRAM</td><td>칩 위에 바로 붙은 아주 빠른 메모리</td></tr>
+              <tr><td>EFA</td><td>Elastic Fabric Adapter. AWS 서버끼리 데이터를 빠르게 주고받는 네트워크 장치</td></tr>
+              <tr><td>Trainium / CS-3</td><td>Trainium: AWS가 만든 AI 칩. CS-3: Cerebras의 AI 시스템</td></tr>
+              <tr><td>커널</td><td>Kernel. 칩 위에서 실제 계산을 하는 작은 프로그램</td></tr>
+              <tr><td>테이프아웃</td><td>Tape-out. 칩 설계를 마치고 제조로 넘기는 단계</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 20 -->
+      <section id="timeline">
+        <header><span class="num">20</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개: Daniel(Cerebras), Michelle(Gimlet Labs)</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>AI 컴퓨트 지출: 7,650억 달러, 2031년 최대 1.6조 달러</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>구글 토큰: 월 480조 개에서 3,200조 개로</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>Llama 3.3 70B: 25% 싸지고 3.6배 빨라짐</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>발표의 두 질문</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>자기회귀 루프와 메모리 대기</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>GPU 4개로 나누기와 all-reduce</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>에너지 비용과 파레토 경계</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>예: Claude Code fast mode</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>배칭과 연속 배칭</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>KV 캐시: 128K 컨텍스트에 42GB</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>페이지드 KV 캐시</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>프롬프트 캐싱</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>프리필과 디코드</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>코딩 에이전트가 파이프라인을 막는 문제</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>청크 프리필</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>런타임에서 시스템 최적화로</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>요청 유형 세 가지</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>프리필·디코드 분리</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>메모리 대역폭: H100과 Cerebras</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>AWS Trainium과 Cerebras CS-3 협업</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>Gimlet Labs의 멀티 실리콘 클라우드</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>추측 디코딩</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>파레토 결과: 상호작용성 10배</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>어텐션·FFN 분리</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>가장 좋은 하드웨어는 없다</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>에이전트와 늘어나는 토큰 수요</td></tr>
+              <tr><td><span class="ts">18:50</span></td><td>KForge: 커널 생성 에이전트</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>GPT-OSS-120B, AMD에서 33% 향상</td></tr>
+              <tr><td><span class="ts">20:10</span></td><td>맞춤 칩 설계의 재귀 루프</td></tr>
+              <tr><td><span class="ts">20:40</span></td><td>앞으로: 장애 대응, 모델 올리기</td></tr>
+              <tr><td><span class="ts">21:10</span></td><td>맞춤 컴파일러, 테이프아웃 앞당기기</td></tr>
+              <tr><td><span class="ts">21:40</span></td><td>백오피스 업무</td></tr>
+              <tr><td><span class="ts">22:10</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '_cRgl3maiT8:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

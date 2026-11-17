@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 시대의 종목 선택</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#unchanged">바뀌지 않는 것, 바뀌는 것</a></li>
+      <li><a href="#bottleneck">병목은 사람의 머리</a></li>
+      <li><a href="#junior">주니어 애널리스트의 일</a></li>
+      <li><a href="#busier">남는 시간은 더 많은 일로</a></li>
+      <li><a href="#audit">출처 없는 숫자는 안 쓴다</a></li>
+      <li><a href="#vendor">벤더에게 숨길 것과 1.0 단계</a></li>
+      <li><a href="#edge">모두 같은 모델을 쓰면</a></li>
+      <li><a href="#newfund">2027년에 펀드를 차린다면</a></li>
+      <li><a href="#size">5명 펀드와 5,000명 펀드</a></li>
+      <li><a href="#noanalyst">애널리스트 없는 헤지펀드</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">적용 체크리스트</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-30 · 19분 · 영어 대담 한글 정리</span>
+      <h1>AI는 종목 고르는 사람을 대신할까</h1>
+      <p class="lead">AI는 애널리스트의 준비 작업을 몇 시간에서 몇 분으로 줄인다. 하지만 돈은 남과 다른 시각에서 나오고, 그 시각을 찾는 일은 여전히 사람의 몫이다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=y2dyD6slKxE" target="_blank" rel="noopener">Why AI Won't Replace Stock Pickers</a></span>
+        <span>대담: Jack Woodruff (Candlestick Capital Management 창업자, 전 CIO) · 진행: Vinoo Ganesh (Kepler)</span>
+      </div>
+      <p class="note">영어 대담의 자동 자막을 바탕으로 한글로 정리했다. 진행자 Vinoo Ganesh가 묻고 Jack Woodruff가 답하는 형식이다. 수치는 모두 대담에서 나온 것이고 원 출처를 따로 확인하지는 않았다. 자막의 "Venu"는 진행자 Vinoo Ganesh로 고쳤다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>장기 종목 선택의 원리는 그대로다. 수익은 <strong>남과 다른 시각</strong>에서 나온다.</li>
+        <li>바뀌는 것은 정보를 모으고 종합하는 방식, 그리고 PM과 애널리스트의 역할이다.</li>
+        <li>AI는 <strong>6~8시간 걸리던 준비 작업을 5분</strong>으로 줄인다. 그래도 정보가 사람 머리에 들어가야 하므로 <strong>병목은 사람</strong>이다.</li>
+        <li>아낀 시간은 쉬는 데 쓰이지 않는다. 경쟁자가 더 일하므로 <strong>모두의 기본 수준이 올라갈 뿐</strong>이다.</li>
+        <li>출처를 확인할 수 없는 숫자는 쓰지 않는다. <strong>모든 숫자를 감사할 수 있어야</strong> AI를 믿을 수 있다.</li>
+        <li>AI의 진짜 쓸모는 "이걸 사라"가 아니라 <strong>"여기에 시간을 써라"</strong>를 알려 주는 것이다.</li>
+        <li>애널리스트 없는 AI 헤지펀드는 1년 전 펀드를 따라 할 수는 있어도 <strong>내년의 펀드를 이기지는 못한다</strong>.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="unchanged">
+        <header><span class="num">01</span><h2>바뀌지 않는 것, 바뀌는 것 <span class="ts">01:00</span></h2></header>
+        <p>Jack Woodruff는 Greenwich의 롱숏 주식 헤지펀드 Candlestick Capital Management를 세웠다. 그 전에는 Citadel 산하 Surveyor Capital에서 포트폴리오 매니저로 일했다.</p>
+        <p>Ganesh의 첫 질문은 "5년 뒤 펀더멘털 투자는 어떤 모습인가"였다. 펀더멘털 투자<span class="en">fundamental investing</span>는 기업의 실적과 사업을 분석해 종목을 고르는 방식이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">바뀌지 않는 것</span>
+            <ul>
+              <li>장기 종목 선택의 원리</li>
+              <li>여러 조각의 정보를 맞춰 그림을 그리는 방식. 이를 모자이크<span class="en">mosaic</span>라고 부른다</li>
+              <li>초과 수익(알파<span class="en">alpha</span>)은 남과 다른 시각<span class="en">divergent view</span>에서 나온다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">완전히 바뀌는 것</span>
+            <ul>
+              <li>누구나 갖춰야 하는 기본 정보의 수준<span class="en">table stakes</span></li>
+              <li>그 정보를 종합하는 방식</li>
+              <li>포트폴리오 매니저와 애널리스트의 전통적인 역할</li>
+            </ul>
+          </div>
+        </div>
+        <p>다만 Woodruff는 새 역할이 어떤 모습일지 말하기는 아직 이르다고 했다. 도구가 너무 새롭고, 쓰는 사람도 몇 가지만 시도하는 단계이기 때문이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="bottleneck">
+        <header><span class="num">02</span><h2>병목은 사람의 머리 <span class="ts">02:10</span></h2></header>
+        <p>Ganesh가 숫자로 물었다. Citadel에서는 18명이 400종목을 맡았다. Candlestick에는 종목을 고르는 사람이 30명 있었다. 2030년에는 뛰어난 애널리스트 한 명이 400종목을 다 볼 수 있을까?</p>
+        <p>Woodruff의 답은 "사람이 여전히 병목"이다. 결국 정보가 사람 머리에 들어가야 한다. 그래서 핵심은 사람과 기계가 어떻게 함께 일하느냐다.</p>
+        <blockquote>투자 운용은 시간 관리다.<cite>Jack Woodruff, 02:40 (원문 "investment management is a time management exercise")</cite></blockquote>
+        <ol class="plain">
+          <li>한 종목에 모든 시간을 쓰면 그 종목은 세상 누구보다 잘 안다.</li>
+          <li>하지만 그 종목에서 할 일이 없으면 시간이 남는다.</li>
+          <li>두 종목이면 종목당 시간이 반으로 준다.</li>
+          <li>종목을 늘릴수록 한 종목에 쓰는 시간의 효과가 줄어든다. 이를 수확 체감<span class="en">diminishing returns</span>이라고 한다.</li>
+        </ol>
+        <p>AI가 할 수 있는 일은 기본 지식의 수준을 올려 주는 것이다. 예전에는 한 종목을 준비하는 데 몇 시간이 걸렸다.</p>
+
+        <figure class="chart" aria-label="준비 작업 시간 비교: 예전 6~8시간(360~480분), AI 사용 시 5분">
+          <span class="chart-title">한 종목을 준비하는 데 걸리는 시간 (분)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>예전 · 길 때 (8시간)</span><span class="val">480</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="예전, 길 때: 480분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>예전 · 짧을 때 (6시간)</span><span class="val">360</span></div>
+              <div class="track"><div class="fill" style="width:75%" title="예전, 짧을 때: 360분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>AI 도구 사용</span><span class="val">5</span></div>
+              <div class="track"><div class="fill key" style="width:1.04%" title="AI 도구 사용: 5분"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>240</span><span>480</span></div>
+          <span class="caption">Woodruff가 "어쩌면"이라며 든 예다. 측정한 값이 아니다.</span>
+        </figure>
+
+        <p>그렇다고 애널리스트 30명을 5명으로 줄이고 끝나는 게 아니다. 경쟁이 아주 치열한 업계이기 때문이다. 아낀 시간은 다음 일로 간다.</p>
+        <ul class="plain">
+          <li>독자 리서치<span class="en">proprietary research</span>: 남이 갖지 못한 정보를 직접 구하는 조사</li>
+          <li>채널 체크<span class="en">channel check</span>: 거래처, 유통망 등 현장에 직접 물어보는 조사</li>
+          <li>산업 배경 분석: 업종 전체의 흐름을 보는 작업</li>
+        </ul>
+        <div class="callout">
+          <span class="title">2시간 만에 끝냈다면</span>
+          <span>"이제 2시간이면 일이 끝난다"고 멈추면 진다. 다른 누군가는 여전히 하루 16시간 일하며 돈이 될 한 가지를 찾고 있다. 1~2년 전 애널리스트에게 돈을 주고 시키던 일은, 1년 뒤에는 돈을 주고 시킬 일이 아니다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="junior">
+        <header><span class="num">03</span><h2>주니어 애널리스트의 일 <span class="ts">04:40</span></h2></header>
+        <p>Ganesh가 물었다. 지금 주니어 애널리스트가 하는 일 중 5년 뒤에도 하고 있으면 우스울 일은 무엇인가?</p>
+        <p>흔한 예상은 "이제 10-K나 실적 발표 녹취록은 안 읽게 된다"이다. Woodruff는 동의하지 않는다. 10-K는 미국 상장사가 매년 내는 사업 보고서다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구분</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>계속 할 일</td><td>깊이 맡은 종목의 원자료를 직접 소화한다. 요약본이 시간을 줄여 줄 수는 있지만, 정보는 결국 머리에 들어가야 한다</td></tr>
+              <tr><td>줄어들 일</td><td>대량 데이터<span class="en">big data</span>를 훑고 정리하는 일. 외부에 맡기기 쉬워진다</td></tr>
+              <tr><td>AI가 할 일</td><td>올바른 종목으로 사람을 이끈다. 어디에 시간을 써야 하는지 알려 준다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Woodruff는 여기서도 시간 관리를 강조한다. 승자는 <strong>도구를 써서 다른 시각을 찾을 만한 곳에 알맞은 시간을 쓰는 사람</strong>이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="busier">
+        <header><span class="num">04</span><h2>남는 시간은 더 많은 일로 <span class="ts">06:10</span></h2></header>
+        <p>애널리스트는 한 주의 상당 부분을 데이터를 찾고, 정리하고, 확인하는 데 쓴다. 이 일이 사라지면 애널리스트는 더 똑똑해질까, 더 바빠질까?</p>
+        <p>Woodruff의 답은 "더 바빠진다"이다. 시간이 남으면 더 많은 데이터를 찾는다. 독자 리서치 통화도, 산업 모델 작업도 더 한다.</p>
+        <div class="shift" aria-label="기본 수준이 올라가는 과정">
+          <div><span class="tag">처음</span><b>남보다 많이 한다</b><span class="muted">AI로 아낀 시간에 더 많은 조사를 한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">곧</span><b>모두가 똑같이 한다</b><span class="muted">그건 기본이 된다. 없으면 경쟁에 끼지도 못한다</span></div>
+        </div>
+        <p>그래서 차이는 그다음 층의 정보에서 생긴다.</p>
+        <div class="callout">
+          <span class="title">모자이크는 데이터 한 개가 아니다</span>
+          <span>데이터 하나가 답을 주지는 않는다. <strong>서로 다른 곳에서 나온 데이터 3~4개가 같은 방향을 가리킬 때</strong> 다른 시각이 생긴다. Woodruff는 이것이 알파가 만들어지는 방식에 대해 널리 받아들여진 견해라고 말한다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="audit">
+        <header><span class="num">05</span><h2>출처 없는 숫자는 안 쓴다 <span class="ts">07:20</span></h2></header>
+        <p>Woodruff는 공인회계사<span class="en">CPA</span> 출신이다. Ganesh가 물었다. 모델이 낸 숫자를 출처도 보지 않고 승인하겠는가?</p>
+        <p>답은 "절대 아니다"였다.</p>
+        <ul class="plain">
+          <li>사람이 숫자를 입력하던 시절에도 실수는 드물게 있었다.</li>
+          <li>데이터 입력 실수 하나로 수백만 달러를 잃을 수 있다.</li>
+          <li>정보를 믿을 수 없으면 AI에게 결정을 맡기거나 트레이딩 알고리즘을 돌리게 할 수 없다.</li>
+          <li>그래서 <strong>숫자의 정확성과 감사 가능성</strong><span class="en">auditability</span>이 전체 과정에서 가장 중요하다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">검증 비용이 절약을 잡아먹는다</span>
+          <span>Woodruff 주변에는 Claude 같은 도구로 재무 모델을 만드는 사람이 많다. 그런데 결국 숫자를 하나하나 다시 검사한다. 그러면 자동화로 정말 시간을 아끼는지 의문이 남는다. 다들 "점점 좋아질 것"이라고 가정하지만, Woodruff는 모든 숫자를 감사할 수 있느냐가 핵심이라고 본다.</span>
+        </div>
+        <p class="note">Woodruff는 이 대목에서 "모든 숫자를 감사할 수 있다는 점이 Kepler에서 가장 흥미로운 부분"이라고 말했다. 진행자 Vinoo Ganesh가 Kepler 소속이고, 두 사람이 함께 일해 온 것으로 들린다. 자사 제품과 관련된 평가이니 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="vendor">
+        <header><span class="num">06</span><h2>벤더에게 숨길 것과 1.0 단계 <span class="ts">09:10</span></h2></header>
+        <p>Ganesh는 청중인 AI 회사들에게 Woodruff가 바로 "소프트웨어를 사는 사람"이라고 소개했다. 그리고 물었다. 투자 과정 중 AI 벤더에게 절대 보여 주지 않을 부분은 무엇인가?</p>
+        <p>Woodruff는 데이터 보안은 CTO가 답할 질문이라며 말을 아꼈다. 다만 내부 데이터가 밖으로 나가는 것이 가장 걱정된다고 했다. Ganesh가 이를 데이터 보안 격리<span class="en">data security isolation</span>라고 정리했다.</p>
+        <h3>지금은 1.0 단계 <span class="ts">10:10</span></h3>
+        <div class="shift" aria-label="1.0 단계에서 그다음 단계로">
+          <div><span class="tag">1.0 · 지금</span><b>자동화하고 데이터를 쌓는다</b><span class="muted">도구를 들이고, 데이터를 모아 둔다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">그다음</span><b>시간을 쓸 곳을 알려 준다</b><span class="muted">"여기에 시간을 써라. 여기가 흥미롭다"</span></div>
+        </div>
+        <p>Woodruff와 Ganesh는 지금을 "1.0"이라고 부른다. 자동화를 갖춘 뒤에야 정말 흥미로운 일을 할 수 있다는 뜻이다.</p>
+        <div class="callout">
+          <span class="title">투자 운용의 목적</span>
+          <span>투자 운용은 실적 프리뷰를 쓰거나 DCF 모델을 만드는 일이 아니다. 돈을 버는 일이다. 돈을 벌려면 다른 시각이 필요하다. 도구는 다른 시각을 찾도록 돕지만, 도구가 낸 결과물 자체가 답은 아니다.</span>
+        </div>
+        <p>그래서 돈을 버는 자기만의 방식은 지켜야 한다. 투자 업계에서 경쟁 우위(해자<span class="en">moat</span>)는 오래가지 않는다. 똑똑하고 보상을 많이 받는 사람들이 모여 있어서, 누가 큰돈을 벌면 금방 따라 하고 차익은 사라진다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="edge">
+        <header><span class="num">07</span><h2>모두 같은 모델을 쓰면 <span class="ts">11:20</span></h2></header>
+        <p>모든 펀드가 같은 모델을 쓰게 되면 우위는 어디서 오나? 더 나은 데이터, 더 나은 질문, 더 나은 판단 중 무엇인가?</p>
+        <p>Woodruff의 답은 "전부"다. 결국 모두가 같은 정보를 갖게 된다. 차이는 두 가지에서 난다.</p>
+        <ul class="plain">
+          <li>모델에게 어떻게 묻느냐(프롬프트)</li>
+          <li>사람과 기계를 얼마나 빨리 결합하느냐</li>
+        </ul>
+        <p>예전에도 방대한 분석 작업을 했다. 지금은 대부분 자동화할 수 있는 일이다. 그 작업은 "이 종목을 사라"고 알려 주지 않았다. 대신 "여기에 시간을 많이 써라. 깊이 공부해야 할 프로젝트다"라고 알려 줬다.</p>
+        <ol class="plain">
+          <li>남들은 모두 같은 것을 보고 있다.</li>
+          <li>나는 남들이 보지 않는 바늘을 찾는다.</li>
+          <li>"이게 흥미로울 수 있다"는 곳에서 확신을 쌓는다.</li>
+          <li>그 일이 실제로 일어나면 큰돈을 번다.</li>
+        </ol>
+        <p>이것이 현장 조사<span class="en">field work</span>의 목적이었다. 앞으로도 같다. 도구를 써서 특별 프로젝트로 삼을 만한 대상을 찾는 것이다.</p>
+        <blockquote>남들보다 빨리 찾아내는 것이 핵심이다.<cite>Jack Woodruff, 13:10 (원문 "It's about identifying them fast before everybody else.")</cite></blockquote>
+        <p>Woodruff는 "AI가 다 할 수 있다면 우리가 왜 필요하냐"고 되물었다. 할 수 있는 일은 끝이 없다. 그래서 "AI가 다 해 준다"는 말은 맞지 않는다. <strong>맞는 일을 고르는 것</strong>이 사람의 일이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="newfund">
+        <header><span class="num">08</span><h2>2027년에 펀드를 차린다면 <span class="ts">13:20</span></h2></header>
+        <p>Ganesh가 물었다. 2027년에 펀드를 새로 차린다면 무엇을 직접 만들고 무엇을 사겠는가?</p>
+        <p>Woodruff는 웃으며 "당연히 Kepler를 사겠다"고 답했다. 그 뒤로는 만들 것과 살 것의 목록 대신 사람의 구성을 이야기했다.</p>
+        <p class="note">이 답도 진행자 회사의 제품 이야기다. 농담 섞인 답이지만 감안해서 읽자.</p>
+        <ul class="plain">
+          <li>시니어 종목 선택자는 여전히 필요하다.</li>
+          <li>애널리스트는 지금만큼 많이 필요하지 않을 수 있다.</li>
+          <li>대신 다른 기술을 가진 사람이 필요할 수 있다. 예: 탐사 기자<span class="en">investigative journalist</span>, 깊은 프로젝트 조사를 하는 사람, 새로운 종류의 데이터 엔지니어.</li>
+        </ul>
+        <div class="shift" aria-label="조직 구조의 변화">
+          <div><span class="tag">예전 · 피라미드</span><b>많은 애널리스트 → 시니어 → PM → CIO</b><span class="muted">아래에서 대량의 정보를 올려 보낸다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">앞으로 · 더 수직적</span><b>돈을 버는 사람 중심</b><span class="muted">준비하는 사람은 줄고, 만드는 사람은 그대로</span></div>
+        </div>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">만드는 사람 · producer</span>
+            <p>실제로 돈을 버는 판단을 내리는 사람. Woodruff는 이 사람들은 그대로 원한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">준비하는 사람 · preparer</span>
+            <p>자료를 모아 정리하는 사람. 덜 필요할 수 있다. 하지만 독자 정보를 더 모아 "기계를 먹여야" 한다면 오히려 필요할 수도 있다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="size">
+        <header><span class="num">09</span><h2>5명 펀드와 5,000명 펀드 <span class="ts">15:10</span></h2></header>
+        <p>AI는 누구를 더 돕나? 50명처럼 일하게 되는 5명짜리 펀드인가, 5명처럼 빨라지는 5,000명짜리 펀드인가?</p>
+        <p>Woodruff는 펀드마다 전략과 운용 지침<span class="en">mandate</span>이 다르다는 점부터 짚었다. 어떤 곳은 1년에 9,000번 포트폴리오를 갈아 치울 만큼 짧게 거래한다. 어떤 곳은 5년씩 보유한다. 모두가 가진 자원으로 더 많은 일을 하게 되는 건 같다. 그 효과는 전략에 따라 다르게 나타난다.</p>
+        <h3>작은 펀드: 아이디어가 많아지면 <span class="ts">16:00</span></h3>
+        <p>5명짜리 팀은 아이디어가 나오는 속도<span class="en">idea velocity</span>가 느리다. 그래서 보통 적은 종목에 집중하는 전략을 쓴다. 고를 아이디어가 많아지면 이론상 적중률<span class="en">hit rate</span>이 오른다.</p>
+
+        <figure class="chart" aria-label="포트폴리오 20종목을 고를 때 담기는 비율: 100종목 커버 시 20%, 200종목 10%, 400종목 5%">
+          <span class="chart-title">포트폴리오에 20종목을 담을 때, 맡은 종목 중 실제로 담기는 비율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>100종목을 맡을 때</span><span class="val">20</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="100종목 커버: 20%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>200종목을 맡을 때</span><span class="val">10</span></div>
+              <div class="track"><div class="fill" style="width:50%" title="200종목 커버: 10%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>400종목을 맡을 때</span><span class="val">5</span></div>
+              <div class="track"><div class="fill key" style="width:25%" title="400종목 커버: 5%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>10</span><span>20</span></div>
+          <span class="caption">더 까다롭게 고를수록 맞힐 확률이 오른다는 논리다. 막대 길이는 20%를 최대로 맞췄다.</span>
+        </figure>
+
+        <div class="callout warn">
+          <span class="title">조건이 붙는다</span>
+          <span>400종목을 맡으려면 400종목 모두의 리서치가 100종목을 맡을 때만큼 탄탄해야 한다. 그래야 넓게 보는 것이 적중률로 이어진다.</span>
+        </div>
+        <h3>큰 펀드와 아이디어 속도 <span class="ts">16:50</span></h3>
+        <p>5,000명 규모라면 보통 여러 전략을 동시에 운용하는 멀티 스트래티지<span class="en">multi-strat</span> 펀드다. 모든 자산군을 다룬다. 상황이 전혀 다르다.</p>
+        <p>그래도 공통으로 가장 중요한 것은 아이디어 속도와 파이프라인 속 좋은 아이디어의 수다.</p>
+        <ol class="plain">
+          <li>한 아이디어가 맞아떨어진다.</li>
+          <li>그 종목을 빼서 이익을 확정한다.</li>
+          <li>그 자리에 새 아이디어를 넣는다.</li>
+          <li>이 순환을 계속하며 알파와 수익을 쌓는다.</li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="noanalyst">
+        <header><span class="num">10</span><h2>애널리스트 없는 헤지펀드 <span class="ts">17:30</span></h2></header>
+        <p>마지막 질문은 두 가지였다. 금융계가 들떠 있지만 안 될 AI 아이디어는? 아무도 말하지 않지만 될 아이디어는?</p>
+        <p>두 번째에는 "그걸 알면 돈을 벌었을 것"이라며 답하지 않았다. 첫 번째 답은 분명했다. <strong>애널리스트 없이 AI 에이전트로만 돌리는 헤지펀드</strong>다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">될 수 있는 것</span>
+            <p>1년 전에 있던 펀드를 AI로 복제하는 것.</p>
+          </div>
+          <div class="card">
+            <span class="tag">안 되는 것</span>
+            <p>내년의 헤지펀드만큼 잘하는 것. 사람이 있는 펀드도 그사이 계속 나아진다.</p>
+          </div>
+        </div>
+        <p>Woodruff는 사람을 루프에서 완전히 뺄 수 없다고 본다. 퀀트 펀드<span class="en">quant fund</span>는 수십 년 전부터 사람을 뺐다. 그건 새로운 일이 아니다. 하지만 펀더멘털 투자에서 사람을 빼면 남는 기준은 하나다. <strong>컴퓨팅과 정보를 가장 많이 가진 쪽이 이긴다.</strong> Woodruff는 그렇게 흘러가지 않을 것이라고 본다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>장기 종목 선택의 원리는 그대로다. 알파는 <strong>남과 다른 시각</strong>에서 나온다.</li>
+          <li>바뀌는 것은 정보를 종합하는 방식, 기본 정보의 수준, PM과 애널리스트의 역할이다.</li>
+          <li>정보가 사람 머리에 들어가야 하므로 <strong>병목은 사람</strong>이다. 투자 운용은 시간 관리다.</li>
+          <li>AI는 6~8시간 준비 작업을 5분으로 줄일 수 있다. 아낀 시간은 독자 리서치와 채널 체크로 간다.</li>
+          <li>모두가 더 많이 하면 그건 <strong>기본</strong>이 된다. 차이는 그다음 층의 정보에서 난다.</li>
+          <li>모자이크: 서로 다른 출처의 데이터 3~4개가 같은 방향을 가리킬 때 다른 시각이 생긴다.</li>
+          <li>출처를 확인할 수 없는 숫자는 쓰지 않는다. <strong>감사 가능성</strong>이 AI를 믿는 전제다.</li>
+          <li>AI의 쓸모는 "사라"가 아니라 <strong>"여기에 시간을 써라"</strong>를 알려 주는 것이다.</li>
+          <li>맡는 종목이 늘면 이론상 적중률이 오른다. 단, 모든 종목의 리서치가 똑같이 탄탄해야 한다.</li>
+          <li>AI만으로 돌리는 펀드는 1년 전 펀드를 따라 할 뿐이다. 펀더멘털 투자에서 사람은 빠지지 않는다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>Woodruff가 말하는 "바뀌지 않는 것"은?</span></summary><div class="answer">장기 종목 선택의 원리. 여러 정보를 모자이크처럼 맞춰 남과 다른 시각을 찾고, 거기서 알파가 나온다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>뛰어난 애널리스트 한 명이 400종목을 다 볼 수 있느냐는 질문에 Woodruff가 먼저 든 제약은?</span></summary><div class="answer">사람이 병목이다. 정보는 결국 사람 머리에 들어가야 한다. 종목을 늘릴수록 종목당 시간이 줄어 수확 체감이 생긴다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>AI로 준비 시간이 6~8시간에서 5분으로 줄면, 남는 시간은 어디에 쓰이나?</span></summary><div class="answer">독자 리서치, 채널 체크, 산업 배경 분석. 경쟁자가 계속 일하므로 멈추면 진다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>주니어 애널리스트는 앞으로 10-K와 실적 발표 녹취록을 안 읽게 될까?</span></summary><div class="answer">Woodruff는 아니라고 본다. 깊이 맡은 종목이라면 요약본을 쓰더라도 정보를 직접 소화해야 한다. 줄어드는 일은 대량 데이터를 정리하는 쪽이다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>데이터 정리 일이 사라지면 애널리스트는 똑똑해지나, 바빠지나?</span></summary><div class="answer">바빠진다. 남은 시간에 더 많은 데이터를 찾고, 모두가 그렇게 하면 그 수준이 기본이 된다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Woodruff가 말하는 투자 모자이크의 조건은?</span></summary><div class="answer">데이터 하나가 아니라, 서로 다른 곳에서 나온 데이터 3~4개가 같은 방향을 가리키는 것.</div></details>
+          <details><summary><span class="qn">Q7</span><span>Claude 같은 도구로 재무 모델을 만들어도 시간이 생각만큼 줄지 않는 이유는?</span></summary><div class="answer">숫자를 하나하나 다시 감사해야 하기 때문이다. 입력 실수 하나로 수백만 달러를 잃을 수 있어서, 출처를 확인할 수 없는 숫자는 쓸 수 없다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Woodruff와 Ganesh가 "1.0 단계"라고 부르는 것은?</span></summary><div class="answer">자동화를 갖추고 도구를 들이고 데이터를 쌓는 지금 단계. 그다음에야 도구가 "여기에 시간을 써라"를 알려 주는 단계로 간다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>100, 200, 400종목을 맡고 20종목을 담으면 각각 몇 %를 고르나? 조건은?</span></summary><div class="answer">20%, 10%, 5%. 더 까다롭게 고르니 이론상 적중률이 오른다. 단, 400종목 모두의 리서치가 100종목 때만큼 탄탄해야 한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>애널리스트 없는 AI 헤지펀드가 안 된다고 보는 이유는?</span></summary><div class="answer">1년 전 펀드를 복제할 수는 있어도 내년의 펀드만큼 잘하지는 못한다. 펀더멘털 투자에서 사람을 빼면 컴퓨팅과 정보가 가장 많은 쪽이 이기는 게임이 되는데, Woodruff는 그렇게 되지 않는다고 본다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>적용 체크리스트</h2><p class="muted">대담 내용을 실행 항목으로 바꾼 것이다. 투자 도구를 만드는 사람과 쓰는 사람 모두에게 해당한다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>AI가 낸 모든 숫자에 원문 출처를 붙인다<span class="how">확인: 숫자 하나를 눌러 원문 위치로 갈 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>AI 결과물을 검증하는 데 드는 시간을 함께 잰다<span class="how">확인: 생성 시간만이 아니라 감사 시간까지 합쳐도 시간이 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>아낀 시간을 어디에 쓸지 미리 정한다<span class="how">예: 독자 리서치, 채널 체크, 산업 배경 분석</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>도구가 "무엇을 사라"가 아니라 "어디에 시간을 써라"를 알려 주게 한다<span class="how">확인: 결과물이 더 파고들 후보와 이유를 보여 주는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>모두가 가진 정보와 나만 가진 정보를 나눠 본다<span class="how">확인: 같은 모델을 쓰는 경쟁자도 얻을 수 있는 정보인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>판단 근거가 서로 다른 출처 3~4개에서 나오는지 확인한다<span class="how">확인: 근거들이 사실은 같은 원자료를 반복하고 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>내부 데이터가 AI 벤더 밖으로 나가지 않는지 확인한다<span class="how">데이터 보안 격리. CTO나 보안 담당과 함께 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>맡는 종목을 늘릴 때 종목당 리서치 품질을 점검한다<span class="how">확인: 새로 늘린 종목의 리서치가 기존 종목만큼 탄탄한가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>롱숏 주식 헤지펀드</td><td>Long-short equity. 오를 종목은 사고 내릴 종목은 공매도하는 펀드</td></tr>
+              <tr><td>펀더멘털 투자</td><td>Fundamental investing. 기업의 실적과 사업을 분석해 종목을 고르는 방식</td></tr>
+              <tr><td>CIO / PM</td><td>최고 투자 책임자 / 포트폴리오 매니저. 투자 결정을 내리는 사람</td></tr>
+              <tr><td>알파</td><td>Alpha. 시장 평균을 넘어서는 초과 수익</td></tr>
+              <tr><td>모자이크</td><td>Mosaic. 여러 출처의 작은 정보를 맞춰 큰 그림을 그리는 분석 방식</td></tr>
+              <tr><td>다른 시각</td><td>Divergent view. 시장 다수와 다른 판단. 맞으면 수익이 된다</td></tr>
+              <tr><td>기본 수준</td><td>Table stakes. 경쟁에 끼려면 누구나 갖춰야 하는 최소 조건</td></tr>
+              <tr><td>10-K</td><td>미국 상장사가 매년 제출하는 사업 보고서</td></tr>
+              <tr><td>실적 발표 녹취록</td><td>Transcript. 분기 실적 발표 통화를 글로 옮긴 것</td></tr>
+              <tr><td>독자 리서치</td><td>Proprietary research. 남이 갖지 못한 정보를 직접 구하는 조사</td></tr>
+              <tr><td>채널 체크</td><td>Channel check. 거래처, 유통망 등 현장에 직접 물어 확인하는 조사</td></tr>
+              <tr><td>실적 프리뷰</td><td>Earnings preview. 실적 발표 전에 예상치를 정리한 자료</td></tr>
+              <tr><td>DCF</td><td>Discounted cash flow. 미래 현금 흐름을 현재 가치로 바꿔 기업 가치를 계산하는 모델</td></tr>
+              <tr><td>감사 가능성</td><td>Auditability. 숫자가 어디서 왔는지 거슬러 올라가 확인할 수 있는 성질</td></tr>
+              <tr><td>해자</td><td>Moat. 남이 쉽게 따라 하지 못하게 막는 경쟁 우위</td></tr>
+              <tr><td>데이터 보안 격리</td><td>Data security isolation. 내부 데이터가 외부 업체나 다른 고객에게 섞이거나 새지 않게 분리하는 것</td></tr>
+              <tr><td>운용 지침</td><td>Mandate. 펀드가 무엇에 어떻게 투자할지 정해 둔 규칙</td></tr>
+              <tr><td>아이디어 속도</td><td>Idea velocity. 쓸 만한 투자 아이디어가 새로 나오는 속도</td></tr>
+              <tr><td>적중률</td><td>Hit rate. 고른 종목 중 판단이 맞은 비율</td></tr>
+              <tr><td>멀티 스트래티지</td><td>Multi-strat. 여러 전략과 자산군을 한 회사에서 동시에 운용하는 펀드</td></tr>
+              <tr><td>퀀트 펀드</td><td>Quant fund. 사람의 판단 대신 수학 모델과 알고리즘으로 거래하는 펀드</td></tr>
+              <tr><td>수확 체감</td><td>Diminishing returns. 같은 노력을 더할수록 얻는 효과가 점점 줄어드는 현상</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>Jack Woodruff 소개: Candlestick, Surveyor Capital</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>5년 뒤 펀더멘털 투자는?</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>바뀌지 않는 원리, 바뀌는 역할</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>18명이 400종목: 한 명이 다 볼 수 있나</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>투자 운용은 시간 관리다</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>준비 작업 6~8시간 → 5분</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>아낀 시간은 독자 리서치로, 2시간 vs 16시간</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>주니어 애널리스트가 그만둘 일</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>AI는 올바른 종목으로 이끈다</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>똑똑해지나, 바빠지나</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>투자 모자이크: 서로 다른 출처 3~4개</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>CPA 출신의 답: 출처 없는 숫자는 안 쓴다</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>AI로 만든 모델도 결국 다시 감사한다</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>AI 벤더에게 보여 주지 않을 것</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>지금은 1.0 단계</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>투자 운용의 목적은 돈을 버는 것, 해자는 짧다</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>모두 같은 모델을 쓰면 우위는 어디서</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>"여기에 시간을 써라", 특별 프로젝트</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>2027년 새 펀드: 만들 것과 살 것</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>필요한 사람: 시니어 종목 선택자, 탐사 기자, 데이터 엔지니어</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>피라미드에서 수직 구조로, 만드는 사람과 준비하는 사람</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>5명 펀드와 5,000명 펀드</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>아이디어 속도와 적중률: 100 · 200 · 400종목</td></tr>
+              <tr><td><span class="ts">16:50</span></td><td>멀티 스트래티지와 아이디어 교체</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>안 될 AI 아이디어: 애널리스트 없는 헤지펀드</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>사람은 루프에서 빠지지 않는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'y2dyD6slKxE:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

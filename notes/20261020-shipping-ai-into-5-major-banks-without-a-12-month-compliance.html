@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>은행 AI 배포 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#proof">은행은 풀이를 본다</a></li>
+      <li><a href="#onprem">SaaS로는 못 들어간다</a></li>
+      <li><a href="#cve">CVE는 은행 수만큼 곱해진다</a></li>
+      <li><a href="#versions">은행마다 다른 버전 요구</a></li>
+      <li><a href="#exploit">버전 대신 익스플로잇으로 증명</a></li>
+      <li><a href="#dr">ClickHouse 재해 복구</a></li>
+      <li><a href="#correctness">백업 성공 ≠ 데이터 정확</a></li>
+      <li><a href="#residency">백업 위치와 데이터 상주</a></li>
+      <li><a href="#judge">LLM 심판이 여는 옆문</a></li>
+      <li><a href="#reasoning">점수는 남기고 근거는 거른다</a></li>
+      <li><a href="#signals">배포를 늦추는 신호</a></li>
+      <li><a href="#show-work">풀이가 곧 속도</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-20 · 18분 · 영어 발표 한글 정리</span>
+      <h1>은행은 답보다 풀이를 본다</h1>
+      <p class="lead">은행에 AI를 빨리 들이려면 "고쳤다", "백업했다", "가렸다"는 말 대신 증거를 내놓아야 한다. 발표자는 취약점 대응, 재해 복구, 민감 정보 유출 세 곳에서 그 증거를 만드는 방법을 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=Bz1HFxQA1o8" target="_blank" rel="noopener">Shipping AI Into 5 Major Banks Without a 12-Month Compliance Wait</a></span>
+        <span>발표: Al Chen (Cisco · 은행에 AI 관측 소프트웨어를 배포하는 팀)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 말은 확실한 것만 바로잡았고, 나머지는 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>은행 컴플라이언스 팀은 답보다 <strong>풀이 과정</strong>을 본다. 발표자는 이걸 맞추면 프로덕션까지 <strong>1년 걸리던 일이 몇 주</strong>로 준다고 말한다.</li>
+        <li>일반 SaaS AI는 데이터가 인터넷으로 나가서 은행에 못 들어간다. <strong>은행 안에 설치</strong>해야 하고, 그러면 세 가지를 증명해야 한다.</li>
+        <li><strong>CVE</strong>: 스캐너는 패키지 버전만 본다. 에이전트에게 <strong>익스플로잇과 테스트를 쓰게 해</strong> 취약점이 정말 사라졌는지 보여 준다.</li>
+        <li><strong>재해 복구</strong>: 백업 작업이 성공했다는 로그로는 부족하다. <strong>행 개수와 복제본 상태</strong>로 데이터가 맞는지 확인한다.</li>
+        <li>백업 위치를 정하는 일은 곧 <strong>데이터 상주</strong>를 정하는 일이다. ID와 메타데이터만 다른 리전으로 보낸다.</li>
+        <li><strong>민감 정보</strong>: 화면에서 가려도 <strong>LLM 심판의 근거 글</strong>이 다시 드러낼 수 있다. 근거는 검사를 통과한 것만 남긴다.</li>
+        <li>배포를 늦추는 원인은 대개 <strong>사람과 조직</strong>이다. 결국 <strong>풀이를 보여 주는 것</strong>이 속도를 올린다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="proof">
+        <header><span class="num">01</span><h2>은행은 풀이를 본다 <span class="ts">00:00</span></h2></header>
+        <p>발표자가 10학년(한국의 고1) 때 만난 수학 선생님 Huff는 시험이 혹독했다. 답을 소수점 넷째 자리까지 쓰게 했다. 운으로 답을 맞히는 경우를 막기 위해서였다. 점수 대부분은 답이 아니라 풀이 과정에 있었다.</p>
+        <p>발표자는 은행의 컴플라이언스·리스크 팀이 이 선생님과 닮았다고 말한다. 차이는 수백만 달러 규모의 예산이 있다는 것뿐이다.</p>
+        <p>그래서 은행에 AI 에이전트를 들이는 데는 오래 걸린다. 핵심 단어는 <strong>프로덕션</strong><span class="en">production</span>이다. 여기서 프로덕션은 개발·스테이징 환경의 시제품이 아니다. 직원 생산성을 높이는 내부 RAG 에이전트도 아니다. <strong>수백만 고객이 매일 쓰는 은행 웹사이트와 모바일 앱</strong>이다. 발표자는 이쪽이 진짜 중요한 사용처라고 본다.</p>
+
+        <h3>1년을 몇 주로 <span class="ts">01:30</span></h3>
+        <p>발표자의 팀은 세계 최대급 은행들에 자사 소프트웨어를 배포한다. 소프트웨어만이 아니라 엔지니어링 절차까지 함께 들여보낸다. 발표자는 고객들이 겪은 문제와, 프로덕션까지 걸리는 시간을 줄인 전략을 소개한다.</p>
+
+        <figure class="chart" aria-label="프로덕션까지 걸리는 기간 비교: 이전 약 52주(1년), 발표자 팀이 말하는 기간 약 2주">
+          <span class="chart-title">프로덕션까지 걸리는 기간 (주)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>이전: 약 1년</span><span class="val">52</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="이전: 약 52주 (1년)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>발표자 팀이 말하는 기간: 몇 주</span><span class="val">≈ 2</span></div>
+              <div class="track"><div class="fill key" style="width:3.8%" title="발표자 팀: 약 2주"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>26</span><span>52</span></div>
+          <span class="caption">발표자가 말한 "a couple weeks"를 2주로 놓고 그렸다. 1년은 52주로 바꿨다.</span>
+        </figure>
+        <p class="note">이 기간은 발표자 팀의 실적에 대한 주장이다. 발표자는 은행에 자사 소프트웨어를 파는 쪽이니 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="onprem">
+        <header><span class="num">02</span><h2>SaaS로는 못 들어간다 <span class="ts">01:50</span></h2></header>
+        <p>보통의 SaaS AI를 은행에 그대로 붙이면 안 된다. 은행 밖 인터넷으로 나가는 트래픽<span class="en">outbound egress</span>이 생긴다. 그 길로 민감 정보가 샐 수 있다.</p>
+        <p>그래서 은행 안 서버에 직접 설치하는 <strong>온프렘</strong><span class="en">on-prem</span> 방식을 쓴다. 인터넷과 끊긴 <strong>에어갭</strong><span class="en">air-gapped</span> 은행이라면 흐름이 더 복잡해진다. 발표자는 이 상황에서 풀어야 할 일을 세 기둥으로 나눈다. <span class="ts">02:10</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기둥</th><th>은행이 묻는 것</th><th>보여 줄 증거</th></tr></thead>
+            <tbody>
+              <tr><td>빌드 파이프라인</td><td>업체 이미지를 은행 클러스터로 받아올 때 취약점은 어떻게 처리하나</td><td>옛 취약점이 새 버전에서 더는 통하지 않는다는 테스트 결과</td></tr>
+              <tr><td>재해 복구</td><td>요청 도중 한 리전이 죽으면 데이터는 어떻게 되나</td><td>복원한 데이터가 실제로 맞다는 확인 결과</td></tr>
+              <tr><td>민감 정보 보호</td><td>은행 직원과 VPC 바깥으로 민감 정보가 새지 않나</td><td>LLM 심판의 근거 글까지 검사하는 흐름</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="cve">
+        <header><span class="num">03</span><h2>CVE는 은행 수만큼 곱해진다 <span class="ts">02:40</span></h2></header>
+        <p>컴플라이언스 속도와 <strong>CVE</strong><span class="en">Common Vulnerabilities and Exposures</span>는 붙어 다닌다. CVE는 번호가 매겨진 공개 보안 취약점이다. 은행에 들어갈 때 가장 먼저 넘어야 하는 관문이다. 발표자는 제대로 된 플랫폼이라면 여기에 대한 계획이 반드시 있다고 말한다.</p>
+        <p>CVE 하나만 보면 간단하다. NVD, CISA, MITRE 사이트에서 찾아보면 된다. 실제로는 여러 요소가 곱해진다. <span class="ts">03:00</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>곱해지는 요소</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>이미지</td><td>플랫폼 이미지가 여러 개이고, 이미지마다 CVE가 여러 개다</td></tr>
+              <tr><td>은행</td><td>한 은행이 아니라 여러 은행을 동시에 맞춰야 한다</td></tr>
+              <tr><td>버전</td><td>은행마다 쓰는 이미지 버전이 달라서 CVE 목록도 다르다</td></tr>
+              <tr><td>스캐너</td><td>은행마다 쓰는 스캔 도구가 달라서 보고서도 다르다</td></tr>
+              <tr><td>정책</td><td>무엇을 CVE로 칠지, 심각도를 어떻게 매길지, 고칠 때까지 기한(SLA)이 얼마인지 은행마다 다르다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>그래서 은행 하나씩 손으로 대응하면 안 된다. 시스템과 절차를 만들어야 한다.</p>
+        <div class="callout">
+          <span class="title">직접 고칠 수 없는 CVE <span class="ts">03:50</span></span>
+          <span>이미지는 여러 오픈소스 프로젝트에 기댄다. 그 프로젝트들은 또 다른 패키지에 기댄다. 이 <strong>전이 의존성</strong><span class="en">transitive dependency</span> 속 CVE는 발표자 팀이 고칠 수 없다. 그래서 팀은 오픈소스 릴리스 노트를 계속 읽는다. 왜 못 고치는지, 어느 메인테이너를 기다리는지 은행 보안팀에 자세히 설명해야 하기 때문이다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="versions">
+        <header><span class="num">04</span><h2>은행마다 다른 버전 요구 <span class="ts">04:10</span></h2></header>
+        <p>팀이 고칠 수 있는 CVE를 골라냈다면 고치는 방법은 두 가지다.</p>
+        <ul class="plain">
+          <li>패키지를 더 높은 버전으로 올린다</li>
+          <li>기반 Docker 이미지 위에 이미지를 다시 빌드한다</li>
+        </ul>
+        <p>여기서 충돌이 생긴다. 한 은행은 어떤 패키지를 3.8 버전으로 맞춰 달라고 한다. 다른 은행은 그 버전에 CVE가 너무 많다며 더 낮은 버전을 원한다. 그래도 소프트웨어는 양쪽 모두에서 제대로 돌아가야 한다.</p>
+
+        <h3>스킬로 보고와 조사를 맡긴다 <span class="ts">04:50</span></h3>
+        <p>발표자 팀은 이 일을 에이전트 <strong>스킬</strong><span class="en">skill</span>로 만들었다(추정. 자막에는 "scale"로 적혀 있다). 스킬이 보고서 정리와 내부 조사를 대부분 맡는다. 결과는 표 하나로 나온다. 그 표는 두 쪽에 쓰인다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>CVE (예시)</th><th>위치</th><th>판정</th><th>누구에게 무엇을</th></tr></thead>
+            <tbody>
+              <tr><td>CVE-A</td><td>제품이 직접 쓰는 패키지</td><td>고칠 수 있음</td><td>엔지니어링 팀: 버전을 올리거나 기반 이미지로 다시 빌드</td></tr>
+              <tr><td>CVE-B</td><td>오픈소스가 기대는 깊은 패키지</td><td>지금은 못 고침</td><td>은행 보안팀: 어떤 의존성 때문인지, 어떤 릴리스를 기다리는지</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">예시: 발표 화면의 표가 아니다. 스킬 결과의 두 가지 쓰임을 보이려고 만든 형식이다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="exploit">
+        <header><span class="num">05</span><h2>버전 대신 익스플로잇으로 증명 <span class="ts">05:20</span></h2></header>
+        <p>Sysdig, Wiz, Prisma 같은 스캐너는 대부분 패키지가 특정 버전으로 올라갔는지만 본다. 그 취약점을 실제로 악용하는 길, 즉 <strong>익스플로잇</strong><span class="en">exploit</span>이 애플리케이션 코드에 남아 있는지는 전혀 알려 주지 않는다.</p>
+
+        <h3>Harbor 과제 <span class="ts">05:40</span></h3>
+        <p>발표자의 해법은 <strong>Harbor 과제</strong><span class="en">Harbor task</span>다. 에이전트가 이것저것 시도해 볼 수 있는 하네스, 작은 세계를 만드는 일이다. 과제 하나는 세 부분으로 이뤄진다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>지시문 <span class="en">instruction</span></td><td>에이전트에게 줄 과제. 어떤 서비스의 어떤 패키지 CVE인지 알려 준다</td></tr>
+              <tr><td>환경 <span class="en">environment</span></td><td>애플리케이션의 실제 Docker 이미지</td></tr>
+              <tr><td>테스트 <span class="en">tests</span></td><td>에이전트가 과제를 해냈는지 판정한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">발표자가 에이전트에게 준 지시 (요지) <span class="ts">06:00</span></span>
+          <span>이 패키지의 2.6.2 버전이 이 CVE를 고쳤다고 한다. 옛 버전을 기준으로 익스플로잇을 써라. 새 버전에서도 그 익스플로잇이 통하는지 확인하라. 익스플로잇이 통했는지 판정하는 테스트도 써라.</span>
+        </div>
+        <p>Harbor로 이 과제를 Docker 컨테이너나 Modal, Daytona 샌드박스에서 여러 개 동시에 돌린다. 시도<span class="en">trial</span>마다 결과가 쌓인다. 여러 번의 시도에서 에이전트가 어떻게 해냈는지 볼 수 있다. <span class="ts">06:30</span></p>
+        <div class="shift" aria-label="증거의 수준 변화">
+          <div><span class="tag">스캐너가 보는 것</span><b>"패키지를 2.6.2로 올렸습니다"</b><span class="muted">버전 번호만 바뀌었다는 사실</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">은행이 믿는 것</span><b>"옛 익스플로잇이 새 버전에서 막힙니다"</b><span class="muted">취약점이 코드에서 사라졌다는 테스트 결과</span></div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="dr">
+        <header><span class="num">06</span><h2>ClickHouse 재해 복구 <span class="ts">07:00</span></h2></header>
+        <p>은행에서 <strong>재해 복구</strong><span class="en">disaster recovery, DR</span>는 있으면 좋은 관리 습관이 아니다. 반드시 있어야 한다.</p>
+        <p>문제는 데이터베이스다. AI 관측 도구 대부분이 쓰는 ClickHouse에는 리전 간 <strong>장애 조치</strong><span class="en">failover</span>와 데이터 복제를 맡아 주는 관리형 서비스가 없다. 발표자는 이 학회의 일부 후원사 도구도 ClickHouse를 쓴다고 했다. Redis와 Postgres에는 리전 간 관리형 장애 조치가 있다. 발표자는 ClickHouse의 데이터 복원력 문서에도 이 점이 적혀 있다고 인용했다. <span class="ts">07:30</span></p>
+        <p>그래서 은행은 재해 복구를 스스로 풀어야 한다. 발표자가 제시한 단순한 패턴은 이렇다. <span class="ts">07:50</span></p>
+        <ol class="plain">
+          <li>주 리전<span class="en">primary region</span>에서 ClickHouse를 돌린다</li>
+          <li>백업 작업이 데이터를 버킷<span class="en">bucket</span>에 올린다</li>
+          <li>복원 작업이 그 버킷을 DR 리전에 풀어 놓는다</li>
+          <li>DR 리전 안의 여러 파드<span class="en">pod</span>가 데이터 복제본을 갖는다</li>
+        </ol>
+        <p>이 절차 전체가 <code>clickhouse-backup</code>에 기댄다. Altinity가 관리하는 오픈소스다. 발표자에 따르면 Altinity는 리전 간 장애 조치 관리 쪽에서 ClickHouse와 경쟁하는 회사다. <span class="ts">08:10</span></p>
+      </section>
+
+      <!-- 7 -->
+      <section id="correctness">
+        <header><span class="num">07</span><h2>백업 성공 ≠ 데이터 정확 <span class="ts">08:30</span></h2></header>
+        <p><code>clickhouse-backup</code>은 백업과 복원이 실행됐는지 로그로 남긴다. 그 로그로 깔끔한 상태 표를 만들 수 있다. 하지만 이 상태는 <strong>지금 이 순간의 데이터</strong>에 대해 아무것도 말해 주지 않는다.</p>
+        <p>작업이 돈 뒤에도 데이터는 낡을 수 있다. 원인은 이런 것들이다.</p>
+        <ul class="plain">
+          <li>고장 난 디스크</li>
+          <li>고장 난 노드</li>
+          <li>잘못된 마이그레이션</li>
+          <li>복제 지연<span class="en">replication lag</span></li>
+        </ul>
+        <p>그래서 한 걸음 더 간다. <span class="ts">08:50</span></p>
+        <ul class="plain">
+          <li>테이블 사이의 행 개수를 비교한다</li>
+          <li>한 리전 안의 복제본들이 같은 상태로 수렴했는지 확인한다</li>
+        </ul>
+        <div class="callout">
+          <span class="title">CVE와 같은 원리 <span class="ts">09:00</span></span>
+          <span>목표는 체크 표시가 아니라 <strong>데이터가 맞는지</strong>다. 버전을 올렸다고 익스플로잇이 사라졌다고 가정하지 않듯, 백업 작업이 돌았다고 데이터가 맞다고 가정하지 않는다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="residency">
+        <header><span class="num">08</span><h2>백업 위치와 데이터 상주 <span class="ts">09:20</span></h2></header>
+        <p>클러스터 안에 백업·복원을 설계하는 사람은 원하든 원치 않든 <strong>데이터 상주</strong><span class="en">data residency</span>도 함께 결정한다.</p>
+        <p>버킷은 자기가 오리건에 있든 버지니아에 있든 상관하지 않는다. 데이터 상주 규정은 기록 하나하나가 어디에 저장되는지를 따진다. 백업 버킷을 다른 리전에 두는 순간, 기록이 그 리전으로 옮겨 가는 셈이다.</p>
+        <p>발표자의 해법은 데이터를 둘로 나누는 것이다. <span class="ts">09:40</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>데이터</th><th>어디에 두나</th></tr></thead>
+            <tbody>
+              <tr><td>트레이스의 ID와 메타데이터</td><td>여러 리전에 복제한다</td></tr>
+              <tr><td>핵심 트레이스 데이터</td><td>한 리전에만 둔다. 관할 법 때문에 그 리전을 떠나지 않는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="judge">
+        <header><span class="num">09</span><h2>LLM 심판이 여는 옆문 <span class="ts">10:00</span></h2></header>
+        <p>은행은 대부분 직원이나 VPC 바깥 사용자에게 민감 정보가 새지 않는다고 믿는다. 하지만 옆문이 열려 있을 수 있다.</p>
+        <p>여기서 민감 정보는 두 가지다. <strong>PII</strong><span class="en">personally identifiable information</span>는 개인을 알아볼 수 있는 정보다. <strong>MNPI</strong><span class="en">material non-public information</span>는 공개되지 않은 중요 정보다. 이런 정보를 가리는<span class="en">redaction</span> 방법은 여러 층에 있다. <span class="ts">10:20</span></p>
+        <ul class="plain">
+          <li>SDK 단계</li>
+          <li>게이트웨이 단계</li>
+          <li>여러 미들웨어</li>
+        </ul>
+        <p>실제로 보면 UI에는 고객 정보가 가려진 채 나온다. 그런데 <strong>LLM 심판</strong><span class="en">LLM-as-a-judge</span>은 어떨까. 발표자는 청중에게 직접 확인해 보라고 권한다. 심판의 시스템 프롬프트를 열어 본다. 그리고 심판의 판단 근거가 담긴 트레이스에 PII나 MNPI가 있는지 본다. <span class="ts">10:40</span></p>
+
+        <h3>프롬프트의 한 줄 <span class="ts">11:00</span></h3>
+        <p>발표자가 보여 준 단순한 심판은 에이전트가 과제를 얼마나 잘했는지 점수와 설명을 낸다. 문제는 프롬프트의 한 줄이다. 사람 검토자가 에이전트가 정확했는지 확인할 수 있게 하려고 넣은, 무해해 보이는 줄이다.</p>
+        <div class="callout">
+          <span class="title">예시: 문제가 될 수 있는 줄</span>
+          <span><code>판단의 근거로 응답 속 구체적인 내용을 그대로 인용하라.</code></span>
+          <span class="note">발표 화면의 실제 문구가 아니다. 이런 성격의 지시라는 뜻으로 만든 예시다.</span>
+        </div>
+        <div class="callout warn">
+          <span class="title">화면은 멀쩡한데 뒤에서 샌다 <span class="ts">11:20</span></span>
+          <span>심판은 가려지지 않은 원본 트레이스를 읽는다. 위 같은 지시가 있으면 근거 글에 고객 정보를 다시 풀어 적을 수 있다. UI는 여전히 잘 가려져 보인다. 하지만 백엔드에 저장된 심판의 근거에는 민감 정보가 남는다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="reasoning">
+        <header><span class="num">10</span><h2>점수는 남기고 근거는 거른다 <span class="ts">11:40</span></h2></header>
+        <p>심판은 계속 원본 트레이스를 읽어도 된다. 대신 점수와 근거를 따로 다룬다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>갈래</th><th>처리</th><th>UI에 보이는 것</th></tr></thead>
+            <tbody>
+              <tr><td>점수</td><td>항상 저장한다. 평가에 필요하다</td><td>점수</td></tr>
+              <tr><td>근거: 깨끗함</td><td>애플리케이션 코드의 검사가 "민감 정보 없음"으로 판정하면 저장한다</td><td>점수와 근거</td></tr>
+              <tr><td>근거: 민감 정보 있음</td><td>저장하지 않고 숨긴다</td><td>점수만</td></tr>
+              <tr><td>두 번째 심판</td><td>민감 정보를 가린 입력으로 다시 판정한다. 입력이 깨끗하니 근거도 깨끗하다</td><td>점수와 깨끗한 근거</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>두 번째 심판은 추가 단계다. 발표자에 따르면 함께 일하는 은행 대부분은 민감한 기록에서도 심판의 근거를 보고 싶어 한다. 근거를 숨기기만 하면 이 요구를 못 채운다. 그래서 가린 입력으로 한 번 더 판정해 보여 준다. <span class="ts">12:20</span></p>
+        <div class="callout">
+          <span class="title">유출 0은 공짜가 아니다 <span class="ts">12:50</span></span>
+          <span>민감 정보 유출을 0으로 만들고 <strong>데이터 주권</strong><span class="en">data sovereignty</span>을 지키는 데는 값이 든다. 이 경우 그 값은 같은 요청에 LLM 호출을 한 번 더 하는 비용이다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="signals">
+        <header><span class="num">11</span><h2>배포를 늦추는 신호 <span class="ts">13:00</span></h2></header>
+        <p>세 기둥에 공통된 점이 있다. 보안·컴플라이언스 팀에게 "믿어 주세요, 답은 이겁니다"라고 하지 않는다. 답에 이른 <strong>증거와 과정</strong>을 보여 준다. 발표자는 이것이 신뢰를 얻는 방법이라고 말한다.</p>
+        <p>많은 업체가 프로덕션까지 몇 주면 된다고 말한다. 발표자는 그 업체들이 그 기간을 은행의 인프라, 보안 수준, 클러스터 사정에 맞춰 확인하지 않았다고 지적한다. <span class="ts">13:10</span></p>
+        <p>발표자가 기간을 가늠할 때 보는 신호는 이렇다. <span class="ts">13:30</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>은행의 상황</th><th>기간</th></tr></thead>
+            <tbody>
+              <tr><td>레지스트리에서 이미지를 받아오는 절차가 이미 있다. 추론용 GPU가 확보돼 있다</td><td>짧아진다</td></tr>
+              <tr><td>정식 보안 심사가 있다. 맞춤 LLM 게이트웨이나 RBAC(추정. 자막에는 "RBA") 설정을 만들어야 한다</td><td>몇 달 늘어난다</td></tr>
+              <tr><td>이미지를 레지스트리로 들여오는 승인 절차 자체가 없다. GPU를 구하고 조달할 계획이 없다</td><td>그보다 더 늘어난다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자의 관찰은 이렇다. 기간을 늘리는 신호 대부분은 기술 문제가 아니다. <strong>은행 안의 사람과 조직, 그리고 합의</strong>의 문제다. 그래도 반드시 풀어야 하는 문제다. <span class="ts">14:10</span></p>
+        <p class="note">다른 업체에 대한 평가는 경쟁하는 쪽에서 한 말이다. 감안해 읽자.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="show-work">
+        <header><span class="num">12</span><h2>풀이가 곧 속도 <span class="ts">14:30</span></h2></header>
+        <p>발표의 주제는 <strong>일을 보여 주기</strong><span class="en">showing your work</span>다. 발표자는 은행과 일할 때 컴플라이언스 속도를 실제로 움직이는 손잡이가 이것이라고 말한다.</p>
+        <p>고객 은행이 "우리 고객들이 문제를 겪고 있다"고 하면, 그 문제는 발표자 팀의 문제가 된다. 팀은 문제를 세 갈래 작업으로 나눈다. <span class="ts">14:40</span></p>
+        <ul class="plain">
+          <li>엔지니어링</li>
+          <li>워크플로</li>
+          <li>사람과 조직</li>
+        </ul>
+        <p>목표는 최대한 자동화하는 것이다. 발표자는 그냥 또 하나의 업체가 되지 말고, 고객의 문제를 실제로 푸는 쪽이 되라고 말한다.</p>
+        <p>은행에는 걸린 것이 크다. 예금 계좌, 주택담보대출, 신용카드가 걸려 있다. <span class="ts">15:30</span></p>
+        <blockquote>이런 곳에서는 답을 소수점 넷째 자리까지 맞추는 일이 중요하다.<cite>발표자의 말을 옮김 · 15:40</cite></blockquote>
+        <p>은행 소프트웨어가 낡은 데는 이유가 있다. 하지만 낡은 소프트웨어와 혁신 사이의 경계는 매일 조금씩 움직인다. 발표자는 느리고, 지루하고, 관료적이고, 꼼꼼해야 하는 사람·조직의 문제에 마음이 가는 사람이라면 금융권 AI 배포만 한 일이 없다고 말한다.</p>
+        <p>발표자는 세 기둥 아래에 더 큰 프로덕션 체크리스트가 있다고 밝혔다. 체크리스트 전체는 공개하지 않았다. 자기 배포를 이 기둥에 비춰 채점해 보고 싶으면 연락하라고 했다. <span class="ts">16:30</span></p>
+        <p class="note">연락하라는 제안은 자사 영업과도 닿아 있다.</p>
+
+        <h3>점심 식탁 <span class="ts">16:50</span></h3>
+        <p>Huff 선생님의 시험이 끝나면 발표자와 친구들은 점심 식탁에 모였다. 기억나는 문제를 적어 놓고 서로 어떻게 풀었는지 이야기했다. 덕분에 같은 문제를 푸는 여러 방법을 알게 됐다. 발표자는 학회가 그 점심 식탁과 같다고 말하며 발표를 마친다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>은행 컴플라이언스 팀은 답보다 풀이를 본다. "고쳤다"는 말 대신 <strong>증거</strong>가 필요하다.</li>
+          <li>일반 SaaS AI는 데이터가 인터넷으로 나가서 은행에서 못 쓴다. <strong>은행 안에 설치</strong>하는 방식이 기본이다.</li>
+          <li>CVE 대응은 이미지, 은행, 버전, 스캐너, 정책이 곱해져 복잡해진다. 손이 아니라 <strong>시스템</strong>으로 다룬다.</li>
+          <li>전이 의존성 속 CVE는 직접 못 고친다. <strong>왜 못 고치는지 설명하는 것</strong>도 일이다.</li>
+          <li>스캐너는 버전만 본다. Harbor 과제로 에이전트가 <strong>익스플로잇과 테스트</strong>를 쓰게 해 수정을 증명한다.</li>
+          <li>발표자에 따르면 ClickHouse에는 리전 간 관리형 장애 조치가 없다. 백업 → 버킷 → DR 리전 복원을 직접 짠다.</li>
+          <li><strong>백업 작업 성공 ≠ 데이터 정확.</strong> 행 개수와 복제본 수렴을 따로 확인한다.</li>
+          <li>백업 위치는 곧 데이터 상주 결정이다. <strong>ID와 메타데이터만</strong> 다른 리전으로 보낸다.</li>
+          <li>UI에서 가려도 <strong>LLM 심판의 근거 글</strong>이 민감 정보를 다시 드러낼 수 있다. 점수는 남기고 근거는 검사 뒤에 남긴다. 필요하면 가린 입력으로 두 번째 심판을 돌린다.</li>
+          <li>배포를 늦추는 원인은 대개 <strong>사람과 조직</strong>이다. 풀이를 보여 주는 것이 컴플라이언스 속도를 올린다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 "프로덕션"은 무엇이고, 무엇이 아닌가?</span></summary><div class="answer">수백만 고객이 매일 쓰는 은행 웹사이트와 모바일 앱이다. 개발·스테이징 시제품이나 직원용 내부 RAG 에이전트는 여기에 들지 않는다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>일반 SaaS AI를 은행에 그대로 붙이면 안 되는 이유는?</span></summary><div class="answer">은행 밖 인터넷으로 나가는 트래픽이 생기고, 그 길로 민감 정보가 샐 수 있다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>발표의 세 기둥은?</span></summary><div class="answer">빌드 파이프라인(이미지의 CVE 대응), 재해 복구, 민감 정보 유출 방지.</div></details>
+          <details><summary><span class="qn">Q4</span><span>여러 은행에 CVE 대응을 하면 왜 복잡해지나?</span></summary><div class="answer">은행마다 이미지 버전, 스캔 도구, 정책(무엇을 CVE로 칠지, 심각도, 고칠 기한)이 다르다. 여기에 이미지 수와 CVE 수가 곱해진다. 전이 의존성 속 CVE는 직접 고칠 수도 없다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>직접 고칠 수 없는 CVE는 어떻게 다루나?</span></summary><div class="answer">오픈소스 릴리스 노트를 조사해 왜 못 고치는지, 어느 메인테이너에게 달려 있는지 은행 보안팀에 설명한다. 발표자 팀은 스킬로 고칠 것과 못 고칠 것을 표로 정리한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Sysdig, Wiz, Prisma 같은 스캐너가 알려 주지 않는 것은?</span></summary><div class="answer">취약점을 악용하는 익스플로잇이 애플리케이션 코드에 아직 남아 있는지. 스캐너는 패키지 버전이 올라갔는지만 본다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>Harbor 과제의 세 구성과, 에이전트에게 준 지시는?</span></summary><div class="answer">지시문, 환경(애플리케이션의 Docker 이미지), 테스트. 지시는 옛 버전 기준으로 익스플로잇을 쓰고, 새 버전(2.6.2)에서도 통하는지 확인하는 테스트를 쓰라는 것이다.</div></details>
+          <details><summary><span class="qn">Q8</span><span><code>clickhouse-backup</code> 로그가 "성공"인데도 부족한 이유와 추가 확인은?</span></summary><div class="answer">로그는 작업이 실행됐다는 것만 알려 준다. 디스크·노드 고장, 잘못된 마이그레이션, 복제 지연으로 데이터는 낡을 수 있다. 테이블 행 개수를 비교하고 복제본들이 수렴했는지 확인한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>백업 버킷이 데이터 상주 문제가 되는 이유와 발표자의 해법은?</span></summary><div class="answer">버킷은 위치를 가리지 않지만 규정은 기록이 어디에 저장되는지 따진다. 트레이스의 ID와 메타데이터만 여러 리전에 복제하고, 핵심 트레이스 데이터는 한 리전에 둔다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>UI에서 민감 정보를 가렸는데도 샐 수 있는 길은?</span></summary><div class="answer">LLM 심판의 근거 글. 심판은 원본 트레이스를 읽고, 검토자를 위해 근거를 구체적으로 쓰라는 지시가 있으면 가린 정보를 다시 적을 수 있다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>두 번째 심판은 무엇을 하고, 대가는 무엇인가?</span></summary><div class="answer">민감 정보를 가린 입력으로 다시 판정해 깨끗한 근거를 UI에 보여 준다. 대가는 같은 요청에 LLM 호출이 한 번 더 드는 비용이다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>배포 기간을 몇 달 이상 늘리는 신호는? 그 공통점은?</span></summary><div class="answer">정식 보안 심사, 맞춤 LLM 게이트웨이나 RBAC 설정은 몇 달을 늘린다. 이미지 반입 승인 절차나 GPU 조달 계획이 없으면 더 늘어난다. 대부분 기술보다 사람·조직의 문제다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>고객별 CVE 정책을 한곳에 정리한다<span class="how">쓰는 이미지 버전, 스캔 도구, 심각도 기준, 고칠 기한</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>고칠 CVE와 못 고칠 CVE를 나눈 표를 만든다<span class="how">못 고치는 것은 어떤 전이 의존성 때문인지, 어떤 릴리스를 기다리는지 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>중요한 CVE는 익스플로잇 테스트로 수정을 증명한다<span class="how">옛 버전에서 통하던 익스플로잇이 새 버전에서 막히는지 여러 번 돌려 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>백업·복원 작업의 성공과 별도로 데이터 정확성을 확인한다<span class="how">테이블별 행 개수 비교, 복제본 수렴 확인</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>백업 버킷의 리전을 데이터 상주 규정과 대조한다<span class="how">리전을 떠나도 되는 것(ID·메타데이터)과 안 되는 것(핵심 데이터)을 나눈다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>LLM 심판의 시스템 프롬프트와 근거 글에서 민감 정보를 찾아본다<span class="how">근거에 구체 내용을 인용하라는 지시가 있는지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>심판의 점수와 근거를 따로 저장하고, 근거는 검사를 통과한 것만 보인다<span class="how">근거가 꼭 필요하면 가린 입력으로 두 번째 심판을 돌리고 추가 호출 비용을 계산한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>배포 일정을 약속하기 전에 고객의 조직 신호를 확인한다<span class="how">이미지 반입 승인 절차, GPU 조달, 정식 보안 심사, 게이트웨이·RBAC 요구</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>컴플라이언스</td><td>Compliance. 법, 규정, 내부 정책을 지키는지 확인하는 일. 또는 그 일을 맡은 팀</td></tr>
+              <tr><td>프로덕션</td><td>실제 고객이 쓰는 운영 환경</td></tr>
+              <tr><td>AI 관측 도구</td><td>AI observability. AI 애플리케이션이 실제로 한 일을 기록하고 평가하는 도구</td></tr>
+              <tr><td>SaaS</td><td>업체 서버에서 도는 소프트웨어를 인터넷으로 빌려 쓰는 방식</td></tr>
+              <tr><td>온프렘</td><td>On-prem. 고객 회사 안의 서버에 소프트웨어를 직접 설치해 돌리는 방식</td></tr>
+              <tr><td>에어갭</td><td>Air-gapped. 외부 인터넷과 끊어 놓은 환경</td></tr>
+              <tr><td>VPC</td><td>클라우드 안에 따로 떼어 놓은 사설 네트워크</td></tr>
+              <tr><td>CVE</td><td>번호가 매겨진 공개 보안 취약점. NVD, CISA, MITRE 사이트에서 정보를 찾을 수 있다</td></tr>
+              <tr><td>SLA</td><td>여기서는 취약점을 고치기까지 허용된 기한</td></tr>
+              <tr><td>전이 의존성</td><td>Transitive dependency. 내가 쓰는 패키지가 다시 기대는 패키지. 직접 고치기 어렵다</td></tr>
+              <tr><td>컨테이너 이미지</td><td>애플리케이션과 실행 환경을 묶은 배포 단위. Docker 이미지가 대표적이다</td></tr>
+              <tr><td>익스플로잇</td><td>Exploit. 취약점을 실제로 악용하는 코드나 방법</td></tr>
+              <tr><td>Harbor 과제</td><td>Harbor task. 지시문, 환경, 테스트로 이뤄진 에이전트 실험 단위. 여러 샌드박스에서 동시에 돌린다</td></tr>
+              <tr><td>샌드박스</td><td>바깥에 영향을 주지 않고 코드를 돌려 볼 수 있는 격리된 실행 환경</td></tr>
+              <tr><td>재해 복구 (DR)</td><td>장애나 재해가 나면 다른 곳에서 서비스와 데이터를 되살리는 계획</td></tr>
+              <tr><td>리전</td><td>Region. 클라우드 데이터센터가 모여 있는 지리적 지역</td></tr>
+              <tr><td>장애 조치</td><td>Failover. 주 시스템이 죽으면 예비 시스템으로 넘기는 것</td></tr>
+              <tr><td>복제 지연</td><td>Replication lag. 원본의 변경이 복제본에 늦게 반영되는 것</td></tr>
+              <tr><td>데이터 상주</td><td>Data residency. 데이터를 특정 국가나 지역 안에 저장해야 한다는 요구</td></tr>
+              <tr><td>데이터 주권</td><td>Data sovereignty. 데이터가 저장된 곳의 법이 그 데이터에 적용된다는 원칙</td></tr>
+              <tr><td>트레이스</td><td>Trace. AI 애플리케이션이 요청 하나를 처리하며 거친 단계와 입출력을 기록한 것</td></tr>
+              <tr><td>PII</td><td>Personally identifiable information. 개인을 알아볼 수 있는 정보</td></tr>
+              <tr><td>MNPI</td><td>Material non-public information. 공개되지 않은 중요 정보. 금융권에서는 투자 판단에 영향을 줄 수 있는 내부 정보를 뜻한다</td></tr>
+              <tr><td>가리기</td><td>Redaction. 민감한 부분을 지우거나 가리는 것</td></tr>
+              <tr><td>LLM 심판</td><td>LLM-as-a-judge. LLM에게 다른 AI의 결과를 채점하게 하는 평가 방식</td></tr>
+              <tr><td>LLM 게이트웨이</td><td>앱과 LLM 사이에서 요청을 모아 통제하고 기록하는 중간 계층</td></tr>
+              <tr><td>RBAC</td><td>Role-based access control. 역할에 따라 접근 권한을 나누는 방식</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>Huff 선생님 이야기: 답보다 풀이</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>은행 컴플라이언스 팀과 닮은 점</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>여기서 말하는 프로덕션</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>발표자 팀의 일, 1년 → 몇 주</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>SaaS AI가 은행에서 안 되는 이유, 온프렘·에어갭</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>세 기둥 소개</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>CVE: 첫 컴플라이언스 관문</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>CVE가 은행 수만큼 곱해진다</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>직접 못 고치는 전이 의존성</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>고치는 방법과 은행 간 버전 충돌</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>스킬로 만든 CVE 보고 표</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>스캐너는 버전만 본다</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>Harbor 과제로 익스플로잇 테스트</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>버전이 아니라 증거</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>재해 복구와 ClickHouse의 빈자리</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>백업 → 버킷 → DR 리전 패턴</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>clickhouse-backup과 Altinity</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>작업 성공 로그의 한계</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>행 개수, 복제본 수렴 확인</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>데이터 상주 문제</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>ID·메타데이터만 복제</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>민감 정보가 새는 옆문</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>가리기: SDK, 게이트웨이, 미들웨어</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>LLM 심판의 근거 글을 확인하라</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>심판 프롬프트의 한 줄</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>점수와 근거를 나누는 흐름</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>두 번째 심판</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>유출 0의 비용</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>증거로 얻는 신뢰</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>배포 기간을 가르는 신호</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>결국 사람과 조직의 문제</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>주제: 풀이를 보여 주기</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>세 갈래 작업으로 나누기</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>금융에서 걸린 것들</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>프로덕션 체크리스트와 제안</td></tr>
+              <tr><td><span class="ts">16:50</span></td><td>점심 식탁 비유와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'Bz1HFxQA1o8:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

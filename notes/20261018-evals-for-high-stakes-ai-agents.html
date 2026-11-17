@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>고위험 에이전트 평가 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#green">초록불인데 실패한 에이전트</a></li>
+      <li><a href="#loop">AI 엔지니어링 루프</a></li>
+      <li><a href="#entry">위험도에 따라 다른 출발점</a></li>
+      <li><a href="#bank">은행 상담 에이전트 시연</a></li>
+      <li><a href="#datasets">데이터셋은 테스트 케이스다</a></li>
+      <li><a href="#annotation">오류 분석과 주석 큐</a></li>
+      <li><a href="#evaluators">실패 유형을 점수로</a></li>
+      <li><a href="#ci">실험과 CI 품질 관문</a></li>
+      <li><a href="#dashboard">사업 쪽에 보여 줄 대시보드</a></li>
+      <li><a href="#taste">코딩 에이전트에 다 맡기지 않기</a></li>
+      <li><a href="#start">내일 시작한다면</a></li>
+      <li><a href="#qa">질의응답</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-18 · 54분 · 영어 발표 한글 정리</span>
+      <h1>위험이 큰 AI 에이전트는 어떻게 평가하나</h1>
+      <p class="lead">AI 에이전트는 시스템 지표가 모두 정상인데도 엉뚱한 일을 한다. Langfuse의 두 발표자는 은행 상담 에이전트 시연으로, 전문가가 확인한 정답 데이터와 CI 품질 관문으로 이 위험을 관리하는 과정을 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=obfPzbapMIM" target="_blank" rel="noopener">Evals for High-Stakes AI Agents</a></span>
+        <span>발표: Annabell Schäfer (Langfuse AI 솔루션 엔지니어), Doneyli De Jesus (Langfuse AI 솔루션 아키텍처 총괄)</span>
+      </div>
+      <p class="note">영어 워크숍의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 알려진 이름으로 바로잡았다. 두 발표자 모두 Langfuse 직원이고, 시연도 Langfuse 화면으로 진행했다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트는 <strong>지연도 오류도 없이 거짓말</strong>을 할 수 있다. 환불 도구를 부르지 않고 "환불했다"고 답한 예가 그렇다.</li>
+        <li>잘하는 팀은 <strong>추적 → 모니터링 → 데이터셋 → 실험 → 평가</strong>를 계속 돈다. 바탕은 언제나 추적이다.</li>
+        <li>규제 산업에서는 출시 전에 <strong>정답 데이터셋</strong>이 필요하다. 전문가가 직접 만들거나, 섀도 런으로 비교하거나, 사람 검토 시스템에서 쌓는다.</li>
+        <li>도메인 전문가에게는 <strong>점수 두어 개와 자유 의견</strong>만 받는다. 의견을 실패 유형으로 묶는 일은 LLM에게 맡긴다.</li>
+        <li>평가자는 <strong>LLM 판정과 코드 검사를 섞는다.</strong> LLM 판정은 가끔 틀리고, 코드 검사는 같은 입력에 늘 같은 답을 낸다.</li>
+        <li>프롬프트가 바뀌면 <strong>CI가 실험을 돌려 통과와 실패를 가린다.</strong> 점수마다 최소 기준을 두고, 결과는 배포 판단의 증거로 남긴다.</li>
+        <li>코딩 에이전트에게 "다 고쳐 줘"로 맡기면 품질이 떨어진다. <strong>기준과 데이터는 사람이 잡고</strong>, 계측·실험·평가 실행은 자동화한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="green">
+        <header><span class="num">01</span><h2>초록불인데 실패한 에이전트 <span class="ts">02:00</span></h2></header>
+        <p>고객 지원 에이전트에게 사용자가 환불을 요청한다. 에이전트는 환불 정책을 찾아본다. 그리고 "환불해 드렸습니다"라고 답한다. 사용자는 고맙다고 하고 대화가 끝난다.</p>
+        <div class="shift" aria-label="지표가 본 것과 추적으로 드러난 것">
+          <div><span class="tag">지표가 본 것</span><b>아무 문제 없음</b><span class="muted">상태는 정상이고 지연도 없다. 기존 관측 기준으로는 잘못된 게 없다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">추적해 보면</span><b>환불 도구를 부르지 않았다</b><span class="muted">에이전트는 환불을 실행하지 않고, 실행했다고 거짓말했다.</span></div>
+        </div>
+        <p>이 실패는 몇 주 뒤에야 드러난다. 사용자가 "환불을 아직 못 받았다"며 다시 연락할 때다.</p>
+        <p>LLM 기반 시스템은 비결정적 <span class="en">non-deterministic</span>이다. 같은 입력에도 매번 다르게 움직일 수 있다. 한다고 말한 일을 실제로는 하지 않을 수도 있다.</p>
+        <p>그래서 <strong>무엇이 잘못되고 있는지 신호를 계속 캐내는 방법</strong>이 필요하다. 같은 실패가 다시 일어나지 않게, 가능하면 처음부터 일어나지 않게 막아야 한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="loop">
+        <header><span class="num">02</span><h2>AI 엔지니어링 루프 <span class="ts">03:10</span></h2></header>
+        <p>Langfuse 창업자들은 3년 전 Y Combinator에 있을 때 같은 문제를 겪었다. AI 앱에는 단위 테스트 같은 장치가 없었다. 그래서 AI 시스템을 추적하고, 모니터링하고, 개선하는 오픈소스 플랫폼을 만들었다.</p>
+        <p>처음 사용자는 개발자였다. 지금은 도메인 전문가도 함께 쓴다. 최근 8~12개월 사이에는 개발자를 돕는 코딩 에이전트도 주요 사용자가 됐다.</p>
+        <ul class="plain">
+          <li>개발자 15만 명 이상이 쓴다. 오픈소스인 덕이 크다고 했다.</li>
+          <li>Fortune 50 기업 중 21곳이 핵심 기술 스택에 넣었다.</li>
+          <li>매달 관찰 기록 <span class="en">observation</span> 900억 건 이상이 들어온다. 에이전트가 밟는 단계가 늘면서 계속 늘고 있다.</li>
+          <li>고객사로 Ramp, Canva, Khan Academy 등을 들었다.</li>
+        </ul>
+        <p class="note">발표자들이 자기 회사를 소개하며 든 수치다. 그 점을 감안해 읽자.</p>
+
+        <h3>잘하는 팀이 반복하는 다섯 단계 <span class="ts">04:40</span></h3>
+        <p>믿을 만한 에이전트를 내보내고 계속 개선하는 고객사들에는 공통점이 있었다. 아래 다섯 단계를 한 번 돌고 끝내지 않는다. 프로덕션에서 배운 것은 다시 데이터셋으로 들어간다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th><th>예</th></tr></thead>
+            <tbody>
+              <tr><td>추적 <span class="en">tracing</span> <span class="ts">04:50</span></td><td>에이전트가 밟은 모든 단계를 사람이 들여다볼 수 있는 기록으로 남긴다</td><td>LLM 호출과 도구 호출이 나무 구조로 보이고, 단계마다 입력·출력·비용·시간이 붙는다</td></tr>
+              <tr><td>모니터링 <span class="ts">06:50</span></td><td>쌓인 기록을 모아 평균 성능을 보고, 문제가 있는 기록을 골라낸다</td><td>비용과 지연, 규정 가드레일을 지켰는지, 대문자로만 쓰는 화난 사용자가 몇 명인지</td></tr>
+              <tr><td>데이터셋 <span class="ts">07:40</span></td><td>에이전트가 처리해야 할 대표 사례와 기대 결과를 모은다</td><td>IT 지원 에이전트가 받지 말아야 할 투자 조언이나 뉴욕 날씨 질문</td></tr>
+              <tr><td>실험 <span class="ts">08:20</span></td><td>시스템의 한 가지를 바꿔 결과를 비교한다</td><td>프롬프트, 모델, 컨텍스트, 도구 설명 바꾸기</td></tr>
+              <tr><td>평가 <span class="en">eval</span> <span class="ts">09:00</span></td><td>사람이 다 보지 않고도 결과를 대규모로 잰다</td><td>LLM 판정, 정답과 정확히 같은지 보는 코드 검사</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>추적은 나머지 모든 단계의 바탕이다. 사람이 문제를 파고들 때도, 코딩 에이전트가 기록을 대량으로 살펴볼 때도 이 기록을 쓴다. 발표 화면의 예는 부모님의 IT 질문에 대신 답해 주는 지원 에이전트였다.</p>
+        <p>데이터셋의 기대 결과는 모범 답안일 수도 있고, 기대하는 행동이나 꼭 다뤄야 할 키워드일 수도 있다. 이 데이터셋은 오프라인에서 개선할 때나 CI/CD에서 흔들리지 않는 기준점이 된다.</p>
+        <div class="callout">
+          <span class="title">실험은 한 번에 하나만 바꾼다</span>
+          <span>같은 모델에서 프롬프트 효과를 보고 싶다면 프롬프트만 바꾼다. 다섯 가지를 한꺼번에 바꾸면 무엇 때문에 결과가 달라졌는지 해석할 수 없다.</span>
+        </div>
+        <p>평가를 자동화해도 가끔은 사람이 직접 기록을 봐야 한다. Annabell도 그렇게 권한다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="entry">
+        <header><span class="num">03</span><h2>위험도에 따라 다른 출발점 <span class="ts">09:40</span></h2></header>
+        <p>루프에 들어가는 입구는 사용 사례에 따라 다르다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">위험이 낮을 때</span>
+            <p>사내용 채팅 에이전트처럼 실수의 대가가 작은 경우다. 관측 도구가 아예 없는 상태에서 시작해도 된다.</p>
+            <ul>
+              <li>추적부터 붙인다</li>
+              <li>사용자가 답답해하는 곳을 잡는 모니터를 몇 개 둔다</li>
+              <li>평가는 처음엔 크게 신경 쓰지 않는다</li>
+              <li>테스트 사례는 쓰면서 쌓고, 바로 출시한다</li>
+            </ul>
+            <p class="verdict">출발점: <b>추적 + 모니터링</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">고객 대면 · 규제 산업</span>
+            <p>에이전트가 해서는 안 되는 일을 할 위험을 감수할 수 없는 경우다.</p>
+            <ul>
+              <li>추적은 여기서도 바탕이다</li>
+              <li>어떤 단계를 밟았는지, 어떤 입력과 출력을 봤는지, 어떤 도구를 불렀는지 알아야 한다</li>
+              <li>그 위에 정답 데이터셋을 먼저 만든다</li>
+            </ul>
+            <p class="verdict">출발점: <b>추적 + 정답 데이터셋</b></p>
+          </div>
+        </div>
+        <p>정답 데이터셋 <span class="en">ground truth dataset</span>은 "이 입력에는 이렇게 해야 한다"를 사람이 확인해 둔 사례 모음이다. 요즘 자주 이야기하는 자동 개선 <span class="en">auto-improvement</span>도 이 데이터셋이 있어야 할 수 있다.</p>
+
+        <h3>정답 데이터셋을 쌓는 세 가지 방법 <span class="ts">11:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방법</th><th>하는 법</th></tr></thead>
+            <tbody>
+              <tr><td>전문가 큐레이션</td><td>회사 안의 도메인 전문가와 함께 사례와 정답을 직접 만든다</td></tr>
+              <tr><td>섀도 런 <span class="en">shadow run</span></td><td>업무는 지금처럼 사람이 처리한다. 같은 일을 옆에서 에이전트에게도 돌린다. 에이전트였다면 어떻게 했을지 비교해 정확도를 재고, 정답 사례도 쌓는다</td></tr>
+              <tr><td>사람 검토 시스템 <span class="en">human in the loop</span></td><td>처음엔 모든 결과를 사람이 확인한다. 쌓인 데이터를 나눠 자동화해도 될 부분과 늘 사람이 볼 부분을 가른다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">Annabell의 이전 경험</span>
+          <span>Annabell은 Langfuse에 오기 전 의료기기 규정 준수를 돕는 에이전트를 만들었다. 고객이 검증한 정답 데이터셋과 사람 검토 시스템이 핵심이었다. 표의 세 번째 방법이 그때 쓴 방식이다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="bank">
+        <header><span class="num">04</span><h2>은행 상담 에이전트 시연 <span class="ts">12:10</span></h2></header>
+        <p>여기서부터 Doneyli가 시연한다. 함께 일하는 금융기관 몇 곳을 위해 만든 예제다. 이 기관들은 첫 프로토타입을 만든 뒤 경영진에게서 같은 질문을 받았다. "고객이 직접 쓰는 이 에이전트를 어떻게 평가하나?"</p>
+        <p>은행은 고객에게 정확한 정보를 줘야 한다. 틀리면 금전적·법적 책임이 생긴다. LLM은 본래 비결정적이다. 그래서 예측하기 어려운 부분을 줄이고, 결과를 최대한 재현할 수 있어야 한다. 그래야 실패 유형을 찾아 고칠 수 있다.</p>
+
+        <h3>시연에 들어간 장치 <span class="ts">13:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>장치</th><th>내용</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>고객 유형 바꾸기</td><td>평범한 고객, 초고액 자산가 등 여러 고객으로 접속해 본다</td><td>고객 유형별로 정한 가드레일을 에이전트가 지키는지 확인한다</td></tr>
+              <tr><td>개인정보 가리기</td><td>PII를 Langfuse에 저장하기 전에 자동으로 가린다. PII는 카드 번호처럼 사람을 특정할 수 있는 정보다</td><td>금융기관은 카드 번호나 사회보장번호를 관측 시스템에 남기지 않으려 한다. 원래의 기록 시스템에만 둔다</td></tr>
+              <tr><td>자동 점수</td><td>새 추적이 들어올 때마다 미리 정한 점수가 자동으로 계산된다</td><td>답이 은행 업무 범위를 지켰는지, 실패 유형에 걸렸는지, 가드레일이 답을 막았는지 본다</td></tr>
+              <tr><td>음성 통화 <span class="ts">19:20</span></td><td>콜센터 통화를 음성 인식으로 글로 바꾼 뒤 같은 방식으로 평가한다</td><td>추적에서 원본 오디오 링크, 받아쓴 글, 에이전트의 답을 함께 본다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>세 가지 질문으로 본 흐름 <span class="ts">15:30</span></h3>
+        <ol class="plain">
+          <li><strong>"국제 송금 수수료가 얼마인가?"</strong> 고객 Anna로 접속해 물었다. 에이전트는 지식 베이스에서 답을 찾아 돌려준다. 시연 화면에는 부른 도구와 데이터 소스도 띄웠다. 실제 고객에게는 보여 주지 않을 정보다.</li>
+          <li><strong>"카드를 잃어버렸다. 번호는 이거다. 정지됐나?"</strong> <span class="ts">16:00</span> 사용자가 카드 번호를 그대로 입력했다. 사용자가 무엇을 입력할지는 통제할 수 없다. Langfuse에서 추적을 열면 번호가 가려진 채 저장돼 있다. 미리 정해 둔 가리기 함수가 저장 전에 처리했기 때문이다.</li>
+          <li><strong>"저축을 비트코인에 넣어도 되나?"</strong> <span class="ts">18:20</span> 은행이 답하면 안 되는 투자 조언이다. 에이전트는 올바르게 답을 피했다. 입력 가드레일은 주요 위험을 "투자 조언"으로 표시했다. 고객 의도 점수에도 "투자 조언"이 찍혔다. 이 점수로 비슷한 사례만 쉽게 걸러 볼 수 있다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">추적 화면에서 보이는 것 <span class="ts">17:00</span></span>
+          <span>사용자에게는 질문과 답만 보인다. 추적에는 그 뒤의 모든 단계가 나무 구조로 보인다. Anthropic 모델 호출, 쓸 수 있는 도구 목록, 계좌 목록 조회 같은 도구 호출과 그 출력이다. 맨 위에는 이 사용 사례에 정의한 점수들이 붙는다.</span>
+        </div>
+        <p class="note">시연은 모두 Langfuse 화면으로 진행했다. 기능 설명은 자사 제품 시연이라는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="datasets">
+        <header><span class="num">05</span><h2>데이터셋은 테스트 케이스다 <span class="ts">20:00</span></h2></header>
+        <p>고객은 예측할 수 없다. 한 가지 의도로 설계해도 고객은 기발한 방식으로 다르게 쓴다. LLM 기반 시스템을 세상에 내놓았을 때 나올 결과를 전부 예상할 수도 없다. 그래서 Doneyli는 평가 기준의 중심에 데이터셋을 둔다.</p>
+        <p>데이터셋 <span class="en">dataset</span>은 질문과 기대 결과의 모음이다. 소프트웨어 개발로 치면 테스트 케이스다. QA를 거치지 않고 출시하지 않듯, 에이전트도 정한 요구 사항을 통과했다는 증거가 있어야 한다.</p>
+        <div class="callout">
+          <span class="title">기대 결과가 꼭 모범 답안일 필요는 없다</span>
+          <span>에이전트의 의도를 잴 수도 있고, 에이전트가 해야 할 행동을 잴 수도 있다. 재고 싶은 품질이 여럿이라 데이터셋도 보통 여러 개가 된다.</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시연의 데이터셋</th><th>무엇을 재나</th></tr></thead>
+            <tbody>
+              <tr><td>레드 티밍 <span class="ts">22:10</span></td><td>프롬프트 인젝션 같은 공격으로 가드레일을 우회해, 받아선 안 될 정보를 빼내려 할 때 막아 내는가</td></tr>
+              <tr><td>미해결 분쟁</td><td>고객이 제기한 분쟁이 해결되지 않은 사례에서 에이전트가 어떻게 하는가</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>데이터셋은 사용 사례와 기술 요구 사항에 맞게 따로 만든다. 무엇을 넣을지는 도메인 전문가가 개발팀과 함께 정한다. Doneyli는 이 부분에서 여전히 사람이 중요하다고 강조했다.</p>
+
+        <h3>데이터셋을 만드는 두 가지 방법 <span class="ts">23:10</span></h3>
+        <ul class="plain">
+          <li><strong>스프레드시트 올리기</strong>: 팀에 이미 "에이전트에서 시험할 것" 목록이 있다면 CSV로 올린다. 가장 쉽다.</li>
+          <li><strong>프로덕션 추적에서 고르기</strong> <span class="ts">24:00</span>: 실제 사용 기록에서 좋은 사례를 골라 데이터셋에 넣는다. 단, "앞으로도 이렇게 해야 한다"고 판단한 사례만 넣는다.</li>
+        </ul>
+        <p class="note">시연은 화면으로 했지만 같은 일을 CLI, MCP, API로도 할 수 있다고 했다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="annotation">
+        <header><span class="num">06</span><h2>오류 분석과 주석 큐 <span class="ts">24:50</span></h2></header>
+        <p>오류 분석 <span class="en">error analysis</span>은 추적을 직접 들여다보는 일이다. 에이전트가 필요한 단계를 다 밟았는지 본다. 불러야 할 도구를 불렀는지 본다. 원하는 결과를 냈는지 본다. Annabell은 이전 직장에서 며칠씩 추적만 보며 지냈다.</p>
+        <p>이 과정은 여전히 중요하다. 하지만 프로덕션에서 쌓이는 수천 건을 사람이 다 볼 수는 없다. 그래서 이렇게 줄인다.</p>
+        <ol class="plain">
+          <li><strong>대표 표본을 고른다.</strong> 전체의 10~20%를 뽑거나, 분쟁이나 카드 정보처럼 관심 있는 주제로 거른다.</li>
+          <li><strong>주석 큐</strong> <span class="en">annotation queue</span><strong>를 만든다.</strong> <span class="ts">26:20</span> 전문가가 차례로 검토할 사례 목록이다. 예를 들어 리스크 전문가에게 "에이전트가 고객에게 준 이 답을 봐 달라"고 맡긴다.</li>
+          <li><strong>입력을 단순하게 받는다.</strong> 예/아니오, 참/거짓, 1~10점 같은 점수 두어 개와 자유 의견이면 충분하다. 시연에서는 실패 유형으로 "인용 누락"을 고르고, "인용이 없다. 이런 경우엔 모두 넣어야 한다"고 적었다.</li>
+          <li><strong>완료로 표시한다.</strong> 사람이 남긴 주석은 그 추적에 붙어 증거로 남는다.</li>
+          <li><strong>LLM으로 패턴을 찾는다.</strong> <span class="ts">28:10</span> 모든 의견을 LLM에 넘겨, 여러 의견에 반복되는 실패 유형을 뽑는다.</li>
+        </ol>
+
+        <p>전문가는 본업이 따로 있어서 몇 시간씩 내주기 어렵다. Doneyli는 "한 시간만 내 달라"고 부탁하라고 한다. 말을 받아 적어 주는 Wispr Flow 같은 도구를 쓰면 의견을 타이핑할 필요도 없다.</p>
+        <figure class="chart" aria-label="주석 100건에 드는 시간: 건당 10초면 약 17분, 건당 30초면 50분, 전문가에게 부탁할 시간은 60분">
+          <span class="chart-title">주석 100건에 드는 시간 (분)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>시연 속도 · 건당 10초</span><span class="val">약 17</span></div>
+              <div class="track"><div class="fill" style="width:27.8%" title="건당 10초: 약 17분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>발표자 가정 · 건당 30초</span><span class="val">50</span></div>
+              <div class="track"><div class="fill key" style="width:83.3%" title="건당 30초: 50분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>전문가에게 부탁할 시간</span><span class="val">60</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="부탁할 시간: 60분"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>30</span><span>60</span></div>
+          <span class="caption">건당 시간, 100건, 1시간은 발표에 나온 값이다. 분은 곱해서 계산했다. 건당 30초로 잡아도 한 시간 안에 끝난다.</span>
+        </figure>
+        <p class="note">Doneyli는 "100건에 30초씩이면 50분"이라고 말한 뒤 계산을 스스로 의심했다. 100 × 30초 = 3,000초이니 처음 말한 50분이 맞다.</p>
+
+        <div class="callout">
+          <span class="title">전문가에게 범주를 만들라고 하지 않는다</span>
+          <span>전문가에게는 거르지 않은 날것의 의견만 받는다. 범주로 묶는 일은 LLM이 한다. LLM은 글에서 패턴을 찾고 정보를 뽑는 데 강하다. 전문가는 쉽게 일하고, LLM은 잘하는 일을 맡는다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="evaluators">
+        <header><span class="num">07</span><h2>실패 유형을 점수로 <span class="ts">29:00</span></h2></header>
+        <p>전문가 의견에서 뽑은 범주는 곧 품질을 재는 기준이 된다. Langfuse에서는 이걸 점수 <span class="en">score</span>라고 부른다. 실험을 돌릴 때마다 이 점수들로 결과를 잰다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시연의 점수</th><th>무엇을 보나</th></tr></thead>
+            <tbody>
+              <tr><td>꼭 들어갈 내용 <span class="en">must include</span></td><td>답에 반드시 있어야 할 내용이 들어 있는가</td></tr>
+              <tr><td>출처 회수 <span class="en">source recall</span></td><td>기대한 출처를 찾아 담았는가</td></tr>
+              <tr><td>정확성 <span class="en">correctness</span></td><td>내용이 맞는가</td></tr>
+              <tr><td>언어 일치 <span class="en">language match</span></td><td>고객이 쓴 언어로 답했는가</td></tr>
+              <tr><td>격식 <span class="en">formal register</span></td><td>격식 있는 말투가 필요한 언어에서 그 말투를 지켰는가</td></tr>
+              <tr><td>권하지 않은 판매 없음 <span class="en">no unsolicited upsell</span></td><td>고객이 묻지 않은 상품을 팔려 하지 않았는가</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">점수 이름은 시연 중 두 번 읽어 준 목록을 합쳐 정리했다. 자막이 뭉개진 곳이 있다.</p>
+
+        <h3>점수를 매기는 두 방식 <span class="ts">30:10</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">LLM 판정 · LLM-as-a-judge</span>
+            <p>다른 LLM이 결과를 읽고 점수를 매긴다.</p>
+            <p class="verdict"><b>한계</b>: LLM의 본성상 일부 판정이 틀릴 가능성이 0이 아니다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">코드 검사 · deterministic</span>
+            <p>그냥 함수다. 시연에서는 정규식으로 정확히 일치하는지 봤다. <span class="ts">32:10</span></p>
+            <p class="verdict"><b>장점</b>: 같은 입력에는 늘 같은 결과를 낸다. 95%나 80%가 아니라 100%다.</p>
+          </div>
+        </div>
+        <p>점수는 들어오는 추적마다 Langfuse가 자동으로 계산하게 할 수 있다. 앱이 실시간으로 직접 계산해 보낼 수도 있다.</p>
+        <div class="callout">
+          <span class="title">고객사에서 얻은 교훈 <span class="ts">31:00</span></span>
+          <span>LLM 판정과 코드 검사를 균형 있게 섞을수록 좋다. 비율은 찾아낸 실패 유형의 성격에 따라 정한다. 둘을 합치면 한쪽만 쓸 때보다 믿을 만한 평가가 나온다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="ci">
+        <header><span class="num">08</span><h2>실험과 CI 품질 관문 <span class="ts">33:00</span></h2></header>
+        <p>실험 <span class="en">experiment</span>은 데이터셋 위에서 돈다. 데이터셋의 사례가 에이전트가 풀 과제다.</p>
+        <p>지금 에이전트는 정해진 시스템 프롬프트, 모델, 도구로 돈다. 모델을 바꾸면 어떻게 될까. 프롬프트를 고치거나 새 데이터에 접근할 도구를 주면 어떻게 될까. 이걸 프로덕션에 올리기 전에 시험한다.</p>
+        <p>지금까지 대부분은 "대충 괜찮아 보이니 올리자"는 감 <span class="en">vibes</span>으로 배포해 왔다. 실험은 이걸 체계적인 절차로 바꾼다.</p>
+
+        <h3>프롬프트가 바뀌면 CI가 돈다 <span class="ts">34:40</span></h3>
+        <ol class="plain">
+          <li>시스템 프롬프트를 Langfuse에서 버전으로 관리한다. GitHub나 GitLab에서 관리해도 된다. 어느 쪽이든 이 변경을 자동 평가의 출발 신호로 쓴다.</li>
+          <li>Langfuse에 자동화를 만든다. 조건은 "프롬프트가 바뀌면", 동작은 "GitHub에서 CI 작업 실행"이다. <span class="ts">35:10</span></li>
+          <li>시연에서는 프롬프트 다섯 버전 중 4번 버전을 다시 프로덕션으로 올렸다. 지금 버전에서 회귀를 봤기 때문이다. 회귀는 변경 때문에 원래 잘 되던 것이 나빠지는 것이다. <span class="ts">36:10</span></li>
+          <li>몇 초 뒤 GitHub에서 CI 작업이 시작된다. 데이터셋으로 실험을 돌리고, 정해 둔 평가자로 채점한다. <span class="ts">37:00</span></li>
+          <li>점수마다 최소 기준을 정해 둔다. 기준을 넘지 못하면 통과로 보지 않는다. <span class="ts">38:00</span></li>
+        </ol>
+        <div class="callout">
+          <span class="title">CI 결과 화면 <span class="ts">37:40</span></span>
+          <span>보낸 프롬프트와 버전, 라벨이 나오고 결과는 "통과"였다. 평가자는 꼭 들어갈 내용, 출처 회수, 언어 일치, 정확성, 권하지 않은 판매 없음이었다.</span>
+        </div>
+        <p>Doneyli는 통과했다고 바로 main에 머지하지는 않았다. 자동으로 PR을 만들고 누군가 리뷰하게 하는 흐름도 가능하다. 기준을 넘으면 바로 main에 올리는 팀도 있다. 어느 쪽이든 <strong>왜 이 설정으로 바꿨는지 증거 기록</strong>이 남는다.</p>
+        <p class="note">시연은 클릭으로 했지만, API나 CLI로 "이 버전에 production 라벨을 붙여라"라고 호출해도 같은 흐름이 시작된다고 했다. Langfuse의 프롬프트 관리는 따로 돈을 받지 않는다고도 했다. 자사 제품 설명이니 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="dashboard">
+        <header><span class="num">09</span><h2>사업 쪽에 보여 줄 대시보드 <span class="ts">39:10</span></h2></header>
+        <p>Doneyli에 따르면 2025년부터 2026년 초까지는 토큰을 최대한 많이 쓰는 분위기였다. 지금은 토큰에서 얼마나 가치를 뽑는지를 따진다. 그래서 경영진과 사업 담당자에게 이 에이전트가 실제로 이득이 된다는 걸 보여 줘야 한다.</p>
+
+        <h3>사람에게 넘어가지 않은 1,400건 <span class="ts">40:30</span></h3>
+        <p>지난 7일 동안 사람 상담원에게 넘기지 않고 끝난 대화가 1,400건이었다. 이 대화에 든 비용은 7달러가 안 됐다.</p>
+        <p>Doneyli는 20년 전 콜센터 직원으로 일했다. 상담원에게는 시간당 15~20달러를 줘야 한다. 그리고 상담원 한 명이 한 시간에 1,400건을 받을 수는 없다.</p>
+        <figure class="chart" aria-label="비용 비교: 에이전트 7일 대화 1,400건 7달러 미만, 상담원 1시간 인건비 15~20달러">
+          <span class="chart-title">에이전트 7일 비용과 상담원 1시간 인건비 (달러)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>에이전트 · 7일, 대화 1,400건</span><span class="val">&lt; 7</span></div>
+              <div class="track"><div class="fill key" style="width:35%" title="에이전트 7일: 7달러 미만"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>상담원 1시간 · 낮게 잡을 때</span><span class="val">15</span></div>
+              <div class="track"><div class="fill" style="width:75%" title="상담원 시급 하한: 15달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>상담원 1시간 · 높게 잡을 때</span><span class="val">20</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="상담원 시급 상한: 20달러"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>10</span><span>20</span></div>
+          <span class="caption">에이전트 막대는 "7달러 미만"이라 7에 맞춰 그렸다. 에이전트의 7일 비용이 상담원 한 명의 1시간 인건비보다 적다.</span>
+        </figure>
+        <p>건당으로 나누면 1,400건에 7달러 미만이니 한 건에 0.5센트가 안 된다.</p>
+        <p class="note">Doneyli도 이 계산 논리에는 이견이 있을 수 있고 조직마다 다르다고 했다. 정밀한 비용 비교가 아니라 방향을 보여 주는 숫자다.</p>
+
+        <h3>어디서 넘어지는지 순위로 보기 <span class="ts">41:20</span></h3>
+        <p>대시보드는 실패 유형을 지난 7일 발생 순으로 보여 준다. 상위 셋은 범위 밖 질문, 격식 없는 말투, 미해결 분쟁이었다. 셋 다 시간이 갈수록 늘고 있었다.</p>
+        <p>수십만 건을 뒤지는 대신 1위 유형부터 본다. 추적 목록에서 "미해결 분쟁 = 0"으로 거르면, 분쟁을 요청했는데 풀리지 않은 사례만 남는다. 사람 상담원에게 넘어갔거나, 아무 일 없이 세션이 닫힌 경우다.</p>
+        <p>이 필터는 저장된 보기 <span class="en">saved view</span>로 남겨 매번 다시 걸 필요가 없다. 수천 건이 수십~수백 건으로 줄어 표적 조사가 가능해진다.</p>
+
+        <h3>엄지 버튼과 보안 위험 <span class="ts">43:20</span></h3>
+        <ul class="plain">
+          <li>고객이 누른 엄지 위/아래도 점수로 모아 대시보드에 띄운다. 사업 쪽 누구라도 바로 읽을 수 있다.</li>
+          <li>대부분은 엄지 위였다. 엄지 아래 18%에서 무슨 일이 있었는지 파고든다.</li>
+          <li>보안 위험 분포도 본다. 대부분의 대화에서는 위험이 잡히지 않았다.</li>
+          <li>다만 7일 동안 89건에서 고객이 투자 조언을 구했다. 에이전트가 조언했거나 하려 했을 수 있는 사례다.</li>
+          <li>범주형 점수 <span class="en">categorical score</span>에 "보안 위험 = 투자 조언" 조건을 걸면 그 사례만 바로 볼 수 있다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">Doneyli의 정리 <span class="ts">45:10</span></span>
+          <span>고객 대면 에이전트에는 법적·금전적·평판상 책임이 걸려 있다. 부정확하거나 지어낸 정보를 고객 앞에 내놓으면 안 된다. 체계적인 절차를 따르면 에이전트가 가드레일과 통제를 지킨다는 증거를 보여 줄 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="taste">
+        <header><span class="num">10</span><h2>코딩 에이전트에 다 맡기지 않기 <span class="ts">45:50</span></h2></header>
+        <p>요즘 일부 팀은 코딩 에이전트에게 이렇게만 시킨다. "내 에이전트 고쳐 줘. 실수하지 마." 코딩 에이전트가 MCP나 CLI로 Langfuse 데이터에 연결돼 있어도 결과는 대개 질 낮은 결과물 <span class="en">slop</span>이다.</p>
+        <p>그렇다고 코딩 에이전트를 쓰지 말라는 뜻은 아니다. 두 발표자도 코딩 에이전트와 함께 앱을 개선하는 쪽을 지지한다. Annabell은 들인 시간과 시스템 품질, 두 축으로 자리를 나눠 보였다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">전부 자동</span>
+            <p>"다 고쳐 줘" 하고 맡긴다. 할 일은 없지만 품질이 낮고, 고객도 만족하지 않는다.</p>
+            <p class="verdict"><b>피할 자리</b>: 시간도 적고 품질도 낮다</p>
+          </div>
+          <div class="card">
+            <span class="tag">전부 수동</span>
+            <p>계측을 직접 하고, 실패 유형을 직접 찾고, 데이터를 전부 직접 본다. 이건 이제 자동화할 수 있다.</p>
+            <p class="verdict"><b>낭비</b>: 시간이 너무 많이 든다</p>
+          </div>
+          <div class="card">
+            <span class="tag">균형</span>
+            <p>사람은 데이터를 보고 취향과 도메인 지식을 넣는다. 코딩 에이전트는 계측, 실패 유형 찾기, 평가 실행을 맡는다. 실험도 사람이 떠올린 하나 대신 20개를 돌린다.</p>
+            <p class="verdict"><b>목표</b>: 알맞은 시간으로 높은 품질</p>
+          </div>
+        </div>
+        <p>사람이 꼭 손대야 할 곳은 데이터셋이다. 앱이 풀어야 할 진짜 문제가 무엇인지, 어느 방향으로 가야 하는지는 도메인 전문가와 함께 정한다.</p>
+        <p>Annabell은 이런 사람을 "취향 있는 AI 엔지니어 <span class="en">tasteful AI engineer</span>"라고 불렀다. 평가를 탄탄하게 만든 뒤, 루프를 조금씩 더 자동화한다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="start">
+        <header><span class="num">11</span><h2>내일 시작한다면 <span class="ts">48:10</span></h2></header>
+        <p>두 발표자가 내일 당장 시작한다면 할 일이다.</p>
+        <ol class="plain">
+          <li><strong>Langfuse 스킬을 설치한다.</strong> 에이전트 스킬 <span class="en">agent skill</span>은 코딩 에이전트가 읽는 마크다운 파일 묶음이다. 이 스킬은 Langfuse 문서, 연동 안내, Langfuse Academy의 모범 사례와 연결돼 있다. 자동으로 할 일을 맡기고, 사람이 직접 볼 데이터를 고르는 출발점으로 쓴다.</li>
+          <li><strong>정답 데이터를 모은다.</strong> 과거 기록, 프로덕션 기록, 도메인 전문가와 돌린 표본에서 가져온다.</li>
+          <li><strong>규제 산업이라면 넘으면 안 되는 선을 정한다.</strong> 금융이라면 "투자 조언은 절대 하지 않는다"가 그런 선이다. 이 선을 평가 세트에 넣는다. 일어나지 않는 게 가장 좋지만, 일어나면 적어도 알 수 있다.</li>
+        </ol>
+        <p class="note">첫 번째 권고는 발표자 회사의 도구다. 그 점을 감안해 읽자.</p>
+
+        <h3>발표에서 소개한 자료 <span class="ts">49:20</span></h3>
+        <ul class="plain">
+          <li><strong>시연 저장소</strong>: 온라인에 공개돼 있다. 데이터는 지어낸 것이고 실제 고객 데이터가 아니다.</li>
+          <li><strong>Langfuse Academy</strong>: AI 엔지니어링의 전 과정을 길게 정리한 글이다.</li>
+          <li><strong>셀프 워크숍</strong>: 각 단계를 혼자 따라 해 볼 수 있다.</li>
+          <li><strong>Doneyli의 다른 발표</strong>: AI 에이전트의 배포 관문 만들기. 같은 행사의 수요일 발표다.</li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="qa">
+        <header><span class="num">12</span><h2>질의응답 <span class="ts">51:10</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>답</th></tr></thead>
+            <tbody>
+              <tr><td>Langfuse는 어떤 저장소를 쓰나</td><td>ClickHouse에 강하게 의존한다. 처음엔 PostgreSQL로 시작했다. 하루 수십억 건의 이벤트를 감당하지 못해 ClickHouse로 옮겼다. 데이터는 S3로 내보내거나 API, CLI, MCP로 꺼내 쓸 수 있다.</td></tr>
+              <tr><td>AWS에서 돌릴 수 있나 <span class="ts">51:50</span></td><td>그렇다. 클라우드 SaaS 자체가 AWS에서 돈다. 인프라를 직접 운영하고 싶다면 필요한 구성 요소를 묶어 둔 셀프 호스팅 방식도 있다.</td></tr>
+              <tr><td>LLM 판정은 믿을 만한가 <span class="ts">52:10</span></td><td>평가자 간 신뢰도와 일관성을 묻는 질문이었다. LLM이 사람처럼 판정하도록 맞추는 과정이 필요하다. 아래 순서를 따른다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>LLM 판정을 사람 판정에 맞추는 법</h3>
+        <ol class="plain">
+          <li>대표 표본을 사람이 먼저 판정한다.</li>
+          <li>같은 표본에 LLM 판정을 돌린다.</li>
+          <li>LLM 판정이 사람 판정과 맞아떨어지도록 다듬는다.</li>
+          <li>학술적으로는 여러 사람이 판정한다. 실무에서는 한 사람이 라벨을 달고 그걸 기준으로 삼아도 된다.</li>
+          <li>시간이 지나도 표본이 실제 데이터를 대표하는지 계속 확인한다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">프로덕션에 처음 붙일 때</span>
+          <span>처음엔 거짓 양성 <span class="en">false positive</span>이 조금 많은 쪽으로 시작한다. 필요한 것보다 더 잡더라도 놓치지 않는 게 낫다. 그다음 시간을 두고 기준을 조인다.</span>
+        </div>
+        <p class="note">답변자는 이 과정을 부르는 용어가 잠깐 떠오르지 않는다고 했다. Langfuse 스킬이 이 과정도 돕는다고 했다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트는 시스템 지표가 정상이어도 실패한다. 환불 도구를 부르지 않고 환불했다고 말할 수 있다.</li>
+          <li>바탕은 추적이다. 모든 단계의 입력, 출력, 도구 호출을 사람과 코딩 에이전트가 볼 수 있게 남긴다.</li>
+          <li>루프는 <strong>추적 → 모니터링 → 데이터셋 → 실험 → 평가</strong>이고, 프로덕션에서 배운 것은 다시 데이터셋에 넣는다.</li>
+          <li>위험이 낮으면 추적과 모니터링으로 바로 출시한다. 규제 산업은 <strong>정답 데이터셋</strong>을 먼저 만든다.</li>
+          <li>정답 데이터셋은 전문가 큐레이션, 섀도 런, 사람 검토 시스템으로 쌓는다.</li>
+          <li>기대 결과는 모범 답안이 아니어도 된다. 의도, 행동, 꼭 들어갈 키워드도 잴 수 있다.</li>
+          <li>전문가에게는 <strong>점수 두어 개와 날것의 의견</strong>만 받고, 범주로 묶는 일은 LLM에게 맡긴다.</li>
+          <li>평가자는 <strong>LLM 판정과 코드 검사를 섞는다.</strong> LLM 판정은 사람 판정에 맞춰 다듬는다.</li>
+          <li>설정이 바뀌면 CI가 실험을 돌리고, 점수별 최소 기준으로 <strong>통과와 실패를 가려 증거를 남긴다.</strong></li>
+          <li>코딩 에이전트에게 "다 고쳐 줘"로 맡기지 않는다. <strong>기준과 데이터는 사람이</strong> 잡고, 반복 작업은 자동화한다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>환불 사례에서 기존 관측 지표가 문제를 못 잡은 이유는?</span></summary><div class="answer">상태도 정상이었고 지연도 없었다. 에이전트는 환불 도구를 부르지 않고 말로만 환불했다고 했다. 추적으로 도구 호출을 봐야 드러난다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>AI 엔지니어링 루프의 다섯 단계와 그 바탕은?</span></summary><div class="answer">추적, 모니터링, 데이터셋, 실험, 평가. 바탕은 추적이다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>실험에서 한 번에 하나만 바꾸는 이유는?</span></summary><div class="answer">여러 가지를 한꺼번에 바꾸면 어떤 변경이 결과를 바꿨는지 해석할 수 없다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>사내 채팅 에이전트와 규제 산업 에이전트는 어디서 출발하나?</span></summary><div class="answer">위험이 낮으면 추적과 모니터링으로 바로 출시하고 테스트는 쓰면서 쌓는다. 규제 산업은 추적 위에 정답 데이터셋을 먼저 만든다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>섀도 런은 어떻게 하나?</span></summary><div class="answer">업무는 사람이 지금처럼 처리하고, 같은 일을 옆에서 에이전트에게도 돌린다. 에이전트였다면 어떻게 했을지 비교해 정확도를 재고 정답 사례를 쌓는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>시연에서 카드 번호를 Langfuse에 저장하기 전에 가린 이유는?</span></summary><div class="answer">금융기관은 카드 번호나 사회보장번호 같은 PII를 관측 시스템에 남기지 않으려 한다. 그런 정보는 원래의 기록 시스템에만 둔다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>데이터셋의 기대 결과는 꼭 모범 답안이어야 하나?</span></summary><div class="answer">아니다. 에이전트의 의도, 해야 할 행동, 꼭 들어갈 키워드도 잴 수 있다. 재고 싶은 품질이 여럿이라 데이터셋도 여러 개가 된다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>도메인 전문가에게 주석을 받을 때 지킬 원칙 두 가지는?</span></summary><div class="answer">입력을 단순하게 받는다. 점수 두어 개와 자유 의견이면 된다. 그리고 범주를 만들라고 하지 않는다. 의견에서 실패 유형을 뽑는 일은 LLM이 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>LLM 판정만 쓰지 않고 코드 검사를 섞는 이유는?</span></summary><div class="answer">LLM 판정은 틀릴 가능성이 0이 아니다. 코드 검사는 같은 입력에 늘 같은 결과를 낸다. 둘을 섞으면 더 믿을 만한 평가가 된다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>시연의 CI 흐름은 무엇으로 시작해 무엇으로 끝나나?</span></summary><div class="answer">프롬프트 버전이 프로덕션으로 바뀌면 Langfuse 자동화가 GitHub CI를 실행한다. CI는 데이터셋으로 실험을 돌리고 평가자로 채점한다. 점수별 최소 기준으로 통과와 실패를 가린다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>대시보드의 실패 유형 순위는 어디에 쓰나?</span></summary><div class="answer">수천 건을 다 보지 않고 1위 유형으로 걸러 수십~수백 건만 집중해서 조사한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>LLM 판정을 사람에 맞추는 실무 방법과, 프로덕션에 처음 붙일 때의 설정은?</span></summary><div class="answer">한 사람이 대표 표본에 라벨을 달고, LLM 판정을 그 라벨에 맞춰 다듬고, 표본이 대표성을 유지하는지 계속 확인한다. 처음엔 거짓 양성이 조금 많게 시작해 놓치지 않게 하고, 점점 조인다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트의 모든 단계를 추적으로 남긴다<span class="how">확인: LLM 호출과 도구 호출이 입력·출력과 함께 보이는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>PII가 관측 도구에 저장되기 전에 가린다<span class="how">카드 번호, 신분 번호 같은 값을 저장 전에 가리는 함수를 둔다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>우리 서비스가 절대 해서는 안 되는 일을 적는다<span class="how">예: 금융은 투자 조언. 이 사례를 평가 데이터셋에 넣는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>정답 데이터셋을 쌓을 방법을 고른다<span class="how">전문가 큐레이션, 섀도 런, 사람 검토 시스템 중에서</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>전문가 주석 큐를 1시간 분량으로 만든다<span class="how">대표 표본 10~20%, 점수 두어 개와 자유 의견</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>전문가 의견을 LLM으로 묶어 실패 유형 목록을 만든다<span class="how">확인: 실패 유형마다 재는 점수가 하나씩 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>평가자를 LLM 판정과 코드 검사로 나눠 둔다<span class="how">정확한 일치나 정규식으로 볼 수 있는 건 코드로 잰다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>LLM 판정을 사람 라벨과 맞춰 본다<span class="how">확인: 사람 판정과 얼마나 일치하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>프롬프트나 모델이 바뀌면 CI에서 실험을 돌린다<span class="how">점수별 최소 기준을 정하고 통과·실패 결과를 남긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>실패 유형 순위와 부정 피드백 비율을 대시보드에 둔다<span class="how">1위 유형 필터를 저장된 보기로 만들어 둔다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>추적 <span class="en">trace</span></td><td>에이전트가 요청 하나를 처리하며 밟은 모든 단계의 기록. LLM 호출, 도구 호출, 입력·출력, 비용, 시간이 담긴다</td></tr>
+              <tr><td>관찰 기록 <span class="en">observation</span></td><td>추적 안의 단계 하나. LLM 호출 한 번, 도구 호출 한 번 같은 것</td></tr>
+              <tr><td>비결정적</td><td>같은 입력에도 매번 결과가 달라질 수 있는 성질</td></tr>
+              <tr><td>모니터링</td><td>많은 추적을 모아 평균 성능을 보고 문제 신호를 찾는 일</td></tr>
+              <tr><td>데이터셋</td><td>질문과 기대 결과의 모음. 에이전트의 테스트 케이스</td></tr>
+              <tr><td>정답 데이터셋 <span class="en">ground truth</span></td><td>사람이 확인한 입력과 기대 결과 모음. 평가의 기준점. golden dataset이라고도 한다</td></tr>
+              <tr><td>실험 <span class="en">experiment</span></td><td>데이터셋에 대해 시스템의 한 가지를 바꿔 돌리고 결과를 비교하는 일</td></tr>
+              <tr><td>평가 <span class="en">eval</span></td><td>결과의 품질을 재는 방법이나 그 묶음</td></tr>
+              <tr><td>LLM 판정 <span class="en">LLM-as-a-judge</span></td><td>다른 LLM이 결과를 읽고 점수를 매기는 평가 방식</td></tr>
+              <tr><td>코드 검사 <span class="en">deterministic evaluator</span></td><td>정해진 코드로 판정하는 평가. 같은 입력에 늘 같은 결과를 낸다</td></tr>
+              <tr><td>점수 <span class="en">score</span></td><td>추적이나 실험 결과에 붙는 평가 값. 숫자, 예/아니오, 범주 등</td></tr>
+              <tr><td>범주형 점수</td><td>숫자 대신 "투자 조언"처럼 범주로 매기는 점수</td></tr>
+              <tr><td>가드레일 <span class="en">guardrail</span></td><td>에이전트가 해서는 안 되는 답을 막거나 표시하는 장치</td></tr>
+              <tr><td>PII</td><td>개인 식별 정보. 카드 번호, 사회보장번호처럼 사람을 특정할 수 있는 정보</td></tr>
+              <tr><td>마스킹</td><td>민감한 값을 저장하기 전에 가리는 것</td></tr>
+              <tr><td>섀도 런 <span class="en">shadow run</span></td><td>사람이 일하는 동안 에이전트를 옆에서 같이 돌려 결과를 비교하는 방식</td></tr>
+              <tr><td>사람 검토 시스템 <span class="en">human in the loop</span></td><td>에이전트의 결과를 사람이 확인한 뒤에 내보내는 구조</td></tr>
+              <tr><td>오류 분석 <span class="en">error analysis</span></td><td>추적을 직접 보며 어디서 왜 실패하는지 찾는 일</td></tr>
+              <tr><td>주석 큐 <span class="en">annotation queue</span></td><td>전문가가 차례로 검토하며 점수와 의견을 남길 사례 목록</td></tr>
+              <tr><td>실패 유형 <span class="en">failure mode</span></td><td>에이전트가 반복해서 실패하는 방식의 범주. 예: 인용 누락, 범위 밖 질문</td></tr>
+              <tr><td>레드 티밍 <span class="en">red teaming</span></td><td>일부러 공격자처럼 시스템을 공격해 약점을 찾는 일</td></tr>
+              <tr><td>프롬프트 인젝션</td><td>입력 안에 지시문을 숨겨 AI가 원래 지시 대신 그걸 따르게 만드는 공격</td></tr>
+              <tr><td>격식 <span class="en">register</span></td><td>말투의 격식 수준. 존댓말처럼 언어마다 요구가 다르다</td></tr>
+              <tr><td>업셀 <span class="en">upsell</span></td><td>더 비싼 상품이나 추가 상품을 권해 파는 것</td></tr>
+              <tr><td>CI/CD</td><td>코드나 설정이 바뀔 때마다 자동으로 시험하고 배포하는 흐름</td></tr>
+              <tr><td>품질 관문 <span class="en">quality gate</span></td><td>정한 기준을 넘어야 배포 같은 다음 단계로 갈 수 있게 막는 검사</td></tr>
+              <tr><td>회귀 <span class="en">regression</span></td><td>변경 때문에 원래 잘 되던 것이 나빠지는 것</td></tr>
+              <tr><td>에이전트 스킬</td><td>코딩 에이전트가 특정 도구나 작업을 잘 다루도록 돕는 마크다운 지침 묶음</td></tr>
+              <tr><td>평가자 간 신뢰도 <span class="en">inter-rater reliability</span></td><td>여러 판정자가 같은 사례에 얼마나 같은 판정을 내리는지</td></tr>
+              <tr><td>거짓 양성 <span class="en">false positive</span></td><td>문제가 아닌데 문제라고 잡는 것</td></tr>
+              <tr><td>셀프 호스팅</td><td>서비스를 업체 클라우드 대신 내 인프라에 직접 설치해 운영하는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, Annabell의 이전 경험</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>청중 질문: 에이전트를 출시해 본 사람</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>초록불인데 거짓말한 환불 에이전트</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>Langfuse 소개와 규모</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>AI 엔지니어링 루프</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>추적</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>모니터링</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>데이터셋</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>실험: 한 번에 하나만 바꾸기</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>평가: LLM 판정과 코드 검사</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>위험도에 따라 다른 출발점</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>정답 데이터셋을 쌓는 세 가지 방법</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>Doneyli 등장</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>은행 상담 에이전트 시연 시작</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>고객 유형 바꾸기, PII 가리기</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>송금 수수료 질문</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>카드 번호 입력과 가리기</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>추적 구조와 자동 점수</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>비트코인 질문과 투자 조언 가드레일</td></tr>
+              <tr><td><span class="ts">19:20</span></td><td>음성 통화 평가</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>데이터셋이 평가의 중심인 이유</td></tr>
+              <tr><td><span class="ts">22:10</span></td><td>여러 데이터셋: 레드 티밍, 미해결 분쟁</td></tr>
+              <tr><td><span class="ts">23:10</span></td><td>CSV 올리기, 프로덕션 추적에서 고르기</td></tr>
+              <tr><td><span class="ts">24:50</span></td><td>오류 분석</td></tr>
+              <tr><td><span class="ts">26:20</span></td><td>주석 큐와 전문가 의견</td></tr>
+              <tr><td><span class="ts">27:40</span></td><td>100건에 50분 계산</td></tr>
+              <tr><td><span class="ts">28:10</span></td><td>LLM으로 실패 유형 뽑기</td></tr>
+              <tr><td><span class="ts">29:00</span></td><td>실패 유형을 점수로</td></tr>
+              <tr><td><span class="ts">31:00</span></td><td>LLM 판정과 코드 검사 섞기</td></tr>
+              <tr><td><span class="ts">33:00</span></td><td>실험</td></tr>
+              <tr><td><span class="ts">34:40</span></td><td>프롬프트 버전과 자동화</td></tr>
+              <tr><td><span class="ts">36:10</span></td><td>4번 버전 승격, CI 실행</td></tr>
+              <tr><td><span class="ts">37:40</span></td><td>CI 결과와 최소 기준</td></tr>
+              <tr><td><span class="ts">39:10</span></td><td>사업 가치: 토큰에서 뽑는 가치</td></tr>
+              <tr><td><span class="ts">40:30</span></td><td>1,400건에 7달러 미만</td></tr>
+              <tr><td><span class="ts">41:20</span></td><td>실패 유형 순위와 필터</td></tr>
+              <tr><td><span class="ts">43:20</span></td><td>엄지 위/아래, 보안 위험</td></tr>
+              <tr><td><span class="ts">45:10</span></td><td>Doneyli의 정리</td></tr>
+              <tr><td><span class="ts">45:50</span></td><td>"내 에이전트 고쳐 줘"의 함정</td></tr>
+              <tr><td><span class="ts">48:10</span></td><td>내일 시작한다면</td></tr>
+              <tr><td><span class="ts">49:20</span></td><td>자료와 행사 안내</td></tr>
+              <tr><td><span class="ts">51:10</span></td><td>질의응답: ClickHouse, AWS 호스팅</td></tr>
+              <tr><td><span class="ts">52:10</span></td><td>질의응답: LLM 판정의 신뢰도</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'obfPzbapMIM:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

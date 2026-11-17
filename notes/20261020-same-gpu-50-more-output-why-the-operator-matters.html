@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GPU 운영 역량 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#market">원자재 시장으로 보는 컴퓨트</a></li>
+      <li><a href="#operator">입력을 지능으로 바꾸는 운영자</a></li>
+      <li><a href="#b200">같은 B200, 50% 더</a></li>
+      <li><a href="#useful">쓸모 있는 지능의 조건</a></li>
+      <li><a href="#ops">운영은 매일 하는 일</a></li>
+      <li><a href="#clustermax">운영자 평가: ClusterMAX</a></li>
+      <li><a href="#cost">가격과 원가는 다르다</a></li>
+      <li><a href="#relative">원가 위치는 상대적이다</a></li>
+      <li><a href="#scarcity">공급 부족이 가리는 것</a></li>
+      <li><a href="#grade">비교하려면 등급이 필요하다</a></li>
+      <li><a href="#futures">컴퓨트 선물과 헤지</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-20 · 18분 · 영어 발표 한글 정리</span>
+      <h1>GPU는 운영자 수준까지만 일한다</h1>
+      <p class="lead">같은 GPU를 써도 누가 운영하느냐에 따라 쓸모 있는 출력이 50%까지 차이 난다. 컴퓨트를 원자재처럼 사고파는 시장에서는 GPU 시간당 가격이 아니라 쓸모 있는 출력당 원가로 경쟁한다는 게 발표의 요지다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=3axY1wz2OvA" target="_blank" rel="noopener">Same GPU, 50% More Output: Why the Operator Matters</a></span>
+        <span>발표: Oliver Kennon (SemiAnalysis 리서치 애널리스트)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에 "Cannon"으로 나온 발표자 이름은 영상 제목과 발표자가 밝힌 이메일 철자에 맞춰 Kennon으로 적었다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>GPU를 사면 <strong>가능성</strong>을 산다. 실제로 쓸모 있는 일을 얼마나 해내는지는 <strong>운영자</strong>가 정한다.</li>
+        <li>컴퓨트는 원자재 시장이다. 같은 결과를 더 싸게 만드는 생산자가 가격 경쟁에서 버틴다. 그래서 GPU 시간당 가격보다 <strong>쓸모 있는 출력당 원가</strong>를 봐야 한다.</li>
+        <li>같은 B200, 같은 사용자당 속도 목표에서 서빙 소프트웨어에 따라 출력이 초당 약 200 토큰과 약 300 토큰으로 갈렸다. <strong>약 50% 차이</strong>다.</li>
+        <li>쓸모 있는 지능은 품질, 속도, 가용성, <strong>보안</strong>을 모두 만족해야 한다. GPU가 아무리 빨라도 보안이 뚫리면 실패한 서비스다.</li>
+        <li>원가는 <strong>같은 기간 쓴 돈 전부 ÷ 고객이 실제로 쓸 수 있는 출력</strong>이다. 운영 역량은 이 식의 위아래를 모두 바꾼다.</li>
+        <li>원가 곡선 위의 위치는 <strong>상대적</strong>이다. 내가 나아져도 경쟁자가 더 빨리 나아지면 뒤처진다. 지금의 공급 부족이 이 차이를 가린다.</li>
+        <li>믿을 만한 <strong>컴퓨트 선물 시장</strong>에는 비교 가능한 등급이 필요하다. 발표자는 그 출발점이 운영자 평가라고 주장한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="market">
+        <header><span class="num">01</span><h2>원자재 시장으로 보는 컴퓨트 <span class="ts">01:00</span></h2></header>
+        <p>발표자는 컴퓨트를 <strong>원자재 시장</strong> <span class="en">commodity market</span>으로 본다. 기술 쪽 사람에게는 낯선 틀이라 먼저 짧게 설명한다.</p>
+        <ul class="plain">
+          <li>원자재 시장에서는 생산자들이 서로 비슷한 결과물을 내며 경쟁한다.</li>
+          <li>생산 원가가 낮을수록 가격이 떨어질 때 버틸 여유가 크다.</li>
+          <li><strong>원가 곡선</strong> <span class="en">cost curve</span>은 같은 쓸모의 일을 하는 데 드는 비용 순서로 생산자를 늘어놓은 그림이다.</li>
+          <li>두 생산자가 같은 가격을 받으면 덜 쓰는 쪽이 더 많이 남긴다.</li>
+        </ul>
+
+        <h3>무엇을 출력으로 셀까 <span class="ts">01:40</span></h3>
+        <p>이 시장의 결과물은 <strong>지능</strong>이다. 발표자가 말하는 최종 지표는 "요구한 품질로 성공적으로 끝낸 작업 하나당 가격"이다. 아직은 이 지표를 표준화하기 어렵다.</p>
+        <p>그래서 지금은 <strong>토큰당 가격</strong>을 대리 지표 <span class="en">proxy</span>로 쓴다. 비슷한 워크로드와 품질 요구끼리 비교할 때 쓸 만하다. 흔히 인용되는 GPU 시간당 가격보다 실제 출력에 훨씬 가깝다.</p>
+        <div class="callout">
+          <span class="title">GPU 시간은 입력이다 <span class="ts">02:10</span></span>
+          <span>GPU 시간당 가격은 출력이 아니라 입력을 잰다. 발표자는 이 숫자를 생산자의 원가로 본다. 고객이 내는 가격과 생산자가 일을 하는 데 드는 원가는 서로 다른 숫자다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="operator">
+        <header><span class="num">02</span><h2>입력을 지능으로 바꾸는 운영자 <span class="ts">02:30</span></h2></header>
+        <p>쓸모 있는 지능을 만드는 재료는 하드웨어와 전기다. 이 발표에서 하드웨어는 GPU를 말한다.</p>
+        <div class="shift" aria-label="입력이 쓸모 있는 지능으로 바뀌는 과정">
+          <div><span class="tag">입력</span><b>하드웨어와 전기</b><span class="muted">이 발표에서는 GPU 시간</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">출력</span><b>쓸모 있는 지능</b><span class="muted">고객이 실제로 쓸 수 있는 응답</span></div>
+        </div>
+        <p>소프트웨어와 운영은 이 두 재료에 <strong>곱해지는 값</strong>이다. 재료가 같아도 곱하는 값이 크면 결과가 커진다.</p>
+        <p><strong>운영자</strong> <span class="en">operator</span>는 모델을 서빙할 소프트웨어를 고르고 구현하는 주체다. 요청이 시스템 안에서 막히지 않고 흐르게 하는 것도 운영자의 일이다. 기계가 있어도, 고객이 실제로 쓸 수 있는 응답을 내게 만드는 누군가가 따로 필요하다.</p>
+        <p>중요한 건 두 가지다. 쓸모 있는 일이 얼마나 나오는가. 그 일이 작업의 요구를 만족하는가. 같은 종류의 칩이라도 이 변환 비율은 달라진다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="b200">
+        <header><span class="num">03</span><h2>같은 B200, 50% 더 많은 출력 <span class="ts">03:20</span></h2></header>
+        <p>발표자는 SemiAnalysis가 공개한 <strong>InferenceX</strong> 계산기에서 예시를 가져왔다. 두 추정치의 조건은 이렇다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>조건</th><th>값</th></tr></thead>
+            <tbody>
+              <tr><td>GPU</td><td>B200 (둘 다 같음)</td></tr>
+              <tr><td>모델</td><td>같은 모델. 어떤 모델인지는 말하지 않았다</td></tr>
+              <tr><td>요청 한 건의 크기</td><td>입력 약 8,000 토큰, 출력 약 1,000 토큰. 발표자 말로 꽤 흔한 비율이다</td></tr>
+              <tr><td>사용자당 속도 목표</td><td>사용자 한 명에게 초당 출력 토큰 100개</td></tr>
+              <tr><td>달라진 것</td><td><strong>서빙 스택</strong> <span class="en">serving stack</span>. 모델의 응답을 처리하는 소프트웨어다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <figure class="chart" aria-label="같은 B200, 같은 사용자당 속도 목표에서 서빙 스택에 따른 출력 비교: 약 200 대 약 300 출력 토큰/초">
+          <span class="chart-title">서빙 스택에 따른 출력 (초당 출력 토큰, 약)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>서빙 스택 A</span><span class="val">약 200</span></div>
+              <div class="track"><div class="fill" style="width:66.7%" title="서빙 스택 A: 초당 약 200 출력 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>서빙 스택 B</span><span class="val">약 300 · +50%</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="서빙 스택 B: 초당 약 300 출력 토큰 (+50%)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>150</span><span>300</span></div>
+          <span class="caption">발표자가 InferenceX 계산기에서 인용한 추정치. 스택 이름은 밝히지 않아 A, B로 적었다.</span>
+        </figure>
+
+        <p>차이를 만든 건 세 가지다. 소프트웨어, 설정, 그리고 동시에 돌리는 요청 수 <span class="en">concurrency</span>. 셋 다 운영자가 정한다.</p>
+        <p><strong>같은 칩, 같은 목표 속도에서 출력이 약 50% 더 많다.</strong></p>
+        <p class="note">자막에는 사용자당 속도 목표가 "P50"으로, 이어지는 비교는 "P90 시나리오"로 나온다. 어느 백분위 기준인지는 자막만으로 분명하지 않다.</p>
+
+        <h3>구매자의 청구서 <span class="ts">04:10</span></h3>
+        <p>두 배포의 시간당 요금이 같고, 둘 다 요구를 만족한다고 가정하자. 출력이 약 1.5배면 쓸 만한 토큰 하나에 드는 임대 비용은 그만큼 낮아진다. 같은 한 시간으로 쓸모 있는 출력을 더 많이 사는 셈이다.</p>
+        <div class="callout">
+          <span class="title">계산해 보면 (노트에서 덧붙인 계산)</span>
+          <span>토큰당 비용은 1 ÷ 1.5 ≈ 0.67배가 된다. 약 33% 낮아진다. 출력이 50% 늘었다고 비용이 50% 줄지는 않는다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="useful">
+        <header><span class="num">04</span><h2>쓸모 있는 지능의 조건 <span class="ts">04:40</span></h2></header>
+        <p>쓸모 있는 지능은 맡긴 일을 해내야 한다. 발표자는 조건을 넷으로 들었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>조건</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>품질</td><td>답이 그 작업에 충분히 좋다</td></tr>
+              <tr><td>속도</td><td>답이 충분히 빨리 온다</td></tr>
+              <tr><td>가용성</td><td>필요할 때 쓸 수 있다</td></tr>
+              <tr><td>보안</td><td>내 정보가 합의한 접근 범위 안에 머문다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>보안은 자주 빠뜨리는 조건이다. 칩의 성능 지표에는 잡히지 않는다. 그래도 칩을 쓸모 있게 만드는 데 꼭 필요하다.</p>
+        <div class="callout warn">
+          <span class="title">빠른 GPU, 실패한 서비스 <span class="ts">05:10</span></span>
+          <span>SemiAnalysis가 공개한 보안 조사에서, 모니터링 접근 권한으로 다른 고객의 로그와 지표를 볼 수 있는 사례가 나왔다. 그 GPU는 아주 빨랐다. 그래도 서비스는 크게 실패했다. 발표자는 이런 일이 드물지 않다고 했다.</span>
+        </div>
+        <p>클러스터 보안은 계속 손이 가는 일이다. 약속한 성능을 내는 일도 마찬가지다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="ops">
+        <header><span class="num">05</span><h2>운영은 매일 하는 일 <span class="ts">05:40</span></h2></header>
+        <p>대부분의 경우 이 책임은 운영자에게 있다. 누군가는 시스템을 실제 서비스 환경에서 돌아가게 만들어야 한다.</p>
+        <p>더 빠른 서빙 업데이트가 나왔다고 하자. 운영자가 할 일은 이렇다.</p>
+        <ol class="plain">
+          <li>고객의 실제 워크로드로 테스트한다.</li>
+          <li>실제 응답을 보고 출력이 여전히 요구를 만족하는지 확인한다.</li>
+          <li>부하를 걸어 테스트한다.</li>
+          <li>언제, 어디에, 어떻게 배포할지 정한다.</li>
+          <li>배포 후 문제가 생기면 이전 버전으로 되돌릴 길 <span class="en">rollback</span>을 남겨 둔다.</li>
+          <li>배포한 뒤에도 유지하고, 문제가 생기면 대응한다.</li>
+        </ol>
+        <p>이 일은 제공자가 맡을 수도, 우리 팀이 맡을 수도, 둘이 나눌 수도 있다. 어느 쪽이든 <strong>누가 책임지는지, 그리고 그쪽이 실제로 해낼 수 있는지</strong> 알아야 한다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="clustermax">
+        <header><span class="num">06</span><h2>운영자 평가: ClusterMAX <span class="ts">06:30</span></h2></header>
+        <p>운영자는 어떻게 평가할까. SemiAnalysis는 <strong>ClusterMAX</strong>라는 평가를 만든다. 발표 시점에 3.0판이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구분</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>대상</td><td>매니지드 GPU 클러스터. 발표자 말로 이백여 곳이고 계속 늘고 있다</td></tr>
+              <tr><td>보는 항목</td><td>프로비저닝, 안정성, 모니터링, 보안. 가격과 가용성도 함께 본다</td></tr>
+              <tr><td>방법</td><td>직접 써 보는 테스트, 문서, 고객 피드백</td></tr>
+              <tr><td>보려는 것</td><td>잘 돌아가는 날만이 아니라 기계가 고장 난 날 서비스가 어떻게 돌아가는가</td></tr>
+              <tr><td>등급의 성격</td><td>같은 부류 업체끼리 비교한 상대 등급</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">매니지드 클러스터 <span class="en">managed cluster</span></span>
+            <p>제공자가 운영 일의 상당 부분을 맡는다. ClusterMAX 등급은 이 상품에 적용된다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">베어메탈 <span class="en">bare metal</span> <span class="ts">07:10</span></span>
+            <p>운영 일이 보통 고객에게 더 많이 넘어온다. 매니지드 등급을 그대로 옮겨 적용하면 안 된다.</p>
+          </div>
+        </div>
+        <p>한 업체의 매니지드 서비스 등급이 그 업체가 파는 모든 상품을 덮지도 않는다.</p>
+        <p>가격과 가용성은 토큰 출력을 직접 재지 않는다. 그래도 아주 중요하다. 평가는 누가 실제로 해낼 수 있는지 알려 준다.</p>
+        <p class="note">ClusterMAX와 InferenceX는 발표자 회사의 제품이다. 앞의 B200 예시와 보안 사례도 같은 회사 자료다. 운영자 평가가 중요하다는 주장은 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="cost">
+        <header><span class="num">07</span><h2>가격과 원가는 다르다 <span class="ts">07:40</span></h2></header>
+        <p>다음 질문은 쓸모 있는 지능을 만드는 데 실제로 얼마가 드느냐다. 먼저 <strong>임대료와 생산 원가는 다르다</strong>는 점을 짚는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>누구</th><th>무엇을 사고파나</th><th>무엇에 돈을 쓰나</th></tr></thead>
+            <tbody>
+              <tr><td>GPU 제공자</td><td>GPU 시간을 빌려준다. 임대료가 매출이다</td><td>장비, 전력, 공간, 지원</td></tr>
+              <tr><td>추론 생산자</td><td>GPU 시간을 빌려 응답을 판다. 임대료는 입력 비용이다</td><td>임대료 + 소프트웨어, 인력, 그 밖의 서비스</td></tr>
+              <tr><td>장비를 직접 가진 추론 생산자</td><td>응답을 판다</td><td>장비 투자를 사용 기간에 나눈 몫 + 운영비</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>생산자가 받는 돈과 쓰는 돈은 별개의 숫자다. 쓸모 있는 지능의 원가를 알려면, 쓴 돈이 쓸모 있는 일을 얼마나 만들어 냈는지 알아야 한다.</p>
+        <div class="callout">
+          <span class="title">쓸모 있는 토큰당 원가 <span class="ts">09:00</span></span>
+          <span>같은 기간 서비스를 내는 데 쓴 돈 전부 ÷ 고객이 실제로 쓸 수 있는 출력. 비슷한 워크로드끼리 비교할 때 쓴다.</span>
+        </div>
+
+        <h3>운영을 잘하면 원가가 내려간다 <span class="ts">08:40</span></h3>
+        <p>B200 비교는 출력의 양이 중요하다는 걸 보여 줬다. 같은 시간을 빌려 쓸 만한 응답을 더 많이 내면 임대료가 더 많은 일에 나뉜다. GPU를 직접 가진 생산자도 같다. 장비 투자와 운영비가 더 많은 출력에 나뉜다.</p>
+
+        <h3>운영을 잘하는 데도 돈이 든다 <span class="ts">09:10</span></h3>
+        <p>업데이트를 테스트하고, 안전하게 배포하고, 계속 돌아가게 하려면 사람과 돈이 든다. <strong>늘어난 출력이 늘어난 지출보다 커야 한다.</strong></p>
+        <ul class="plain">
+          <li>벤치마크 한 번 잘 나왔다고 우위가 생기지 않는다. 발표자 표현으로 "매일 다시 얻어 내야" 한다.</li>
+          <li>새 워크로드가 올 때마다 다시 확인해야 한다.</li>
+          <li>소프트웨어와 워크로드가 바뀔 때마다 같은 일을 반복할 수 있는 팀이면 우위가 오래간다.</li>
+          <li>발표자가 관찰한 바로는, 반복 가능한 운영 과정이 원가 우위와 가격 우위를 함께 만든다.</li>
+        </ul>
+        <p>계속 나아진다고 끝은 아니다. 경쟁자도 가만있지 않는다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="relative">
+        <header><span class="num">08</span><h2>원가 곡선 위 위치는 상대적이다 <span class="ts">10:00</span></h2></header>
+        <p>원가 곡선 위의 내 위치는 <strong>경쟁자가 무엇을 해내느냐</strong>에 달려 있다. 내 성과만으로 정해지지 않는다. 발표자는 이 대목이 원자재 시장 틀이 왜 중요한지 가장 잘 보여 준다고 했다.</p>
+        <p>같은 작업, 같은 품질 요구를 놓고 가상의 비용 단위로 비교한 예시다.</p>
+
+        <figure class="chart" aria-label="성공한 작업당 총원가 가상 예시: 이전에는 나 10, 경쟁자 12. 이후에는 나 8, 경쟁자 6">
+          <span class="chart-title">성공한 작업당 총원가 (가상 단위, 낮을수록 싸다)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>이전 · 나</span><span class="val">10</span></div>
+              <div class="track"><div class="fill key" style="width:83.3%" title="이전, 나: 10"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>이전 · 경쟁자</span><span class="val">12</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="이전, 경쟁자: 12"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>이후 · 나</span><span class="val">8 · −20%</span></div>
+              <div class="track"><div class="fill key" style="width:66.7%" title="이후, 나: 8 (−20%)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>이후 · 경쟁자</span><span class="val">6 · −50%</span></div>
+              <div class="track"><div class="fill" style="width:50%" title="이후, 경쟁자: 6 (−50%)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>6</span><span>12</span></div>
+          <span class="caption">발표자가 든 가상 예시. 경쟁자 숫자는 발표의 결론에 맞게 12 → 6으로 고쳐 그렸다.</span>
+        </figure>
+        <p class="note">자막에는 경쟁자의 원가가 "6에서 12로 떨어졌다"고 나온다. 6에서 12는 오른 것이다. 그렇게 읽으면 "더 싼 생산자로 시작해 더 비싼 생산자로 끝났다"는 결론과도 맞지 않는다. 결론과 맞으려면 12에서 6으로 떨어져야 하므로 이 노트는 12 → 6으로 적었다.</p>
+
+        <p>나는 원가를 10에서 8로 20% 줄였다. 같은 기간 경쟁자는 12에서 6으로 50% 줄였다. 둘 다 나아졌다. 그런데 나는 더 싼 생산자로 시작해 더 비싼 생산자로 끝났다.</p>
+        <p>고객이 두 서비스를 똑같이 쓸 만하다고 보면, 경쟁자는 판매가를 더 낮출 여유가 생긴다.</p>
+        <p><strong>나아진다고 저절로 앞서지는 않는다.</strong> 쓸모 있는 일당 원가는 늘 경쟁자와 견줘서 봐야 한다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="scarcity">
+        <header><span class="num">09</span><h2>공급 부족이 가리는 것 <span class="ts">11:00</span></h2></header>
+        <p>이 비교는 지금 같은 때 놓치기 쉽다. 지금은 수요가 공급을 크게 넘는다. 발표자는 이 상황이 앞으로 2~3년은 이어질 것으로 본다.</p>
+        <ul class="plain">
+          <li>공급이 모자라면 원가가 크게 다른 생산자들도 모두 고객을 찾는다.</li>
+          <li>매출이 좋으니 원가 차이가 급해 보이지 않는다.</li>
+          <li>CEO 입장에서는 원가 곡선 위치를 다지는 일보다 새 데이터센터를 짓는 일이 더 끌린다.</li>
+        </ul>
+        <h3>역사로 보면 <span class="ts">11:40</span></h3>
+        <p>지금까지 모든 원자재는 수요와 공급이 출렁였다. 그 시점이 아직 안 보인다고 이번 주기가 다르다는 뜻은 아니다. 발표자는 자신이 틀릴 수도 있다고 덧붙였다.</p>
+        <p>빚을 내서 사업을 키운 회사 <span class="en">leverage</span>는 특히 조심해야 한다. 원가 우위를 쌓는 일은 매출을 키우는 일보다 덜 눈에 띈다. 그래도 경기 순환을 버티려면 꼭 필요하다.</p>
+        <div class="callout">
+          <span class="title">발표자의 조언</span>
+          <span>사정이 좋을 때, 자본을 모을 수 있을 때 운영 역량과 원가 우위를 쌓는다. 고객의 선택지가 늘고 가격이 압박받는 시기가 오면 그 차이가 더 커진다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="grade">
+        <header><span class="num">10</span><h2>비교하려면 등급이 필요하다 <span class="ts">12:30</span></h2></header>
+        <p>이제 지능 생산자가 사는 컴퓨트 쪽을 본다. 같은 칩도 운영에 따라 결과가 다르다는 건 이미 봤다.</p>
+        <p>"B200 GPU 시간"이라는 상품 두 개도 서로 다를 수 있다. 포함된 서비스가 다르고, 고객에게 남기는 운영 일이 다르다. 원자재 시장 틀에서는 이 차이를 설명해서, 구매자가 어떤 서비스끼리 비교할 수 있는지 알게 해야 한다. 그게 <strong>등급</strong> <span class="en">grade</span>의 역할이다.</p>
+        <ul class="plain">
+          <li>등급은 특정 컴퓨트 서비스와, 그 구매자가 기대할 수 있는 것을 설명한다.</li>
+          <li>등급이 모든 작업에서 지능을 서로 바꿔 쓸 수 있게 만들지는 않는다.</li>
+        </ul>
+
+        <h3>임대료 지표가 재는 것 <span class="ts">13:20</span></h3>
+        <p>서비스를 정의하고 나면, 그 서비스의 임대료가 무엇을 말해 주는지 물을 수 있다. <strong>임대료 지표</strong> <span class="en">rental price benchmark</span>는 정해진 시장 안에서 GPU 시간 가격을 요약한 기준값이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">지표가 알려 주는 것</span>
+            <ul>
+              <li>정해진 시장에서 GPU 시간이 얼마에 거래되는지</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">지표가 알려 주지 않는 것</span>
+            <ul>
+              <li>생산자의 생산 원가</li>
+              <li>실제로 전달된 지능의 양</li>
+              <li>운영 품질. 가격에 영향은 주지만 따로 재지 않는다</li>
+              <li>내 배포가 낼 쓸모 있는 일의 양</li>
+            </ul>
+          </div>
+        </div>
+        <p>지표의 값은 어디서 온 가격이냐에 따라 달라진다. 광고된 호가와 실제로 체결된 거래는 같지 않다. 서비스 범위, 계약 조건, 누구의 가격을 표본으로 삼았는지, 어떻게 합쳤는지가 모두 기준값을 바꾼다.</p>
+        <p>이 지표로 헤지를 하려면, 지표가 내가 실제로 내거나 받는 임대료를 얼마나 따라가는지 알아야 한다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="futures">
+        <header><span class="num">11</span><h2>컴퓨트 선물이 헤지하는 것 <span class="ts">14:10</span></h2></header>
+        <p>최근 컴퓨트 선물에 관심이 많다. <strong>선물 계약</strong> <span class="en">futures contract</span>은 미래의 인도나 현금 정산 조건을 표준화한 계약이다. 현금 정산은 가격 기준값에 따라 정해진다. 구매자와 판매자 모두 앞으로 임대료가 어떻게 될지 모른다. 그래서 헤지 수요가 생긴다.</p>
+        <p>발표자는 앞의 이야기를 이렇게 잇는다.</p>
+        <ol class="plain">
+          <li>누가 시스템을 운영하는지 평가하면 구매자가 받는 서비스를 설명할 수 있다.</li>
+          <li>그 설명으로 등급을 정의하면 구매자가 어떤 서비스끼리 비교할 수 있는지 안다.</li>
+          <li>그다음 지표가 구매자가 실제로 내거나 받는 임대료를 따라가야 한다.</li>
+        </ol>
+        <blockquote>운영자 평가는 믿을 만한 컴퓨트 선물 시장을 세우는 데 꼭 필요한 재료다.<cite>발표자의 주장을 옮김 <span class="ts">14:50</span></cite></blockquote>
+
+        <div class="callout">
+          <span class="title">평가만으로는 안 되는 것</span>
+          <span>평가는 정보를 줄 뿐이다. 평가 혼자서는 선물 등급을 정하지 못하고, 건전한 지표를 세우지 못하고, 쉽게 사고팔 만큼 거래를 만들지 못한다. 헤지가 효과 있다고 보장하지도 않는다.</span>
+        </div>
+        <ul class="plain">
+          <li>임대료 헤지는 임대료 변동을 상쇄하는 데 도움이 된다.</li>
+          <li>실패한 배포를 고쳐 주지 않는다.</li>
+          <li>내 고객이 돈을 낸다고 보장하지 않는다.</li>
+        </ul>
+
+        <h3>지표와 내 임대료의 관계 <span class="ts">15:10</span></h3>
+        <p>내 임대료가 지표보다 높다는 사실만으로 나쁜 헤지가 되지는 않는다. 중요한 건 <strong>지표의 변화가 내 임대료의 변화를 따라가는가</strong>다. 그 관계가 예상과 다르게 바뀌면 실제 가격 위험이 남는다.</p>
+        <div class="callout">
+          <span class="title">예시 (노트에서 덧붙임)</span>
+          <span>컴퓨트를 빌려 쓰는 회사가 임대료 상승에 대비해 선물을 샀다고 하자. 내 임대료가 늘 지표보다 일정하게 비싸도, 둘이 같이 오르내리면 헤지는 작동한다. 그런데 지표만 내리고 내 임대료는 그대로라면, 선물에서 잃은 만큼을 메워 줄 곳이 없다.</span>
+        </div>
+        <p>이런 도구는 무엇을 사는지 이해하고 임대료 위험을 관리하는 데 도움이 된다. 하지만 지능 생산자에게 임대료는 원가의 한 부분일 뿐이다. 그 컴퓨트를 고객이 쓸 수 있는 일로 바꾸는 건 여전히 운영자다.</p>
+        <p class="note">SemiAnalysis는 운영자 평가를 만드는 회사이고, 발표 끝에 시장 데이터 협업을 제안했다. "운영자 평가가 선물 시장의 필수 재료"라는 주장은 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="conclusion">
+        <header><span class="num">12</span><h2>결론: 가장 싸게 지능을 만드는 쪽 <span class="ts">15:50</span></h2></header>
+        <p>처음 질문으로 돌아간다. 필요한 지능을 가장 싸게 만드는 쪽은 누구인가.</p>
+        <p>발표자의 답은 이렇다. <strong>요구를 반복해서 만족시키면서, 성공한 작업당 총원가가 가장 낮은 생산자</strong>다.</p>
+        <ul class="plain">
+          <li>서비스를 내는 데 쓴 돈을 모두 센다. 그걸 고객이 실제로 쓸 수 있는 출력으로 나눈다.</li>
+          <li>운영 역량은 이 식의 양쪽을 다 바꾼다. 쓰는 돈도, 만들어 내는 쓸모 있는 일도 달라진다.</li>
+          <li>내 위치는 경쟁자에 달려 있다. 나아지고 있어도 경쟁자가 더 빨리 나아지면 뒤처진다.</li>
+          <li>그래서 운영자는 한 시점이 아니라 경기 순환 내내 봐야 한다. 고객의 선택지가 늘고 가격이 압박받을 때 더 그렇다.</li>
+        </ul>
+        <blockquote>GPU는 운영자 수준까지만 일한다.<cite>발표의 한 줄 요약 "A GPU falls to the level of the operator."를 옮김 <span class="ts">16:40</span></cite></blockquote>
+        <p>발표자는 정보가 잘 도는 컴퓨트 시장을 함께 만들자며 협업과 채용을 알리고 발표를 마쳤다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>GPU를 사면 가능성을 산다. 쓸모 있는 일을 얼마나 해내는지는 <strong>운영자</strong>가 정한다.</li>
+          <li>컴퓨트는 원자재 시장이다. 같은 결과를 더 싸게 만드는 생산자가 가격 경쟁에서 버틴다.</li>
+          <li>GPU 시간당 가격은 입력이다. 비교 기준은 <strong>쓸모 있는 출력당 원가</strong>이고, 지금은 토큰당 가격이 대리 지표다.</li>
+          <li>같은 B200, 같은 목표 속도에서 서빙 스택에 따라 출력이 초당 약 200 대 300 토큰, <strong>약 50%</strong> 차이 났다.</li>
+          <li>시간당 요금이 같을 때 출력이 1.5배면 토큰당 비용은 약 33% 줄어든다. 50%가 아니다.</li>
+          <li>쓸모 있는 지능은 품질, 속도, 가용성, <strong>보안</strong>을 다 만족해야 한다. 빠른 GPU도 보안이 뚫리면 실패한 서비스다.</li>
+          <li>원가 = 같은 기간 쓴 돈 전부 ÷ 고객이 쓸 수 있는 출력. 운영 역량은 위아래를 다 바꾸고, 운영에도 돈이 든다.</li>
+          <li>원가 곡선 위치는 <strong>상대적</strong>이다. 10 → 8로 나아져도 경쟁자가 12 → 6으로 가면 뒤처진다.</li>
+          <li>지금의 공급 부족이 원가 차이를 가린다. 자본을 모을 수 있을 때 원가 우위를 쌓아야 한다.</li>
+          <li>믿을 만한 컴퓨트 선물 시장에는 비교 가능한 등급과 실제 임대료를 따라가는 지표가 필요하다. 발표자는 그 출발점을 <strong>운영자 평가</strong>로 본다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>원자재 시장에서 생산 원가가 낮으면 왜 유리한가?</span></summary><div class="answer">같은 가격을 받으면 더 많이 남긴다. 가격이 떨어질 때도 버틸 여유가 크다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>발표자가 말한 최종 지표와, 지금 대신 쓰는 지표는?</span></summary><div class="answer">최종 지표는 요구한 품질로 성공적으로 끝낸 작업당 가격이다. 표준화가 어려워 지금은 토큰당 가격을 대리 지표로 쓴다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>GPU 시간당 가격을 "출력"이 아니라 "입력"이라고 보는 이유는?</span></summary><div class="answer">GPU 시간은 일에 들어가는 재료다. 고객이 원하는 건 쓸모 있는 지능이다. 같은 시간에서 나오는 쓸모 있는 출력은 운영에 따라 달라진다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>B200 예시에서 50% 차이를 만든 세 가지는?</span></summary><div class="answer">서빙 소프트웨어, 설정, 동시에 돌리는 요청 수. 모두 운영자가 정한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>시간당 요금이 같을 때 출력이 1.5배가 되면 토큰당 비용은 얼마나 줄어드나?</span></summary><div class="answer">약 33%. 1 ÷ 1.5 ≈ 0.67이기 때문이다. 출력이 50% 늘어도 비용이 50% 줄지는 않는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>쓸모 있는 지능의 네 조건은? 그중 칩 성능 지표가 놓치는 것은?</span></summary><div class="answer">품질, 속도, 가용성, 보안. 칩 성능 지표에 잡히지 않는 건 보안이다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>더 빠른 서빙 업데이트가 나오면 운영자가 할 일은?</span></summary><div class="answer">실제 워크로드로 테스트하고, 응답이 요구를 만족하는지 확인하고, 부하 테스트를 한다. 배포 시점·위치·방법을 정하고, 되돌릴 길을 남긴다. 배포 뒤에도 유지하고 문제에 대응한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>ClusterMAX 등급을 베어메탈 상품에 그대로 적용하면 안 되는 이유는?</span></summary><div class="answer">ClusterMAX는 매니지드 클러스터를 평가한다. 베어메탈은 운영 일이 고객에게 더 많이 넘어온다. 한 업체의 매니지드 등급이 그 업체의 모든 상품을 덮지도 않는다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>원가를 10에서 8로 줄였는데 왜 더 비싼 생산자가 됐나?</span></summary><div class="answer">같은 기간 경쟁자가 12에서 6으로 더 빨리 줄였다. 원가 곡선 위의 위치는 경쟁자와 견준 상대적인 것이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>지금 같은 공급 부족 시기에 원가 우위를 쌓아야 하는 이유는?</span></summary><div class="answer">공급이 모자라면 원가가 다른 생산자도 다 팔려서 차이가 가려진다. 하지만 모든 원자재는 수급이 출렁였다. 빚이 있는 회사는 하락기를 버티기 어렵다. 자본을 모을 수 있을 때 쌓아 둬야 한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>임대료 지표가 알려 주지 않는 것은?</span></summary><div class="answer">생산 원가, 전달된 지능의 양, 운영 품질, 그리고 내 배포가 낼 쓸모 있는 일의 양.</div></details>
+          <details><summary><span class="qn">Q12</span><span>내 임대료가 지표보다 늘 비싸면 헤지가 쓸모없나?</span></summary><div class="answer">아니다. 중요한 건 지표의 변화가 내 임대료의 변화를 따라가는가다. 그 관계가 예상과 다르게 바뀌면 위험이 남는다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>GPU 시간당 가격 대신 쓸모 있는 토큰당 원가로 비교한다<span class="how">같은 기간 쓴 돈 전부 ÷ 요구를 만족한 출력</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>우리 워크로드 조건으로 처리량을 잰다<span class="how">입력·출력 길이, 사용자당 속도 목표를 맞추고 서빙 스택·설정·동시 요청 수를 바꿔 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>"쓸모 있음"의 기준을 글로 적는다<span class="how">품질, 속도, 가용성, 보안 각각의 최소 기준</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>서빙 업데이트 배포 절차를 정한다<span class="how">실제 워크로드 테스트 → 응답 확인 → 부하 테스트 → 배포 → 되돌릴 길 유지</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>운영 책임이 누구에게 있는지 정한다<span class="how">확인: 매니지드인가 베어메탈인가, 제공자와 우리 팀이 각각 무엇을 맡나</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>클러스터의 접근 경계를 점검한다<span class="how">확인: 모니터링 화면이나 로그로 다른 고객의 정보가 보이지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>운영 개선 비용이 늘어난 출력으로 회수되는지 계산한다<span class="how">개선에 든 사람·돈 vs 늘어난 쓸모 있는 출력</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>내 원가를 경쟁자와 견줘서 본다<span class="how">내 개선율만 보지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>임대료 헤지를 쓴다면 지표와 내 임대료의 관계를 확인한다<span class="how">확인: 지표가 오르내릴 때 내 임대료도 같이 움직이는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>운영자</td><td>Operator. 모델을 서빙할 소프트웨어를 고르고 구현하며, 요청이 잘 흐르게 관리하는 주체. 제공자일 수도, 우리 팀일 수도 있다</td></tr>
+              <tr><td>원자재 시장</td><td>Commodity market. 생산자들이 서로 비슷한 결과물을 내며 주로 원가와 가격으로 경쟁하는 시장</td></tr>
+              <tr><td>원가 곡선</td><td>Cost curve. 같은 일을 하는 데 드는 비용 순서로 생산자를 늘어놓은 그림</td></tr>
+              <tr><td>원가와 가격</td><td>원가는 생산자가 일을 하는 데 쓰는 돈, 가격은 고객이 내는 돈</td></tr>
+              <tr><td>대리 지표</td><td>Proxy. 재고 싶은 것을 직접 못 재서 대신 쓰는 지표. 예: 성공한 작업당 가격 대신 토큰당 가격</td></tr>
+              <tr><td>토큰</td><td>모델이 글을 읽고 쓰는 단위. 입력 토큰은 모델에 넣는 글, 출력 토큰은 모델이 생성한 글</td></tr>
+              <tr><td>서빙 스택</td><td>Serving stack. 모델을 띄워 요청을 받고 응답을 만들어 내는 소프트웨어 묶음</td></tr>
+              <tr><td>사용자당 속도</td><td>Interactivity. 사용자 한 명이 받는 생성 속도. 이 발표의 목표는 사용자당 초당 출력 토큰 100개</td></tr>
+              <tr><td>P50 / P90</td><td>요청의 50% / 90%가 만족하는 기준. P50은 중앙값이다</td></tr>
+              <tr><td>동시 요청 수</td><td>Concurrency. 한꺼번에 처리하는 요청의 수</td></tr>
+              <tr><td>B200</td><td>NVIDIA의 데이터센터용 GPU 모델명</td></tr>
+              <tr><td>매니지드 클러스터</td><td>Managed cluster. 제공자가 운영 일까지 맡는 GPU 클러스터 상품</td></tr>
+              <tr><td>베어메탈</td><td>Bare metal. 서버를 그대로 빌리는 상품. 운영 일이 고객 몫으로 더 많이 남는다</td></tr>
+              <tr><td>프로비저닝</td><td>Provisioning. 고객이 쓸 수 있게 자원을 준비해 내주는 일</td></tr>
+              <tr><td>롤백</td><td>Rollback. 문제가 생겼을 때 이전 버전으로 되돌리는 일</td></tr>
+              <tr><td>등급</td><td>Grade. 어떤 컴퓨트 서비스들을 서로 비교 가능한 것으로 볼지 정한 설명</td></tr>
+              <tr><td>임대료 지표</td><td>Rental price benchmark. 정해진 시장에서 GPU 시간 가격을 요약한 기준값</td></tr>
+              <tr><td>선물</td><td>Futures. 미래의 인도나 현금 정산 조건을 미리 표준화해 정한 계약</td></tr>
+              <tr><td>현금 정산</td><td>Cash settlement. 물건을 주고받지 않고 가격 기준값에 따라 돈으로 정산하는 방식</td></tr>
+              <tr><td>헤지</td><td>Hedge. 가격 변동 위험을 반대 방향의 거래로 줄이는 것</td></tr>
+              <tr><td>레버리지</td><td>Leverage. 빚을 내서 사업 규모를 키우는 것</td></tr>
+              <tr><td>InferenceX</td><td>SemiAnalysis가 공개한 추론 성능 계산기. 자막 표기를 따랐다</td></tr>
+              <tr><td>ClusterMAX</td><td>SemiAnalysis의 GPU 클러스터 운영 역량 평가. 발표 시점 3.0판</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, "GPU는 운영자 수준까지만"</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>질문: 필요한 지능을 가장 싸게 만드는 쪽은 누구인가</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>원자재 시장과 원가 곡선</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>최종 지표는 성공한 작업당 가격, 대리 지표는 토큰당 가격</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>GPU 시간당 가격은 입력이다. 원가와 가격의 차이</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>하드웨어·전기 × 소프트웨어·운영 = 쓸모 있는 지능</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>InferenceX 계산기의 B200 예시</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>서빙 스택에 따라 초당 약 200 vs 약 300 토큰</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>같은 칩, 약 50% 더. 구매자의 청구서</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>쓸모 있는 지능의 조건</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>보안 사례: 다른 고객의 로그와 지표가 보였다</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>운영자의 책임: 업데이트 테스트와 배포</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>ClusterMAX 3.0으로 운영자 평가</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>매니지드 vs 베어메탈, 상대 등급</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>쓸모 있는 지능의 생산 원가</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>GPU 제공자와 추론 생산자의 돈 흐름</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>운영을 잘하면 원가가 내려간다</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>운영 개선에도 돈이 든다</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>원가 곡선 위치는 상대적이다</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>가상 예시: 나 10 → 8, 경쟁자 12 → 6</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>공급 부족이 원가 차이를 가린다</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>원자재의 역사와 레버리지</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>비교 가능한 컴퓨트에는 등급이 필요하다</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>임대료 지표가 재는 것과 재지 않는 것</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>컴퓨트 선물로 헤지할 수 있는 것</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>운영자 평가는 선물 시장의 재료, 그리고 한계</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>지표와 내 임대료의 관계</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>결론: 성공한 작업당 총원가가 가장 낮은 생산자</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>한 줄 요약과 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '3axY1wz2OvA:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

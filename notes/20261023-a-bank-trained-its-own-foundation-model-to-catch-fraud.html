@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>거래 파운데이션 모델 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#not-language">언어가 아닌 파운데이션 모델</a></li>
+      <li><a href="#backbone">모델 여러 개 대신 백본 하나</a></li>
+      <li><a href="#xgboost">XGBoost를 쓰면 되지 않나</a></li>
+      <li><a href="#pretrain">다음 거래를 맞히는 학습</a></li>
+      <li><a href="#scratch">처음부터 학습한다</a></li>
+      <li><a href="#features">거래를 다섯 질문으로 나눈다</a></li>
+      <li><a href="#tokenize">가장 어려운 일: 토큰화</a></li>
+      <li><a href="#size">모델 크기와 데이터 양</a></li>
+      <li><a href="#training">학습은 검증된 방법으로</a></li>
+      <li><a href="#fraud">사기 탐지에 적용</a></li>
+      <li><a href="#results">결과: 더 잡고 덜 막는다</a></li>
+      <li><a href="#next">정리와 다음 계획</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-23 · 18분 · 영어 발표 한글 정리</span>
+      <h1>은행은 왜 거래 데이터로 모델을 처음부터 학습했나</h1>
+      <p class="lead">Wells Fargo는 고객 거래 수십억 건으로 트랜스포머를 처음부터 학습했다. 거래를 언어의 단어처럼 다루는 파운데이션 모델이다. 발표자는 이 모델이 사기 탐지에서 기존 XGBoost보다 사기를 더 잡고 정상 거래는 덜 막았다고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=UB6hoWyh3B0" target="_blank" rel="noopener">A Bank Trained Its Own Foundation Model to Catch Fraud</a></span>
+        <span>발표: Freddy Lecue (Wells Fargo)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 용어는 확실한 것만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>Wells Fargo는 언어가 아니라 <strong>고객 거래</strong>로 파운데이션 모델을 만들었다. 금융 데이터 대부분이 표 형태이기 때문이다.</li>
+        <li>목표는 조직마다 따로 만든 모델 대신 <strong>백본 하나</strong>를 사기 탐지, 신용 평가, 자금세탁방지, 마케팅에 나눠 쓰는 것이다.</li>
+        <li>공개된 가중치 없이 <strong>처음부터 사전학습</strong>했다. 학습 과제는 언어 모델처럼 다음 거래를 맞히는 것이다.</li>
+        <li>사람이 손으로 만든 수천 개의 특징 대신 <strong>원재료 특징 약 100개</strong>만 넣었다. 특징 사이의 관계는 트랜스포머가 찾게 했다.</li>
+        <li>가장 어려운 일은 <strong>토큰화</strong>다. 우편번호 같은 값을 토큰 몇 개로 묶을지가 관건이다.</li>
+        <li>모델은 <strong>10억 파라미터</strong>다. 학습 토큰은 흔히 쓰는 기준의 <strong>10배</strong>가 필요했다.</li>
+        <li>사기 탐지에서 기존 XGBoost보다 <strong>사기는 더 잡고 정상 거래는 덜 막았다.</strong> 발표자는 과거 거래와의 관계를 볼 수 있어서라고 설명한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="not-language">
+        <header><span class="num">01</span><h2>언어가 아닌 파운데이션 모델 <span class="ts">00:00</span></h2></header>
+        <p>파운데이션 모델<span class="en">foundation model</span>은 대량의 데이터로 한 번 크게 학습해 두고, 여러 작업에 맞춰 다시 쓰는 모델이다. Claude나 ChatGPT 같은 언어 모델이 대표적이다.</p>
+        <p>발표자는 파운데이션 모델이 꼭 언어를 다룰 필요는 없다고 말한다. 금융 회사에도 글로 된 데이터가 있다. 하지만 대부분은 표 형태 데이터<span class="en">tabular data</span>다. 고객 정보, 투자은행 데이터, 소비자 금융 데이터가 모두 행과 열로 쌓여 있다.</p>
+        <p>이 데이터를 언어 모델에 그대로 넣어도 얻는 것은 있다. 그래도 발표자는 그게 최선은 아니라고 본다. 그래서 Wells Fargo는 데이터 모양에 맞춘 자기만의 파운데이션 모델을 만들었다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="backbone">
+        <header><span class="num">02</span><h2>모델 여러 개 대신 백본 하나 <span class="ts">01:20</span></h2></header>
+        <p>재료는 고객이 만드는 모든 거래다. 체크카드, 신용카드, 디지털 결제, 수표 거래가 여러 채널에서 들어온다.</p>
+        <p>목표는 이 거래로 백본<span class="en">backbone</span> 하나를 만드는 것이다. 백본은 여러 작업이 공통으로 딛고 서는 기본 모델이다. 작업마다 이 백본을 파인튜닝<span class="en">fine-tuning</span>해서 쓴다. 파인튜닝은 이미 학습한 모델을 특정 작업의 데이터로 조금 더 학습시키는 일이다.</p>
+        <p>발표자가 꼽은 후속 작업<span class="en">downstream task</span>은 네 가지다.</p>
+        <ul class="plain">
+          <li>신용 평가 <span class="en">credit scoring</span></li>
+          <li>사기 탐지 <span class="en">fraud detection</span></li>
+          <li>자금세탁방지 <span class="en">anti-money laundering, AML</span></li>
+          <li>마케팅</li>
+        </ul>
+        <div class="shift" aria-label="모델 운영 방식의 변화">
+          <div><span class="tag">지금까지</span><b>조직마다 따로 만든 모델</b><span class="muted">작업마다 모델과 특징을 새로 만든다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이번 시도</span><b>모든 조직이 같이 쓰는 백본 하나</b><span class="muted">고객 거래의 표현을 대규모로 한 번 배우고, 각 조직은 그걸 가져다 쓴다</span></div>
+        </div>
+        <p>여기서 표현<span class="en">representation</span>은 모델이 데이터를 이해한 결과를 숫자 묶음으로 담은 것이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="xgboost">
+        <header><span class="num">03</span><h2>XGBoost를 쓰면 되지 않나 <span class="ts">02:10</span></h2></header>
+        <p>표 데이터라면 익숙한 모델을 쓰면 된다는 반론이 나올 수 있다. 대표가 XGBoost다. XGBoost는 결정 트리를 여러 개 이어 붙여 예측하는 모델로, 표 데이터에서 강하다.</p>
+        <p>Wells Fargo도 이미 해 봤다. 실제로 운영 중이던 사기 탐지 모델이 XGBoost였다. 발표자는 새 모델이 이 모델을 이겼다고 말한다.</p>
+        <ul class="plain">
+          <li><strong>사기를 더 많이 잡았다.</strong> 탐지율이 올랐다.</li>
+          <li><strong>정상 거래를 사기로 잘못 막는 일이 줄었다.</strong> 거짓 양성<span class="en">false positive</span>이 줄었다.</li>
+          <li>지연 시간에서도 XGBoost에 밀리지 않았다고 말했다. 구체적인 비교 수치는 내놓지 않았다.</li>
+        </ul>
+        <p>모델은 트랜스포머 블록<span class="en">transformer blocks</span>으로 만들었다. 트랜스포머는 지금 대부분의 언어 모델이 쓰는 신경망 구조다. 들어가는 데이터는 매달 쌓이는 수십억 건의 거래다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="pretrain">
+        <header><span class="num">04</span><h2>다음 거래를 맞히는 학습 <span class="ts">03:20</span></h2></header>
+        <p>틀은 언어 모델과 같다. 재료만 다르다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>언어 파운데이션 모델</th><th>거래 파운데이션 모델</th></tr></thead>
+            <tbody>
+              <tr><td>기본 단위</td><td>언어 토큰</td><td>거래, 또는 거래 안의 토큰</td></tr>
+              <tr><td>사전학습 과제</td><td>다음 토큰 맞히기</td><td>다음 거래, 또는 거래 안의 다음 토큰 맞히기</td></tr>
+              <tr><td>사후 학습</td><td>SFT, RLHF, RLVR</td><td>후속 작업별 파인튜닝</td></tr>
+              <tr><td>쓰는 곳</td><td>분류 같은 언어 작업</td><td>신용 한도 증액, 사기 탐지, 자금세탁방지</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>사전학습<span class="en">pre-training</span>은 정답 표시 없이 대량의 데이터로 다음에 올 것을 맞히게 하는 첫 학습이다. 사후 학습<span class="en">post-training</span>은 그 뒤에 모델을 원하는 작업에 맞게 다듬는 학습이다.</p>
+        <div class="callout">
+          <span class="title">다음 거래 맞히기는 목표가 아니다</span>
+          <span>언어 모델도 다음 단어를 맞히는 데서 끝나지 않는다. 그 과정에서 배운 표현을 다른 작업에 쓴다. 거래 모델도 같다. 모델이 배우려는 관계는 두 가지다. 한 고객의 거래가 시간 순으로 이어지는 관계, 그리고 여러 고객의 거래 사이의 관계다.</span>
+        </div>
+        <p class="note">자막에 "LCHEF, LRVR"로 적힌 부분은 문맥상 RLHF, RLVR이 확실해 바로잡았다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="scratch">
+        <header><span class="num">05</span><h2>처음부터 학습한다 <span class="ts">04:50</span></h2></header>
+        <div class="callout">
+          <span class="title">공개 가중치는 하나도 쓰지 않았다</span>
+          <span>발표자는 사람들이 자주 헷갈린다며 이 점을 다시 강조했다. 공개된 모델에서 빌린 것은 구조뿐이다. 가중치는 빈 상태에서 시작해 자기 거래 데이터로만 학습했다.</span>
+        </div>
+        <p>공개 가중치<span class="en">open weights</span>는 학습이 끝난 모델의 값을 누구나 받아 쓸 수 있게 풀어 둔 것이다. 이걸 가져다 이어서 학습하는 방법도 있지만, Wells Fargo는 그렇게 하지 않았다.</p>
+        <p>학습은 사내 GPU 클러스터에서 했다. 처음에는 몇 주가 걸렸다. 발표 끝부분에서는 지금은 며칠이면 된다고 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>데이터 규모</th><th>발표자가 말한 값</th></tr></thead>
+            <tbody>
+              <tr><td>거래 수</td><td>수십억 건</td></tr>
+              <tr><td>계좌 수</td><td>수백만 개 규모 (자막이 불분명해 추정)</td></tr>
+              <tr><td>고객 한 명의 거래</td><td>한 달에 수백 건</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="features">
+        <header><span class="num">06</span><h2>거래를 다섯 질문으로 나눈다 <span class="ts">05:50</span></h2></header>
+        <p>거래 하나는 다섯 가지 차원으로 나눠 본다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>차원</th><th>묻는 것</th><th>발표에 나온 예</th></tr></thead>
+            <tbody>
+              <tr><td>누가 <span class="en">who</span></td><td>누가 거래했고 누가 서비스를 제공했나</td><td>고객, 가맹점</td></tr>
+              <tr><td>무엇을 <span class="en">what</span></td><td>무엇을 사고 거래했나</td><td>구매한 것, 거래 종류</td></tr>
+              <tr><td>어떻게 <span class="en">how</span></td><td>어떤 채널로 했나</td><td>신용카드, 체크카드, 디지털, 수표</td></tr>
+              <tr><td>언제 <span class="en">when</span></td><td>언제 일어났나</td><td>직전 거래와의 시간 간격</td></tr>
+              <tr><td>어디서 <span class="en">where</span></td><td>어디서 일어났나</td><td>우편번호, IP 주소</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>가공한 특징 대신 원재료 특징 <span class="ts">06:30</span></h3>
+        <p>기존 운영 모델은 특징 공학<span class="en">feature engineering</span>에 크게 기댔다. 특징 공학은 사람이 원본 데이터를 가공해 모델에 넣을 입력값을 직접 만드는 일이다. 발표자는 이 일에 시간이 아주 많이 든다고 말한다. 비슷한 금융 조직들도 마찬가지라고 본다.</p>
+        <p>그래서 한발 물러섰다. 특정 작업을 위해 미리 가공한 특징을 버리고, 더 쪼갤 수 없는 원재료 정보만 찾았다.</p>
+        <div class="shift" aria-label="특징을 다루는 방식의 변화">
+          <div><span class="tag">기존</span><b>수천 개의 특징</b><span class="muted">작업에 맞춰 사람이 가공한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이번</span><b>원재료 특징 약 100개</b><span class="muted">특징 사이의 관계는 트랜스포머가 찾는다</span></div>
+        </div>
+        <p>이 특징들이 쓰는 어휘는 금융에만 있는 것이다. 발표자는 이것이 기존 사전학습 모델을 쓰지 않은 이유라고 말한다. 체크 계좌, 저축 계좌, 디지털 거래를 모두 합쳐도 특징의 종류는 많지 않다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="tokenize">
+        <header><span class="num">07</span><h2>가장 어려운 일: 토큰화 <span class="ts">08:00</span></h2></header>
+        <p>데이터는 결국 전부 표다. 문제는 표의 값을 모델이 읽는 토큰으로 바꾸는 방법이다. 토큰화<span class="en">tokenization</span>는 입력을 모델이 다루는 최소 단위인 토큰으로 나누는 일이다.</p>
+        <p>값의 종류가 제각각이라 어렵다. 숫자 값이 있고, 범주 값이 있고, 우편번호 같은 값도 있다.</p>
+        <div class="callout">
+          <span class="title">어휘를 얼마나 크게 할까</span>
+          <span>우편번호마다 토큰을 하나씩 주면 어휘<span class="en">vocabulary</span>가 너무 커진다. 어휘가 지나치게 크면 학습이 엉망이 되기 쉽다. 그래서 어떤 정보를 토큰 하나에 담을지 정하는 데 많은 노력이 들었다.</span>
+        </div>
+
+        <h3>거래가 숫자가 되는 순서 <span class="ts">08:40</span></h3>
+        <ol class="plain">
+          <li>거래가 하나 들어온다.</li>
+          <li>거래의 특징 값마다 어휘에서 맞는 토큰을 찾는다.</li>
+          <li>토큰마다 정해진 ID가 있다.</li>
+          <li>ID로 임베딩<span class="en">embedding</span>을 찾는다. 임베딩은 토큰을 뜻이 담긴 숫자 벡터로 바꾼 것이다.</li>
+        </ol>
+        <p>결국 거래 하나를 모델 입력으로 바꾸는 일은 정해 둔 표에서 값을 찾는 일<span class="en">lookup</span>이다.</p>
+
+        <h3>특징마다 다른 토큰 수 <span class="ts">09:10</span></h3>
+        <p>어떤 특징은 0과 1 두 값이면 충분하다. 어떤 특징은 훨씬 많은 토큰이 필요하다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>특징</th><th>발표에서 말한 것</th><th>토큰으로 바꾸는 방법</th></tr></thead>
+            <tbody>
+              <tr><td>범주 값</td><td>종류가 8개뿐인 것도 있고 훨씬 많은 것도 있다</td><td>종류마다 토큰 하나 (예시)</td></tr>
+              <tr><td>거래 금액</td><td>아주 중요한 특징이다</td><td>금액 구간마다 토큰 하나 (예시)</td></tr>
+              <tr><td>거래 사이 시간 간격</td><td>특징으로 쓴다</td><td>시간 구간마다 토큰 하나 (예시)</td></tr>
+              <tr><td>IP 주소</td><td>특징으로 쓴다</td><td>발표에서 밝히지 않음</td></tr>
+              <tr><td>우편번호</td><td>약 2,800개 토큰. 실제 미국 우편번호는 이보다 훨씬 많다</td><td>분포를 기준으로 묶는다 (발표)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">"예시"라고 적은 칸은 이해를 돕기 위해 흔히 쓰는 방식을 적은 것이다. 발표자는 금액과 시간 간격을 어떻게 나눴는지 밝히지 않았다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="size">
+        <header><span class="num">08</span><h2>모델 크기와 데이터 양 <span class="ts">10:00</span></h2></header>
+        <p>모델 크기는 친칠라<span class="en">Chinchilla</span> 계산을 기준으로 정했다. 친칠라 계산은 모델 크기와 학습 데이터 양을 어떤 비율로 맞추면 좋은지 알려 주는 규칙이다.</p>
+        <p>처음에는 이 방법이 표 데이터에서 통할지 전혀 몰랐다. 표 데이터용 공개 파운데이션 모델이 이미 있었고, 거기서 배운 것에서 출발했다. 그 위에서 임베딩 차원, 디코더 층 수 같은 설계를 정했다.</p>
+        <p>조 단위 파라미터 모델을 만들려는 게 아니다. 발표자는 언어 모델 선두 기업과 경쟁할 생각이 없다고 말한다. 거래에만 집중하고, 크기는 10억 단위다.</p>
+
+        <figure class="chart" aria-label="모델 파라미터 수 비교: 현재 모델 10억, 개발 중인 다음 버전 110억">
+          <span class="chart-title">모델 파라미터 수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>현재 모델</span><span class="val">10억</span></div>
+              <div class="track"><div class="fill key" style="width:9.1%" title="현재 모델: 10억 파라미터"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>다음 버전 (개발 중)</span><span class="val">110억</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="다음 버전: 110억 파라미터"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>55억</span><span>110억</span></div>
+          <span class="caption">110억은 자막에 들린 값이다. 발표자가 경쟁하지 않겠다고 한 1조 단위 모델은 이 차트 끝의 약 90배다.</span>
+        </figure>
+
+        <p>10억을 고른 이유는 실험한 크기 중 가장 작으면서 성능 향상은 가장 컸기 때문이다. 발표자는 이 크기로도 사기 탐지에서 거짓 양성을 줄여 투자 대비 효과가 충분하다고 말한다.</p>
+        <p>구조는 디코더 전용<span class="en">decoder-only</span>이다. 앞의 내용만 보고 다음 것을 예측하는 구조로, 다음 거래 맞히기에 맞다.</p>
+
+        <h3>토큰은 친칠라 기준의 10배 <span class="ts">11:20</span></h3>
+        <p>친칠라 기준은 파라미터 1개당 학습 토큰 약 20개다. 처음에는 이 기준을 따랐다. 실험해 보니 그보다 10배가 더 필요했다.</p>
+
+        <figure class="chart" aria-label="파라미터 1개당 학습 토큰 수: 친칠라 기준 20, 실제로 필요했던 양 약 200">
+          <span class="chart-title">파라미터 1개당 학습 토큰 수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>친칠라 기준 (처음 계획)</span><span class="val">20</span></div>
+              <div class="track"><div class="fill" style="width:10%" title="친칠라 기준: 파라미터당 20 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>실제로 필요했던 양</span><span class="val">약 200</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="실제: 파라미터당 약 200 토큰"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>100</span><span>200</span></div>
+          <span class="caption">발표자는 "20배의 10배"라고 말했다. 200은 그 말을 곱한 값이다.</span>
+        </figure>
+
+        <div class="callout">
+          <span class="title">예시 계산</span>
+          <span>10억 파라미터 모델이라면 친칠라 기준으로 토큰 200억 개가 필요하다. 실제로는 약 2,000억 개가 필요했던 셈이다. 발표자가 직접 말한 숫자는 아니고, 비율로 계산한 값이다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="training">
+        <header><span class="num">09</span><h2>학습은 검증된 방법으로 <span class="ts">11:50</span></h2></header>
+        <p>학습 목표 함수<span class="en">objective function</span>는 두 가지를 썼다. 인과 언어 모델링<span class="en">causal language modeling</span>은 앞부분을 보고 다음 토큰을 맞힌다. 마스크 언어 모델링<span class="en">masked language modeling</span>은 중간을 가리고 가려진 토큰을 맞힌다.</p>
+        <p>발표자는 구조 자체에는 특별한 것이 없다고 말한다.</p>
+        <div class="callout">
+          <span class="title">발표자가 꼽은 비법 두 가지</span>
+          <span><strong>토큰화</strong>, 그리고 <strong>사후 학습</strong>이다. 학습 단계에서 따로 고민할 것은 하나다. 과거 거래를 몇 건까지 모델의 문맥에 넣을지다.</span>
+        </div>
+        <p>평가는 두 갈래로 했다. 하나는 퍼플렉서티<span class="en">perplexity</span> 기반 정확도다. 퍼플렉서티는 모델이 다음 것을 얼마나 헷갈려하는지 재는 값이고, 낮을수록 좋다. 다른 하나는 후속 작업 성능을 모은 대시보드다.</p>
+
+        <h3>학습 기법 <span class="ts">12:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기법</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>혼합 정밀도 <span class="en">mixed precision</span></td><td>일부 계산을 낮은 정밀도로 해 속도와 메모리를 아낀다</td></tr>
+              <tr><td>분산 데이터 병렬 <span class="en">distributed data parallel</span></td><td>같은 모델을 여러 GPU에 복사하고 데이터를 나눠 학습한다</td></tr>
+              <tr><td>마이크로 배치 최대화</td><td>GPU 하나가 한 번에 처리하는 묶음을 최대로 키워 더 빨리 수렴하게 한다</td></tr>
+              <tr><td>RoPE</td><td>토큰의 순서 정보를 회전 방식으로 넣는다</td></tr>
+              <tr><td>플래시 어텐션 <span class="en">flash attention</span></td><td>어텐션 계산을 메모리를 덜 쓰는 방식으로 한다</td></tr>
+              <tr><td>활성화 체크포인팅 <span class="en">activation checkpointing</span></td><td>중간 계산값 일부만 저장하고 필요할 때 다시 계산해 메모리를 아낀다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 기법들은 새로운 것이 아니다. 발표자는 훨씬 큰 모델을 만든 사람들의 조언을 그대로 따랐다고 말한다.</p>
+        <p class="note">자막에 "one rope"로 적힌 부분은 문맥상 RoPE가 확실해 바로잡았다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="fraud">
+        <header><span class="num">10</span><h2>사기 탐지에 적용 <span class="ts">13:20</span></h2></header>
+        <p>첫 후속 작업은 사기 분류다. 거래 하나가 들어오면 그 거래가 사기인지 예측한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">기존 · XGBoost</span>
+            <p>사기와 정상으로 표시된 대량의 거래로 학습했다.</p>
+            <p class="verdict"><b>놓친 것</b>: 지금 판단할 거래와 그 고객의 과거 거래들 사이의 관계. 이 정보를 넣으려면 사람이 특징으로 어렵게 만들어 넣어야 한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">새 모델 · 거래 파운데이션 모델</span>
+            <p>트랜스포머의 어텐션<span class="en">attention</span>이 지금 거래와 과거 거래들을 직접 이어서 본다.</p>
+            <p class="verdict"><b>발표자의 해석</b>: 이것이 탐지율을 크게 올린 이유라고 본다.</p>
+          </div>
+        </div>
+        <p>추론<span class="en">inference</span> 때 모델에 넣는 것은 거래의 순서열이다. 질문은 이런 식이다. "고객이 방금 체크카드를 썼다. 지금까지의 거래 기록에 비춰 볼 때 이 거래는 사기인가?"</p>
+
+        <h3>250ms 안에 답해야 한다 <span class="ts">15:00</span></h3>
+        <p>결제를 거절하려면 그 결정이 250밀리초 안에 나와야 한다. 발표자는 모델 구조보다 이 시간을 지키는 엔지니어링이 중요하다고 말한다.</p>
+
+        <figure class="chart" aria-label="응답 시간 비교: 허용 한도 250밀리초, 모델 응답 약 25밀리초(추정)">
+          <span class="chart-title">사기 판단 응답 시간 (밀리초)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>허용 한도</span><span class="val">250</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="허용 한도: 250ms"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>모델 응답 (추정)</span><span class="val">약 25</span></div>
+              <div class="track"><div class="fill key" style="width:10%" title="모델 응답: 약 25ms (추정)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>125</span><span>250</span></div>
+          <span class="caption">짧을수록 좋다. 약 25ms는 발표자의 "10배" 발언으로 계산한 추정값이다.</span>
+        </figure>
+        <p class="note">발표자는 한도보다 "10배 느렸다(slower)"고 말했다. 하지만 바로 이어서 "그래서 문제없었다"고 했다. 문맥상 한도보다 10배 빨랐다는 뜻으로 보고 약 25ms로 그렸다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="results">
+        <header><span class="num">11</span><h2>결과: 더 잡고 덜 막는다 <span class="ts">15:20</span></h2></header>
+        <p>성과는 두 지표로 쟀다. 두 지표 모두 회사의 비용 절감과 바로 이어진다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">탐지율 · detection rate</span>
+            <p>실제 사기 중에서 모델이 잡아낸 비율이다.</p>
+            <p class="verdict"><b>결과</b>: 올랐다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">거짓 양성률 · false positive rate</span>
+            <p>정상 거래 중에서 사기로 잘못 막은 비율이다.</p>
+            <p class="verdict"><b>결과</b>: 내려갔다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">둘 다 좋아진 것이 왜 큰일인가</span>
+          <span>보통은 탐지율을 올리면 거짓 양성도 같이 늘어난다. 더 많이 의심하면 정상 거래도 더 많이 걸리기 때문이다. 이번에는 사기를 더 잡으면서 거짓 양성은 줄였다.</span>
+        </div>
+        <p>정상 거래를 사기로 막으면 이런 일이 생긴다.</p>
+        <ul class="plain">
+          <li>고객이 은행에 전화한다.</li>
+          <li>그 전화를 처리하는 운영 비용이 든다.</li>
+          <li>막힌 거래에서 나올 수익을 잃는다.</li>
+        </ul>
+        <p>비교 대상은 업계 최고 수준의 XGBoost 사기 탐지 모델이다. 발표자는 절감액이 수백만 달러라고 말한다.</p>
+        <p class="note">발표자 팀이 만든 모델을 발표자 팀이 평가한 결과다. 탐지율과 거짓 양성률이 얼마나 바뀌었는지 구체적인 수치는 발표에 나오지 않는다. 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="next">
+        <header><span class="num">12</span><h2>정리와 다음 계획 <span class="ts">16:30</span></h2></header>
+        <ul class="plain">
+          <li>Wells Fargo 고객의 거래 수십억 건으로 만들었다.</li>
+          <li>공개 가중치 없이 처음부터 사전학습했다. 빌린 것은 구조뿐이다.</li>
+          <li>사전학습은 처음에 몇 주 걸렸고, 지금은 며칠이면 된다.</li>
+          <li>사전학습만 끝내도 다음 거래를 꽤 잘 맞힌다.</li>
+        </ul>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>후속 작업</th><th>상태</th></tr></thead>
+            <tbody>
+              <tr><td>사기 탐지</td><td>적용함</td></tr>
+              <tr><td>신용 한도 증액</td><td>검토 중</td></tr>
+              <tr><td>자금세탁방지</td><td>검토 중</td></tr>
+              <tr><td>마케팅</td><td>검토 중</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>같은 백본을 이제 Wells Fargo 안의 여러 조직이 같이 쓰고 있다. 처음에 세운 "백본 하나" 목표가 실제로 움직이기 시작한 것이다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>파운데이션 모델은 언어를 다룰 필요가 없다. 금융에서는 표 형태의 거래 데이터가 주재료다.</li>
+          <li>백본 하나를 여러 작업에 파인튜닝해 쓰면, 조직마다 모델을 따로 만들 필요가 줄어든다.</li>
+          <li>사전학습 과제는 다음 거래 맞히기다. 진짜 목표는 거래 사이의 관계를 담은 표현이다.</li>
+          <li>공개 가중치는 쓰지 않았다. <strong>구조만 빌리고 자기 데이터로 처음부터 학습했다.</strong></li>
+          <li>거래는 누가, 무엇을, 어떻게, 언제, 어디서의 다섯 차원으로 나눈다.</li>
+          <li>수천 개의 가공 특징 대신 <strong>원재료 특징 약 100개</strong>를 넣고, 관계 찾기는 모델에 맡겼다.</li>
+          <li>비법은 <strong>토큰화와 사후 학습</strong>이다. 어휘가 너무 크면 학습이 어렵다.</li>
+          <li>모델은 10억 파라미터 디코더 전용이고, 학습 토큰은 파라미터의 약 <strong>200배</strong>가 필요했다.</li>
+          <li>XGBoost가 놓치던 과거 거래와의 관계를 어텐션이 잡았다. 응답은 250ms 한도 안에 든다.</li>
+          <li>탐지율은 오르고 거짓 양성은 줄었다. 같은 백본을 신용 한도, 자금세탁방지, 마케팅으로 넓히는 중이다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>Wells Fargo가 언어 모델 대신 거래 파운데이션 모델을 만든 이유는?</span></summary><div class="answer">금융 데이터 대부분은 표 형태의 거래 데이터다. 언어 모델에 넣어도 이득은 있지만 최선은 아니다. 금융 데이터의 어휘도 고유하다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>"백본 하나"로 무엇을 바꾸려 했나?</span></summary><div class="answer">조직마다 따로 만들던 모델을, 거래 표현을 한 번 배운 백본 하나로 바꾼다. 각 작업은 그 백본을 파인튜닝해 쓴다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>거래 파운데이션 모델의 사전학습 과제는? 그것이 최종 목표인가?</span></summary><div class="answer">다음 거래, 또는 거래 안의 다음 토큰을 맞히는 것이다. 최종 목표는 아니다. 그 과정에서 배운 표현을 후속 작업에 쓰는 것이 목표다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>"처음부터 사전학습"은 정확히 무슨 뜻인가?</span></summary><div class="answer">공개 모델의 가중치를 전혀 쓰지 않았다는 뜻이다. 구조만 빌리고 가중치는 빈 상태에서 자기 거래 데이터로 학습했다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>거래를 나누는 다섯 차원은?</span></summary><div class="answer">누가(고객, 가맹점), 무엇을, 어떻게(채널), 언제, 어디서.</div></details>
+          <details><summary><span class="qn">Q6</span><span>기존 특징 공학 방식과 이번 방식의 차이는?</span></summary><div class="answer">기존에는 작업에 맞춰 사람이 가공한 특징을 수천 개 썼다. 이번에는 원재료 특징 약 100개만 넣고, 특징 사이의 관계는 트랜스포머가 찾게 했다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>우편번호마다 토큰을 하나씩 주지 않은 이유와 대신 쓴 방법은?</span></summary><div class="answer">어휘가 너무 커지면 학습이 어려워진다. 그래서 분포를 기준으로 우편번호를 묶어 약 2,800개 토큰으로 줄였다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>친칠라 기준과 실제로 필요했던 학습 토큰 수는?</span></summary><div class="answer">친칠라 기준은 파라미터당 약 20개다. 실제로는 그 10배인 약 200개가 필요했다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>모델 크기를 10억 파라미터로 정한 이유는?</span></summary><div class="answer">실험한 크기 중 가장 작으면서 성능 향상은 가장 컸다. 이 크기로도 거짓 양성을 줄여 투자 대비 효과가 충분했다. 다음 버전은 110억으로 개발 중이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>XGBoost가 놓치던 정보와, 새 모델이 그걸 잡는 방법은?</span></summary><div class="answer">지금 거래와 그 고객의 과거 거래들 사이의 관계다. 새 모델은 트랜스포머의 어텐션으로 지금 거래와 과거 거래를 직접 이어서 본다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>250ms는 무엇의 기준이고, 모델은 어땠나?</span></summary><div class="answer">결제 거절 결정이 나와야 하는 시간 한도다. 발표자의 말로는 모델이 이 한도보다 약 10배 빨랐다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>탐지율과 거짓 양성률이 함께 좋아진 것이 왜 큰 성과인가?</span></summary><div class="answer">보통은 탐지율을 올리면 거짓 양성도 늘어난다. 정상 거래를 막으면 고객 전화, 운영 비용, 거래 수익 손실이 생긴다. 이번에는 사기는 더 잡고 정상 거래는 덜 막았다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 데이터 중 시간 순서가 있는 이벤트 기록을 찾는다<span class="how">확인: 고객이나 사용자별로 시간 순으로 줄 세울 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>기존 모델의 특징 목록을 원재료 특징으로 줄여 본다<span class="how">누가, 무엇을, 어떻게, 언제, 어디서의 다섯 칸으로 분류해 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>종류가 아주 많은 값은 토큰을 어떻게 묶을지 먼저 정한다<span class="how">우편번호처럼 분포를 기준으로 묶고, 전체 어휘 크기를 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>친칠라 기준은 출발점으로만 쓰고 토큰 비율을 실험으로 확인한다<span class="how">이 발표에서는 파라미터당 20개가 아니라 약 200개가 필요했다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>작은 모델부터 시작해 성능 향상이 큰 크기를 찾는다<span class="how">확인: 크기를 키울 때 후속 작업 지표가 실제로 오르는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>기존 기준 모델과 같은 지표 두 개로 비교한다<span class="how">탐지율만 보지 말고 거짓 양성률을 함께 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>응답 시간 한도를 먼저 정하고 추론 속도를 잰다<span class="how">확인: 실제 서비스 경로에서 한도 안에 드는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>같은 백본을 다른 작업에도 쓸 수 있는지 검토한다<span class="how">발표의 예: 신용 한도 증액, 자금세탁방지, 마케팅</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>파운데이션 모델</td><td>Foundation model. 대량의 데이터로 한 번 크게 학습해 두고 여러 작업에 맞춰 다시 쓰는 모델</td></tr>
+              <tr><td>표 형태 데이터</td><td>Tabular data. 행과 열로 정리된 데이터</td></tr>
+              <tr><td>백본</td><td>Backbone. 여러 후속 작업이 공통으로 쓰는 기본 모델</td></tr>
+              <tr><td>후속 작업</td><td>Downstream task. 사전학습한 모델을 가져다 푸는 실제 업무 과제</td></tr>
+              <tr><td>사전학습</td><td>Pre-training. 정답 표시 없이 대량의 데이터로 다음에 올 것을 맞히게 하는 첫 학습</td></tr>
+              <tr><td>사후 학습 / 파인튜닝</td><td>Post-training / fine-tuning. 사전학습한 모델을 특정 작업에 맞춰 더 학습시키는 일</td></tr>
+              <tr><td>SFT · RLHF · RLVR</td><td>지도 파인튜닝, 사람 피드백 기반 강화학습, 검증 가능한 보상 기반 강화학습. 언어 모델의 대표적인 사후 학습 방법</td></tr>
+              <tr><td>공개 가중치</td><td>Open weights. 학습이 끝난 모델의 값을 누구나 받아 쓸 수 있게 풀어 둔 것</td></tr>
+              <tr><td>XGBoost</td><td>결정 트리를 여러 개 이어 붙여 예측하는 모델. 표 데이터에서 강하다</td></tr>
+              <tr><td>특징 공학</td><td>Feature engineering. 원본 데이터를 가공해 모델 입력값을 사람이 직접 만드는 일</td></tr>
+              <tr><td>토큰화</td><td>Tokenization. 입력을 모델이 다루는 최소 단위인 토큰으로 나누는 일</td></tr>
+              <tr><td>어휘</td><td>Vocabulary. 모델이 아는 토큰 전체 목록</td></tr>
+              <tr><td>임베딩</td><td>Embedding. 토큰을 뜻이 담긴 숫자 벡터로 바꾼 것</td></tr>
+              <tr><td>친칠라 계산</td><td>Chinchilla scaling. 모델 크기와 학습 토큰 수의 균형을 정하는 규칙. 파라미터당 토큰 약 20개가 기준</td></tr>
+              <tr><td>디코더 전용</td><td>Decoder-only. 앞부분만 보고 다음 토큰을 예측하는 트랜스포머 구조</td></tr>
+              <tr><td>인과 / 마스크 언어 모델링</td><td>앞을 보고 다음을 맞히는 학습 / 가려진 중간을 맞히는 학습</td></tr>
+              <tr><td>퍼플렉서티</td><td>Perplexity. 모델이 다음 것을 얼마나 헷갈려하는지 재는 값. 낮을수록 좋다</td></tr>
+              <tr><td>어텐션</td><td>Attention. 입력의 어느 부분을 얼마나 참고할지 모델이 스스로 정하는 장치</td></tr>
+              <tr><td>추론</td><td>Inference. 학습이 끝난 모델에 새 입력을 넣어 답을 얻는 일</td></tr>
+              <tr><td>지연 시간</td><td>Latency. 요청을 받고 답을 내기까지 걸리는 시간</td></tr>
+              <tr><td>탐지율</td><td>Detection rate. 실제 사기 중 모델이 잡아낸 비율</td></tr>
+              <tr><td>거짓 양성</td><td>False positive. 정상 거래를 사기로 잘못 판단하는 것</td></tr>
+              <tr><td>자금세탁방지</td><td>AML, anti-money laundering. 불법 자금의 흐름을 찾아내 막는 업무</td></tr>
+              <tr><td>신용 한도 증액</td><td>Credit line increase. 고객의 카드 한도를 올려 줄지 판단하는 업무</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표 소개: Wells Fargo의 첫 파운데이션 모델</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>파운데이션 모델은 언어 기반일 필요가 없다. 금융 데이터는 대부분 표</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>모든 거래 채널을 모아 백본 하나를 만든다</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>조직마다 따로 만든 모델에서 백본 하나로</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>XGBoost를 쓰면 되지 않나</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>발표 순서: 데이터, 표현, 구조, 결과, 교훈</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>언어 파운데이션 모델과 거래 파운데이션 모델 비교</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>공개 가중치 없이 처음부터 사전학습</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>데이터 규모</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>다섯 차원: 누가, 무엇을, 어떻게, 언제, 어디서</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>가공한 특징 수천 개 대신 원재료 특징 약 100개</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>금융 고유 어휘, 기존 사전학습 모델을 쓰지 않은 이유</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>토큰화: 숫자, 범주, 우편번호</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>값에서 토큰, ID, 임베딩으로</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>특징마다 다른 토큰 수</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>우편번호 약 2,800개 토큰</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>친칠라 계산으로 구조 설계</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>10억 파라미터, 다음 버전은 110억</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>디코더 전용, 토큰은 친칠라 기준의 10배</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>학습 목표 함수</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>비법은 토큰화와 사후 학습</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>평가 방법과 학습 기법</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>결과: 사기 거래 분류</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>XGBoost가 놓치는 과거 거래와의 관계</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>250ms 응답 시간 한도</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>탐지율과 거짓 양성률</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>정상 거래를 막는 비용, 수백만 달러 절감</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>정리: 수십억 거래, 처음부터 사전학습</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>다음 후속 작업: 신용 한도, 자금세탁방지, 마케팅</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'UB6hoWyh3B0:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

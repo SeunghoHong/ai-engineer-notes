@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 간 대화 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#future">에이전트끼리 대화하는 미래</a></li>
+      <li><a href="#router">지금은 사람이 라우터</a></li>
+      <li><a href="#why-many">왜 에이전트를 여럿 쓰나</a></li>
+      <li><a href="#messengers">메신저로 이으면?</a></li>
+      <li><a href="#protocols">프로토콜로 이으면?</a></li>
+      <li><a href="#so-far">중간 정리</a></li>
+      <li><a href="#distributed">진짜 문제: 분산 시스템</a></li>
+      <li><a href="#band">BAND가 내놓은 답</a></li>
+      <li><a href="#demo1">데모 1: 등록과 연결</a></li>
+      <li><a href="#demo2">데모 2: 터미널의 Claude Code</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 작업에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-07 · 17분 · 영어 발표 한글 정리</span>
+      <h1>AI 에이전트끼리 아직 대화하지 못하는 이유</h1>
+      <p class="lead">에이전트를 여럿 돌려도 그 사이의 메시지는 아직 사람이나 스크립트가 옮긴다. 발표자는 이것을 메신저나 프로토콜로는 풀리지 않는 분산 시스템 문제로 보고, 그 층을 대신 맡는 자사 제품 BAND를 소개한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=toq-jyGLZDk" target="_blank" rel="noopener">Why Your AI Agents Can't Talk to Each Other (Yet)</a></span>
+        <span>발표: Vlad Luzin (BAND 공동 창업자, CTO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 것만 알려진 이름으로 바로잡았고, 확실하지 않은 이름은 들린 대로 적고 "(추정)"을 붙였다. 발표 후반은 발표자 회사의 제품 소개다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>발표자는 앞으로 AI가 사람 대신 일하고, 일을 끝내려고 <strong>AI끼리 대화</strong>하게 된다고 본다.</li>
+        <li>지금 우리는 에이전트를 여럿 돌리지만 그 사이의 메시지는 <strong>사람이 옮긴다.</strong> 루프 엔지니어링은 그 일을 스크립트에 넘긴 것일 뿐이다.</li>
+        <li>에이전트를 나눠 쓰는 이유는 <strong>세션 하나의 한계</strong> 때문이다. 발표자는 컨텍스트를 늘려도 이 한계가 풀리지 않는다고 말한다.</li>
+        <li><strong>메신저 연결</strong>은 설정이 5~11단계로 번거롭다. 연결해도 에이전트와 나 한 사람만 이어진다.</li>
+        <li><strong>프로토콜</strong>(MCP, A2A)은 너무 낮은 층이다. 상태가 없거나 한 방향이고, 상대 찾기와 큐는 직접 만들어야 한다.</li>
+        <li>진짜 문제는 <strong>분산 시스템</strong>이다. 안정적인 전송, 장애 후 복구, 프레임워크 사이의 ID 연결, 대화 단위의 관리, 신원과 관측성이 모두 필요하다.</li>
+        <li>BAND는 이 층을 플랫폼으로 제공한다고 소개했다. 데모는 등록, <strong>양쪽 동의</strong>로 연결, 실시간 대화, 사람의 열람과 개입을 보여 줬다. 자사 제품 주장이니 감안해 읽는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="future">
+        <header><span class="num">01</span><h2>에이전트끼리 대화하는 미래 <span class="ts">00:50</span></h2></header>
+        <p>발표자는 회사가 믿는 것을 두 가지로 설명한다.</p>
+        <ul class="plain">
+          <li>AI가 사람 대신 일한다. 일을 끝내려면 AI끼리 대화해야 한다 <span class="en">AI-to-AI communication</span>. 회사 안에서도, 회사와 회사 사이에서도, 소비자와 회사 사이에서도 그렇다.</li>
+          <li>에이전트는 스스로 움직이는 <span class="en">autonomous</span> 존재가 된다. 항상 켜져 있고 <span class="en">always-on</span>, 세계 곳곳에 흩어져 있다.</li>
+        </ul>
+
+        <h3>발표자가 그린 장면 <span class="ts">01:30</span></h3>
+        <ol class="plain">
+          <li>에이전트들이 같은 대화 공간 <span class="en">conversational space</span>에 모여 서로를 본다.</li>
+          <li>사람이나 다른 시스템에게서 일을 받는다.</li>
+          <li>레지스트리 <span class="en">registry</span>에서 필요한 상대 에이전트를 찾는다. 레지스트리는 연결할 수 있는 상대의 목록이다.</li>
+          <li>그 상대를 대화 공간에 초대하고 일을 나눠 맡긴다.</li>
+          <li>정보가 충분히 모이면 결과를 사람에게 돌려준다.</li>
+        </ol>
+        <p>발표자는 이 장면을 머리에 두고 나머지를 들으라고 한다. 뒤에 나오는 문제는 모두 이 장면을 가로막는 것들이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="router">
+        <header><span class="num">02</span><h2>지금은 사람이 라우터 <span class="ts">02:00</span></h2></header>
+        <p>적대적 에이전트 <span class="en">adversarial agents</span>는 이미 많은 사람이 쓰는 방식이다. 에이전트 하나가 만들고, 다른 에이전트가 그것을 따져 보게 한다.</p>
+        <ul class="plain">
+          <li>Claude나 Codex 세션을 여러 개 연다.</li>
+          <li>한 세션은 계획을 세우고, 다른 세션은 그 계획을 리뷰한다.</li>
+          <li>한 세션이 코드를 쓰면, 다른 세션이 그 코드를 리뷰한다.</li>
+        </ul>
+        <p>이때 상태를 기억하는 <span class="en">stateful</span> 에이전트 두 개가 같은 일을 하고 있다. 그 사이에서 메시지를 복사해 옮기는 건 사람이다. 발표자는 이를 "사람이 Cisco 라우터와 스위치가 되어 패킷을 나른다"고 표현한다.</p>
+
+        <h3>루프 엔지니어링 <span class="ts">02:40</span></h3>
+        <p>루프 엔지니어링 <span class="en">loop engineering</span>은 이번 행사에서도 많이 다룬 새 개념이다. 발표자는 본질이 앞의 방식과 같다고 정리한다.</p>
+        <ul class="plain">
+          <li>에이전트를 여럿 돌리는 건 같다. 되도록 상태를 기억하는 에이전트를 쓴다.</li>
+          <li>메시지를 옮기는 일은 사람 대신 스크립트가 한다. 누군가 오픈소스로 공개한 Python이나 TypeScript 코드다.</li>
+          <li>스크립트가 에이전트들에게 번갈아 프롬프트를 넣는다. 사람은 스크립트를 실행만 한다.</li>
+        </ul>
+        <div class="shift" aria-label="메시지를 옮기는 주체의 변화">
+          <div><span class="tag">적대적 에이전트</span><b>사람이 옮긴다</b><span class="muted">세션 사이에서 복사하고 붙여 넣는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">루프 엔지니어링</span><b>스크립트가 옮긴다</b><span class="muted">사람은 스크립트를 실행만 한다</span></div>
+        </div>
+        <div class="callout">
+          <span class="title">두 방식의 공통점</span>
+          <span>에이전트끼리 직접 말하지 않는다. 사람이든 스크립트든, 누군가 중간에서 메시지를 옮긴다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="why-many">
+        <header><span class="num">03</span><h2>왜 에이전트를 여럿 쓰나 <span class="ts">03:30</span></h2></header>
+        <p>세션 하나에 모든 일을 맡기지 않는 이유가 있다. 발표자는 트랜스포머 구조의 한계 때문이라고 말한다. 이 한계를 단일 에이전트 병목 <span class="en">single agent bottleneck</span>이라 부른다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>발표자가 든 한계</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>확증 편향 <span class="en">confirmation bias</span></td><td>자기가 세운 계획이나 쓴 코드를 옳다고 믿는 쪽으로 기운다</td></tr>
+              <tr><td>주의 분산 <span class="en">attention dilution</span></td><td>맥락이 길어질수록 중요한 부분에 주의가 덜 간다</td></tr>
+              <tr><td>맥락 조각남 <span class="en">context fragmentation</span></td><td>정보가 긴 맥락 여기저기 흩어져 서로 이어지지 않는다</td></tr>
+              <tr><td>기억 저하 <span class="en">recall degradation</span></td><td>앞에서 본 내용을 정확히 다시 떠올리지 못한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 컨텍스트를 100만, 200만 토큰으로 늘려도 성능은 나아지지 않는다고 말한다. 그래서 일을 여러 에이전트로 나눈다. 세션을 여럿 돌리고 있다면, 그건 이미 멀티 에이전트 시스템 <span class="en">multi-agent system</span>이다.</p>
+        <p class="note">"컨텍스트를 늘려도 성능이 나아지지 않는다"는 발표자의 주장이다. 발표에서 근거 수치는 나오지 않았다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="messengers">
+        <header><span class="num">04</span><h2>메신저로 이으면? <span class="ts">04:10</span></h2></header>
+        <p>에이전트 여럿을 잇는 가장 쉬운 길은 이미 있는 메신저다. Slack, Teams, Discord, WhatsApp, Telegram이 있다. 발표자는 Anthropic도 Slack용 에이전트를 내놓았다고 말한다.</p>
+
+        <figure class="chart" aria-label="에이전트를 메신저에 연결하는 설정 단계 수: Telegram 5단계, Discord 7단계, Slack 8단계, WhatsApp 11단계">
+          <span class="chart-title">에이전트 하나를 메신저에 연결하는 설정 단계 수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Telegram</span><span class="val">5</span></div>
+              <div class="track"><div class="fill" style="width:41.67%" title="Telegram: 5단계"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Discord</span><span class="val">7</span></div>
+              <div class="track"><div class="fill" style="width:58.33%" title="Discord: 7단계"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Slack</span><span class="val">8</span></div>
+              <div class="track"><div class="fill" style="width:66.67%" title="Slack: 8단계"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>WhatsApp</span><span class="val">11</span></div>
+              <div class="track"><div class="fill key" style="width:91.67%" title="WhatsApp: 11단계"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>6</span><span>12</span></div>
+          <span class="caption">발표자가 제시한 단계 수다. 모두 손으로 하는 단계이고, 설명서를 한참 읽어야 한다고 한다.</span>
+        </figure>
+
+        <div class="callout">
+          <span class="title">다 설정해도 얻는 것은 하나</span>
+          <span>에이전트가 사람 한 명과 대화한다. 그 사람은 대개 나다. 이 에이전트가 다른 에이전트나 다른 사람과 말하게 하려면 또 번거로운 우회로를 만들어야 한다. 발표자는 이를 에이전트가 "디지털 독방" <span class="en">digital solitary confinement</span>에 갇힌 상태라고 부른다.</span>
+        </div>
+        <p>발표자는 메신저가 사람을 위해 만든 도구라고 덧붙인다. 봇과 봇을 잇는 것은 오히려 적극적으로 막는다고 한다. <span class="ts">07:10</span></p>
+        <p class="note">단계 수는 발표자가 제시한 것이고 각 플랫폼의 설정 절차를 따로 확인하지 않았다. 발표자는 이 문제를 푸는 제품을 파는 회사의 CTO라는 점도 감안해 읽자.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="protocols">
+        <header><span class="num">05</span><h2>프로토콜로 이으면? <span class="ts">05:30</span></h2></header>
+        <p>다음 답은 프로토콜이다. MCP, ACP, A2A 같은 규약으로 세션을 잇는다. 이 방식이면 구조가 이렇게 된다.</p>
+        <ol class="plain">
+          <li>서버 여러 대가 MCP로 다른 에이전트를 도구처럼 부른다.</li>
+          <li>도구로 불린 에이전트가 다시 A2A로 또 다른 에이전트를 부른다.</li>
+        </ol>
+        <p>겉보기에는 간단하다. 발표자는 그 안의 복잡함을 하나씩 짚는다. <span class="ts">06:10</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>발표자가 지적한 한계</th></tr></thead>
+            <tbody>
+              <tr><td>MCP</td><td>상태가 없는 호출 <span class="en">stateless</span>이다. 한 번 부른 에이전트에게 돌아가 "아까 어떻게 됐어?"라고 다시 물을 수 없다.</td></tr>
+              <tr><td>A2A</td><td>기본이 한 방향 클라이언트-서버 <span class="en">client-server</span> 구조다. A가 B에게 일을 보낼 수 있을 뿐이다. B도 A에게 일을 보내려면 양쪽 모두 클라이언트와 서버를 다 구현해야 한다.</td></tr>
+              <tr><td>REST 호출 잇기</td><td>호출을 줄줄이 이으면 응답 대기 시간 초과 <span class="en">timeout</span>에 걸린다.</td></tr>
+              <tr><td>빠진 것</td><td>상대를 찾는 기능 <span class="en">discovery</span>이 없다. A2A 명세는 아직 초안이다. 메시지를 쌓아 두는 큐 <span class="en">queue</span>도 뒤에 직접 붙여야 한다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">발표자의 결론</span>
+          <span>이걸 다 직접 만들고 있다면, 멀티 에이전트 시스템을 만드는 게 아니다. 배관 공사 <span class="en">plumbing</span>를 하고 있는 것이다. 지루한 일에 시간을 쓰는 셈이다.</span>
+        </div>
+        <p class="note">자막에는 "building planning"으로 찍혔다. 문맥상 plumbing(배관)으로 보고 옮겼다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="so-far">
+        <header><span class="num">06</span><h2>중간 정리 <span class="ts">07:00</span></h2></header>
+        <p>발표자는 여기까지를 세 가지로 묶는다.</p>
+        <ol class="plain">
+          <li><strong>멀티 에이전트 시스템은 이미 와 있다.</strong> 여기 있는 모두가 에이전트를 여럿 쓴다.</li>
+          <li><strong>메신저는 답이 아니다.</strong> 사람용으로 만들어졌고, 봇끼리 잇는 것을 막는다.</li>
+          <li><strong>프로토콜은 너무 낮은 층이다.</strong> 그 위에 큰 규모로 무언가를 짓기 어렵다.</li>
+        </ol>
+        <p>앞에서 나온 연결 방식을 한 표로 묶으면 이렇다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>연결 방식</th><th>되는 것</th><th>막히는 곳</th></tr></thead>
+            <tbody>
+              <tr><td>사람이 옮기기</td><td>지금 바로 쓸 수 있다</td><td>사람이 계속 붙어 있어야 한다</td></tr>
+              <tr><td>스크립트 (루프 엔지니어링)</td><td>사람 손이 빠진다</td><td>스크립트를 따로 가져와 돌려야 한다</td></tr>
+              <tr><td>메신저</td><td>에이전트와 나 한 사람의 대화</td><td>설정이 길고, 봇끼리 연결을 막는다</td></tr>
+              <tr><td>프로토콜</td><td>도구 호출, 작업 넘기기</td><td>상태가 없거나 한 방향이고, 상대 찾기와 큐는 직접 만든다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="distributed">
+        <header><span class="num">07</span><h2>진짜 문제: 분산 시스템 <span class="ts">07:40</span></h2></header>
+        <p>에이전트끼리 잇는 게 그렇게 어려운가. 발표자의 답은 "그렇다"다. 내 노트북의 세션 두 개를 잇든, 내 Claude와 다른 사람의 Codex를 잇든, 이건 분산 시스템 <span class="en">distributed systems</span> 문제다.</p>
+        <p>분산 시스템은 원래 어렵다. 늘 같은 입력에 같은 결과를 내는 결정적 <span class="en">deterministic</span> 소프트웨어만으로도 골치 아프다. 여기에 결과가 매번 달라지는 비결정적 <span class="en">non-deterministic</span> 마이크로서비스, 즉 에이전트를 더하면 훨씬 어려워진다.</p>
+
+        <h3>풀어야 할 다섯 가지 <span class="ts">08:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>풀어야 할 것</th><th>내용</th><th>위치</th></tr></thead>
+            <tbody>
+              <tr><td>전송 계층 <span class="en">transport layer</span></td><td>실시간이어야 한다. 순서가 보장돼야 한다. LLM은 메시지가 순서대로 온다고 가정하기 때문이다. 실패하면 다시 보내야 한다.</td><td><span class="ts">08:10</span></td></tr>
+              <tr><td>영속성과 복구 <span class="en">persistence, hydration</span></td><td>에이전트는 마이크로서비스라 언제든 죽을 수 있다. 실행 단위인 파드 <span class="en">pod</span>가 죽으면 멀티 에이전트 시스템 전체가 멈춘다. 상태를 저장해 두고 다시 불러와 이어야 한다.</td><td><span class="ts">08:30</span></td></tr>
+              <tr><td>런타임 바인딩 <span class="en">runtime binding</span></td><td>발표자가 새로운 문제라고 강조한 부분이다. LangGraph와 Codex를 잇거나 Claude와 CrewAI를 이으면, 각자의 thread ID, session ID, execution ID, run ID를 서로 짝지어야 한다. 그래야 같은 목표를 향해 한 팀으로 일한다.</td><td><span class="ts">08:40</span></td></tr>
+              <tr><td>더 높은 추상화</td><td>IP와 포트, URL, pub/sub 토픽 단위로는 관리할 수 없다. 대화, 참여자, 채널이나 방 같은 단위가 필요하다. 메시지 라우팅도 에이전트를 1급 시민 <span class="en">first-class citizen</span>으로 다뤄야 한다.</td><td><span class="ts">09:00</span></td></tr>
+              <tr><td>거버넌스 <span class="en">governance</span></td><td>조직은 신원 <span class="en">identity</span>과 관측성 <span class="en">observability</span>을 요구한다. 서버 A의 에이전트가 서버 B의 에이전트에게 보낸 메시지만 보면 부족하다. 메시지를 받은 뒤 그 에이전트가 어떤 도구를 불렀는지도 봐야 한다. 분산 시스템에서는 이걸 보여 주기가 매우 어렵다.</td><td><span class="ts">09:30</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>예시: 대화 하나에 묶이는 ID들</h3>
+        <p class="note">발표에 없는 예시다. 런타임 바인딩이 무엇인지 보이려고 만든 것이고, 값은 지어낸 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>무엇</th><th>예시 값</th></tr></thead>
+            <tbody>
+              <tr><td>플랫폼의 대화 공간</td><td><code>room-42</code></td></tr>
+              <tr><td>에이전트 A의 thread ID</td><td><code>thr_8f1</code></td></tr>
+              <tr><td>에이전트 B의 session ID</td><td><code>ses_c09</code></td></tr>
+              <tr><td>에이전트 C의 run ID</td><td><code>run_77a</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><code>room-42</code>에 온 메시지는 각 에이전트가 쓰는 자기 ID로 바뀌어 전달돼야 한다. 발표자는 이 짝이 맞지 않으면 에이전트들이 한 팀으로 일하지 못한다고 말한다.</p>
+
+        <p>발표자는 이 문제들을 다 풀지 못하면 에이전트끼리 대화하는 미래는 오지 않는다고 말한다. <span class="ts">10:00</span> "모두 기본소득을 받으며 해변에 누워 있는 미래도 없다"는 농담을 곁들였다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="band">
+        <header><span class="num">08</span><h2>BAND가 내놓은 답 <span class="ts">10:10</span></h2></header>
+        <p>발표자는 여기서 자기 회사 BAND를 소개한다. 앞에서 말한 문제를 회사가 대신 풀어 두었다는 주장이다. 그래서 회사 안의 에이전트들이나 Hermes, OpenClaw 같은 개인 에이전트를 쉽게 이을 수 있다고 한다.</p>
+        <p>발표 주간에 출시한 제품은 전 세계 단위의 상호작용·협업 층 <span class="en">interaction and collaboration layer</span>이다. <span class="ts">10:30</span></p>
+        <ul class="plain">
+          <li>어떤 에이전트, 플랫폼, 언어, 환경이든 붙을 수 있다고 한다.</li>
+          <li>둘씩만 잇는 1대1 <span class="en">peer-to-peer</span>이 아니다. 여럿이 한자리에 모이는 구조 <span class="en">multi-peer</span>다.</li>
+          <li>사람도 접속해 자기 에이전트와 대화할 수 있다.</li>
+        </ul>
+
+        <h3>안에 들어 있는 것 <span class="ts">11:00</span></h3>
+        <p>발표자는 이 제품이 통신 층만은 아니라고 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성 요소</th><th>발표자의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>레지스트리</td><td>사람이 따로 손대지 않아도 에이전트들이 서로를 자동으로 본다</td></tr>
+              <tr><td>영속성</td><td>대화와 상태를 저장한다</td></tr>
+              <tr><td>채널</td><td>대화를 나누는 공간</td></tr>
+              <tr><td>메시지 필터링</td><td>클라이언트가 아니라 플랫폼 안에서 거른다</td></tr>
+              <tr><td>보안, 관측성</td><td>이름만 나열했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">BAND는 발표자 회사의 제품이다. 앞의 문제 제기도 이 제품으로 이어지도록 짜여 있다. "다 풀었다"는 말은 발표자의 주장이고, 각 기능이 앞의 다섯 문제를 어떻게 푸는지는 발표에서 자세히 설명하지 않았다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="demo1">
+        <header><span class="num">09</span><h2>데모 1: 등록과 연결 <span class="ts">11:20</span></h2></header>
+        <p>시간이 짧아 데모는 녹화본으로 보여 줬다. 브라우저 두 개에서 사용자 두 명이 같은 플랫폼에 접속해 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>사용자</th><th>가진 에이전트</th></tr></thead>
+            <tbody>
+              <tr><td>Vlad (발표자)</td><td>Mac에서 도는 개인 비서 에이전트 (Claude)</td></tr>
+              <tr><td>Mike</td><td>처음에는 없다. 데모에서 Codex 에이전트와 Landlord(추정) 에이전트를 띄운다. 두 번째 데모에서 터미널의 Claude Code를 붙인다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Mike의 두 번째 에이전트 이름은 자막에 "Landlord"로 들렸다. 정확한 제품명은 확인하지 못했다.</p>
+
+        <h3>진행 순서 <span class="ts">12:20</span></h3>
+        <ol class="plain">
+          <li>Mike 쪽에서 에이전트를 하나 띄운다. 몇 초 만에 Mike 계정 아래에 에이전트 카드 <span class="en">agent card</span>가 생긴다. 에이전트 카드는 그 에이전트가 누구이고 무엇을 하는지 보여 주는 소개 카드다.</li>
+          <li>두 번째 에이전트도 띄우자 곧 카드가 생긴다. 이때부터 두 에이전트는 서로를 알고 함께 일할 수 있다.</li>
+          <li>Mike의 Codex 에이전트를 Vlad의 개인 비서와 잇고 싶다. 그래서 연락 요청을 보낸다. <span class="ts">12:50</span></li>
+          <li>이 요청은 양쪽 동의 <span class="en">bilateral consent</span>가 있어야 성립한다. 레지스트리는 에이전트나 사람마다 따로 있고, 동의해야 서로의 레지스트리에 들어간다.</li>
+          <li>Vlad가 요청을 수락한다. 이제 Codex 에이전트가 Vlad의 비서를 대화 공간에 초대해 실시간으로 대화한다. <span class="ts">13:10</span></li>
+        </ol>
+        <div class="callout">
+          <span class="title">사람의 열람과 개입 <span class="ts">13:30</span></span>
+          <span>Vlad의 에이전트가 다른 사용자의 에이전트와 대화하면, Vlad는 그 대화를 전부 볼 수 있다. Vlad 모르게 오가는 대화는 없다. 에이전트가 Vlad를 대화 공간에 불러 사람이 직접 끼어들게 할 수도 있다. 이를 사람 개입 <span class="en">human in the loop</span>이라 한다.</span>
+        </div>
+        <p>발표자는 이 에이전트들이 상태를 기억하고, 실제로 세계 여러 곳에 배포돼 있다고 말한다. 발표자는 이 과정을 "번거로움 없는 온보딩"이라 부른다. <span class="ts">14:00</span></p>
+      </section>
+
+      <!-- 10 -->
+      <section id="demo2">
+        <header><span class="num">10</span><h2>데모 2: 터미널의 Claude Code <span class="ts">14:10</span></h2></header>
+        <p>Mike에게는 앞의 Codex 에이전트가 계속 붙어 있다. 이번에는 터미널에서 Claude Code 세션을 열고 플랫폼에 붙인다.</p>
+        <ol class="plain">
+          <li>터미널의 Claude에게 "플랫폼에 연결해"라고 말한다. <span class="ts">14:50</span></li>
+          <li>이 세션이 신원과 에이전트 카드를 받는다. 네트워크상 어디에 있는지는 플랫폼이 감춘다. <span class="ts">15:00</span></li>
+          <li>Claude가 대화 공간을 만들고 그 공간의 주인 <span class="en">owner</span>이 된다.</li>
+          <li>Claude가 Codex 에이전트와 Mike를 초대한다.</li>
+          <li>에이전트들이 작은 웹사이트를 함께 만든다. 한쪽이 다른 쪽의 작업을 리뷰한다. <span class="ts">16:00</span></li>
+          <li>에이전트와 Mike가 막히면 Vlad도 같은 대화 공간에 불러 도움을 받을 수 있다.</li>
+        </ol>
+        <p>발표자는 플랫폼이 전 세계 단위라고 강조한다. 상대가 같은 사용자의 에이전트든 다른 사람의 에이전트든 상관없다는 뜻이다.</p>
+        <blockquote>이것도 루프 엔지니어링이다. 다만 에이전트끼리 서로 일을 시키게 하려고 거대한 스크립트를 따로 가져올 필요가 없다.<cite>발표자의 말을 옮김 <span class="ts">15:30</span></cite></blockquote>
+        <div class="shift" aria-label="루프 엔지니어링 방식의 변화">
+          <div><span class="tag">지금의 루프 엔지니어링</span><b>스크립트가 메시지를 옮긴다</b><span class="muted">스크립트를 받아 와서 실행한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자가 말하는 방식</span><b>에이전트가 대화 공간에서 직접 주고받는다</b><span class="muted">필요하면 사람도 같은 공간에 들어온다</span></div>
+        </div>
+        <p class="note">발표 끝에 부스(LG17)와 QR 코드 두 개를 안내했다. 하나는 에이전트를 플랫폼에 연결하는 용도, 하나는 스크립트 없는 루프 엔지니어링 용도다. 데모는 모두 녹화본이었고, 제품 주장은 직접 써 보고 판단해야 한다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>발표자는 AI가 사람 대신 일하며 <strong>AI끼리 대화하는 미래</strong>를 전제로 한다.</li>
+          <li>지금 멀티 에이전트 작업에서는 <strong>사람이나 스크립트가 메시지를 옮긴다.</strong> 앞이 적대적 에이전트, 뒤가 루프 엔지니어링이다.</li>
+          <li>에이전트를 나누는 이유는 <strong>단일 에이전트 병목</strong>이다. 확증 편향, 주의 분산, 맥락 조각남, 기억 저하가 있다.</li>
+          <li>메신저 연결은 <strong>5~11단계의 수동 설정</strong>이 들고, 결과는 에이전트와 나 한 사람의 대화뿐이다.</li>
+          <li><strong>MCP는 상태가 없고, A2A는 한 방향이다.</strong> 상대 찾기와 큐는 직접 만들어야 한다.</li>
+          <li>그걸 다 직접 만들면 멀티 에이전트 시스템이 아니라 <strong>배관</strong>을 만드는 셈이다.</li>
+          <li>에이전트 연결은 <strong>분산 시스템 문제</strong>다. 비결정적인 에이전트가 더해져 더 어렵다.</li>
+          <li>필요한 것은 다섯 가지다. <strong>안정적인 전송, 영속성과 복구, 런타임 ID 연결, 대화 단위의 추상화, 신원과 관측성.</strong></li>
+          <li>BAND는 레지스트리, <strong>양쪽 동의 연결</strong>, 대화 공간, 사람의 열람과 개입을 제공한다고 소개했다.</li>
+          <li>결론이 발표자 회사의 제품이다. <strong>문제 정리는 가져가고, 제품 주장은 직접 확인한다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>적대적 에이전트 방식에서 사람은 어떤 역할을 하나?</span></summary><div class="answer">세션 사이에서 메시지를 옮기는 라우터와 스위치 역할이다. 계획 세션의 결과를 리뷰 세션에 넘기는 식으로 손으로 나른다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>발표자가 보는 루프 엔지니어링의 본질은?</span></summary><div class="answer">적대적 에이전트와 같다. 메시지를 옮기는 일을 사람 대신 Python이나 TypeScript 스크립트가 할 뿐이다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>단일 에이전트 병목으로 든 네 가지는?</span></summary><div class="answer">확증 편향, 주의 분산, 맥락 조각남, 기억 저하. 발표자는 컨텍스트를 100만, 200만 토큰으로 늘려도 성능이 나아지지 않는다고 말한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>메신저 연결이 답이 아닌 이유 두 가지는?</span></summary><div class="answer">설정이 5~11단계의 수동 작업이라 번거롭다. 연결해도 에이전트와 사람 한 명만 이어지고, 메신저는 봇끼리 연결을 막는다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>MCP로 다른 에이전트를 도구처럼 부를 때의 한계는?</span></summary><div class="answer">상태가 없는 호출이다. 한 번 부른 에이전트에게 돌아가 "아까 어떻게 됐어?"라고 다시 물을 수 없다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>A2A로 두 에이전트가 서로 일을 주고받으려면 무엇이 필요한가?</span></summary><div class="answer">A2A는 기본이 한 방향 클라이언트-서버다. 양쪽 모두 클라이언트와 서버를 다 구현해야 한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>전송 계층에 필요한 세 가지와, 순서가 중요한 이유는?</span></summary><div class="answer">실시간, 순서 보장, 재전송. LLM은 메시지가 순서대로 온다고 가정하기 때문에 순서가 섞이면 안 된다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>영속성과 복구가 왜 필요한가?</span></summary><div class="answer">에이전트는 마이크로서비스라 파드가 죽을 수 있다. 상태를 저장해 두고 다시 불러오지 못하면 멀티 에이전트 시스템 전체가 멈춘다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>런타임 바인딩은 무엇을 맞추는 일인가?</span></summary><div class="answer">서로 다른 프레임워크의 에이전트가 쓰는 thread ID, session ID, execution ID, run ID를 서로 짝짓는 일이다. 그래야 한 팀으로 같은 목표를 향해 일한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>발표자가 말하는 관측성에서 메시지 기록만으로 부족한 이유는?</span></summary><div class="answer">메시지를 받은 에이전트가 그 뒤에 어떤 도구를 불렀는지도 봐야 하기 때문이다. 분산 시스템에서는 이걸 보여 주기가 매우 어렵다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>데모 1에서 다른 사용자의 에이전트와 연결할 때 거친 절차는?</span></summary><div class="answer">연락 요청을 보내고 양쪽이 동의한다. 동의해야 서로의 레지스트리에 들어간다. 연결 뒤에도 Vlad는 자기 에이전트의 대화를 전부 볼 수 있다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 데모 2를 "스크립트 없는 루프 엔지니어링"이라 부른 이유는?</span></summary><div class="answer">에이전트들이 대화 공간에서 직접 일을 주고받고 서로의 작업을 리뷰한다. 메시지를 옮기는 별도 스크립트가 필요 없다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 작업에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>지금 내가 에이전트 사이에서 메시지를 손으로 옮기는 곳을 적는다<span class="how">예: 계획 세션의 결과를 리뷰 세션에 붙여 넣기. 자동화할 후보 목록이 된다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트를 나누는 이유를 한 줄로 적는다<span class="how">확증 편향을 피하려는 것인지, 맥락이 길어져서인지 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>상대 에이전트에게 다시 물어볼 일이 있는지 확인한다<span class="how">있다면 상태 없는 도구 호출만으로는 부족하다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>에이전트를 잇는 구조를 다섯 가지로 점검한다<span class="how">전송(실시간·순서·재전송), 영속성과 복구, ID 연결, 대화 단위 관리, 신원과 관측성</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트 하나가 죽었을 때 대화를 이어 갈 수 있는지 시험한다<span class="how">확인: 프로세스를 끄고 다시 켰을 때 맥락이 돌아오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>다른 사람이나 다른 회사의 에이전트와 이을 때 양쪽 동의 절차를 둔다<span class="how">누가 언제 연결을 허락했는지 남긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>내 에이전트가 나눈 대화와 그 뒤의 도구 호출을 볼 수 있게 한다<span class="how">확인: 메시지 하나를 따라가면 어떤 도구가 불렸는지까지 보이는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트가 막혔을 때 사람을 부르는 경로를 만든다<span class="how">사람이 같은 대화에 들어와 바로 도울 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>에이전트 연결 플랫폼을 고르기 전에 직접 써 본다<span class="how">발표의 데모는 녹화본이었다. 제품 주장은 직접 확인한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>적대적 에이전트</td><td>Adversarial agents. 한 에이전트가 만들고 다른 에이전트가 따져 보게 해 서로 견제하는 방식</td></tr>
+              <tr><td>루프 엔지니어링</td><td>Loop engineering. 스크립트가 에이전트들에게 번갈아 프롬프트를 넣어 일을 이어 가게 하는 방식</td></tr>
+              <tr><td>stateful / stateless</td><td>앞의 대화를 기억하는가(stateful), 매번 새로 시작하는가(stateless)</td></tr>
+              <tr><td>단일 에이전트 병목</td><td>Single agent bottleneck. 세션 하나에 모든 일을 맡길 때 생기는 한계</td></tr>
+              <tr><td>멀티 에이전트 시스템</td><td>Multi-agent system. 에이전트 여럿이 일을 나눠 맡는 시스템</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 모델이 외부 도구와 데이터를 부르는 규약</td></tr>
+              <tr><td>ACP</td><td>발표에서 이름만 나온 에이전트 연결 규약. 어떤 ACP인지는 발표에서 밝히지 않았다</td></tr>
+              <tr><td>A2A</td><td>Agent2Agent. Google이 내놓은, 에이전트끼리 작업을 주고받는 규약</td></tr>
+              <tr><td>클라이언트-서버</td><td>요청하는 쪽(클라이언트)과 응답하는 쪽(서버)이 정해진 구조</td></tr>
+              <tr><td>디스커버리</td><td>Discovery. 연결할 상대를 찾는 기능</td></tr>
+              <tr><td>레지스트리</td><td>Registry. 연결할 수 있는 상대 에이전트의 목록</td></tr>
+              <tr><td>큐</td><td>Queue. 메시지를 쌓아 두고 순서대로 꺼내 쓰는 대기열</td></tr>
+              <tr><td>분산 시스템</td><td>여러 컴퓨터에 나뉘어 돌면서 네트워크로 협력하는 시스템</td></tr>
+              <tr><td>비결정적</td><td>Non-deterministic. 같은 입력에도 결과가 매번 달라질 수 있는 성질</td></tr>
+              <tr><td>전송 계층</td><td>Transport layer. 메시지를 실제로 실어 나르는 부분</td></tr>
+              <tr><td>영속성 / 하이드레이션</td><td>Persistence: 상태를 저장해 둔다. Hydration: 저장한 상태를 다시 불러와 이어서 실행한다</td></tr>
+              <tr><td>파드</td><td>Pod. 쿠버네티스에서 컨테이너가 실행되는 단위</td></tr>
+              <tr><td>런타임 바인딩</td><td>Runtime binding. 서로 다른 프레임워크의 실행 ID들을 한 대화에 짝지어 묶는 일</td></tr>
+              <tr><td>pub/sub</td><td>보내는 쪽이 토픽에 메시지를 올리고, 구독한 쪽이 받아 가는 방식</td></tr>
+              <tr><td>관측성</td><td>Observability. 시스템 안에서 무슨 일이 일어났는지 밖에서 볼 수 있는 정도</td></tr>
+              <tr><td>에이전트 카드</td><td>Agent card. 에이전트가 누구이고 무엇을 하는지 보여 주는 소개 정보</td></tr>
+              <tr><td>양쪽 동의</td><td>Bilateral consent. 연결하려면 두 쪽이 모두 허락해야 하는 방식</td></tr>
+              <tr><td>사람 개입</td><td>Human in the loop. 사람이 흐름 중간에 들어와 확인하거나 돕는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 네 가지 주제</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>주장: 미래는 AI끼리 대화한다</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>에이전트는 항상 켜진 자율적 존재</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>장면: 대화 공간, 레지스트리, 일 나누기</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>적대적 에이전트: 사람이 라우터</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>루프 엔지니어링: 스크립트가 라우터</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>단일 에이전트 병목</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>메신저 연결: 5~11단계</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>결과는 에이전트와 나 한 사람뿐</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>프로토콜: MCP, ACP, A2A</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>MCP는 상태 없음, A2A는 한 방향</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>타임아웃, 디스커버리, 큐</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>중간 정리: 세 가지 사실</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>분산 시스템 문제</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>전송: 실시간, 순서, 재전송</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>영속성과 복구</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>런타임 바인딩</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>더 높은 추상화: 대화, 참여자, 방</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>거버넌스: 신원과 관측성</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>BAND 소개</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>출시 제품: 전 세계 상호작용·협업 층</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>구성: 레지스트리, 영속성, 필터링</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>데모 설정: Vlad와 Mike</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>데모 1: Mike의 에이전트 등록</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>연락 요청과 양쪽 동의</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>실시간 대화와 사람의 열람</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>데모 2: 터미널의 Claude Code</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>신원, 에이전트 카드, 대화 공간 만들기</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>스크립트 없는 루프 엔지니어링</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>웹사이트 만들기, 막히면 사람 부르기</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>마무리, 부스 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'toq-jyGLZDk:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

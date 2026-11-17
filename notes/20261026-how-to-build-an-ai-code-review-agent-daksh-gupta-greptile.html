@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>코드 리뷰 에이전트 만들기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#who">발표자와 Greptile</a></li>
+      <li><a href="#baseline">5분이면 만드는 최소 구성</a></li>
+      <li><a href="#problems">처음 돌리면 생기는 다섯 문제</a></li>
+      <li><a href="#prompt">개선 1: 프롬프트</a></li>
+      <li><a href="#dataset">개선 2: 과거 PR 데이터셋</a></li>
+      <li><a href="#inversion">개선 3: 모델 뒤집기</a></li>
+      <li><a href="#context">개선 4: 코드베이스 맥락</a></li>
+      <li><a href="#intent">버그가 없어도 틀린 코드</a></li>
+      <li><a href="#testing">개선 5: 자율 테스트</a></li>
+      <li><a href="#cost">비용: 작업마다 다른 모델</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-26 · 18분 · 영어 발표 한글 정리</span>
+      <h1>AI 코드 리뷰 에이전트, 직접 만들면 어디서 막히나</h1>
+      <p class="lead">샌드박스에 에이전트를 넣고 PR 웹훅을 연결하면 리뷰 에이전트는 금방 만들어진다. 문제는 그다음이다. 버그를 놓치고, 맥락을 모르고, 비싸고, 잔소리가 많다. 발표자는 이 네 가지를 순서대로 줄이는 다섯 가지 개선을 설명한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=4UtrRVtUN_g" target="_blank" rel="noopener">How to Build an AI Code Review Agent</a></span>
+        <span>발표: Daksh Gupta (Greptile 공동 창업자)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 코드 리뷰 제품을 파는 회사의 창업자다. "직접 만들어 보라"는 조언이지만, 데이터셋 규모나 위키 같은 대목은 자사 제품의 강점을 설명하는 부분이기도 하다. 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>최소 구성은 간단하다.</strong> 샌드박스, 그 안의 코딩 에이전트, PR 웹훅, GitHub 리뷰 API. 이것만으로 5분 뒤 PR에 댓글이 달린다.</li>
+        <li>그런데 곧 <strong>버그를 놓치고, 맥락을 모르고, PR당 3~25달러가 들고, 잔소리 댓글이 쌓인다.</strong> 돌릴 때마다 새 버그가 나와 어디까지 믿을지도 모른다.</li>
+        <li><strong>프롬프트</strong>는 "우리 회사가 자주 내는 버그 종류"를 적고 "잔소리가 무엇인지"를 명시하는 방향으로 고친다.</li>
+        <li>프롬프트를 조금 바꿔도 결과가 크게 흔들리므로, <strong>과거 장애를 낸 PR을 모아 데이터셋</strong>으로 만들고 버전마다 잡는 비율을 잰다.</li>
+        <li><strong>코드를 쓴 모델과 다른 모델로 리뷰한다.</strong> 모델마다 잘 내는 버그가 다르고, 같은 모델은 같은 방식으로 놓친다. 발표자 데이터로는 잡는 비율이 10% 오른다.</li>
+        <li>grep만으로는 부족하다. <strong>코드베이스를 미리 색인한 지식 베이스</strong>와 문서, 티켓을 함께 준다. 버그가 없어도 의도와 다른 코드를 잡으려면 이게 필요하다.</li>
+        <li><strong>샌드박스에서 앱을 띄워 직접 눌러 본다.</strong> 코드만 읽어서는 아이폰에서 버튼이 가려지는지 알 수 없다.</li>
+        <li>비용은 <strong>작업별로 모델을 나눠</strong> 줄인다. Greptile은 토큰의 약 20%만 최상위 모델에 쓴다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="who">
+        <header><span class="num">01</span><h2>발표자와 Greptile <span class="ts">00:10</span></h2></header>
+        <p>Greptile은 코드베이스 전체 맥락을 가지고 PR을 리뷰하고 테스트하는 에이전트를 만든다. 발표자에 따르면 GitHub 전체 PR의 약 1%가 Greptile을 거친다. Nvidia의 CUDA 코드베이스부터 Coinbase의 지갑 코드베이스까지 종류가 다양하다.</p>
+        <p>가끔 요구가 너무 특수해서 직접 만드는 게 나은 회사를 만난다. 그럴 때 Greptile은 무료로 돕는다. 이 발표는 그 회사들에게 해 주는 조언을 그대로 옮긴 것이다.</p>
+        <h3>사람들이 Greptile에서 좋아하는 세 가지 <span class="ts">01:20</span></h3>
+        <ul class="plain">
+          <li><strong>코드베이스 맥락</strong>: 코드 검증 회사가 되기 전에는 큰 코드베이스를 언어 모델에게 이해시키는 회사였다. 그래서 색인을 잘한다.</li>
+          <li><strong>코드를 실제로 돌린다</strong>: 의존성을 다 갖춘 샌드박스에 앱을 띄우고, 화면을 눌러 보고, API를 두드린다.</li>
+          <li><strong>추론 예산을 효율적으로 나눈다</strong>: 리뷰의 하위 작업마다 맞는 모델과 예산을 고른다. 그래서 달러당 성능이 높다.</li>
+        </ul>
+        <p>이 발표는 두 종류의 청중을 위한 것이다. 직접 만들려는 사람, 그리고 리뷰 제품을 고를 때 "좋은 것"과 "아주 좋은 것"을 구분하고 싶은 사람이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="baseline">
+        <header><span class="num">02</span><h2>5분이면 만드는 최소 구성 <span class="ts">02:30</span></h2></header>
+        <p>상황은 이렇다. 플랫폼 팀이거나 팀의 AI 열성 멤버다. 엔지니어도, 마케팅 담당자도 바이브 코딩으로 코드를 쏟아낸다. 새 병목은 리뷰와 검증이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성 요소</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>샌드박스</td><td>파는 회사가 많다. Firecracker 같은 것을 직접 써도 된다</td></tr>
+              <tr><td>에이전트</td><td>Codex나 Claude Code. 발표자는 모델에 묶이지 않는 OpenCode나 Pi(추정) 같은 오픈소스 하네스를 권한다</td></tr>
+              <tr><td>입력</td><td>GitHub이나 GitLab의 PR 웹훅. PR이 열리면 내용을 에이전트에 보낸다</td></tr>
+              <tr><td>프롬프트</td><td>"이 PR을 리뷰하고 피드백을 보내라" 정도</td></tr>
+              <tr><td>출력</td><td>GitHub 리뷰 API로 댓글을 단다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>많은 사람이 이게 전부라고 생각한다. 실제로 PR을 열면 약 5분 뒤 피드백이 온다. 그런데 이걸 만드는 동안 이미 문제가 시작된다.</p>
+        <p class="note">모델에 묶이지 않는 하네스를 권하는 이유는 뒤의 "모델 뒤집기"에서 나온다. 코드를 쓴 모델과 다른 모델로 리뷰해야 하기 때문이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="problems">
+        <header><span class="num">03</span><h2>처음 돌리면 생기는 다섯 문제 <span class="ts">04:00</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1. 버그를 놓친다</span>
+            <p>버그는 끝이 없다. 발표자는 "버그는 프랙탈처럼 무한하다"는 트윗을 인용한다. 그런데 이 시스템의 존재 이유는 최소한 큰 장애만큼은 막는 것이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2. 맥락을 모른다</span>
+            <p>코드베이스가 어디로 가는지, 특정 부분이 어떻게 돌아가는지, 어떤 라이브러리를 어떻게 쓰는지 모른다. 마이크로서비스 시대를 지나 저장소가 수천 개라면 더 심하다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3. 비싸다</span>
+            <p>직접 만든 사람들은 PR 하나 리뷰에 3달러에서 25달러까지 쓴다. 토큰이 조용히, 빠르게 쌓인다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">4. 잔소리 댓글</span>
+            <p>기술적으로는 맞지만 지나치게 깐깐한 댓글이다. 두 가지가 망가진다. 사람은 "양치기 소년" 효과로 어느 댓글이 치명적인지 가려내기 힘들다. 그리고 코딩 에이전트가 그 댓글을 전부 반영해 지나치게 방어적인 코드가 된다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">5. 돌릴 때마다 새 버그</span>
+            <p>같은 PR에 다시 돌리면 또 새로운 걸 찾는다. 결과가 흔들리니 어디까지 믿을지 알 수 없다.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <span class="title">잔소리 댓글이 코드베이스를 망치는 경로 <span class="ts">05:20</span></span>
+          <span>리뷰 에이전트가 GitHub에 댓글을 남긴다. 코딩 에이전트가 그 댓글을 집어 처리한다. 코딩 에이전트는 가려서 받지 않는다. 결과는 세 겹 방어 코드와 과한 예외 처리다. 발표자는 코딩 에이전트가 이런 코드를 특히 잘 쓴다고 말한다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="prompt">
+        <header><span class="num">04</span><h2>개선 1: 프롬프트 <span class="ts">06:00</span></h2></header>
+        <p>가장 손쉬운 개선이다. 처음 프롬프트는 "이 PR을 리뷰하고 GitHub API 형식으로 댓글을 출력하라" 정도였다. 두 방향으로 고친다.</p>
+        <ol class="plain">
+          <li><strong>특정 버그 종류를 찾게 한다.</strong> 과거 장애와 사고를 분석해 우리 회사가 자주 내는 버그 종류를 목록으로 만든다. 프롬프트가 그 목록을 찾게 한다.</li>
+          <li><strong>잔소리가 무엇인지 명시하고 찾지 말라고 한다.</strong> "왜 세 겹 방어가 없냐", "예외 처리가 조금 엉성하다" 같은 것이다.</li>
+        </ol>
+        <h3>프롬프트를 바꾸면 생기는 무서운 일 <span class="ts">06:50</span></h3>
+        <p>프롬프트를 조금 바꿨는데 댓글 수가 크게 변한다. 이게 무서운 이유는 <strong>버그를 놓치고 있는지 알 수 없기</strong> 때문이다. 리뷰어는 버그가 있다는 건 말해 주지만, 없다는 건 말해 주지 못한다.</p>
+        <p>치명적인 버그는 아주 드물다. 발표자의 데이터로는 PR 천 건 중 한 건, 혹은 코드 천 줄 중 한 줄 정도다. 그래서 좋아 보이는 버전을 배포했는데 사실은 큰 버그를 놓치는 버전일 수 있고, 그 사실을 한참 뒤에야 알게 된다.</p>
+        <p class="note">발표자는 "PR 천 건 중 하나"와 "천 줄 중 하나"를 둘 다 말했다. 둘은 꽤 다른 수치다. 정확한 단위는 자막만으로 확정할 수 없다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="dataset">
+        <header><span class="num">05</span><h2>개선 2: 과거 PR 데이터셋 <span class="ts">07:40</span></h2></header>
+        <p>프롬프트를 자신 있게 고치려면 채점표가 필요하다. 장애와 사고를 잘 기록해 온 회사라면 쉽다. 과거에 장애를 낸 PR 목록이 이미 있다.</p>
+        <ol class="plain">
+          <li>장애를 낸 PR을 모아 목록으로 만든다.</li>
+          <li>리뷰 에이전트의 모든 버전을 그 목록에 돌린다.</li>
+          <li>버그를 잡는 비율을 버전마다 비교한다.</li>
+        </ol>
+        <h3>데이터셋은 계속 갱신해야 한다 <span class="ts">08:10</span></h3>
+        <p>버그의 종류와 모양은 시간이 지나면 바뀐다. 발표자에 따르면 버그의 80~90%는 과거 실수의 반복이지만, 코딩 에이전트가 좋아질수록 전에 없던 새로운 방식으로 실패한다. 그래서 실시간으로 갱신되는 데이터셋이 필요하다. 수백만 건의 PR이 없으면 버그 종류를 고르게 덮기 어렵다는 한계가 여기서 나온다.</p>
+        <p class="note">발표자는 이 대목에서 Greptile이 여러 회사의 PR을 모아 큰 데이터셋을 갖고 있어 내부 도구보다 유리하다고 말한다. 자사 제품의 강점을 설명하는 부분이다. 다만 "자기 회사 데이터만으로도 꽤 멀리 갈 수 있다"고 덧붙인다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="inversion">
+        <header><span class="num">06</span><h2>개선 3: 모델 뒤집기 <span class="ts">09:00</span></h2></header>
+        <p>발표자는 올해 초 AI Engineer 샌프란시스코에서 코딩 에이전트의 실패 방식을 발표했다. 그 연구에서 발견한 것은 <strong>Claude 모델과 Codex 모델이 내는 버그 종류가 꽤 다르다</strong>는 점이다. 발표자는 이를 후처리 학습 <span class="en">post-training</span>의 흔적으로 본다.</p>
+
+        <figure class="chart" aria-label="발표자가 인용한 모델별 버그 경향: Claude 모델은 off-by-one 오류를 GPT 모델보다 약 3배 자주 낸다">
+          <span class="chart-title">off-by-one 오류를 내는 빈도 (GPT 모델 = 1)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Claude 모델</span><span class="val">약 3배</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="Claude 모델: 약 3배"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>GPT 모델</span><span class="val">1</span></div>
+              <div class="track"><div class="fill" style="width:33.3%" title="GPT 모델: 1"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>3</span></div>
+          <span class="caption">반대로 GPT 모델은 인증 우회 <span class="en">auth bypass</span>를 Claude 모델보다 훨씬 자주 낸다고 발표자는 말한다. 이쪽은 수치가 없어 차트에 넣지 않았다.</span>
+        </figure>
+
+        <p>같은 모델로 쓰고 같은 모델로 리뷰하면 잡는 버그가 상대적으로 적다. 코드를 쓸 때 실패하는 방식 그대로 리뷰할 때도 실패하기 때문이다. 그래서 <strong>Claude Code로 쓴 코드는 GPT 모델이 리뷰하고, 그 반대도 마찬가지로 한다.</strong> 발표자 데이터로는 모델을 뒤집으면 잡는 비율이 10% 높다. 장애와 사고 기준으로 10%는 작은 숫자가 아니다.</p>
+
+        <h3>어떤 모델이 썼는지 알아내기 <span class="ts">09:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구분</th><th>방법</th></tr></thead>
+            <tbody>
+              <tr><td>쉬운 80%</td><td>코딩 에이전트가 남기는 지문을 본다. Codex는 브랜치 이름을 <code>codex/</code>로 시작한다. Claude는 PR 설명과 커밋 메시지에 <code>Co-authored-by: Claude</code>를 쓴다</td></tr>
+              <tr><td>어려운 20%</td><td>브랜치를 손으로 만들었거나 다른 에이전트를 썼을 때. 모델 특유의 흔적을 찾는 휴리스틱이 필요하다. 사내에서 누가 어떤 에이전트를 쓰는지 기록한 목록이나 개발 장비의 텔레메트리가 도움이 된다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="context">
+        <header><span class="num">07</span><h2>개선 4: 코드베이스 맥락 <span class="ts">11:00</span></h2></header>
+        <p>발표자가 가장 아끼는 주제다. 요즘은 grep이 코드베이스 맥락 문제를 사실상 해결했다고들 보지만, 발표자는 두 가지 이유로 동의하지 않는다.</p>
+        <ul class="plain">
+          <li><strong>grep은 부정확하다.</strong> 필요한 곳을 콕 집지 못하고 파일을 대량으로 읽는다.</li>
+          <li><strong>grep은 비싸다.</strong> 코딩 에이전트의 실행 기록을 보면 토큰 대부분이 grep, 파일 읽기, 파일 내용 캐시 쓰기다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">발표자의 과장 섞인 계산 <span class="ts">11:20</span></span>
+          <span>작년 GDP 성장의 한 자릿수 퍼센트포인트가 추론 비용이었고, 그 추론의 큰 몫이 코딩 에이전트였으며, 코딩 에이전트 토큰의 대부분이 grep과 파일 읽기다. 그러니 GDP 성장의 무시 못 할 부분이 grep이라는 것이다. 발표자는 토큰 단위로 돈을 받는 회사에게는 토큰을 더 태울 유인이 있을지도 모른다고 덧붙인다. 수치의 출처는 밝히지 않았다.</span>
+        </div>
+        <h3>Greptile의 방법: 미리 색인한 지식 베이스 <span class="ts">11:50</span></h3>
+        <p>코드베이스 전체를 훑어 부분마다 목록을 만들고 색인한다. "이건 인증이다. 이렇게 동작한다. 흐름은 이렇다. 흐름 다이어그램은 이것이다. 관련 파일은 이것들이다." 이런 식이다.</p>
+        <p>맥락이 필요한 대표 예가 인증 우회다. 코드의 그 부분이 인증된 환경 안인지 밖인지를 구체적으로 알아야 우회가 일어났는지 판단할 수 있다. diff만 봐서는 알 수 없다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="intent">
+        <header><span class="num">08</span><h2>버그가 없어도 틀린 코드 <span class="ts">12:30</span></h2></header>
+        <p>지금까지는 버그 중심이었지만, 버그가 없어도 코드는 나쁠 수 있다. 품질이 형편없거나, <strong>작성자가 말한 의도를 채우지 못하는</strong> 경우다.</p>
+        <p>발표자는 "사람들이 점점 Slack을 IDE로 쓴다"는 글을 봤다. Slack 메시지에는 의도가 한두 문장뿐이라 지시가 모호하다. 그러면 코딩 에이전트가 지시를 잘못 읽거나, 모호해서 무엇을 할지 몰랐을 수 있다. <strong>맞게 돌아가는 코드도 여전히 틀릴 수 있다.</strong></p>
+        <h3>가장 효과가 큰 맥락 두 가지 <span class="ts">13:10</span></h3>
+        <ul class="plain">
+          <li><strong>문서와 티켓</strong>: Jira, Linear 같은 티켓 도구와 Confluence, Notion 같은 문서 도구에 접근하게 하면 놀랄 만큼 멀리 간다.</li>
+          <li><strong>코드베이스</strong>: 앞서 말한 색인기나 지식 베이스에서 온다.</li>
+        </ul>
+        <p>사람이 좋은 코드를 쓰는 데는 무의식적으로 쓰는 부족 지식 <span class="en">tribal knowledge</span>이 많이 들어간다. 에이전트에게 같은 일을 시키면 "뭘 모르는지 모르는" 느낌이 드는데, 그건 자신이 가진 지식의 깊이를 과소평가하기 때문이다.</p>
+        <div class="callout">
+          <span class="title">Greptile의 방법: 살아 있는 위키 <span class="ts">13:50</span></span>
+          <span>여러 맥락 출처를 하나의 위키로 모은다. 회사가 어떻게 돌아가는지에 대한 세계 모델 같은 것이다. 코드베이스, 프로덕션 텔레메트리와 로그, 문서와 티켓에서 읽은 로드맵이 들어간다. 이 위키로 에이전트가 맥락을 갖게 하고, 코드 검색도 정확하게 만든다. 필요 없는 파일은 읽지 않게 된다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="testing">
+        <header><span class="num">09</span><h2>개선 5: 자율 테스트 <span class="ts">14:20</span></h2></header>
+        <p>UI 변경을 예로 들면, React 코드를 읽고 문제없다고 결론 내릴 수 있다. 그런데 실제로 그려 보면 아이폰에서 가려져 있을 수 있다. 기술적으로 가장 어려운 문제 중 하나다.</p>
+        <p>Greptile은 완전히 설정 가능한 가상 머신인 의존성 풍부한 샌드박스를 만들고, 고객과 함께 그 안에 고객의 스택을 띄운다. 그다음 에이전트가 컴퓨터 비전으로 끝에서 끝까지 테스트한다. 발표자는 새 세대 GPT와 Opus 모델에서 컴퓨터 비전이 크게 좋아져 <strong>끝단 QA가 거의 풀렸다</strong>고 본다.</p>
+        <h3>직접 하려면 필요한 세 가지 <span class="ts">15:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>필요한 것</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td>개발 박스</td><td>PR 브랜치의 의존성까지 갖춘 상태로 앱을 돌릴 수 있는 환경</td></tr>
+              <tr><td>단순한 빌드 스크립트</td><td>에이전트가 스택을 혼자 띄울 수 있을 만큼 단순해야 한다. 발표자는 이 부분이 가장 까다로워 전담 엔지니어가 고객을 돕는다고 말한다</td></tr>
+              <tr><td>흐름 지도</td><td>"이건 인증 코드, 이건 가입 흐름" 식으로 앱의 모든 흐름을 문서화한 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이게 갖춰지면 에이전트가 코드를 끝에서 끝까지 테스트하고, 비전 모델로 "이 버튼이 코드상으로는 있는데 아이폰에서는 가려진다"거나 "첫 화면에 안 들어온다" 같은 것을 잡는다. 좋은 개발 박스가 이미 있다면 축하한다. 발표자 표현으로는 "Stripe에 다니시는군요"다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="cost">
+        <header><span class="num">10</span><h2>비용: 작업마다 다른 모델 <span class="ts">16:00</span></h2></header>
+        <p>여기까지 해도 비용은 여전히 높다. PR 하나에 3달러에서 15~20달러다. 이제 풀 문제는 <strong>어떤 일에 싼 모델을 써도 되는가</strong>다. 발표자가 보기에 최상위 모델이 오픈소스 모델보다 여전히 유능하지만 격차는 좁아지고 있다.</p>
+
+        <figure class="chart" aria-label="Greptile의 토큰 배분: 최상위 모델 약 20%, 작은 모델들 약 80%">
+          <span class="chart-title">Greptile의 토큰 배분 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>최상위 모델 · 가장 중요한 작업</span><span class="val">약 20</span></div>
+              <div class="track"><div class="fill key" style="width:20%" title="최상위 모델: 약 20%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>작은 모델들 · 탐색, 파일 읽기 등 긴 꼬리</span><span class="val">약 80</span></div>
+              <div class="track"><div class="fill" style="width:80%" title="작은 모델들: 약 80%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자가 "약 20%가 최상위 모델"이라고 말한 것을 바탕으로 나머지를 80으로 그렸다.</span>
+        </figure>
+
+        <h3>예시 배분 <span class="ts">16:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>작업</th><th>모델</th></tr></thead>
+            <tbody>
+              <tr><td>맥락 찾기</td><td>작은 모델</td></tr>
+              <tr><td>사용자 흐름 테스트</td><td>아주 가벼운 컴퓨터 사용 모델</td></tr>
+              <tr><td>버그 분석, 리뷰 절차 적용, 최종 제출</td><td>최상위 모델</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>실제로 Greptile은 하위 작업이 20개이고 각각에 맞는 모델 조합이 따로 있다. 작은 연구팀이 어떤 작업에 어떤 모델을 쓸지 계속 조정한다. 하지만 <strong>단순한 작업을 단순한 모델로 바꾸는 것만으로 70~80%까지는 간다.</strong></p>
+        <div class="callout warn">
+          <span class="title">데이터셋 없이 모델을 바꾸면 <span class="ts">17:10</span></span>
+          <span>좋은 데이터셋이 없으면 여러 하위 에이전트를 작고 빠른 모델로 신나게 바꾸고는, 버그를 잡는 능력이 꽤 떨어졌다는 걸 모를 수 있다. 장애가 나서 놓친 걸 알게 될 때까지 모른다. 개선 2의 데이터셋이 여기서 다시 필요하다.</span>
+        </div>
+        <h3>캐시에 무엇을 넣을지 고르는 싼 모델 <span class="ts">17:30</span></h3>
+        <p>과도한 파일 읽기도 싼 모델로 줄일 수 있다. 싼 모델이 모든 맥락 조각을 훑고 실제로 포함할 것만 고른다. 발표자는 이론상 결정 모델이나 재순위 <span class="en">re-ranking</span> API로 이걸 할 수 있다고 말한다. 최상위 모델의 캐시가 가장 비싸고 가장 귀한 자원이기 때문이다.</p>
+        <p class="note">발표자가 이 대목에서 언급한 구체적 제품명은 자막이 불명확해 적지 않았다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="conclusion">
+        <header><span class="num">11</span><h2>결론 <span class="ts">17:50</span></h2></header>
+        <p>이 다섯 가지를 다 하면 직접 만든 리뷰 에이전트로도 꽤 멀리 갈 수 있다. 발표자는 만들게 되면 알려 달라고 하고, 만들지 않기로 하면 Greptile을 쓰라고 농담으로 마무리한다. "이것들에 비하면 공짜"라는 표현이다.</p>
+        <div class="shift" aria-label="최소 구성에서 완성형으로">
+          <div><span class="tag">최소 구성</span><b>PR 내용을 넣고 댓글을 받는다</b><span class="muted">샌드박스 + 에이전트 + 웹훅 + "리뷰해라"</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">완성형</span><b>측정하고, 뒤집고, 맥락을 주고, 돌려 보고, 나눈다</b><span class="muted">버그 목록 프롬프트, 장애 PR 데이터셋, 다른 모델로 리뷰, 지식 베이스와 문서, 샌드박스 테스트, 작업별 모델</span></div>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>최소 구성은 샌드박스, 에이전트, PR 웹훅, GitHub 리뷰 API다. 5분 뒤 댓글이 달리지만 그게 끝이 아니다.</li>
+          <li>처음 생기는 문제는 다섯 가지다. 버그 누락, 맥락 부족, PR당 3~25달러, 잔소리 댓글, 돌릴 때마다 다른 결과.</li>
+          <li>잔소리 댓글은 사람을 지치게 할 뿐 아니라, 코딩 에이전트가 전부 반영해 <strong>지나치게 방어적인 코드</strong>를 만든다.</li>
+          <li>프롬프트는 <strong>우리 회사가 자주 내는 버그 종류</strong>를 찾게 하고, <strong>잔소리의 정의</strong>를 명시해 피하게 한다.</li>
+          <li>리뷰어는 버그가 있다는 건 알려 주지만 없다는 건 알려 주지 못한다. 치명적 버그는 천 건 중 하나 수준으로 드물어 놓쳐도 한참 모른다.</li>
+          <li><strong>장애를 낸 과거 PR 데이터셋</strong>으로 버전마다 잡는 비율을 잰다. 버그 종류는 바뀌므로 계속 갱신한다.</li>
+          <li>모델마다 잘 내는 버그가 다르다. <strong>쓴 모델과 다른 모델로 리뷰하면</strong> 잡는 비율이 10% 오른다. 브랜치 이름과 커밋 메시지의 지문으로 80%는 구분된다.</li>
+          <li>grep은 부정확하고 비싸다. <strong>미리 색인한 지식 베이스</strong>와 문서, 티켓을 주면 인증 우회 같은 맥락 의존 버그와 의도 불일치를 잡을 수 있다.</li>
+          <li>코드만 읽어서는 UI 문제를 모른다. <strong>샌드박스에 앱을 띄우고 비전 모델로 눌러 본다.</strong> 개발 박스, 단순한 빌드 스크립트, 흐름 지도가 필요하다.</li>
+          <li>비용은 <strong>작업별로 모델을 나눠</strong> 줄인다. 최상위 모델은 약 20%만 쓴다. 단, 데이터셋 없이 바꾸면 성능 저하를 모른다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>리뷰 에이전트의 최소 구성 네 가지는?</span></summary><div class="answer">샌드박스, 그 안의 코딩 에이전트(또는 모델 독립 하네스), PR 웹훅, GitHub 리뷰 API로 댓글 달기.</div></details>
+          <details><summary><span class="qn">Q2</span><span>잔소리 댓글이 망치는 두 가지는?</span></summary><div class="answer">사람이 치명적 지적과 사소한 지적을 가려내기 힘들어진다. 그리고 코딩 에이전트가 댓글을 전부 반영해 지나치게 방어적인 코드가 된다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>프롬프트를 고치는 두 방향은?</span></summary><div class="answer">과거 장애를 분석해 만든 버그 종류 목록을 찾게 하고, 잔소리가 무엇인지 명시해 찾지 말라고 한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>프롬프트를 조금 바꿨더니 댓글 수가 크게 변했다. 왜 무서운가?</span></summary><div class="answer">버그를 놓치고 있는지 알 수 없기 때문이다. 리뷰어는 버그의 존재는 알려 주지만 부재는 알려 주지 못한다. 치명적 버그는 드물어서 놓친 걸 한참 뒤에야 안다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>과거 PR 데이터셋은 어떻게 만들고 왜 계속 갱신하나?</span></summary><div class="answer">장애를 낸 PR을 모아 모든 버전의 에이전트를 돌려 잡는 비율을 잰다. 버그의 80~90%는 반복이지만 에이전트가 좋아질수록 새로운 방식으로 실패하므로 갱신해야 한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Claude 모델과 GPT 모델이 자주 내는 버그는 각각 무엇인가?</span></summary><div class="answer">발표자 데이터로 Claude 모델은 off-by-one 오류를 약 3배 자주 내고, GPT 모델은 인증 우회를 훨씬 자주 낸다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>모델 뒤집기란 무엇이고 효과는?</span></summary><div class="answer">코드를 쓴 모델과 다른 모델로 리뷰하는 것. 같은 모델은 같은 방식으로 놓치기 때문이다. 발표자 데이터로 잡는 비율이 10% 오른다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>어떤 코딩 에이전트가 썼는지 알아내는 지문 두 가지는?</span></summary><div class="answer">Codex는 브랜치 이름이 codex/로 시작한다. Claude는 PR 설명과 커밋 메시지에 Co-authored-by: Claude를 남긴다. 약 80%는 이걸로 구분된다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>발표자가 grep만으로는 부족하다고 보는 두 이유는?</span></summary><div class="answer">부정확해서 파일을 대량으로 읽고, 그래서 토큰이 많이 들어 비싸다. 코딩 에이전트 토큰 대부분이 grep, 파일 읽기, 캐시 쓰기다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>인증 우회를 잡으려면 왜 코드베이스 맥락이 필요한가?</span></summary><div class="answer">그 코드가 인증된 환경 안에 있는지 밖에 있는지를 알아야 우회가 일어났는지 판단할 수 있다. diff만으로는 모른다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>버그가 없어도 코드가 틀릴 수 있는 이유와, 이를 막는 맥락 두 가지는?</span></summary><div class="answer">Slack 메시지처럼 짧은 지시는 모호해서 에이전트가 의도를 잘못 읽을 수 있다. 문서와 티켓(Jira, Linear, Confluence, Notion), 그리고 코드베이스 지식 베이스를 준다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>자율 테스트를 직접 하려면 필요한 세 가지는?</span></summary><div class="answer">PR 브랜치 의존성까지 갖춘 개발 박스, 에이전트가 혼자 띄울 수 있는 단순한 빌드 스크립트, 앱의 모든 흐름을 적은 흐름 지도.</div></details>
+          <details><summary><span class="qn">Q13</span><span>비용을 줄이는 방법과 그때의 함정은?</span></summary><div class="answer">하위 작업마다 다른 모델을 쓴다. 최상위 모델은 약 20%만. 함정은 데이터셋 없이 바꾸면 버그 잡는 능력이 떨어진 걸 장애가 날 때까지 모른다는 것이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>최소 구성을 하루 안에 띄운다<span class="how">샌드박스, 모델 독립 하네스, PR 웹훅, 리뷰 API. 완성이 아니라 출발점이다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>과거 장애와 사고에서 우리 팀의 버그 종류 목록을 뽑는다<span class="how">프롬프트가 이 목록을 찾게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>"잔소리"의 정의를 프롬프트에 적는다<span class="how">확인: 스타일 지적과 방어 코드 요구가 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>장애를 낸 PR을 모아 데이터셋을 만들고 버전마다 잡는 비율을 잰다<span class="how">프롬프트나 모델을 바꿀 때마다 돌린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>코드를 쓴 모델과 다른 모델로 리뷰한다<span class="how">브랜치 이름과 Co-authored-by로 쓴 모델을 구분한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>리뷰 에이전트에 티켓과 문서 접근을 준다<span class="how">Jira, Linear, Confluence, Notion. 의도와 다른 코드를 잡기 위해서다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>코드베이스의 주요 영역(인증 등)을 흐름과 관련 파일로 미리 정리한다<span class="how">grep 대신 쓸 지식 베이스의 시작점</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트가 혼자 돌릴 수 있는 빌드 스크립트와 흐름 지도를 만든다<span class="how">확인: 샌드박스에서 PR 브랜치가 뜨는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>하위 작업을 나누고 단순한 작업부터 싼 모델로 바꾼다<span class="how">바꿀 때마다 데이터셋으로 잡는 비율을 확인한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>PR</td><td>Pull Request. 코드 변경을 합쳐 달라고 올리는 요청. 리뷰의 단위</td></tr>
+              <tr><td>샌드박스</td><td>격리된 실행 환경. 에이전트가 코드를 돌려도 바깥에 영향이 없다</td></tr>
+              <tr><td>Firecracker</td><td>가벼운 가상 머신을 띄우는 오픈소스 기술. 샌드박스를 직접 만들 때 쓴다</td></tr>
+              <tr><td>하네스</td><td>모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀. 발표자는 모델을 바꿔 끼울 수 있는 오픈소스 하네스를 권한다</td></tr>
+              <tr><td>웹훅</td><td>Webhook. 어떤 일이 생기면 정해진 주소로 자동 통보하는 방식. 여기서는 PR이 열릴 때</td></tr>
+              <tr><td>바이브 코딩</td><td>Vibe coding. 코드를 직접 읽지 않고 AI에게 말로 시켜 만드는 방식</td></tr>
+              <tr><td>잔소리 댓글</td><td>Nitpick. 기술적으로는 맞지만 지나치게 깐깐한 리뷰 지적</td></tr>
+              <tr><td>반사실</td><td>Counterfactual. "이렇게 안 했으면 어땠을까". 놓친 버그는 반사실이라 알 수 없다</td></tr>
+              <tr><td>후처리 학습</td><td>Post-training. 기본 모델을 만든 뒤 추가로 가르치는 단계. 모델마다 버그 성향이 다른 원인으로 발표자가 지목</td></tr>
+              <tr><td>off-by-one 오류</td><td>경계를 하나 틀리는 버그. 반복 횟수나 인덱스가 하나 많거나 적다</td></tr>
+              <tr><td>인증 우회</td><td>Auth bypass. 로그인이나 권한 확인을 거치지 않고 보호된 기능에 닿는 버그</td></tr>
+              <tr><td>모델 뒤집기</td><td>Model inversion. 코드를 쓴 모델과 다른 모델로 리뷰하는 것</td></tr>
+              <tr><td>RAG</td><td>필요한 문서를 먼저 찾아 모델에게 함께 주는 방식. 큰 코드베이스에 쓰기 어렵다고 발표자가 말함</td></tr>
+              <tr><td>부족 지식</td><td>Tribal knowledge. 문서에 없고 팀원 머릿속에만 있는 지식</td></tr>
+              <tr><td>컴퓨터 사용 모델</td><td>Computer use. 화면을 보고 클릭과 입력으로 앱을 조작하는 모델</td></tr>
+              <tr><td>개발 박스</td><td>Dev box. 앱을 실제로 돌려 볼 수 있게 갖춰진 개발 환경</td></tr>
+              <tr><td>흐름 지도</td><td>Flow map. 앱의 사용자 흐름(가입, 로그인 등)과 관련 코드를 적은 문서</td></tr>
+              <tr><td>최상위 모델</td><td>Frontier model. 현재 가장 성능이 높은 상용 모델</td></tr>
+              <tr><td>재순위</td><td>Re-ranking. 후보 여러 개를 중요도 순으로 다시 정렬하는 것. 맥락 선별에 쓴다</td></tr>
+              <tr><td>캐시</td><td>자주 쓰는 내용을 미리 담아 두는 저장소. 최상위 모델의 캐시는 비싸고 귀한 자원</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자와 Greptile 소개</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>직접 만드는 회사를 무료로 돕는 이유</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>Greptile의 세 강점: 맥락, 실행, 추론 배분</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>상황 설정: 리뷰 병목</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>최소 구성: 샌드박스, 에이전트, 웹훅, 리뷰 API</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>문제 1~2: 버그 누락, 맥락 부족</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>문제 3: PR당 3~25달러</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>문제 4: 잔소리 댓글과 방어적 코드</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>문제 5: 돌릴 때마다 새 버그</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>개선 1: 버그 종류 목록, 잔소리 정의</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>프롬프트 변경의 불안정성, 버그 부재는 알 수 없다</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>개선 2: 장애 PR 데이터셋</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>버그 종류는 바뀐다, 실시간 갱신</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>개선 3: 모델별 버그 성향</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>쓴 모델 알아내기: 지문 80%, 휴리스틱 20%</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>모델 뒤집기 효과 10%</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>개선 4: grep의 한계</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>지식 베이스 색인, 인증 우회 예</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>버그 없이도 틀린 코드, Slack을 IDE로</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>문서와 티켓, 부족 지식</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>살아 있는 위키</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>개선 5: 자율 테스트, 아이폰에서 가려진 버튼</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>흐름 문서와 빌드 스크립트, 개발 박스</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>비용: 최상위 모델 20%</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>작업별 모델 배분 예시, 하위 작업 20개</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>데이터셋 없이 모델을 바꾸는 위험</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>싼 모델로 맥락 선별</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '4UtrRVtUN_g:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

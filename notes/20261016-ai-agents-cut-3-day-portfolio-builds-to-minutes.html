@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>아폴로 AI 에이전트 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#who">두 사람, 두 회사</a></li>
+      <li><a href="#data">문제는 흩어진 데이터</a></li>
+      <li><a href="#portfolio">사례 1: 포트폴리오 구성</a></li>
+      <li><a href="#recap-report">사례 2: 주간 매매 정리</a></li>
+      <li><a href="#trust">왜 ChatGPT에 바로 넣지 않나</a></li>
+      <li><a href="#culture">플랫폼이지 점 해법이 아니다</a></li>
+      <li><a href="#early">금융은 아직 초반</a></li>
+      <li><a href="#edge">도구인가 경쟁 우위인가</a></li>
+      <li><a href="#future">앞으로 바라는 것</a></li>
+      <li><a href="#advice">조언: 현장에 앉아라</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-16 · 19분 · 영어 대담 한글 정리</span>
+      <h1>3일 걸리던 포트폴리오를 몇 분에</h1>
+      <p class="lead">아폴로의 CLO 운용사가 AI 에이전트로 데이터 정리 일을 넘겼다. 비결은 더 좋은 모델이 아니라 "어느 데이터가 진짜인지"를 현장에 앉아 함께 정한 것이다. 금융 현장에서 AI가 참고용을 넘어 거래 판단에 쓰이려면 무엇이 필요한지 운영 책임자가 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=BOWYujhIQuo" target="_blank" rel="noopener">AI Agents Cut 3-Day Portfolio Builds to Minutes</a></span>
+        <span>대담: Jack McDonald (Apollo 프린시펄, Redding Ridge COO) · Michael Manapat (Rowspace 공동 창업자)</span>
+      </div>
+      <p class="note">영어 대담의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 회사 이름이 여러 가지로 뭉개져 나오는데, 영상 제목에 따라 Rowspace로 통일했다. "Reddington Ridge"로 들리는 회사는 Apollo의 CLO 운용사 Redding Ridge로 적었다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>Redding Ridge는 Apollo 산하의 <strong>구조화 신용·CLO 운용사</strong>다. 운용 자산은 약 500억 달러이고, 매일 수천 개의 데이터가 여러 시스템과 문서에 흩어져 들어온다.</li>
+        <li>Rowspace의 에이전트는 이 데이터를 모으고 맞춰 보는 <strong>데이터 엔지니어링 일</strong>을 대신한다. 사람은 그 결과를 검토하고 판단한다.</li>
+        <li><strong>사례 1</strong>: 200~400개 대출로 모의 포트폴리오를 짜는 데 PM이 엑셀로 2~3일 걸렸다. 지금은 몇 분이면 80~90% 완성본이 나오고, PM은 마지막 10%를 다듬는다.</li>
+        <li><strong>사례 2</strong>: 주간 매매 정리 보고서를 2~3명이 여러 시간 들여 만들었다. 지금은 1분 만에 자동으로 나오고, 팀은 매일 검수만 한다.</li>
+        <li>ChatGPT나 Claude에 바로 넣지 않는 이유는 <strong>일반 지식만 있고 우리 데이터가 없기 때문</strong>이다. 한 데이터가 20곳에서 오면 그중 맞는 건 하나뿐이고, 그걸 아는 건 현장 팀이다.</li>
+        <li>신뢰는 <strong>공급사가 매일 현장에 앉아</strong> 계산식과 정답 출처를 함께 정하고, 내부 팀이 검증한 데서 나왔다.</li>
+        <li>금융권 전체로 보면 AI 활용은 아직 초반이다. 제대로 쓰면 <strong>정확한 정보를 빨리 쥐는 쪽이 경쟁 우위</strong>를 갖는다.</li>
+        <li>조언 하나: 이상해 보이는 절차도 이유가 있다. <strong>그 팀 옆에 앉아 흐름을 배우는 시간</strong>이 성공을 갈랐다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="who">
+        <header><span class="num">01</span><h2>두 사람, 두 회사 <span class="ts">00:10</span></h2></header>
+        <p>이 영상은 공급사와 고객이 함께 나온 대담이다. 질문하는 쪽이 공급사이고, 답하는 쪽이 고객이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Michael Manapat · Rowspace</span>
+            <p>Rowspace 공동 창업자. Rowspace는 금융사의 지저분하고 흩어진 데이터를 AI 에이전트로 정리하는 회사다. 여러 시스템의 데이터를 끌어와 맞춰 보는 데이터 엔지니어링 일을 에이전트가 대신한다.</p>
+            <p class="verdict"><b>역할</b>: 진행자. Apollo 쪽에 질문을 던진다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Jack McDonald · Apollo / Redding Ridge</span>
+            <p>Apollo 프린시펄이자 Redding Ridge 최고운영책임자<span class="en">COO</span>. Redding Ridge는 Apollo 산하에 있지만 별도 법인으로 운영되는 구조화 신용·CLO 운용사다. 운용 자산은 약 500억 달러다. 2020년부터 Apollo에서 금융기관 그룹, 자산유동화 그룹을 거쳤다.</p>
+            <p class="verdict"><b>역할</b>: 답변자. 현장 경험을 말한다.</p>
+          </div>
+        </div>
+        <p class="note">Michael Manapat은 Rowspace 창업자이고 Jack McDonald는 그 고객이다. 이 대담은 사실상 고객 사례 발표다. 제품에 유리한 이야기 위주로 나올 수 있다는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="data">
+        <header><span class="num">02</span><h2>문제는 흩어진 데이터 <span class="ts">02:00</span></h2></header>
+        <p>Jack McDonald가 말하는 업무의 어려움은 계산이 어렵다는 게 아니다. 데이터가 너무 많고, 너무 흩어져 있고, 어느 것이 맞는지 가려내기 어렵다는 것이다.</p>
+        <ul class="plain">
+          <li>여러 펀드와 투자 건을 운용하면서 <strong>매일 수천 개의 데이터</strong>가 들어온다.</li>
+          <li>한 대출 풀에 <strong>약 1,000개 차주</strong>가 들어 있고, 이런 풀을 여러 사업부에 걸쳐 매일 평가하고 투자한다.</li>
+          <li>CLO 운용은 매매가 잦고 브로드리 신디케이티드 론<span class="en">broadly syndicated loan</span> 시장에서 거래된다. 정보를 바로 손에 쥐고 있어야 한다.</li>
+          <li>이 정보는 공개 주식이나 공개 채권처럼 시장에 널리 퍼져 있지 않다. <strong>사모 시장</strong>이라 여러 문서에 조각나 있다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">Rowspace에 기대한 것</span>
+          <span>팀 옆에 앉아 실제 계산식을 배우고, 무엇이 정답 출처<span class="en">golden source of truth</span>인지 함께 정한 뒤, AI 엔진이 그 기준을 익혀 반복하게 만드는 것. 목표는 데이터를 정확하고 일관되게, 쓸 수 있는 형태로 만드는 것이다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="portfolio">
+        <header><span class="num">03</span><h2>사례 1: 포트폴리오 구성 <span class="ts">04:00</span></h2></header>
+        <p>CLO는 규칙이 아주 많은 상품이다. 돈이 어디로 어떤 순서로 흘러가는지 정한 워터폴<span class="en">waterfall</span>이 있고, 그 규칙은 인덴처<span class="en">indenture</span>와 여러 법률 문서 깊숙이 적혀 있다.</p>
+        <p>포트폴리오 매니저<span class="en">PM</span>는 그 문서를 읽고 엑셀 모델을 만든 뒤, <strong>200~400개 대출</strong>로 모의 포트폴리오를 짠다. Rowspace를 쓰기 전에는 이 일에 2~3일이 걸렸다. 지금은 실시간 데이터를 끌어와 몇 분 만에 만든다.</p>
+
+        <figure class="chart" aria-label="포트폴리오 하나를 짜는 데 드는 시간 비교: 이전 2~3일, 지금 몇 분">
+          <span class="chart-title">모의 포트폴리오 하나를 짜는 시간 (분 단위 환산)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>이전 · 엑셀 수작업 (3일일 때)</span><span class="val">1,440분</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="3일 = 1,440분 (하루 8시간 기준)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>이전 · 엑셀 수작업 (2일일 때)</span><span class="val">960분</span></div>
+              <div class="track"><div class="fill" style="width:66.7%" title="2일 = 960분 (하루 8시간 기준)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>지금 · 에이전트</span><span class="val">몇 분</span></div>
+              <div class="track"><div class="fill key" style="width:0.7%" title="몇 분 (약 10분으로 그림)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>720</span><span>1,440</span></div>
+          <span class="caption">발표자는 "2~3일"과 "몇 분"이라고만 말했다. 하루를 근무 8시간으로 놓고 환산했고, "몇 분"은 10분으로 그렸다. 환산은 이 노트가 한 것이다.</span>
+        </figure>
+
+        <div class="shift" aria-label="PM 역할의 이동">
+          <div><span class="tag">이전</span><b>처음부터 끝까지 PM이 만든다</b><span class="muted">문서 읽기, 엑셀 모델, 종목 고르기를 모두 손으로</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">지금</span><b>80~90%는 에이전트, 마지막 10%는 PM</b><span class="muted">PM은 자기 판단으로 다듬어 "자기 포트폴리오"로 만든다</span></div>
+        </div>
+        <p>이 일을 하려면 문서 보관소, 거래·컴플라이언스 시스템, 실시간 가격 같은 여러 출처를 한꺼번에 끌어와야 한다. Jack McDonald는 이것을 가장 손에 잡히는 성과로 꼽았다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="recap-report">
+        <header><span class="num">04</span><h2>사례 2: 주간 매매 정리 <span class="ts">05:30</span></h2></header>
+        <p>Redding Ridge는 은행 대출로 자금을 마련해 채권 시장에서 대출 자산을 사들이는 웨어하우스<span class="en">warehouse</span> 방식으로 움직인다. 그래서 이번 주에 무엇을 사고 팔았는지 정리하는 보고서가 매주 필요했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>이전</th><th>지금</th></tr></thead>
+            <tbody>
+              <tr><td>만드는 사람</td><td>전담 팀원 2~3명</td><td>에이전트가 자동 생성</td></tr>
+              <tr><td>걸리는 시간</td><td>한 주에 여러 시간</td><td>약 1분</td></tr>
+              <tr><td>방법</td><td>은행 계좌에 직접 들어가 명세서와 결제 내역을 확인해 손으로 맞춤</td><td>같은 보고서를 Rowspace에 올려 두면 반복 생성</td></tr>
+              <tr><td>주기</td><td>주 1회, 경영진에 이메일 발송</td><td>매일 확인 가능</td></tr>
+              <tr><td>사람이 하는 일</td><td>정리 자체</td><td>매일 결과가 맞는지 검수<span class="en">QA</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>핵심은 사람의 일이 "만들기"에서 "확인하기"로 옮겨 갔다는 점이다. 보고서는 매일 돌아가는 틀에 박힌 절차가 됐다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="trust">
+        <header><span class="num">05</span><h2>왜 ChatGPT에 바로 넣지 않나 <span class="ts">06:50</span></h2></header>
+        <p>Michael Manapat이 물었다. 이 팀은 챗봇 답을 참고하는 게 아니라 실제로 거래하고 포트폴리오를 짠다. 그런 결정을 AI 결과에 맡길 만큼의 신뢰는 어디서 오나.</p>
+        <h3>범용 모델의 한계 <span class="ts">07:20</span></h3>
+        <p>Jack McDonald는 Claude나 ChatGPT 같은 범용 모델이 쓸모 있다고 인정한다. 다만 그 모델은 <strong>일반 지식</strong> 위에서 돌고, <strong>우리 회사의 실제 데이터</strong>는 모른다. 그래서 리서치, 새 아이디어 내기, 낯선 상품을 빨리 익히는 데는 좋지만 거래 판단의 근거로는 부족하다.</p>
+        <h3>신뢰가 쌓인 방식 <span class="ts">07:50</span></h3>
+        <ol class="plain">
+          <li><strong>자기 데이터를 소유한다.</strong> 그 위에 "참이라고 아는" 플랫폼을 얹는다. 점 해법을 여러 개 사는 대신 한 플랫폼으로 간다.</li>
+          <li><strong>공급사가 현장에 앉는다.</strong> Michael Manapat이 매일 팀과 함께 앉아 정보 흐름을 배웠다.</li>
+          <li><strong>20개 출처 중 맞는 하나를 정한다.</strong> 같은 데이터가 20곳에서 오는데 맞는 것은 하나뿐이다. 운용팀과 재무팀이 계산식과 우선순위를 알려 준다.</li>
+          <li><strong>내부 팀이 검증한다.</strong> 결과가 맞는지 우리 팀이 직접 들어가 확인한 뒤에야 "믿고 쓴다"고 말한다.</li>
+        </ol>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>데이터가 오는 곳</th><th>예</th></tr></thead>
+            <tbody>
+              <tr><td>거래 시스템</td><td>주문 관리 시스템<span class="en">OMS</span></td></tr>
+              <tr><td>성과 시스템</td><td>수익률·성과를 기록하는 내부 시스템</td></tr>
+              <tr><td>외부 가격</td><td>Bloomberg, 각종 가격 지수</td></tr>
+              <tr><td>문서</td><td>인덴처, 법률 계약서, 은행 명세서</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>한 데이터가 20개 출처에서 올 수 있는데, 그중 실제로 맞는 건 하나뿐이다.<cite>Jack McDonald, 08:10 부근의 말을 옮김</cite></blockquote>
+        <p>회사 안의 다른 시스템들은 여전히 조각나 있어서 사람이 이쪽 정보를 저쪽으로 옮겨 붙여야 한다. Rowspace는 그 과정을 자동으로 해 준다는 것이 Jack McDonald의 설명이다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="culture">
+        <header><span class="num">06</span><h2>플랫폼이지 점 해법이 아니다 <span class="ts">09:20</span></h2></header>
+        <p>Michael Manapat은 Apollo가 Claude Code가 나오기 전, Cursor가 자동 완성 수준이던 때부터 AI에 가장 적극적인 회사였다고 말한다. 그때 이미 "회사를 AI 네이티브로 다시 지어야 한다. 점 해법<span class="en">point solution</span>이 아니라 플랫폼이 있어야 한다"고 했다는 것이다.</p>
+        <p>Jack McDonald가 말하는 배경은 Apollo의 문화다.</p>
+        <ul class="plain">
+          <li>대체자산 운용 업계에서 <strong>앞서 가는 회사</strong>라는 자부심이 있다. 변화의 앞자리에 서려 한다.</li>
+          <li>경영진은 팀의 역량을 계속 끌어올리고, 시장이 가는 쪽으로 <strong>빠르게 적응</strong>하는 것을 중시한다.</li>
+          <li>AI를 깎아내리거나 외면하지 않고 <strong>적응하고 받아들여야 할 현실</strong>로 봤다.</li>
+          <li>조직이 수평적이고 열려 있어 새 도구를 업무 흐름에 들이기 쉬웠다.</li>
+        </ul>
+        <p>목표는 사람을 수작업에서 풀어 주고, 더 생각하는 일에 시간을 쓰게 하는 것이다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="early">
+        <header><span class="num">07</span><h2>금융은 아직 초반 <span class="ts">11:20</span></h2></header>
+        <p>Michael Manapat이 물었다. 소프트웨어 공학은 AI로 완전히 달라졌고 법률과 고객 응대도 거의 그렇다. 금융은 어디쯤인가.</p>
+        <p>Jack McDonald의 답은 <strong>아직 매우 초반</strong>이다.</p>
+        <ul class="plain">
+          <li>은행과 큰 금융사는 덩치가 크고 미들·백오피스<span class="en">middle/back office</span> 지원 조직이 많다. 여기에 개선 여지가 크다.</li>
+          <li>업무 자체가 아주 복잡하고 단순하지 않다. 그래서 빨리 바뀌지 않는다.</li>
+          <li>지금 가치가 나는 곳은 모델 만들기, 기업을 빨리 파악하기, 리서치 모으기 같은 일이다. 다만 발표자는 이것을 <strong>상대적으로 낮은 가치</strong>로 본다.</li>
+          <li>시간이 가면 이런 기능에 <strong>주니어 인력이 덜 필요</strong>해질 수 있다.</li>
+        </ul>
+        <p>Redding Ridge의 현재 전략은 틀에 박힌 일을 최대한 효율화해서 다른 개선 과제에 쓸 시간을 버는 것이다. 할 일은 끝이 없기 때문이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="edge">
+        <header><span class="num">08</span><h2>도구인가 경쟁 우위인가 <span class="ts">13:20</span></h2></header>
+        <p>Michael Manapat의 질문은 이렇다. 모두가 엑셀을 쓰니 엑셀은 더 이상 우위가 아니다. AI도 그냥 비용을 줄이는 생산성 도구로 끝날까, 아니면 구조적이고 오래가는 경쟁 우위가 될까.</p>
+        <div class="callout">
+          <span class="title">Jack McDonald의 답</span>
+          <span><strong>제대로 받아들이고 쓰면 더 경쟁력이 생긴다.</strong> 활발히 거래되는 시장에서 운용사의 힘은 결국 <strong>절차</strong>와 <strong>손에 쥔 정보</strong>에서 나온다. 가용 유동성, 현재 가격, 가치를 어느 시점에든 정확히 아는 것이 핵심이다.</span>
+        </div>
+        <ul class="plain">
+          <li>공개 시장에서는 이런 정보 우위가 이미 당연하다. <strong>사모 시장</strong>은 이제 만들어지는 중이고, Apollo는 그 앞자리에 서려 한다.</li>
+          <li>더 좋은 정보에 접근하고, 그 정보가 정확하다고 팀이 믿을 수 있으면 시간이 갈수록 격차가 벌어진다.</li>
+          <li>반대로 잘못된 정보로 결정하면 그 피해가 회사와 투자자에게 흘러내려 간다. 이것이 가장 피하고 싶은 일이다.</li>
+        </ul>
+      </section>
+
+      <!-- 9 -->
+      <section id="future">
+        <header><span class="num">09</span><h2>앞으로 바라는 것 <span class="ts">15:20</span></h2></header>
+        <p>Michael Manapat은 5년 뒤 예측은 무리라고 인정했다. 자기 팀이 다음 주에 Claude Code를 쓸지도 모르겠다고 했다. 그래서 질문을 "앞으로 몇 달 동안 개인적으로 바라는 것"으로 바꿨다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">바람 1 · 검증 없는 신뢰</span>
+            <p>400곳이 넘는 전 세계 투자자에게 나가는 모든 정보가 정확하다고 확신하고 싶다. 몇 시간씩 손으로 다시 확인하지 않아도 되는 상태다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">바람 2 · 기술을 먼저 생각하는 팀</span>
+            <p>지금까지 팀에게 기술은 뒷순위 생각이었다. 틀에 박힌 일이 자동화되면 "이 절차는 왜 있나, 바꿔야 하나, 새 기술을 들여야 하나"를 먼저 묻는 팀이 되길 바란다.</p>
+          </div>
+        </div>
+        <p>Jack McDonald는 팀이 그런 생각을 못 해서가 아니라, 그럴 여유가 없었다고 설명한다. 자동화가 그 여유를 만든다는 것이다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="advice">
+        <header><span class="num">10</span><h2>조언: 현장에 앉아라 <span class="ts">17:20</span></h2></header>
+        <p>마지막 질문은 AI와 금융을 잇는 일을 하려는 청중을 위한 조언이었다.</p>
+        <blockquote>뭔가 낯설고 이상하고 제자리가 아닌 것처럼 보여도, 아마 이유가 있어서 그렇게 돼 있을 것이다.<cite>Jack McDonald, 17:50 부근의 말을 옮김</cite></blockquote>
+        <ul class="plain">
+          <li>금융사는 아주 복잡하고 미묘한 조직이다. 겉으로 이상해 보이는 절차에도 대개 이유가 있다.</li>
+          <li>도구를 만들어 줄 팀이나 프런트오피스 담당자 <strong>옆에 직접 앉아</strong> 시간을 쓰는 것이 가장 값진 투자다.</li>
+          <li>Rowspace 프로젝트가 로드맵과 기대보다 앞서 가는 이유도 Michael Manapat과 팀이 <strong>거의 매일</strong> 현장에 앉아 업무 흐름을 익혔기 때문이라고 Jack McDonald는 말한다.</li>
+        </ul>
+        <p class="note">대담 끝에 Michael Manapat은 Rowspace와 Apollo 기술 조직이 모두 채용 중이라고 덧붙였다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>Redding Ridge는 Apollo 산하 CLO 운용사로 약 500억 달러를 운용한다. 데이터가 많고 흩어져 있는 것이 핵심 어려움이다.</li>
+          <li>Rowspace 에이전트는 <strong>데이터 엔지니어링 일</strong>을 대신한다. 모델이 판단을 대신하는 것이 아니다.</li>
+          <li>포트폴리오 구성: <strong>2~3일이 몇 분으로</strong>. 에이전트가 80~90%를 만들고 PM이 마지막 10%를 다듬는다.</li>
+          <li>주간 매매 정리: <strong>2~3명의 여러 시간이 1분으로</strong>. 사람의 일은 만들기에서 검수로 바뀌었다.</li>
+          <li>범용 모델은 리서치에는 좋지만 <strong>우리 데이터를 모른다</strong>. 거래 판단에는 자기 데이터 위에 선 플랫폼이 필요하다.</li>
+          <li>같은 데이터가 20곳에서 와도 맞는 것은 하나다. <strong>어느 것이 정답인지는 현장 팀만 안다.</strong></li>
+          <li>신뢰는 공급사가 매일 현장에 앉고, 내부 팀이 결과를 검증한 데서 왔다.</li>
+          <li>Apollo는 점 해법 대신 플랫폼을 택했다. 수평적이고 변화에 열린 문화가 배경이다.</li>
+          <li>금융권의 AI 활용은 아직 초반이다. 제대로 쓰면 <strong>정확한 정보를 빨리 쥐는 쪽</strong>이 경쟁 우위를 갖는다.</li>
+          <li>조언: 이상해 보이는 절차에도 이유가 있다. <strong>그 팀 옆에 앉아 배우는 시간</strong>을 아끼지 마라.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>Redding Ridge는 어떤 회사이고 Apollo와 어떤 관계인가?</span></summary><div class="answer">Apollo 산하의 구조화 신용·CLO 운용사다. 별도 법인으로 운영되며 약 500억 달러를 운용한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Rowspace의 에이전트가 대신하는 일은 무엇인가?</span></summary><div class="answer">여러 시스템과 문서에 흩어진 데이터를 끌어와 맞춰 보는 데이터 엔지니어링 일이다. 투자 판단 자체를 대신하지는 않는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>포트폴리오 구성 사례에서 시간이 어떻게 바뀌었고, PM의 역할은 무엇으로 남았나?</span></summary><div class="answer">200~400개 대출로 모의 포트폴리오를 짜는 데 2~3일 걸리던 것이 몇 분이 됐다. 에이전트가 80~90%를 만들고 PM은 마지막 10%를 자기 판단으로 다듬는다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>CLO의 규칙은 어디에 적혀 있고, 왜 포트폴리오 구성이 오래 걸렸나?</span></summary><div class="answer">인덴처와 여러 법률 문서에 워터폴 등 규칙이 적혀 있다. PM이 그 문서를 읽고 엑셀 모델을 손으로 만들어야 했다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>주간 매매 정리 보고서에서 사람의 일은 어떻게 바뀌었나?</span></summary><div class="answer">2~3명이 은행 계좌를 직접 확인해 여러 시간 들여 만들던 일이 1분 만에 자동 생성된다. 사람은 매일 결과가 맞는지 검수만 한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Jack McDonald가 ChatGPT나 Claude를 거래 판단에 바로 쓰지 않는 이유는?</span></summary><div class="answer">범용 모델은 일반 지식 위에서 돌고 회사의 실제 데이터를 모르기 때문이다. 리서치나 빠른 학습에는 좋다고 인정했다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>"20개 출처 중 하나"는 무슨 뜻인가?</span></summary><div class="answer">같은 데이터가 20곳에서 들어와도 실제로 맞는 것은 하나뿐이다. 어느 것이 맞는지, 어떤 계산식을 쓰는지는 운용팀과 재무팀이 알려 줘야 한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>신뢰를 만든 공급사의 행동 하나를 꼽으면?</span></summary><div class="answer">매일 현장에 앉아 정보 흐름과 계산식을 배운 것이다. Jack McDonald는 다른 기술 회사와 가장 다른 점으로 이것을 꼽았다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Apollo가 "점 해법이 아니라 플랫폼"을 택한 배경은?</span></summary><div class="answer">자기 데이터를 소유하고 그 위에 참이라고 믿을 수 있는 한 층을 얹으려 했다. 변화에 앞서 가려는 자부심과 수평적이고 열린 문화가 뒷받침했다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>AI가 금융에서 경쟁 우위가 된다고 보는 근거는?</span></summary><div class="answer">운용사의 힘은 절차와 손에 쥔 정보에서 나온다. 정확한 유동성·가격·가치 정보를 빨리 쥐는 쪽이 시간이 갈수록 앞서 간다고 봤다. 사모 시장은 아직 이것이 만들어지는 중이다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>AI와 금융을 잇는 사람에게 준 조언은?</span></summary><div class="answer">이상해 보이는 절차에도 이유가 있으니 함부로 고치려 들지 말고, 그 팀 옆에 직접 앉아 업무 흐름을 배우는 데 시간을 쓰라.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">대담 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>자동화할 업무 하나를 "시간 × 사람 수"로 잰다<span class="how">예: 포트폴리오 구성 2~3일, 주간 정리 2~3명 × 여러 시간. 전후 비교가 가능해야 성과를 말할 수 있다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>핵심 데이터마다 정답 출처를 하나 정해 글로 남긴다<span class="how">같은 값이 여러 시스템에 있으면 어느 것이 이기는지, 그 계산식은 무엇인지</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트는 80~90%까지, 마지막 판단은 사람이 하도록 경계를 정한다<span class="how">확인: 사람이 고치는 "마지막 10%"가 무엇인지 설명할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>자동 생성 결과를 사람이 검수하는 절차를 매일 돌린다<span class="how">만들기는 자동, 확인은 사람. 검수 체크 항목을 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>도구를 만들기 전에 그 업무를 하는 팀 옆에 앉아 흐름을 본다<span class="how">이상해 보이는 절차의 이유를 먼저 묻는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>범용 모델로 할 일과 우리 데이터가 필요한 일을 나눈다<span class="how">리서치·학습은 범용 모델, 거래·보고 판단은 검증된 데이터 위에서</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>자동화로 번 시간을 어디에 쓸지 미리 정한다<span class="how">"이 절차는 왜 있나"를 묻는 시간으로 돌린다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>CLO</td><td>Collateralized Loan Obligation. 기업 대출 수백 개를 묶어 여러 등급의 채권으로 다시 쪼개 파는 상품</td></tr>
+              <tr><td>구조화 신용</td><td>Structured credit. 대출이나 채권을 묶고 쪼개서 새로운 증권으로 만든 상품군</td></tr>
+              <tr><td>인덴처</td><td>Indenture. 채권 발행 조건과 규칙을 적은 법률 계약서</td></tr>
+              <tr><td>워터폴</td><td>Waterfall. 들어온 현금을 누구에게 어떤 순서로 나눠 주는지 정한 규칙</td></tr>
+              <tr><td>포트폴리오 매니저 (PM)</td><td>어떤 자산을 얼마나 담을지 정하고 운용하는 사람</td></tr>
+              <tr><td>브로드리 신디케이티드 론</td><td>Broadly syndicated loan. 여러 은행과 투자자가 나눠 들고 거래하는 대형 기업 대출</td></tr>
+              <tr><td>웨어하우스</td><td>Warehouse. CLO를 만들기 전 은행 자금으로 대출 자산을 미리 사 모아 두는 단계</td></tr>
+              <tr><td>사모 시장</td><td>Private market. 공개 거래소 없이 당사자끼리 거래하는 시장. 정보가 공개되지 않는다</td></tr>
+              <tr><td>정답 출처</td><td>Golden source of truth. 여러 곳에 같은 데이터가 있을 때 기준으로 삼는 단 하나의 출처</td></tr>
+              <tr><td>주문 관리 시스템 (OMS)</td><td>Order management system. 매매 주문을 넣고 추적하는 시스템</td></tr>
+              <tr><td>미들·백오피스</td><td>거래를 직접 하지 않고 결제, 기록, 보고, 위험 관리를 맡는 지원 조직</td></tr>
+              <tr><td>프런트오피스</td><td>거래와 투자 판단을 직접 하는 조직</td></tr>
+              <tr><td>점 해법</td><td>Point solution. 문제 하나만 푸는 개별 도구. 플랫폼과 대비되는 말</td></tr>
+              <tr><td>대체자산 운용</td><td>Alternative asset management. 주식·채권 외에 사모 대출, 부동산 등을 운용하는 업</td></tr>
+              <tr><td>검수 (QA)</td><td>결과물이 맞는지 사람이 확인하는 절차</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>Michael Manapat과 Rowspace 소개</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>Jack McDonald와 Redding Ridge 소개, 운용 자산 약 500억 달러</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>"있으면 좋은 AI"와 "없으면 안 되는 AI"의 간극</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>매일 수천 개 데이터, 1,000개 차주 풀, 사모 시장의 흩어진 문서</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>Rowspace에 기대한 것: 현장에서 계산식과 정답 출처 정하기</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>사례 1: 포트폴리오 구성, 2~3일에서 몇 분으로</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>에이전트 80~90%, PM 마지막 10%</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>사례 2: 주간 매매 정리 보고서</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>1분 만에 생성, 팀은 매일 검수</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>질문: 왜 Claude나 ChatGPT에 바로 넣지 않나</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>범용 모델은 일반 지식, 우리 데이터는 없다</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>데이터 소유, 현장에 앉는 공급사, 20개 출처 중 하나</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>내부 검증, OMS·성과 시스템·Bloomberg</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>Apollo가 일찍부터 AI에 적극적이었던 이유</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>앞서 가는 문화, 적응과 수용, 수평 조직</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>금융은 AI 활용의 어디쯤인가</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>미들·백오피스의 여지, 아직 매우 초반</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>엑셀 비유: 상품화된 도구인가 경쟁 우위인가</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>절차와 정보가 우위를 만든다, 사모 시장은 진행 중</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>5년 예측 대신 앞으로 몇 달의 바람</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>투자자 400곳 이상, 검증 없는 신뢰</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>기술을 먼저 생각하는 팀</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>조언: 이상해 보여도 이유가 있다, 현장에 앉아라</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>채용 안내와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'BOWYujhIQuo:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 회귀 테스트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+/* diverging bars: score change around a centre line at 0; negative bars grow leftwards */
+.chart .fill.neg { border-radius: 4px 0 0 4px; background: var(--crit); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#after-fix">어려운 건 고친 다음이다</a></li>
+      <li><a href="#one-line">프롬프트 한 줄의 대가</a></li>
+      <li><a href="#runtime">에이전트는 실행 중에 실패한다</a></li>
+      <li><a href="#loop">회귀 루프 5단계</a></li>
+      <li><a href="#dataset">1단계: 실제 트레이스로 데이터셋</a></li>
+      <li><a href="#evals">2단계: 평가기로 점수 매기기</a></li>
+      <li><a href="#experiment">3·4단계: 기준 실험과 비교</a></li>
+      <li><a href="#ci">5단계: CI 관문</a></li>
+      <li><a href="#demo">데모: Arize 플레이그라운드</a></li>
+      <li><a href="#coding-agents">코딩 에이전트로 돌리기</a></li>
+      <li><a href="#failure-test">실패는 모두 테스트가 된다</a></li>
+      <li><a href="#self-fix">에이전트가 스스로 고친다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-24 · 19분 · 영어 발표 한글 정리</span>
+      <h1>에이전트를 고쳤더니 다른 게 깨졌다</h1>
+      <p class="lead">에이전트는 코드가 아니라 실행 중에 실패한다. 그래서 프롬프트 한 줄을 고칠 때도 실제 트레이스로 전후를 재야 하고, 그 측정을 CI 관문으로 만들어야 한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=v5tm5EAzsAs" target="_blank" rel="noopener">Your Agent Fix Just Broke Something Else</a></span>
+        <span>발표: Sofia Jakovcevic (Arize AI, Forward Deployed Engineer)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 든 예시와 데모 화면의 값이고, 따로 확인하지 않았다. 자막에서 "Sophia Yakoubovitch"로 들린 발표자 이름은 영상 제목의 표기를 따랐다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>프롬프트 한 줄을 고치면 한 지표는 오르고 다른 지표는 떨어질 수 있다. 발표의 예시에서 <strong>행동 안전성은 17점 올랐고, 작업 완료는 17점 떨어졌다.</strong></li>
+        <li>에이전트는 코드가 아니라 <strong>실행 중에 실패한다.</strong> diff는 무엇이 바뀌었는지 보여 준다. 실제로 무슨 일이 일어났는지는 트레이스가 보여 준다.</li>
+        <li>회귀 테스트는 <strong>실제 프로덕션 트레이스로 데이터셋을 만드는 데서</strong> 시작한다. 평범한 흐름, 알려진 실패, 경계 사례, 지켜야 할 성공 사례를 모두 넣는다.</li>
+        <li>평가기로 주관적인 품질을 숫자로 바꾼다. 판단이 필요하면 <strong>LLM 심판</strong>, 규칙으로 확인되면 <strong>코드 평가기</strong>를 쓴다.</li>
+        <li>기준 실험을 돌린 뒤 변경 하나를 넣고 다시 돌려 비교한다. 이 실험을 <strong>CI에 넣어 기준을 못 넘는 PR은 머지하지 않는다.</strong></li>
+        <li><strong>모든 실패는 테스트가 된다.</strong> 실패한 트레이스를 데이터셋에 다시 넣으면 테스트 묶음이 점점 단단해진다.</li>
+        <li>발표자가 보는 다음 단계는 <strong>에이전트가 이 루프를 직접 도는 것</strong>이다. 코딩 에이전트에 프로덕션 트레이스를 보여 주면 모르는 채로 PR을 올리지 않게 된다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="after-fix">
+        <header><span class="num">01</span><h2>어려운 건 고친 다음이다 <span class="ts">01:10</span></h2></header>
+        <p>Arize는 AI 시스템을 위한 관측성 <span class="en">observability</span> 백엔드를 만든다. 관측성은 시스템이 한 단계씩 실제로 무엇을 하는지 기록하고 보여 주는 것이다.</p>
+        <p>에이전트는 속을 들여다보기 어렵다. 속을 모르면 예측하기 어렵다. 예측하기 어려우면 디버깅도 어렵다. 단계별로 볼 수 있어야 평가할 수 있고, 평가 결과가 있어야 에이전트를 계속 개선할 수 있다.</p>
+        <p>발표자가 꼽는 더 큰 문제는 그다음이다. <strong>무엇이 고장 났는지 찾는 것보다, 고친 변경이 다른 열 가지를 깨뜨리지 않게 하는 게 더 어렵다.</strong> 간단한 변경을 올렸는데 다른 곳이 줄줄이 망가지는 경험은 청중 대부분이 손을 들 만큼 흔했다.</p>
+        <p>이 발표는 관측 데이터로 회귀 <span class="en">regression</span> 테스트 절차를 만들고, 그 절차를 CI/CD에 자동으로 넣는 방법을 다룬다. 회귀는 새 변경 때문에 잘 되던 기능이 망가지는 것이다.</p>
+        <ol class="plain">
+          <li>에이전트의 회귀가 왜 다르고 찾기 어려운가</li>
+          <li>회귀 루프 5단계와 Arize에서 실제로 해 보기</li>
+          <li>그 루프를 에이전트의 속도로 닫기</li>
+        </ol>
+      </section>
+
+      <!-- 2 -->
+      <section id="one-line">
+        <header><span class="num">02</span><h2>프롬프트 한 줄의 대가 <span class="ts">02:20</span></h2></header>
+        <p>고객 지원 에이전트가 있다고 하자. 보안 엔지니어가 에이전트의 정책을 검토하고 한 줄을 넣자고 한다. "어떤 행동이든 하기 전에 먼저 확인을 받아라."</p>
+        <p>간단하고 해롭지 않아 보인다. 많은 팀이 이런 한 줄짜리 프롬프트 수정을 별 검증 없이 올린다. 자연어로 쓰여 있으니 결과를 직감으로 안다고 믿기 때문이다. 발표자는 이를 "감으로 코딩한다" <span class="en">coding on vibes</span>고 불렀다. 원하는 건 감이 아니라 <strong>변경이 정말 나아졌다는 걸 보여 주는 점수</strong>다.</p>
+        <p>그 한 줄을 배포하고 일주일 뒤, 프로덕션 데이터로 평가 <span class="en">eval</span>를 돌렸다고 하자. 평가는 결과의 품질을 재는 테스트 묶음이다.</p>
+
+        <figure class="chart" aria-label="확인 한 줄을 넣은 뒤 점수 변화: 행동 안전성 +17, 작업 완료 -17">
+          <span class="chart-title">"행동 전에 확인" 한 줄을 넣은 뒤의 점수 변화 (점)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>행동 안전성</span><span class="val">+17</span></div>
+              <div class="track"><div class="fill key" style="left:50%;width:42.5%" title="행동 안전성: +17점"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>작업 완료</span><span class="val">−17</span></div>
+              <div class="track"><div class="fill neg" style="left:7.5%;width:42.5%" title="작업 완료: -17점"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>−20</span><span>점선 = 변화 없음 (0)</span><span>+20</span></div>
+          <span class="caption">두 점수의 평균 변화는 0이다. 발표자가 든 예시 시나리오의 값이고, 데모 화면에도 같은 값이 나온다.</span>
+        </figure>
+
+        <ul class="plain">
+          <li><strong>행동 안전성</strong> <span class="en">action safety</span>은 17점 올랐다. 보안 엔지니어의 직감이 맞았다.</li>
+          <li><strong>작업 완료</strong> <span class="en">task completion</span>는 17점 떨어졌다. 에이전트가 행동마다 확인을 묻자 중간에 떠나는 사용자가 생겼다. 사용자가 떠난 세션은 끝까지 가지 못하고 미완료로 남는다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">이 변경을 배포했을까?</span>
+          <span>평가를 돌리기 전이었다면 많은 팀이 배포했을 것이다. 작업 완료가 떨어질 거라고는 미리 생각하지 못했을 수 있다. 평가 묶음이 그걸 잡았다. <strong>한 차원이 좋아졌다고 에이전트 전체가 좋아진 것은 아니다.</strong></span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="runtime">
+        <header><span class="num">03</span><h2>에이전트는 실행 중에 실패한다 <span class="ts">04:50</span></h2></header>
+        <p>실수는 가정에 있었다. 오류가 코드에서 생긴다고 가정한 것이다. 에이전트의 오류는 코드에서 생기는 일이 드물다. 대부분 실행 중, 곧 런타임 <span class="en">runtime</span>에 생긴다.</p>
+        <p>코드 리뷰어가 본 것은 시스템 프롬프트 마크다운 파일의 한 줄이다. 읽기 쉽고, 이해하기 쉽고, 승인하기 쉽다. 코드 변경은 그 한 줄에 머물렀지만, 행동의 변화는 프로덕션에서 일어났다.</p>
+        <ul class="plain">
+          <li>에이전트가 단계를 더 밟는다</li>
+          <li>서브에이전트 <span class="en">sub-agent</span>와 일하는 방식이 바뀐다</li>
+          <li>도구를 부르는 방식이 바뀐다</li>
+        </ul>
+        <p>이렇게 갈라지는 실행 궤적 <span class="en">trajectory</span>은 수천 개일 수 있다. 실행 궤적은 에이전트가 실제로 밟은 단계의 순서다. 이 궤적들은 정적 코드 어디에도 없다. 관측 백엔드에 쌓인 트레이스 <span class="en">trace</span>에만 남는다. 트레이스는 에이전트가 한 번 실행되며 한 일을 구조화해 남긴 기록이다.</p>
+        <blockquote>diff는 무엇이 바뀌었는지 알려 준다. 트레이스는 실제로 무슨 일이 일어났는지 알려 준다.<cite>발표자, 05:40 (영어 원문을 옮김)</cite></blockquote>
+        <div class="shift" aria-label="로직이 있는 곳의 이동">
+          <div><span class="tag">전통 소프트웨어</span><b>로직이 코드에 적혀 있다</b><span class="muted">배포 전에 실행 결과를 꽤 정확히 알 수 있다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">에이전트</span><b>로직이 실행할 때만 존재한다</b><span class="muted">트레이스가 시스템이 실제로 한 일을 보여 주는 진짜 기준이 된다</span></div>
+        </div>
+        <p>코드에 쓰인 것과 실제로 일어난 것 사이의 틈에는 조용한 오류가 숨는다. 그래서 회귀 테스트는 <strong>트레이스에서 시작한다.</strong></p>
+      </section>
+
+      <!-- 4 -->
+      <section id="loop">
+        <header><span class="num">04</span><h2>회귀 루프 5단계 <span class="ts">06:20</span></h2></header>
+        <p>프로덕션 트레이스에서 출발해 평가기를 만들고, 실험을 돌리고, 마지막에 CI의 자동 관문으로 묶는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>할 일</th><th>얻는 것</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>데이터셋 고르기</td><td>실제 프로덕션 트레이스에서 뽑은 테스트 입력</td></tr>
+              <tr><td>2</td><td>평가기 만들기</td><td>중요한 지표마다 점수를 매기는 평가 묶음</td></tr>
+              <tr><td>3</td><td>기준 실험 돌리기</td><td>지금 에이전트의 점수</td></tr>
+              <tr><td>4</td><td>변경하고 다시 돌려 비교하기</td><td>변경 전후의 점수 차이</td></tr>
+              <tr><td>5</td><td>CI에 넣기</td><td>기준을 못 넘는 PR은 머지되지 않는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 1~3단계에만 번호를 붙여 말했다. 4·5단계는 이어지는 설명을 흐름대로 나눈 것이다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="dataset">
+        <header><span class="num">05</span><h2>1단계: 실제 트레이스로 데이터셋 <span class="ts">06:40</span></h2></header>
+        <p>데이터를 따로 지어낼 필요가 없다. 실제 사용자의 질문, 입력, 도구 호출이 이미 트레이스에 있다. 거기서 바로 뽑는다. 다만 아래 네 종류가 모두 들어가야 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>넣을 것</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>평범한 흐름</td><td>사용자 대부분이 실제로 하는 일을 대표해야 한다</td></tr>
+              <tr><td>알려진 실패</td><td>자주 틀리거나 평가 점수가 자주 낮게 나오는 순간을 골라 넣는다</td></tr>
+              <tr><td>경계 사례 <span class="en">edge case</span></td><td>드물지만 그만큼 중요하다</td></tr>
+              <tr><td>지켜야 할 성공 사례</td><td>사람들이 가장 자주 빠뜨린다. 고친 게 통하는지뿐 아니라, 잘 되던 걸 깨뜨리지 않는지도 확인해야 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 데이터셋이 있어야 나머지 회귀 테스트 묶음을 쌓을 수 있다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="evals">
+        <header><span class="num">06</span><h2>2단계: 평가기로 점수 매기기 <span class="ts">07:50</span></h2></header>
+        <p>평가기 <span class="en">evaluator</span>는 엔지니어와 제품팀이 중요하게 보는 지표를 숫자로 바꾼다. 환각 <span class="en">hallucination</span>, 정확도, 도구 호출 순서, 단계 효율 같은 지표는 원래 주관적이다. 사람이 하나씩 보고 판단할 수는 있다. 하지만 이 판단을 자동으로 하고 싶다.</p>
+        <p>그래서 LLM 심판 <span class="en">LLM-as-a-judge</span>을 쓴다. LLM에게 판단 기준을 적은 안내문을 준다. LLM은 그 기준으로 스팬 <span class="en">span</span>, 트레이스, 로그를 보고 판정한다. 스팬은 트레이스 안의 한 단계 기록이다.</p>
+        <div class="callout">
+          <span class="title">작업 완료 평가 (발표 슬라이드의 예)</span>
+          <span>LLM 심판이 작업이 끝났는지 본다. 완료면 1, 미완료면 0을 매긴다. 0~5점으로 매길 수도 있고, 여러 라벨로 나눌 수도 있다. 이렇게 주관적인 지표가 비교할 수 있는 숫자가 된다.</span>
+        </div>
+        <p class="note">발표에서는 "정량 측정을 정성 점수로 바꿨다"고 말했지만, 앞뒤 맥락상 반대다. 주관적인 판단을 숫자 점수로 바꿨다는 뜻이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>평가기 종류</th><th>잘 맞는 곳</th></tr></thead>
+            <tbody>
+              <tr><td>코드 평가기</td><td>결정적 검사. 같은 입력이면 늘 같은 결과가 나오는 확인</td></tr>
+              <tr><td>LLM 심판</td><td>비결정적 검사. 사람의 판단이 필요한 확인</td></tr>
+              <tr><td>ML 평가기</td><td>발표에서는 이름만 언급했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>중요한 지표마다 평가기를 하나씩 만들면 테스트 묶음이 생긴다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="experiment">
+        <header><span class="num">07</span><h2>3·4단계: 기준 실험과 비교 <span class="ts">09:50</span></h2></header>
+        <p><strong>기준 실험</strong> <span class="en">baseline experiment</span>은 지금 에이전트를 데이터셋 전체에 돌리고, 그 결과에 평가 묶음을 돌린 것이다. 이 점수가 비교의 기준이 된다. SDK로는 실험 실행 함수 하나에 데이터셋, 에이전트가 할 작업, 평가 묶음을 넘기면 된다고 발표자는 설명했다.</p>
+        <p>기준이 생기면 변경 하나를 넣는다. 정책 한 줄을 바꾸고, 평가를 다시 돌리고, 점수를 비교한다. 과정이 단순해서 빨리 반복할 수 있다. 한 번에 하나만 시험할 필요도 없다.</p>
+        <ul class="plain">
+          <li>프롬프트를 바꾼다</li>
+          <li>에이전트끼리 일을 넘기는 방식, 곧 핸드오프 <span class="en">handoff</span>를 바꾼다</li>
+          <li>도구를 바꾼다</li>
+          <li>모델을 바꾼다</li>
+        </ul>
+        <p>이 모든 비교를 <strong>프로덕션에 배포하지 않고</strong> 할 수 있다.</p>
+        <div class="callout">
+          <span class="title">비싼 모델로 바꾸자는 제안 <span class="ts">10:40</span></span>
+          <span>발표자가 든 가상의 예다. 팀이 "새 Fable 모델로 바꾸자, 다섯 배 비싸다"고 한다. 증명 없이 바꾸지 않는다. 같은 데이터셋과 평가로 점수를 비교해, 비싼 값만큼 나아지는지 숫자로 확인한다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="ci">
+        <header><span class="num">08</span><h2>5단계: CI 관문 <span class="ts">11:00</span></h2></header>
+        <p>마지막으로 이 실험을 CI에 넣어 자동으로 돌린다. 발표자는 GitHub Actions를 예로 들었다.</p>
+        <ol class="plain">
+          <li>PR이 올라온다</li>
+          <li>그 PR로 실험 워크플로가 돈다. 팀이 중요하다고 정한 평가를 모두 거친다</li>
+          <li>회귀 기준을 모두 넘을 때까지 머지하지 않는다</li>
+          <li>점수가 나빠졌으면 돌아가서 다시 시험하고 고친다</li>
+        </ol>
+        <p>이제 감으로 올리지 않는다. <strong>성능이 실제로 나아졌다는 근거를 갖고 올린다.</strong></p>
+      </section>
+
+      <!-- 9 -->
+      <section id="demo">
+        <header><span class="num">09</span><h2>데모: Arize 플레이그라운드 <span class="ts">11:40</span></h2></header>
+        <p>Arize 화면에서 앞의 예시와 같은 환불 처리 에이전트를 보여 줬다. 기준 실험의 점수가 있고, 그 아래 줄마다 프롬프트나 모델을 바꿔 돌린 실험이 하나씩 있다. 목표에 가장 맞는 균형을 고르려고 각각을 평가한 것이다.</p>
+
+        <figure class="chart" aria-label="기준 실험 대비 점수 변화. 확인 한 줄 추가: 행동 안전성 +17, 작업 완료 -17. 가장 균형 잡힌 버전: 행동 안전성 +18, 작업 완료 +6">
+          <span class="chart-title">기준 실험 대비 점수 변화 (점, 데모 화면)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>확인 한 줄 추가 · 행동 안전성</span><span class="val">+17</span></div>
+              <div class="track"><div class="fill" style="left:50%;width:42.5%" title="확인 한 줄 추가, 행동 안전성: +17점"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>확인 한 줄 추가 · 작업 완료</span><span class="val">−17</span></div>
+              <div class="track"><div class="fill neg" style="left:7.5%;width:42.5%" title="확인 한 줄 추가, 작업 완료: -17점"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>가장 균형 잡힌 버전 · 행동 안전성</span><span class="val">+18</span></div>
+              <div class="track"><div class="fill key" style="left:50%;width:45%" title="가장 균형 잡힌 버전, 행동 안전성: +18점"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>가장 균형 잡힌 버전 · 작업 완료</span><span class="val">+6</span></div>
+              <div class="track"><div class="fill key" style="left:50%;width:15%" title="가장 균형 잡힌 버전, 작업 완료: +6점"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>−20</span><span>점선 = 기준 실험 (0)</span><span>+20</span></div>
+          <span class="caption">여러 번 바꿔 시험한 끝에 두 지표가 모두 오른 버전을 찾았다. 그 버전에서 무엇을 바꿨는지는 발표에서 말하지 않았다.</span>
+        </figure>
+
+        <h3>실험을 만드는 두 가지 방법 <span class="ts">12:20</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">프롬프트 플레이그라운드</span>
+            <p>에이전트 하나를 시험한다. 에이전트 하나는 결국 프롬프트 하나에 도구 묶음과 모델 설정을 붙인 것이다. 그걸 화면에서 그대로 재현한다.</p>
+            <ul>
+              <li>프롬프트 허브에 저장한 프롬프트 1번 버전을 불러온다</li>
+              <li>경계 사례, 알려진 실패, 지켜야 할 성공 사례를 골라 둔 100행짜리 데이터셋을 붙인다</li>
+              <li>프롬프트를 복제해 한 줄을 고치거나 다른 버전을 불러와 나란히 비교한다</li>
+              <li>평가기로 작업 완료와 행동 안전성을 붙인다 <span class="ts">13:40</span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">에이전트 플레이그라운드 <span class="ts">14:40</span></span>
+            <p>여러 에이전트가 함께 일하는 시스템을 시험한다.</p>
+            <ul>
+              <li>내 에이전트를 HTTP 호출 같은 방식으로 원격 연결한다</li>
+              <li>서브에이전트끼리 주고받는 방식은 내 코드에서 바꾼다</li>
+              <li>데이터셋의 행마다 내 에이전트를 불러 결과를 받는다</li>
+              <li>그 결과에 같은 방식으로 평가를 돌려 점수를 매긴다</li>
+            </ul>
+          </div>
+        </div>
+        <p>미리 만들어 둔 평가기도 있다. 환각, 사용자 불만, 코드 템플릿, 보안 검사 같은 것이다. 직접 만들 수도 있다. 실행하면 데이터셋의 모든 행에 평가가 돈다.</p>
+        <p>실험 결과 화면에서는 지연 시간, 평가 점수, 총비용, 오류율을 보고 시간에 따라 추적한다. <span class="ts">14:10</span> PR 변경으로 돌린 실험과 플레이그라운드에서 돌린 실험이 같은 곳에 쌓인다.</p>
+        <p class="note">발표자는 Arize 소속이고, 이 부분은 자사 제품 시연이다. 기능 설명은 발표자의 말을 옮긴 것이며 따로 확인하지 않았다. 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="coding-agents">
+        <header><span class="num">10</span><h2>코딩 에이전트로 돌리기 <span class="ts">15:30</span></h2></header>
+        <p>화면 대신 SDK, REST API, CI, CLI로도 같은 실험을 돌릴 수 있다. 발표자가 가장 좋아하는 방법은 코딩 에이전트에게 시키는 것이다.</p>
+        <p>에이전트 스킬 <span class="en">agent skills</span>은 코딩 에이전트를 외부 데이터와 맥락에 연결해 준다. 발표자에 따르면 Arize는 화면의 모든 기능에 연결되는 스킬을 공개 저장소로 내놓았다.</p>
+        <p>이렇게 연결하면 두 쪽이 이어진다. 한쪽은 코딩 에이전트가 IDE에서 만드는 코드다. 다른 쪽은 관측 백엔드에 쌓인 실제 동작 기록이다.</p>
+        <p class="note">"모든 기능에 연결된다"는 자사 제품에 대한 발표자의 주장이다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="failure-test">
+        <header><span class="num">11</span><h2>실패는 모두 테스트가 된다 <span class="ts">16:20</span></h2></header>
+        <p>발표자는 남은 2분 동안 핵심 메시지 두 가지를 정리했다. 첫째는 지금 엔지니어가 손으로 돌리는 루프다.</p>
+        <ol class="plain">
+          <li><strong>관측</strong>: 프로덕션의 모든 실행에서 로그와 트레이스를 모은다</li>
+          <li><strong>평가</strong>: 그 기록에 평가를 돌려 점수를 얻는다</li>
+          <li><strong>변경</strong>: 프롬프트, 모델, 도구, 정책 중 하나를 바꾼다</li>
+          <li><strong>시험</strong>: 실험 워크플로로 변경을 시험하고 다듬는다</li>
+          <li><strong>개선</strong>: 통과하면 배포한다. 실패하면 그 사례를 관측 단계로 돌려보낸다</li>
+        </ol>
+        <p>실패한 프로덕션 트레이스는 회귀 테스트 묶음의 새 사례가 된다. 테스트 묶음이 스스로 계속 자라므로, 반복해서 개선하는 과정도 점점 튼튼해진다.</p>
+        <div class="callout">
+          <span class="title">첫 번째 메시지</span>
+          <span><strong>모든 실패는 테스트가 되어야 한다.</strong> 실패할 때마다 에이전트는 더 강해지고 깨뜨리기 어려워져야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="self-fix">
+        <header><span class="num">12</span><h2>에이전트가 스스로 고친다 <span class="ts">17:30</span></h2></header>
+        <p>둘째는 질문이다. 에이전트가 원인을 조사하고 수정안까지 낸다면 어떨까.</p>
+        <p>지금 이 루프의 병목은 사람이다. 사람이 대시보드를 보고, 문제를 분류하고, 수정을 올리고, PR을 리뷰한다. 발표자는 이 흐름이 관측에서 <strong>자기 개선</strong> <span class="en">self-improvement</span>으로 옮겨 가고 있다고 본다.</p>
+        <div class="shift" aria-label="관측성의 목적 이동">
+          <div><span class="tag">지금까지</span><b>사람이 에이전트를 이해한다</b><span class="muted">사람에게 에이전트를 디버깅할 도구를 준다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자가 보는 다음</span><b>에이전트가 자기를 이해한다</b><span class="muted">에이전트에게 스스로 살피고 고칠 도구를 준다</span></div>
+        </div>
+        <p>앞에서 본 대로 진짜 로직은 트레이스에 있다. 그런데 지금 코딩 에이전트는 프로덕션에서 무슨 일이 일어나는지 모른 채 PR을 올린다. 정적 코드에만 기대기 때문이다. 코딩 에이전트를 프로덕션 데이터에 연결하면, 자기 변경이 실제로 무엇을 바꾸는지 알고 PR을 올리게 된다.</p>
+        <blockquote>가장 좋은 에이전트는 실패에서 배우는 데 그치지 않는다. 스스로를 고친다.<cite>발표자, 19:00 (영어 원문을 옮김)</cite></blockquote>
+        <p class="note">발표에서는 방향만 제시했다. 에이전트가 스스로 고친 실제 사례나 결과는 보여 주지 않았다. 또 이 방향은 관측 도구를 파는 발표자 회사의 쓰임을 넓히는 주장이기도 하다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>관측으로 무엇이 고장 났는지 찾는 것보다, 고친 변경이 다른 걸 깨뜨리지 않게 하는 게 더 어렵다.</li>
+          <li>"행동 전에 확인" 한 줄로 행동 안전성은 +17, 작업 완료는 −17이 됐다. <strong>한 지표의 개선은 전체 개선이 아니다.</strong></li>
+          <li>에이전트는 코드가 아니라 <strong>런타임에 실패한다.</strong> 한 줄 변경이 단계, 서브에이전트, 도구 호출을 바꾼다.</li>
+          <li>diff는 무엇이 바뀌었는지, <strong>트레이스는 실제로 무슨 일이 일어났는지</strong> 알려 준다. 트레이스가 새 기준이다.</li>
+          <li>회귀 데이터셋은 실제 트레이스로 만든다. <strong>평범한 흐름, 알려진 실패, 경계 사례, 지켜야 할 성공 사례</strong>를 모두 넣는다.</li>
+          <li>평가기는 주관적 지표를 숫자로 바꾼다. 결정적 검사는 코드로, 판단이 필요한 검사는 LLM 심판으로 한다.</li>
+          <li>기준 실험을 먼저 돌리고, 변경 하나씩 넣어 같은 데이터셋으로 비교한다. 비싼 모델로 바꾸는 판단도 이 점수로 한다.</li>
+          <li>이 실험을 CI에 넣고, <strong>회귀 기준을 넘지 못한 PR은 머지하지 않는다.</strong></li>
+          <li><strong>모든 실패는 테스트가 된다.</strong> 실패한 트레이스를 다시 데이터셋에 넣는다.</li>
+          <li>발표자가 보는 다음 단계는 코딩 에이전트가 트레이스를 보고 <strong>스스로 조사하고 고치는 것</strong>이다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>"행동 전에 확인" 한 줄을 넣은 뒤 두 점수는 어떻게 바뀌었고, 왜 그랬나?</span></summary><div class="answer">행동 안전성은 17점 올랐고 작업 완료는 17점 떨어졌다. 에이전트가 행동마다 확인을 묻자 중간에 떠나는 사용자가 생겨, 그 세션의 작업이 끝나지 못했다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>두 점수의 평균 변화가 0이라는 사실이 주는 교훈은?</span></summary><div class="answer">한 차원이 좋아졌다고 에이전트 전체가 좋아진 것은 아니다. 지표 하나만 보면 다른 쪽 손해를 놓친다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>"에이전트는 실행 중에 실패한다"는 무슨 뜻인가?</span></summary><div class="answer">코드 변경은 프롬프트 한 줄이어도, 행동의 변화는 프로덕션 실행 중에 생긴다. 단계가 늘고, 서브에이전트와 일하는 방식과 도구 호출이 바뀐다. 이 수천 개의 실행 궤적은 정적 코드에 없고 트레이스에만 남는다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>회귀 데이터셋에 꼭 넣어야 할 네 종류는?</span></summary><div class="answer">평범한 흐름, 알려진 실패, 경계 사례, 지켜야 할 성공 사례.</div></details>
+          <details><summary><span class="qn">Q5</span><span>사람들이 가장 자주 빠뜨리는 종류는 무엇이고, 왜 중요한가?</span></summary><div class="answer">지켜야 할 성공 사례. 고친 게 통하는지뿐 아니라, 이미 잘 되던 걸 깨뜨리지 않는지도 확인해야 하기 때문이다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>LLM 심판은 주관적인 지표를 어떻게 숫자로 바꾸나?</span></summary><div class="answer">판단 기준을 적은 안내문을 받고, 스팬이나 트레이스를 보고 판정한다. 예를 들어 작업 완료면 1, 미완료면 0을 매긴다. 0~5점이나 여러 라벨로도 매길 수 있다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>코드 평가기와 LLM 심판은 각각 어디에 맞나?</span></summary><div class="answer">코드 평가기는 같은 입력이면 늘 같은 결과가 나오는 결정적 검사에 맞다. LLM 심판은 판단이 필요한 비결정적 검사에 맞다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>기준 실험은 무엇이고 왜 먼저 돌리나?</span></summary><div class="answer">지금 에이전트를 데이터셋 전체에 돌리고 평가 묶음으로 채점한 결과다. 이게 있어야 변경 하나를 넣은 뒤의 점수와 비교할 수 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>"다섯 배 비싼 새 모델로 바꾸자"는 제안에 이 루프로 어떻게 답하나?</span></summary><div class="answer">같은 데이터셋과 평가 묶음으로 새 모델을 돌려 기준 실험과 비교한다. 비싼 값만큼 점수가 나아지는지 숫자로 확인한 뒤 결정한다. 프로덕션에 배포하지 않고 할 수 있다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>CI 단계에서는 무엇을 하나?</span></summary><div class="answer">PR마다 실험 워크플로를 돌려 팀이 정한 평가를 거치게 한다. 회귀 기준을 모두 넘을 때까지 머지하지 않는다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>프롬프트 플레이그라운드와 에이전트 플레이그라운드는 무엇이 다른가?</span></summary><div class="answer">프롬프트 플레이그라운드는 프롬프트, 도구, 모델 설정으로 이루어진 에이전트 하나를 시험한다. 에이전트 플레이그라운드는 원격으로 연결한 다중 에이전트 시스템을 시험한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표의 두 가지 핵심 메시지는?</span></summary><div class="answer">첫째, 모든 실패는 테스트가 되어야 한다. 둘째, 가장 좋은 에이전트는 스스로를 고친다. 코딩 에이전트가 트레이스를 보면 프로덕션을 모른 채 PR을 올리지 않게 된다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>최근 프롬프트 변경 하나를 골라, 지표 두 개 이상으로 전후를 비교한다<span class="how">확인: 올라간 지표 뒤에서 떨어진 지표가 없는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>프로덕션 트레이스에서 회귀 데이터셋을 뽑는다<span class="how">평범한 흐름, 알려진 실패, 경계 사례, 지켜야 할 성공 사례가 모두 들어 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>팀이 중요하게 보는 지표마다 평가기를 하나씩 만든다<span class="how">규칙으로 확인되면 코드 평가기, 판단이 필요하면 LLM 심판</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>변경을 넣기 전에 기준 실험 점수를 저장한다<span class="how">확인: 비교할 기준 숫자가 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>프롬프트, 모델, 도구, 핸드오프를 바꿀 때마다 같은 데이터셋으로 다시 돌려 비교한다<span class="how">비싼 모델로 바꾸자는 제안도 이 점수로 판단한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>PR마다 실험을 돌리는 CI 단계를 넣는다<span class="how">회귀 기준을 못 넘으면 머지를 막는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>실패한 프로덕션 사례를 회귀 데이터셋에 추가하는 절차를 정한다<span class="how">확인: 같은 실패가 두 번째로 프로덕션에 나가지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>코딩 에이전트가 트레이스와 평가 결과를 읽을 수 있게 연결한다<span class="how">확인: 에이전트가 PR을 올리기 전에 실제 동작 기록을 볼 수 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>관측성</td><td><span class="en">Observability</span>. 시스템이 한 단계씩 실제로 무엇을 하는지 기록하고 들여다보는 것</td></tr>
+              <tr><td>회귀</td><td><span class="en">Regression</span>. 새 변경 때문에 잘 되던 기능이 망가지는 것</td></tr>
+              <tr><td>런타임</td><td><span class="en">Runtime</span>. 프로그램이 실제로 실행되는 때</td></tr>
+              <tr><td>트레이스</td><td><span class="en">Trace</span>. 에이전트가 한 번 실행되며 한 일을 구조화해 남긴 기록</td></tr>
+              <tr><td>스팬</td><td><span class="en">Span</span>. 트레이스 안의 한 단계 기록</td></tr>
+              <tr><td>실행 궤적</td><td><span class="en">Trajectory</span>. 에이전트가 실제로 밟은 단계의 순서</td></tr>
+              <tr><td>서브에이전트</td><td><span class="en">Sub-agent</span>. 큰 에이전트가 일을 나눠 맡기는 하위 에이전트</td></tr>
+              <tr><td>핸드오프</td><td><span class="en">Handoff</span>. 에이전트가 다른 에이전트에게 일을 넘기는 것</td></tr>
+              <tr><td>평가 / 평가기</td><td><span class="en">Eval / Evaluator</span>. 결과의 품질을 재는 테스트와 그 채점기</td></tr>
+              <tr><td>LLM 심판</td><td><span class="en">LLM-as-a-judge</span>. 판단 기준을 받은 LLM이 다른 LLM의 결과를 채점하는 방식</td></tr>
+              <tr><td>결정적 검사</td><td><span class="en">Deterministic check</span>. 같은 입력이면 늘 같은 결과가 나오는 확인</td></tr>
+              <tr><td>환각</td><td><span class="en">Hallucination</span>. 모델이 사실이 아닌 내용을 그럴듯하게 만들어 내는 것</td></tr>
+              <tr><td>경계 사례</td><td><span class="en">Edge case</span>. 드물게 나오는 극단적이거나 특이한 입력</td></tr>
+              <tr><td>기준 실험</td><td><span class="en">Baseline experiment</span>. 변경 전 에이전트를 데이터셋에 돌리고 채점한 결과. 비교의 기준</td></tr>
+              <tr><td>CI/CD</td><td>코드 변경을 자동으로 테스트하고 배포하는 절차</td></tr>
+              <tr><td>플레이그라운드</td><td><span class="en">Playground</span>. 프롬프트나 에이전트를 바꿔 가며 바로 돌려 보는 실험 화면</td></tr>
+              <tr><td>에이전트 스킬</td><td><span class="en">Agent skills</span>. 코딩 에이전트를 외부 데이터와 맥락에 연결해 주는 묶음</td></tr>
+              <tr><td>자기 개선</td><td><span class="en">Self-improvement</span>. 에이전트가 자기 실행 기록을 보고 스스로 원인을 찾고 고치는 것</td></tr>
+              <tr><td>감으로 코딩</td><td><span class="en">Coding on vibes</span>. 측정 없이 직감만으로 변경을 올리는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 관측성이란</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>진짜 문제: 고친 뒤 다른 게 깨진다</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>발표 순서 세 부분</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>예시: 지원 에이전트에 "행동 전에 확인" 한 줄</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>감으로 코딩하지 말고 점수로</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>행동 안전성 +17, 작업 완료 −17</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>평균은 0, 이걸 배포했을까</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>에이전트는 런타임에 실패한다</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>diff와 트레이스, 트레이스가 새 기준</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>회귀 루프 5단계 개요</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>1단계: 데이터셋 네 종류</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>2단계: 평가기</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>LLM 심판과 작업 완료 평가</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>코드 평가기와 ML 평가기</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>3단계: 기준 실험</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>변경하고 다시 돌려 비교</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>비싼 모델로 바꿀 때의 판단</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>CI 관문: PR마다 실험</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>데모: Arize 실험 목록, +18과 +6</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>프롬프트 플레이그라운드</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>평가기 추가</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>실험 결과: 지연, 비용, 오류율</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>에이전트 플레이그라운드와 원격 에이전트</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>SDK, CLI, 코딩 에이전트</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>에이전트 스킬</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>루프를 에이전트의 속도로 닫기</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>첫째 메시지: 지금의 루프</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>모든 실패는 테스트가 된다</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>둘째 메시지: 에이전트가 조사하고 고친다면</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>사람이 아니라 에이전트가 자기를 이해한다</td></tr>
+              <tr><td><span class="ts">18:30</span></td><td>프로덕션을 모른 채 PR을 올리는 코딩 에이전트</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>가장 좋은 에이전트는 스스로를 고친다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'v5tm5EAzsAs:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

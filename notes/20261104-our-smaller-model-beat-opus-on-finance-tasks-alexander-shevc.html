@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ramp 응용 연구 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#wait">기다려도 좋아지는데</a></li>
+      <li><a href="#y2023">2023년에도 기다리지 않았다</a></li>
+      <li><a href="#specialist">사례 1: 작은 전문 모델</a></li>
+      <li><a href="#cartridges">사례 2: 카트리지</a></li>
+      <li><a href="#swarm">사례 3: 에이전트 1만 개</a></li>
+      <li><a href="#pattern">공통점: 시간과 돈</a></li>
+      <li><a href="#products">연구가 들어간 제품</a></li>
+      <li><a href="#blog">블로그의 다른 연구</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-04 · 14분 · 영어 발표 한글 정리</span>
+      <h1>프런티어 모델을 기다리지 않는 이유</h1>
+      <p class="lead">새 모델이 나오면 AI 기능은 저절로 싸지고 좋아진다. 그래도 Ramp는 기다리지 않는다. 작은 전문 모델, KV 캐시 압축, 에이전트 떼 같은 응용 연구로 지금 시간과 돈을 줄인다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=T-42NrYjwxM" target="_blank" rel="noopener">Our Smaller Model Beat Opus on Finance Tasks</a></span>
+        <span>발표: Alexander Shevchenko (Ramp 응용 AI 팀, 입사 약 3년)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 발표 전체가 Ramp의 자기 연구와 제품 소개다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고, 확실하지 않은 것은 들린 대로 적고 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>새 모델이 나올 때마다 Ramp의 기능은 같은 정확도에 더 싸진다. 그래도 <strong>기다리지 않고</strong> 응용 연구로 한 층 더 파고든다.</li>
+        <li><strong>작은 전문 모델</strong>: 지휘는 프런티어 모델이 맡고, 금융 질의응답은 사후 학습한 Qwen 3.5 35B가 맡는다. Ramp는 이 모델이 그 과제에서 Opus 4.6을 넘었다고 한다.</li>
+        <li><strong>카트리지</strong>: 월말 결산처럼 미리 아는 일은 필요한 문맥을 전날 밤 KV 캐시로 압축해 둔다. 최대 20~30배까지 압축된다.</li>
+        <li><strong>에이전트 떼</strong>: 에이전트 1만 개로 Ramp 전체를 침투 테스트해 <strong>고위험 취약점 7개</strong>를 찾았다.</li>
+        <li>떼로 돌리면 <strong>최대 5배 싼 오픈 웨이트 모델</strong>로도 탐지율이 크게 떨어지지 않는다.</li>
+        <li>세 사례 모두 <strong>시간(지연 시간)과 돈(토큰 비용)</strong>을 줄이는 일이다.</li>
+        <li>랩이 같은 기능을 API로 내놓아도 손해가 아니다. <strong>먼저 써 본 노하우</strong>가 남는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="wait">
+        <header><span class="num">01</span><h2>기다려도 좋아지는데 왜 연구하나 <span class="ts">00:30</span></h2></header>
+        <p>발표자는 Ramp의 응용 AI 팀에서 약 3년 동안 일했다. LLM과 머신러닝으로 제품을 더 낫게 만드는 팀이다.</p>
+        <p>발표자는 Ramp를 <strong>"쓴 교훈이 가득한 회사"</strong>라고 부른다. 쓴 교훈<span class="en">(bitter lesson)</span>은 사람이 공들인 요령보다 더 큰 모델과 계산이 결국 이긴다는 생각이다. 여기서는 모델이 좋아지면 Ramp의 기능도 저절로 좋아진다는 뜻으로 썼다.</p>
+
+        <figure class="chart" aria-label="Ramp에서 LLM을 쓰는 사례 수 비교: 1년 전 100, 지금 223">
+          <span class="chart-title">Ramp에서 LLM을 쓰는 사례 수 (1년 전 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>지금</span><span class="val">223 · +123%</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="지금: 223 (+123%)"></div><div class="baseline" style="left:44.8%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>1년 전</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:44.8%" title="1년 전: 100"></div><div class="baseline" style="left:44.8%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 1년 전 (100)</span><span>223</span></div>
+          <span class="caption">발표자가 인용한 수치. 같은 기간에 기능 한 번당 비용은 오히려 줄었다고 한다.</span>
+        </figure>
+
+        <ul class="plain">
+          <li>인기 기능들이 쓰는 토큰은 늘고 있다.</li>
+          <li>그런데 기능 한 번당 비용<span class="en">(unit economics)</span>은 오히려 줄었다.</li>
+          <li>새 프런티어 모델이 계속 나오고, 나올 때마다 더 싸고 빠르고 좋아졌기 때문이다.</li>
+          <li>그래서 같은 정확도를 훨씬 낮은 비용으로 낸다.</li>
+        </ul>
+        <p>그러면 이런 질문이 나온다. <strong>그냥 기다리면 되지 않나?</strong> <span class="ts">01:10</span> 모델을 만들지 않고 모델 위에 제품을 만드는 회사<span class="en">(application layer company)</span>에 왜 응용 연구<span class="en">(applied research)</span> 조직이 필요한가?</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="y2023">
+        <header><span class="num">02</span><h2>2023년에도 기다리지 않았다 <span class="ts">01:30</span></h2></header>
+        <p>발표자는 2023년과 비교해 답한다. 그때는 GPT-4로 에이전트를 만들었고, 손이 아주 많이 갔다.</p>
+        <ul class="plain">
+          <li><strong>되돌아가지 못했다.</strong> 생각 토큰<span class="en">(thinking tokens)</span>이 없었다. 방향을 잘못 잡으면 실수를 모른 채 밀고 나갔다.</li>
+          <li><strong>가드레일을 아주 엄격하게 쳤다.</strong> 모델이 벗어나지 않게 규칙<span class="en">(guardrails)</span>으로 묶었다.</li>
+          <li><strong>프롬프트에 매달렸다.</strong> 동의어 하나만 바꿔도 행동이 달라졌다. 사용자 의도를 넓게 알아듣도록 강화학습<span class="en">(RL)</span>이 충분히 되지 않았기 때문이다.</li>
+          <li><strong>문맥을 줄여야 했다.</strong> 문맥을 많이 주면 에이전트가 헷갈렸다.</li>
+        </ul>
+        <p>그래도 Ramp는 GPT-4.5나 GPT-5를 기다리지 않았다. 고객인 금융 전문가에게 <strong>지금</strong> 필요했기 때문이다. 쉽지 않았지만 Ramp Tour Guide를 비롯한 에이전트를 여럿 출시했다. <span class="ts">02:20</span></p>
+
+        <div class="shift" aria-label="2023년과 2026년의 에이전트 만들기 비교">
+          <div><span class="tag">2023 · GPT-4</span><b>에이전트를 손으로 붙잡아야 했다</b><span class="muted">엄격한 가드레일, 정성 들인 프롬프트, 최소한의 문맥</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">2026</span><b>도구와 문맥을 주면 알아서 한다</b><span class="muted">MCP로 도구를 붙이고 문맥을 넉넉히 줘도 할 일을 잘 이해한다</span></div>
+        </div>
+
+        <p>지금은 에이전트 만들기가 훨씬 쉽다. 발표자는 그래도 <strong>한 층 더 파고들면</strong> 더 좋은 사용자 경험을 만들 수 있다고 본다. 다만 품이 더 든다. 이어서 Ramp Labs가 실제로 해 본 사례 세 가지를 소개한다. <span class="ts">03:00</span></p>
+      </section>
+
+      <!-- 3 -->
+      <section id="specialist">
+        <header><span class="num">03</span><h2>사례 1: 작은 전문 모델 <span class="ts">03:10</span></h2></header>
+
+        <h3>Ramp Sheets에서 시작했다 <span class="ts">03:20</span></h3>
+        <p>발표자 기준 작년 11월, Ramp는 스프레드시트 에이전트 Ramp Sheets를 냈다. 두 프런티어 랩이 비슷한 제품을 내기 전이었다. 여러 회사 사용자가 가입해 쓰기 시작했다.</p>
+        <p>Ramp 직원도, 고객인 회계·재무 전문가도 하루 대부분을 스프레드시트에서 보낸다. 그래서 Ramp Sheets의 하네스<span class="en">(harness)</span>와 두뇌를 Ramp의 다른 화면에도 넣었다.</p>
+
+        <h3>Opus 4.6이 막힌 곳 <span class="ts">04:10</span></h3>
+        <p>먼저 모델이 어디서 부족한지 찾았다. 당시 최고 모델은 Opus 4.6이었다.</p>
+        <ul class="plain">
+          <li>시트를 여러 장 넣고 DCF나 재무 시나리오를 만들어 달라고 하면, 모델은 먼저 계획을 세운다.</li>
+          <li>그다음 시트를 하나하나 조사해 전체 그림을 파악한다. 여기에 시간이 많이 들었다.</li>
+          <li>Opus 4.6은 좋은 모델이지만 꽤 느렸다. 생각 토큰도 비쌌다.</li>
+        </ul>
+
+        <h3>지휘는 큰 모델, 질의응답은 작은 모델 <span class="ts">04:50</span></h3>
+        <p>Ramp는 금융 질의응답 모델을 따로 학습시켰다. 시트에서 필요한 정보를 찾아 답하는 검색 모델<span class="en">(retrieval model)</span>이다. 프런티어 모델을 버리지 않고 역할을 나눴다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>역할</th><th>맡은 모델</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>오케스트레이터</td><td>프런티어 모델 (당시 Opus 4.6)</td><td>계획을 세우고 작업을 지휘한다</td></tr>
+              <tr><td>금융 질의응답</td><td>사후 학습한 Qwen 3.5 35B</td><td>계획 에이전트가 넘긴 금융 질문에 빨리 답한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Prime Intellect와 함께 Qwen 3.5 계열의 35B(파라미터 350억 개) 모델을 사후 학습<span class="en">(post-training)</span>했다. <span class="ts">05:10</span></p>
+        <ul class="plain">
+          <li>그 과제의 정확도<span class="en">(exact task accuracy)</span>에서 당시 최고였던 Opus 4.6을 넘었다.</li>
+          <li>지연 시간은 자막상 "high cool" 수준이다. Haiku 수준이라는 말로 보인다(추정).</li>
+          <li>훨씬 빠르면서 이 일에는 똑같이 똑똑한 모델을 프런티어 오케스트레이터와 함께 쓴다.</li>
+          <li>실험으로 끝나지 않고 프로덕션에 배포했다.</li>
+        </ul>
+        <p class="note">작은 모델이 Opus 4.6을 넘었다는 건 Ramp가 자기 과제로 잰 결과다. 발표에서 점수, 평가 데이터, 비교 조건은 보여 주지 않았다. 자사 성과 소개라는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="cartridges">
+        <header><span class="num">04</span><h2>사례 2: 카트리지로 문맥 미리 준비하기 <span class="ts">05:50</span></h2></header>
+        <p>두 번째는 지금도 연구 중인 KV 캐시<span class="en">(KV cache)</span> 기법이다. KV 캐시는 모델이 이미 읽은 내용을 다시 계산하지 않도록 저장해 둔 중간 결과다.</p>
+        <p>발표자가 특히 주목하는 기법은 카트리지<span class="en">(Cartridges)</span>다. 문맥을 최대 20~30배 더 많이 KV 캐시에 압축해 넣는다. 압축은 미리<span class="en">(offline)</span> 해 두고, 에이전트가 일할 때 붙여 쓴다.</p>
+
+        <h3>예: 월말 결산 <span class="ts">06:30</span></h3>
+        <p>한 달이 끝나면 다음 달 1일에 재무 담당자가 장부를 맞추고 마감한다. 이 일을 월말 결산<span class="en">(month-end close)</span>이라고 한다. 언제 할지, 어떤 자료가 필요한지 미리 안다. 원장<span class="en">(ledger)</span>, 채권 연령표<span class="en">(aging report)</span>, 관련 문서다.</p>
+        <div class="shift" aria-label="문맥으로만 넣을 때와 카트리지를 쓸 때 비교">
+          <div><span class="tag">문맥으로 넣기만 하면</span><b>1일 아침에 에이전트가 자료를 찾아 읽는다</b><span class="muted">자료를 미리 넣어 줘도, 에이전트는 스스로 찾아보고 전체 그림을 다시 만들어야 한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">카트리지</span><b>전날 밤에 미리 만들어 둔다</b><span class="muted">그 작업을 압축해 카트리지 하나로 만든다. 담당자가 에이전트를 열면 할 일을 이미 알고 있다</span></div>
+        </div>
+
+        <h3>장점과 단서 <span class="ts">07:10</span></h3>
+        <ul class="plain">
+          <li><strong>장점</strong>: 사후 학습보다 품이 훨씬 덜 든다. 발표자는 카트리지를 만드는 자기 학습 방식<span class="en">(self-play)</span>이 더 범용적이라서라고 설명한다.</li>
+          <li><strong>단서</strong>: 사후 학습과 달리, 이런 기능은 랩들이 언젠가 API로 내놓을 수 있다. 랩들이 지속 학습<span class="en">(continuous learning)</span>으로 나아가는 흐름의 일부다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">랩이 내놓을 기능을 왜 미리 연구하나</span>
+          <span>발표자는 랩이 API로 내놓아도 반갑다고 한다. 그동안 이 기법을 어떻게 써야 하는지 사내 노하우<span class="en">(tribal knowledge)</span>가 쌓인다. 그래서 API가 나온 첫날부터 바로 쓸 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="swarm">
+        <header><span class="num">05</span><h2>사례 3: 에이전트 1만 개로 침투 테스트 <span class="ts">07:50</span></h2></header>
+        <p>세 번째는 에이전트 맵리듀스<span class="en">(agentic map reduce)</span>와 에이전트 떼<span class="en">(agentic swarm)</span>다. 큰 일을 여러 에이전트에게 나눠 맡기고(맵), 결과를 모아 정리한다(리듀스).</p>
+        <p>Ramp Labs 블로그에 사례를 공개했다. 에이전트 1만 개를 동시에 돌려 Ramp 전체를 침투 테스트<span class="en">(pen test)</span>했다. 침투 테스트는 공격자처럼 시스템을 공격해 보안 구멍을 찾는 일이다. <span class="ts">08:00</span></p>
+        <p>이 규모를 돌릴 인프라와 연결 작업은 Ramp의 클라우드 에이전트 Ramp Inspect가 맡았다.</p>
+        <ol class="plain">
+          <li><strong>맵</strong>: 에이전트 1만 개가 일을 나눠 맡아 취약점을 찾고 티켓을 만든다.</li>
+          <li><strong>리듀스 1, 중복 제거</strong>: LLM이 겹치는 티켓을 합친다.</li>
+          <li><strong>리듀스 2, 재현</strong>: LLM이 일부러 공격하는 입장에서 취약점을 재현한다. 진짜이고 중요한지 확인하는 단계다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">결과 <span class="ts">08:40</span></span>
+          <span>고위험 취약점 7개를 찾아 모두 패치했다.</span>
+        </div>
+        <p>그중 하나는 이메일로 보낼 수 있는 Lua 스크립트 주입<span class="en">(Lua script injection)</span>이었다. 스택의 어느 부품도 그 자체로는 위험하지 않았다. 여러 부품이 어떻게 이어지는지 끝까지 이해해야 찾을 수 있었다. 에이전트 떼가 그 연결을 맞춰 냈다.</p>
+        <p>이 과정은 모두 자동으로 돈다. 사람 시간이 들지 않는다. 시작만 하면 되고, 실패해서 걸러진 시도의 비용은 토큰 값뿐이다. <span class="ts">09:10</span></p>
+
+        <h3>떼에는 싼 모델도 통한다 <span class="ts">09:30</span></h3>
+        <p>Ramp Labs는 인프라만 만들지 않는다. 떼 안에서 모델을 어떻게 써야 가장 좋은지도 연구한다. 같은 글에 나온 발견이 있다.</p>
+
+        <figure class="chart" aria-label="같은 양의 토큰에 드는 비용 비교: 프런티어 추론 모델 100, 오픈 웨이트 모델 최저 20">
+          <span class="chart-title">같은 양의 토큰에 드는 비용 (프런티어 추론 모델 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>프런티어 추론 모델</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="프런티어 추론 모델: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>오픈 웨이트 모델</span><span class="val">20 · 최대 1/5</span></div>
+              <div class="track"><div class="fill key" style="width:20%" title="오픈 웨이트 모델: 최저 20 (최대 5배 저렴)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">"최대 5배 싸다"는 말에 맞춰 가장 싼 경우를 그렸다. 탐지율은 "5배 낮지 않다", "거의 비슷하다"고만 했고 수치가 없어 그리지 않았다.</span>
+        </figure>
+
+        <p>오픈 웨이트 모델<span class="en">(open-weight model)</span>은 프런티어 추론 모델보다 최대 5배 싸다. 그런데 떼로 돌리면 탐지율은 5배 떨어지지 않는다. 같은 돈으로 싼 토큰을 더 많이 쓰면 탐지율을 거의 비슷하게 낼 수 있다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="pattern">
+        <header><span class="num">06</span><h2>공통점: 시간과 돈 <span class="ts">10:00</span></h2></header>
+        <p>세 사례는 모두 시간과 돈을 아끼려는 시도다. 시간은 지연 시간<span class="en">(latency)</span>이고, 돈은 토큰 비용이다. 발표자는 이게 Ramp의 슬로건 "고객의 시간과 돈을 아낀다"와 같다고 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>사례</th><th>시간 (지연 시간)</th><th>돈 (토큰 비용)</th></tr></thead>
+            <tbody>
+              <tr><td>작은 전문 모델</td><td>느린 조사 단계를 빠른 모델에 넘긴다</td><td>비싼 생각 토큰을 덜 쓴다</td></tr>
+              <tr><td>카트리지</td><td>1일 아침의 자료 파악을 전날 밤에 끝낸다</td><td>발표에서 따로 말하지 않았다</td></tr>
+              <tr><td>에이전트 떼</td><td>사람 시간이 들지 않는다</td><td>실패 비용은 토큰뿐이고, 오픈 웨이트 모델로 최대 5배 줄인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="products">
+        <header><span class="num">07</span><h2>연구가 들어간 Ramp 제품 <span class="ts">10:20</span></h2></header>
+        <p>발표자는 Ramp Labs 연구가 반영된 제품 두 가지를 소개한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">토큰 지출 관리 <span class="ts">10:30</span></span>
+            <p>회사의 여러 API 키를 연결해, 사내에서 LLM을 어떻게 쓰는지 보여 준다.</p>
+            <ul>
+              <li>API 키별, 사용자별 토큰 지출</li>
+              <li>회계 분류<span class="en">(accounting categories)</span></li>
+              <li>지출을 분석해 받을 수 있는 세액 공제</li>
+              <li>LLM 사용을 맥락과 의미로 나눈 분류 체계<span class="en">(taxonomy)</span>. 어느 팀이 썼는지를 넘어 어떤 일에 썼는지 보여 준다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">Ramp Router <span class="ts">11:10</span></span>
+            <p>에이전트의 지연 시간을 줄이는 라우터다. Ramp Labs와 함께 만든 라우팅 전략을 쓴다.</p>
+            <ul>
+              <li>예: Nvidia Switchyard (들린 대로, 추정)</li>
+              <li>예: 작업 일부를 유연하게 다른 곳으로 넘기는 방식 (smart flex offloading, 들린 대로). 지연 시간과 토큰당 비용을 함께 줄인다</li>
+              <li>전략은 더 나올 예정이다</li>
+            </ul>
+          </div>
+        </div>
+        <p class="note">이 대목은 Ramp 자사 제품 소개다. 발표 중 QR 코드로 제품 페이지를 안내했다. 제품 효과를 보여 주는 수치는 없었다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="blog">
+        <header><span class="num">08</span><h2>Ramp Labs 블로그의 다른 연구 <span class="ts">12:00</span></h2></header>
+        <p>발표에서 다루지 못한 글들을 짧게 소개했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>글</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>Portal (들린 대로) <span class="ts">12:10</span></td><td>한 모델에 한 사후 학습을 다른 모델로 옮긴다. 예를 들어 Qwen 3.5에 LoRA로 학습한 결과를 새 버전 Qwen이나 다른 계열 모델로 옮긴다. 학습 결과를 잠재 표현<span class="en">(latent)</span>으로 만들어 다른 모델에 투영하는 방식이다. 사후 학습에 든 비용을 여러 모델에 나눠 낼 수 있다.</td></tr>
+              <tr><td>LLM 사용 분류 <span class="ts">12:40</span></td><td>에이전트 맵리듀스로 LLM 사용을 분석하고 분류 체계를 만든다. 토큰 지출 관리 제품에 들어갔다.</td></tr>
+              <tr><td>스스로 고치는 모니터링 <span class="ts">13:00</span></td><td>LLM이 제품 서비스마다 Datadog 모니터를 자동으로 만든다. 이후 들어오는 데이터를 보고 사람 없이 모니터를 고친다. 목표는 아주 튼튼하고 잘 회복되는 소프트웨어다.</td></tr>
+              <tr><td>시맨틱 태깅 <span class="ts">13:20</span></td><td>사용자 세션 전체에 에이전트 맵리듀스를 돌려 주석을 단다. 어떤 묶음이 나올지 미리 정하지 않고 열린 분류 체계를 만든다. 그 분류를 회사 지출과 맞춰 본다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>더 많은 연구는 <a href="https://x.com/ramplabs" target="_blank" rel="noopener">x.com/ramplabs</a>에 올린다고 안내했다. <span class="ts">13:40</span></p>
+      </section>
+
+      <!-- 9 -->
+      <section id="recap">
+        <header><span class="num">09</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>새 프런티어 모델이 나올 때마다 Ramp의 기능은 같은 정확도에 더 싸진다. LLM 사용 사례는 1년에 123% 늘었다.</li>
+          <li>그래도 기다리지 않는다. 2023년 GPT-4 시절에도 어려움을 무릅쓰고 에이전트를 출시했다.</li>
+          <li>지금은 에이전트 만들기가 쉬워졌다. 더 나은 경험을 내려면 <strong>한 층 더 파야</strong> 한다.</li>
+          <li>사례 1: 프런티어 모델은 지휘만 맡고, 느리고 비싼 금융 질의응답은 <strong>사후 학습한 작은 모델</strong>에 넘겼다.</li>
+          <li>Ramp는 Qwen 3.5 35B가 그 과제에서 Opus 4.6보다 정확하고 훨씬 빠르다고 한다. 점수는 공개하지 않았다.</li>
+          <li>사례 2: <strong>카트리지</strong>는 문맥을 최대 20~30배 압축한 KV 캐시를 미리 만든다. 월말 결산처럼 예정된 일에 맞다.</li>
+          <li>랩이 같은 기능을 API로 내놓아도 손해가 아니다. 쌓인 사내 노하우로 첫날부터 쓴다.</li>
+          <li>사례 3: 에이전트 1만 개로 침투 테스트를 하고 LLM으로 중복 제거와 재현을 해서 <strong>고위험 취약점 7개</strong>를 찾았다.</li>
+          <li>떼로 돌리면 <strong>최대 5배 싼 오픈 웨이트 모델</strong>로도 탐지율이 크게 떨어지지 않는다.</li>
+          <li>세 사례의 공통점은 <strong>시간(지연 시간)과 돈(토큰 비용)</strong>을 줄이는 것이다.</li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="quiz">
+        <header><span class="num">10</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 Ramp를 "쓴 교훈이 가득한 회사"라고 부른 이유는?</span></summary><div class="answer">새 모델이 나올 때마다 더 싸고 빠르고 좋아져서, Ramp의 기능도 저절로 좋아지기 때문이다. LLM 사용 사례는 1년에 123% 늘었고, 기능 한 번당 비용은 줄었다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>2023년 GPT-4로 에이전트를 만들 때 어려웠던 점은?</span></summary><div class="answer">생각 토큰이 없어 실수해도 되돌아가지 못했다. 동의어 하나에도 행동이 바뀌어 프롬프트에 매달렸다. 문맥을 많이 주면 헷갈려서 문맥을 최소로 줄여야 했다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>그런데도 2023년에 기다리지 않고 출시한 이유는?</span></summary><div class="answer">고객인 금융 전문가에게 지금 필요했기 때문이다. GPT-4.5나 GPT-5를 기다리지 않고 Ramp Tour Guide 같은 에이전트를 냈다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Ramp Sheets에서 Opus 4.6이 막힌 지점은?</span></summary><div class="answer">시트를 여러 장 넣고 DCF 같은 재무 모델을 요청하면, 계획을 세우고 시트를 하나하나 조사하는 데 시간이 많이 들었다. 모델이 느렸고 생각 토큰도 비쌌다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>사후 학습한 Qwen 3.5 35B는 Opus를 대체했나?</span></summary><div class="answer">아니다. 프런티어 모델은 오케스트레이터로 그대로 두고, 계획 에이전트가 금융 질의응답만 빠른 전문 모델에 넘긴다. 둘을 함께 쓴다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>카트리지가 월말 결산에 잘 맞는 이유는?</span></summary><div class="answer">언제 어떤 자료(원장, 채권 연령표, 문서)가 필요한지 미리 알기 때문이다. 전날 밤에 압축해 두면 담당자가 에이전트를 여는 순간 할 일을 이미 안다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>랩이 카트리지 같은 기능을 API로 내놓을 수 있는데도 연구하는 이유는?</span></summary><div class="answer">기법을 어떻게 써야 하는지 사내 노하우가 쌓인다. API가 나온 첫날부터 바로 쓸 수 있다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>침투 테스트 떼에서 리듀스 단계가 한 두 가지 일은?</span></summary><div class="answer">LLM으로 겹치는 티켓을 합쳤다. 그리고 LLM이 공격하는 입장에서 취약점을 재현해 진짜이고 중요한지 확인했다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Lua 스크립트 주입 사례가 보여 주는 것은?</span></summary><div class="answer">부품 하나하나는 안전해도, 여러 부품이 이어지면 취약점이 생길 수 있다. 에이전트 떼는 여러 부품을 끝까지 이어서 이해해 그 연결을 찾아냈다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>떼에 오픈 웨이트 모델을 써도 되는 근거는?</span></summary><div class="answer">최대 5배 싸지만 떼로 돌리면 탐지율은 5배 떨어지지 않는다. 싼 토큰을 더 많이 써서 거의 비슷한 탐지율을 낸다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>세 사례의 공통점은?</span></summary><div class="answer">시간(지연 시간)과 돈(토큰 비용)을 줄이는 것이다. Ramp의 슬로건 "고객의 시간과 돈을 아낀다"와 같다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>Portal 연구가 겨냥하는 비용은?</span></summary><div class="answer">사후 학습 비용이다. 한 모델에 한 학습을 새 버전이나 다른 계열 모델로 옮기면, 그 비용을 여러 모델에 나눠 낼 수 있다.</div></details>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="apply">
+        <header><span class="num">11</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>LLM 기능마다 한 번당 비용을 기록한다<span class="how">확인: 모델을 바꿨을 때 같은 정확도에서 비용이 얼마나 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트 작업에서 가장 느리고 비싼 단계를 찾는다<span class="how">Ramp에서는 Opus 4.6이 시트를 계획하고 조사하는 단계였다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>그 단계만 떼어 빠른 전문 모델에 넘길 수 있는지 본다<span class="how">지휘는 프런티어 모델에 두고, 좁은 질의응답만 넘긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>날짜가 정해진 반복 업무를 찾아 문맥을 미리 준비한다<span class="how">월말 결산처럼 언제 어떤 자료가 필요한지 아는 일</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>큰 탐색 작업을 맵리듀스로 나눈다<span class="how">여러 에이전트가 나눠 찾고, LLM으로 중복을 합치고, 다른 에이전트가 재현해 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>떼로 돌리는 작업에는 오픈 웨이트 모델도 비교한다<span class="how">확인: 같은 비용에서 찾아낸 건수가 프런티어 모델과 얼마나 차이 나는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>사후 학습 전에 모델 교체 주기를 함께 따진다<span class="how">새 모델이 나오면 학습을 다시 해야 하는가, 결과를 옮길 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>랩이 곧 낼 법한 기능도 직접 써 본다<span class="how">API가 나온 날 바로 쓸 수 있는 노하우가 남는다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="glossary">
+        <header><span class="num">12</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>쓴 교훈</td><td>Bitter lesson. 사람이 짜 넣은 요령보다 더 큰 모델과 계산이 결국 이긴다는 생각. 발표자는 "모델이 좋아지면 기능도 저절로 좋아진다"는 뜻으로 썼다</td></tr>
+              <tr><td>프런티어 모델</td><td>Frontier model. 그 시점에 가장 성능이 좋은 최신 모델</td></tr>
+              <tr><td>애플리케이션 계층 회사</td><td>Application layer company. 모델을 직접 만들지 않고, 남이 만든 모델 위에 제품을 만드는 회사</td></tr>
+              <tr><td>응용 연구</td><td>Applied research. 새 이론보다 지금 제품에 바로 쓸 방법을 찾는 연구</td></tr>
+              <tr><td>단위 경제성</td><td>Unit economics. 기능 한 번, 고객 한 명처럼 작은 단위로 따진 비용과 수익</td></tr>
+              <tr><td>생각 토큰</td><td>Thinking tokens. 모델이 답하기 전에 속으로 따져 보는 데 쓰는 토큰</td></tr>
+              <tr><td>가드레일</td><td>Guardrails. 모델이 정해진 범위를 벗어나지 않게 막는 규칙</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 모델이 외부 도구와 데이터에 연결되는 표준 방식</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>오케스트레이터</td><td>Orchestrator. 계획을 세우고 다른 모델이나 도구에 일을 나눠 주는 지휘 역할의 모델</td></tr>
+              <tr><td>사후 학습</td><td>Post-training. 이미 학습된 모델을 특정 일에 맞게 더 학습시키는 것</td></tr>
+              <tr><td>LoRA</td><td>Low-Rank Adaptation. 모델 전체 대신 작은 추가 가중치만 학습하는 가벼운 사후 학습 방법</td></tr>
+              <tr><td>DCF</td><td>Discounted cash flow. 앞으로 들어올 현금을 지금 가치로 바꿔 기업 가치를 계산하는 재무 모델</td></tr>
+              <tr><td>지연 시간</td><td>Latency. 요청을 보내고 답을 받기까지 걸리는 시간</td></tr>
+              <tr><td>KV 캐시</td><td>KV cache. 모델이 이미 읽은 내용을 다시 계산하지 않도록 저장해 둔 중간 계산 결과</td></tr>
+              <tr><td>카트리지</td><td>Cartridges. 자료 묶음을 미리 압축한 KV 캐시로 만들어 두고 에이전트에 붙여 쓰는 기법. 발표자는 문맥을 최대 20~30배 더 담는다고 했다</td></tr>
+              <tr><td>지속 학습</td><td>Continuous learning. 모델이 배포된 뒤에도 새 정보를 계속 배우는 것</td></tr>
+              <tr><td>사내 노하우</td><td>Tribal knowledge. 문서보다 팀의 경험에 쌓인 실무 지식</td></tr>
+              <tr><td>월말 결산</td><td>Month-end close. 한 달이 끝난 뒤 장부를 맞추고 마감하는 회계 업무</td></tr>
+              <tr><td>채권 연령표</td><td>Aging report. 받을 돈이나 줄 돈을 기한이 지난 기간별로 나눠 보여 주는 보고서</td></tr>
+              <tr><td>침투 테스트</td><td>Penetration test. 공격자처럼 시스템을 공격해 보안 구멍을 찾는 시험</td></tr>
+              <tr><td>맵리듀스</td><td>Map reduce. 큰 일을 잘게 나눠 동시에 처리하고(맵), 결과를 모아 정리하는(리듀스) 방식</td></tr>
+              <tr><td>에이전트 떼</td><td>Agentic swarm. 많은 에이전트를 동시에 돌려 한 문제를 함께 푸는 방식</td></tr>
+              <tr><td>오픈 웨이트 모델</td><td>Open-weight model. 학습된 가중치를 공개해 누구나 내려받아 돌릴 수 있는 모델</td></tr>
+              <tr><td>Lua 스크립트 주입</td><td>Lua script injection. 공격자가 넣은 Lua 코드가 시스템 안에서 실행되게 만드는 공격</td></tr>
+              <tr><td>라우터</td><td>Router. 요청마다 어느 모델이나 경로로 보낼지 정하는 장치</td></tr>
+              <tr><td>분류 체계</td><td>Taxonomy. 대상을 기준에 따라 나눈 틀</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="timeline">
+        <header><span class="num">13</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>쓴 교훈: LLM 사용 사례 +123%, 기능당 비용은 하락</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>그냥 기다리면 되지 않나</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>2023년 GPT-4로 에이전트 만들기</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>그래도 출시했다: Ramp Tour Guide</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>2026년: 에이전트 만들기는 쉬워졌다</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>Ramp Labs 사례 세 가지</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>사례 1: 전문 모델, Ramp Sheets</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>Opus 4.6이 막힌 지점</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>금융 질의응답 모델 따로 학습</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>Prime Intellect와 Qwen 3.5 35B 사후 학습</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>사례 2: KV 캐시와 카트리지</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>월말 결산 예시</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>카트리지의 장점과 단서</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>사례 3: 에이전트 맵리듀스와 떼</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>에이전트 1만 개로 침투 테스트</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>고위험 취약점 7개, Lua 스크립트 주입</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>떼에 맞는 모델: 오픈 웨이트 모델</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>공통점: 시간과 돈</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>제품 1: 토큰 지출 관리</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>제품 2: Ramp Router</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>Ramp Labs 블로그: Portal</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>LLM 사용 분류, 스스로 고치는 모니터링</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>시맨틱 태깅</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>마무리: x.com/ramplabs</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'T-42NrYjwxM:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

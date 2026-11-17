@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>부실 채권과 AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#distress">부실 채권이란</a></li>
+      <li><a href="#outcomes">부실의 결말은 여러 갈래</a></li>
+      <li><a href="#limits">기존 두 방식의 한계</a></li>
+      <li><a href="#understand">"이해했다"의 기준</a></li>
+      <li><a href="#experiment">실험: iHeartMedia</a></li>
+      <li><a href="#layers">층마다 따로 점검하기</a></li>
+      <li><a href="#converge">구조화하자 답이 모였다</a></li>
+      <li><a href="#takeaways">네 가지 시사점</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">AI 분석에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-24 · 14분 · 영어 발표 한글 정리</span>
+      <h1>AI는 부실 채권을 이해할 수 있나</h1>
+      <p class="lead">두 최신 모델은 같은 부실 회사의 앞날을 다르게 내다봤지만, 분석을 단계별로 구조화하자 같은 결론으로 모였다. 그 결론이 맞는지는 아직 아무도 모른다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=WOszaC1WWbQ" target="_blank" rel="noopener">Can AI Understand a Distressed Credit?</a></span>
+        <span>발표: Harneet Kaur (Axim Intelligence 창업자 겸 CEO, 금융 경력 10년)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용하거나 직접 실험한 것이고 따로 확인하지 않았다. 자막에서 회사 이름이 Axon, Axium 등으로 뭉개졌는데 영상 제목에 맞춰 Axim으로 적었다. 확실하지 않은 이름은 들린 대로 적고 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>부실 채권</strong>은 돈이 떨어지거나 빚을 못 갚을 위험이 커진 회사의 채권·대출이다. 결말은 파산 하나가 아니라 여러 갈래다.</li>
+        <li>예전 점수 모형은 <strong>디폴트가 나나 안 나나</strong>만 맞혔다. 지금의 빠르고 불투명한 시장을 따라가지 못한다.</li>
+        <li>사람의 분석은 깊지만 <strong>손이 많이 가서 규모를 키우기 어렵다.</strong></li>
+        <li>발표자는 "이해했다"의 기준을 <strong>다음에 어떤 길로 갈지 확률로 예측하기</strong>로 잡았다.</li>
+        <li>진행 중인 iHeartMedia 사례를 두 최신 모델에 줬더니 파산 확률이 <strong>62%와 25%로 갈렸다.</strong></li>
+        <li>분석을 <strong>추출, 도출, 판단, 예측</strong>의 층으로 나누고 층마다 점검하자, 두 모델 모두 파산 확률 약 25%로 모였다.</li>
+        <li>모델에게 사람을 넘는 예측력은 없다. 하지만 <strong>구조화된 과정은 서로 다른 모델을 같은 답으로 모은다.</strong> 발표자는 이것이 곧 시장 가격이 하는 일이라고 본다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="distress">
+        <header><span class="num">01</span><h2>부실 채권이란 <span class="ts">00:50</span></h2></header>
+        <p>신용<span class="en">credit</span>은 회사의 채권이나 대출이다. 코카콜라가 발행한 채권도 하나의 신용이다.</p>
+        <p>회사에 돈이 떨어질 위험이 생기면 그 신용은 스트레스<span class="en">stressed</span> 상태가 된다. 빚을 못 갚을 위험이 생겨도 마찬가지다. 매년 신용 시장의 일부는 이런 스트레스나 부실<span class="en">distressed</span>을 겪는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>스트레스의 원인</th><th>발표자가 든 예</th></tr></thead>
+            <tbody>
+              <tr><td>경기 순환 <span class="en">cyclical</span></td><td>건설 경기나 주택 경기가 꺾인다</td></tr>
+              <tr><td>영업 문제 <span class="en">operational</span></td><td>식당 회사에 대규모 식품 리콜이 터진다</td></tr>
+              <tr><td>구조적 변화 <span class="en">secular disruption</span></td><td>소프트웨어 회사가 AI 때문에 흔들린다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>어떤 회사는 어려움을 겪다가 곧 회복한다. 어떤 회사는 더 깊은 부실로 들어간다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="outcomes">
+        <header><span class="num">02</span><h2>부실의 결말은 여러 갈래 <span class="ts">02:00</span></h2></header>
+        <p>부실이 곧 파산은 아니다. 파산은 여러 결말 가운데 하나일 뿐이다.</p>
+        <ul class="plain">
+          <li><strong>파산</strong> <span class="en">bankruptcy</span>: 법원 절차를 밟아 빚을 정리한다.</li>
+          <li><strong>부채 관리 거래</strong> <span class="en">liability management exercise, LME</span>: 발표에서는 풀어 설명하지 않았다. 일반적인 뜻은 용어 정리에 적었다.</li>
+          <li><strong>법정 밖 구조조정</strong> <span class="en">out-of-court restructuring</span>: 법원을 거치지 않고 채권자와 협상한다.</li>
+          <li><strong>협상에 의한 교환</strong> <span class="en">negotiated exchange</span>: 기존 채권을 조건이 다른 새 증권으로 바꾸기로 합의한다.</li>
+        </ul>
+        <p>회사가 어느 길로 갈지 미리 알기 어렵다. 이 점이 뒤에 나오는 실험의 출발점이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="limits">
+        <header><span class="num">03</span><h2>기존 두 방식의 한계 <span class="ts">02:30</span></h2></header>
+        <p>예전에는 부실을 예측하는 문제가 이분법이었다. 디폴트<span class="en">default</span>가 나느냐 안 나느냐만 맞히면 됐다. 결말이 여러 갈래가 되면서 이 틀이 맞지 않게 됐다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">정량 방식 · 점수 모형</span>
+            <ul>
+              <li>전통 머신러닝으로 디폴트 여부를 맞힌다</li>
+              <li>대표 예는 <strong>Altman Z-점수</strong>. 10~20년 전에는 아주 중요했다</li>
+              <li>상황은 월·분기마다 바뀌는데 점수는 <strong>정적</strong>이다</li>
+              <li>사모 신용<span class="en">private credit</span>이 늘면서 시장이 불투명해졌다. 가격 정보가 부족하다</li>
+            </ul>
+            <p class="verdict"><b>한계</b>: 지금 시장의 속도와 복잡함을 따라가지 못한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">정성 방식 · 사람의 분석</span>
+            <ul>
+              <li>재무제표를 분석한다</li>
+              <li>채권자 쪽에서 무슨 일이 벌어지는지 파악한다</li>
+              <li>신용 문서<span class="en">credit docs</span>를 읽는다</li>
+              <li>헤지펀드나 사모펀드 투자자가 하는 일 그대로다</li>
+            </ul>
+            <p class="verdict"><b>한계</b>: 손이 아주 많이 가서 규모를 키우기 어렵다.</p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <span class="title">발표자의 질문 <span class="ts">04:00</span></span>
+          <span>AI는 부실 채권을 어디까지 이해할 수 있을까. 회사가 갈 수 있는 길을 짚어 낼 수 있을까. 이 복잡한 과정을 체계화할 수 있을까. 발표자는 이 질문이 Axim을 시작한 계기라고 했다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="understand">
+        <header><span class="num">04</span><h2>"이해했다"의 기준 <span class="ts">04:30</span></h2></header>
+        <p>투자자는 부실 채권을 볼 때 세 방향의 질문에 답하려 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>영역</th><th>묻는 것</th></tr></thead>
+            <tbody>
+              <tr><td>재무</td><td>유동성<span class="en">liquidity</span>은 얼마나 있나. 자본 구조<span class="en">capital structure</span>는 어떤가</td></tr>
+              <tr><td>법률</td><td>이 빚의 구조적 우선순위는 무엇인가. 선순위인가 후순위인가</td></tr>
+              <tr><td>영업</td><td>사업을 어떻게 이해할까. 매출이 앞으로 오를까 내릴까</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>기존 AI 벤치마크의 방식 <span class="ts">05:10</span></h3>
+        <p>Rogo(추정, 자막에는 "Pro Go")나 Harvey 같은 AI 회사들은 이런 질문을 하나씩 떼어 채점한다. 예를 들어 "이 빚의 어느 부분이 구조적으로 선순위인가"에 AI가 얼마나 잘 답하는지 엄밀하게 잰다. 발표자는 이를 금융판 대형 벤치마크라고 불렀다.</p>
+
+        <h3>발표자의 기준 <span class="ts">05:50</span></h3>
+        <p>발표자는 다르게 봤다. 부실 채권을 진짜 이해했다면 <strong>다음에 무슨 일이 일어날지 예측할 수 있어야 한다.</strong> 정답 하나를 고르는 게 아니다. 갈 수 있는 길마다 확률을 매긴 확률 분포<span class="en">probability distribution</span>를 내야 한다.</p>
+        <div class="shift" aria-label="이해를 재는 기준의 이동">
+          <div><span class="tag">기존 벤치마크</span><b>개별 질문에 답하나</b><span class="muted">"어느 빚이 선순위인가" 같은 문제를 맞히는지 채점한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 기준</span><b>다음에 갈 길을 예측하나</b><span class="muted">파산, 구조조정, 차환 같은 길마다 확률을 매긴다</span></div>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="experiment">
+        <header><span class="num">05</span><h2>실험: iHeartMedia <span class="ts">06:10</span></h2></header>
+        <p>발표자는 실험 대상으로 iHeartMedia를 골랐다.</p>
+        <ul class="plain">
+          <li>2018년에 파산을 신청했다.</li>
+          <li>2024년에 다시 한 번 스트레스 상황의 부채 거래를 했다.</li>
+          <li>지금도 진행 중인 사례다. 앞으로 어떻게 될지 아무도 모른다. 채점 기준이 될 정답<span class="en">ground truth</span>이 없다.</li>
+        </ul>
+        <p>발표자는 이 회사 자료를 가장 똑똑한 모델 두 개에 넣었다. 하나는 Astra 6(추정)을 최고 성능 설정("Max Intelligence")으로 돌린 것이다. 다른 하나는 Claude Opus 5.5다.</p>
+
+        <h3>두 모델의 답이 갈렸다 <span class="ts">07:00</span></h3>
+        <p>같은 자료를 줬는데 두 모델이 내다본 미래가 서로 달랐다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>가장 유력하다고 본 길</th><th>파산 확률</th></tr></thead>
+            <tbody>
+              <tr><td>Astra 6 (추정)</td><td>협상에 의한 구조조정</td><td>25%</td></tr>
+              <tr><td>Opus 5.5</td><td>파산</td><td>62%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">파산 확률 숫자는 발표 후반(11:40)에 나온다.</p>
+        <p>어느 쪽이 맞는지는 판정할 수 없다. 회사가 파산할지, 법정 밖 구조조정을 할지, 차환<span class="en">refinancing</span>을 할지 아직 모르기 때문이다. 발표자는 Astra 6 쪽 판단에 기운다고 했다. 다만 사람의 판단일 뿐이라고 덧붙였다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="layers">
+        <header><span class="num">06</span><h2>층마다 따로 점검하기 <span class="ts">08:00</span></h2></header>
+        <p>정답이 없으니 결과를 채점할 수는 없다. 대신 발표자는 <strong>결론에 이르는 과정</strong>을 평가하기로 했다. 모델이 깐 가정 하나하나에 동의하는지 따져 볼 수 있게 하는 것이다.</p>
+        <p>그래서 분석을 층으로 나누고 층마다 따로 벤치마크했다. 어느 층에서든 LLM이 실수할 수 있기 때문이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>하는 일</th><th>예</th><th>발표자의 평가</th></tr></thead>
+            <tbody>
+              <tr><td>추출 <span class="en">extraction</span></td><td>문서에서 숫자와 사실을 뽑는다</td><td>EBITDA를 찾는다</td><td>상장사 자료는 거의 해결됐다. 비상장 대출의 엑셀과 PDF는 아직 어렵다</td></tr>
+              <tr><td>도출 <span class="en">reconciliation / derivation</span></td><td>뽑은 값을 맞춰 보고 새 값을 계산한다</td><td>EBITDA와 부채로 레버리지를 낸다</td><td>추출이 맞아도 여기서 틀릴 수 있다</td></tr>
+              <tr><td>판단 <span class="en">judgment</span></td><td>계산된 값으로 상황을 판정한다</td><td>이 레버리지면 부실인가</td><td>합리적인 판단인지 확인한다</td></tr>
+              <tr><td>예측 <span class="en">prediction</span></td><td>앞으로 갈 길마다 확률을 매긴다</td><td>파산 몇 %, 구조조정 몇 %</td><td>앞의 세 층을 확인한 뒤에만 의미가 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>사람 분석가도 이 순서로 생각한다. 잘못된 숫자 위에 세운 판단은 좋은 판단이 될 수 없다. 그래서 데이터, 계산, 판단이 믿을 만하다는 걸 확인한 뒤에야 예측 층으로 넘어간다.</p>
+        <p class="note">09:10부터 10:10 사이에는 발표자의 노트북이 꺼져 발표가 잠시 끊겼다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="converge">
+        <header><span class="num">07</span><h2>구조화하자 답이 모였다 <span class="ts">11:10</span></h2></header>
+        <p>층을 나눈 구조화된 추론 과정<span class="en">structured reasoning process</span>을 거치게 하자 두 모델의 답이 모였다. 발표자는 "놀랍지 않을 수도 있지만 흥미로웠다"고 했다.</p>
+
+        <figure class="chart" aria-label="iHeartMedia 파산 확률 추정: 구조화 전 Opus 5.5 62%, Astra 6 25%. 구조화 후 두 모델 모두 약 25%">
+          <span class="chart-title">iHeartMedia가 파산할 확률, 모델별 추정 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>구조화 전 · Opus 5.5</span><span class="val">62</span></div>
+              <div class="track"><div class="fill" style="width:62%" title="구조화 전 Opus 5.5: 62%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>구조화 전 · Astra 6 (추정)</span><span class="val">25</span></div>
+              <div class="track"><div class="fill" style="width:25%" title="구조화 전 Astra 6: 25%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>구조화 후 · Opus 5.5</span><span class="val">약 25</span></div>
+              <div class="track"><div class="fill key" style="width:25%" title="구조화 후 Opus 5.5: 약 25%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>구조화 후 · Astra 6 (추정)</span><span class="val">약 25</span></div>
+              <div class="track"><div class="fill key" style="width:25%" title="구조화 후 Astra 6: 약 25%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">구조화 후 값은 발표자가 "4분의 1, 약 25%"라고 말한 것이라 25에 맞춰 그렸다. 다른 길의 확률은 자막에 숫자로 나오지 않아 싣지 않았다.</span>
+        </figure>
+
+        <ul class="plain">
+          <li>두 모델 모두 파산 확률을 약 25%로 봤다.</li>
+          <li>두 모델 모두 협상에 의한 구조조정을 가장 유력한 길로 꼽았다.</li>
+        </ul>
+
+        <div class="callout warn">
+          <span class="title">읽을 때 감안할 점</span>
+          <ul class="plain">
+            <li>실험 대상은 회사 하나, 모델 두 개다.</li>
+            <li>발표에서는 구조화 과정의 구체적인 단계나 프롬프트를 공개하지 않았다.</li>
+            <li>숫자만 보면 Astra 6의 파산 확률은 그대로다. 움직인 쪽은 Opus 5.5로, 62%에서 25%로 내려왔다.</li>
+            <li>발표자는 처음부터 Astra 6 쪽에 기울었다고 했다. 과정을 설계한 사람의 판단이 결과에 얼마나 들어갔는지는 발표에서 다루지 않았다.</li>
+          </ul>
+        </div>
+        <p class="note">발표자는 부실 채권 투자용 AI를 만드는 Axim Intelligence의 창업자다. "구조화된 추론 과정이 답을 모은다"는 결론은 그 회사가 만드는 제품의 방향과 맞닿아 있으니 감안해 읽자.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="takeaways">
+        <header><span class="num">08</span><h2>네 가지 시사점 <span class="ts">12:00</span></h2></header>
+        <ol class="plain">
+          <li><strong>모델에게 예측 우위는 없다.</strong> 정답을 확인할 수 없는 질문에서, 사람과 똑같이 정리된 자료를 받은 모델이 사람보다 미래를 잘 내다본다고 할 수 없다. 발표자는 "어떤 의미에서는 에이전트도 사람"이라는 말로 이유를 대신했다.</li>
+          <li><strong>구조화하면 수렴한다.</strong> 구조화된 추론 과정은 서로 다른 모델을 비슷한 이해로 모은다. 사업을 보는 눈도, 앞으로 갈 길에 대한 생각도 비슷해진다.</li>
+          <li><strong>그 답이 맞는지는 모른다.</strong> 진행 중인 사례를 시간이 지나 확인하는 것이 가장 정직한 시험이다. 과거 사례로 시험하면 미래 정보 편향<span class="en">look-ahead bias</span>이 생긴다. 모델이 이미 결말을 알고 있을 수 있기 때문이다.</li>
+          <li><strong>수렴은 곧 가격이다.</strong> 서로 다른 판단자를 같은 확률로 모으는 과정은 시장 가격과 같은 일을 한다.</li>
+        </ol>
+        <blockquote>같은 확률로 모이는 과정을 체계적으로 만들 수 있다면, 그것이 사실상 시장의 가격이다.<cite>발표자의 표현을 옮김 <span class="ts">13:20</span></cite></blockquote>
+        <p>가격은 여러 참여자가 각자 따져 본 판단이 숫자 하나로 모인 것이다. 앞에서 발표자는 사모 신용이 늘면서 가격 정보가 부족해졌다고 했다. 발표자가 두 이야기를 직접 잇지는 않았다. 하지만 같이 놓고 보면, 같은 결론으로 모이는 분석 과정이 가격이 없는 곳에서 가격 노릇을 할 수 있다는 뜻으로 읽힌다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="recap">
+        <header><span class="num">09</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>부실 채권은 돈이 떨어지거나 빚을 못 갚을 위험이 커진 회사의 채권·대출이다.</li>
+          <li>부실의 결말은 파산, 부채 관리 거래, 법정 밖 구조조정, 협상에 의한 교환 등 여러 갈래다.</li>
+          <li>Altman Z-점수 같은 이분법 점수 모형은 정적이다. 사모 신용이 늘며 시장은 불투명해졌다.</li>
+          <li>사람의 정성 분석은 깊지만 손이 많이 가서 규모를 키우기 어렵다.</li>
+          <li>기존 AI 벤치마크는 개별 질문에 답하는 능력을 잰다. 발표자는 <strong>다음에 갈 길을 확률로 예측하는 능력</strong>을 기준으로 삼았다.</li>
+          <li>진행 중인 iHeartMedia 사례에서 두 최신 모델의 파산 확률은 <strong>62%와 25%</strong>로 갈렸다.</li>
+          <li>정답이 없으니 결과 대신 과정을 평가한다. <strong>추출, 도출, 판단, 예측</strong> 층마다 따로 점검한다.</li>
+          <li>구조화하자 두 모델 모두 <strong>파산 약 25%</strong>, 협상에 의한 구조조정이 가장 유력하다는 답으로 모였다.</li>
+          <li>모델에게 사람을 넘는 예측 우위는 없다. 모인 답이 맞는지도 아직 모른다.</li>
+          <li>같은 확률로 모이는 체계적인 과정은 <strong>시장 가격</strong>과 같은 역할을 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="quiz">
+        <header><span class="num">10</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말한 신용과 스트레스의 뜻은?</span></summary><div class="answer">신용은 회사의 채권이나 대출이다. 스트레스는 회사에 돈이 떨어지거나 빚을 못 갚게 될 위험이 생긴 상태다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>스트레스를 부르는 원인 세 가지와 각각의 예는?</span></summary><div class="answer">경기 순환(건설·주택 경기 하락), 영업 문제(식당 회사의 대규모 식품 리콜), 구조적 변화(AI에 흔들리는 소프트웨어 회사).</div></details>
+          <details><summary><span class="qn">Q3</span><span>부실 예측을 더 이상 이분법으로 풀 수 없는 이유는?</span></summary><div class="answer">결말이 파산 하나가 아니기 때문이다. 부채 관리 거래, 법정 밖 구조조정, 협상에 의한 교환 같은 길이 함께 있다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Altman Z-점수 같은 점수 모형이 지금 잘 맞지 않는 이유 두 가지는?</span></summary><div class="answer">상황은 월·분기마다 바뀌는데 점수는 정적이다. 사모 신용이 늘면서 시장이 불투명해져 가격 정보가 부족하다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>기존 AI 벤치마크와 발표자의 기준은 어떻게 다른가?</span></summary><div class="answer">기존 벤치마크는 "어느 빚이 선순위인가" 같은 개별 질문에 답하는지 채점한다. 발표자는 회사가 다음에 갈 길마다 확률을 매길 수 있는지를 이해의 기준으로 삼았다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>iHeartMedia 사례에 정답이 없는 이유는?</span></summary><div class="answer">2018년 파산과 2024년 부채 거래를 거친 뒤 지금도 진행 중인 사례라서, 앞으로 어떻게 될지 아직 아무도 모른다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>처음에 두 모델은 파산 확률을 각각 얼마로 봤나?</span></summary><div class="answer">Opus 5.5는 62%로 보고 파산을 가장 유력하게 봤다. Astra 6(추정)는 25%로 보고 협상에 의한 구조조정을 가장 유력하게 봤다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>네 층의 이름과 각 층의 예는?</span></summary><div class="answer">추출(EBITDA 찾기), 도출(EBITDA와 부채로 레버리지 계산), 판단(이 레버리지면 부실인가), 예측(길마다 확률 매기기).</div></details>
+          <details><summary><span class="qn">Q9</span><span>예측 층보다 앞의 층을 먼저 확인해야 하는 이유는?</span></summary><div class="answer">잘못된 숫자 위에 세운 판단은 좋은 판단이 될 수 없다. 데이터, 계산, 판단이 믿을 만해야 예측도 의미가 있다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>구조화된 추론 과정을 거친 뒤 두 모델의 답은?</span></summary><div class="answer">둘 다 파산 확률을 약 25%로 봤다. 둘 다 협상에 의한 구조조정을 가장 유력한 길로 꼽았다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>과거 사례로 이 방법을 시험하기 어려운 이유는?</span></summary><div class="answer">미래 정보 편향 때문이다. 모델이 이미 결말을 알고 있을 수 있어서 예측을 잘한 것처럼 보일 수 있다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 두 모델의 수렴을 시장 가격에 빗댄 이유는?</span></summary><div class="answer">서로 다른 판단자가 체계적인 과정을 거쳐 같은 확률에 닿는다면, 그것이 바로 가격이 하는 일이기 때문이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="apply">
+        <header><span class="num">11</span><h2>AI 분석에 적용하기</h2><p class="muted">발표 내용을 정답이 없는 판단 작업에 AI를 쓸 때의 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>같은 자료를 모델 두 개 이상에 주고 답을 비교한다<span class="how">확인: 결론이나 확률이 서로 갈리는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>분석을 추출, 도출, 판단, 예측 층으로 나눈다<span class="how">층마다 무엇을 입력받고 무엇을 내놓는지 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>추출 층의 값을 원문과 대조한다<span class="how">비상장 자료, 엑셀, PDF에서 뽑은 숫자는 특히 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>도출 층의 계산을 따로 다시 해 본다<span class="how">예: 레버리지 같은 비율을 직접 계산해 모델 값과 맞춘다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>판단 층에서 모델이 깐 가정을 목록으로 뽑는다<span class="how">가정마다 동의하는지 반대하는지 표시한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>예측은 답 하나가 아니라 길마다 확률로 받는다<span class="how">확인: 확률의 합이 100%인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>과거 사례로 평가할 때는 미래 정보 편향을 의심한다<span class="how">모델의 학습 시점 이후에 결말이 난 사례를 우선 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>모델들의 답이 모여도 맞다고 결론짓지 않는다<span class="how">예측을 날짜와 함께 기록해 두고, 나중에 실제 결과와 비교한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="glossary">
+        <header><span class="num">12</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>신용</td><td>Credit. 회사가 빌린 돈. 채권이나 대출의 형태를 띤다</td></tr>
+              <tr><td>스트레스 / 부실</td><td>Stressed / Distressed. 빚을 못 갚을 위험이 보이는 단계와, 그 위험이 깊어진 단계</td></tr>
+              <tr><td>디폴트</td><td>Default. 약속한 원금이나 이자를 제때 갚지 못하는 것</td></tr>
+              <tr><td>파산</td><td>Bankruptcy. 법원 절차를 밟아 빚을 정리하는 것</td></tr>
+              <tr><td>부채 관리 거래</td><td>Liability management exercise, LME. 회사가 법원 밖에서 일부 채권자와 거래해 빚의 만기, 순위, 담보 조건을 바꾸는 것</td></tr>
+              <tr><td>법정 밖 구조조정</td><td>Out-of-court restructuring. 법원을 거치지 않고 채권자와 협상해 빚을 줄이거나 조건을 바꾸는 것</td></tr>
+              <tr><td>협상에 의한 교환</td><td>Negotiated exchange. 기존 채권을 조건이 다른 새 채권이나 주식으로 바꿔 주기로 합의하는 것</td></tr>
+              <tr><td>차환</td><td>Refinancing. 새로 돈을 빌려 기존 빚을 갚는 것</td></tr>
+              <tr><td>Altman Z-점수</td><td>재무 비율 몇 개를 합쳐 파산 위험을 점수 하나로 내는 고전 모형</td></tr>
+              <tr><td>사모 신용</td><td>Private credit. 공개 시장을 거치지 않고 펀드 등이 기업에 직접 빌려주는 대출. 거래 가격이 잘 드러나지 않는다</td></tr>
+              <tr><td>유동성</td><td>Liquidity. 당장 쓸 수 있는 현금과 곧 현금으로 바꿀 수 있는 자산</td></tr>
+              <tr><td>자본 구조</td><td>Capital structure. 회사가 어떤 빚과 지분으로 돈을 마련했는지의 구성</td></tr>
+              <tr><td>선순위 / 후순위</td><td>Senior / Junior. 회사가 어려워졌을 때 돈을 먼저 돌려받는 쪽과 나중에 받는 쪽</td></tr>
+              <tr><td>신용 문서</td><td>Credit docs. 대출 계약서나 채권 약정서처럼 빚의 조건을 정한 법률 문서</td></tr>
+              <tr><td>EBITDA</td><td>이자, 세금, 감가상각비를 빼기 전 이익. 영업으로 버는 돈의 대략적인 크기</td></tr>
+              <tr><td>레버리지</td><td>Leverage. 버는 돈에 비해 빚이 얼마나 큰지. 흔히 부채를 EBITDA로 나눠 잰다</td></tr>
+              <tr><td>정답 데이터</td><td>Ground truth. 모델의 답을 채점할 기준이 되는 실제 정답</td></tr>
+              <tr><td>확률 분포</td><td>Probability distribution. 일어날 수 있는 결말마다 확률을 매긴 것. 모두 더하면 100%다</td></tr>
+              <tr><td>구조화된 추론 과정</td><td>Structured reasoning process. 분석을 정해진 단계로 나눠 단계마다 결과를 확인하며 진행하는 방식</td></tr>
+              <tr><td>미래 정보 편향</td><td>Look-ahead bias. 과거 시점을 평가하는데 그 뒤에 알려진 정보가 섞여 결과가 실제보다 좋아 보이는 오류</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="timeline">
+        <header><span class="num">13</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자와 Axim Intelligence 소개</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>신용과 부실 채권의 뜻</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>스트레스의 원인: 경기 순환, 영업 문제, 구조적 변화</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>부실의 결말: 파산, 부채 관리 거래, 법정 밖 구조조정</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>예전 예측은 이분법이었다</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>Altman Z-점수의 한계, 사모 신용과 불투명한 시장</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>사람의 정성 분석과 그 한계</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>AI로 이 과정을 체계화할 수 있나</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>투자자의 질문: 재무, 법률, 영업</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>기존 AI 벤치마크: Rogo(추정), Harvey</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>진짜 이해는 다음을 예측하는 것</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>실험 대상 iHeartMedia</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>Astra 6(추정)와 Opus 5.5에 맡김</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>두 모델의 답이 갈렸다</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>결과 대신 과정을 평가하기</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>추출, 도출, 판단 층</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>노트북이 꺼져 잠시 중단</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>판단 층과 예측 층</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>결과: 두 모델의 답이 모였다</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>시사점 1: 모델에게 예측 우위는 없다</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>시사점 2: 구조화하면 수렴한다</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>시사점 3: 맞는지는 모른다, 미래 정보 편향</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>시사점 4: 수렴은 곧 시장 가격</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>발표자 경력: 금융 10년, 부실 채권·특수 상황 투자자</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'WOszaC1WWbQ:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

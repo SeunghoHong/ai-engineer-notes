@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>그래프 RAG 입문 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- code block (this note only) ---------- */
+pre {
+  margin: 0; padding: 12px 16px; max-width: 68ch; overflow-x: auto;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: var(--step--1); line-height: 1.6;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#apple">사과 하나, 세 가지 표현</a></li>
+      <li><a href="#why-graph">표와 벡터가 놓치는 것</a></li>
+      <li><a href="#architecture">RAG와 그래프 RAG의 구조</a></li>
+      <li><a href="#when">언제 그래프 RAG를 쓰나</a></li>
+      <li><a href="#retriever">리트리버와 데이터 소스</a></li>
+      <li><a href="#kg">지식 그래프란</a></li>
+      <li><a href="#build">LLM으로 지식 그래프 만들기</a></li>
+      <li><a href="#setup">실습 환경 준비</a></li>
+      <li><a href="#populate">그래프 생성과 확인</a></li>
+      <li><a href="#agent">Aura 에이전트 만들기</a></li>
+      <li><a href="#vector">벡터 인덱스와 유사도 검색 도구</a></li>
+      <li><a href="#ask">에이전트에 묻기: 집계 질문의 함정</a></li>
+      <li><a href="#code">빌더 코드 읽기</a></li>
+      <li><a href="#closing">마무리와 자료</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 프로젝트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-11 · 53분 · 영어 발표 한글 정리</span>
+      <h1>RAG에는 지도가 필요하다</h1>
+      <p class="lead">벡터 검색만으로는 "이것과 저것이 어떻게 이어지는가"를 답하기 어렵다. 그래프 RAG는 검색 경로에 지식 그래프를 넣어 연결된 맥락을 꺼내고, 에이전트가 어떤 길로 답에 도달했는지 추적할 수 있게 한다. 이 워크숍은 개념 설명과 Neo4j 실습을 함께 담은 입문 과정이다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=LJ2a9nX3vlo" target="_blank" rel="noopener">RAG Needs a Map: Using GraphRAG to Retrieve Connected Context</a></span>
+        <span>발표: Nyah Macklin (Neo4j 시니어 소프트웨어 엔지니어 · 시니어 개발자 애드보킷)</span>
+      </div>
+      <p class="note">영어 워크숍의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 것만 알려진 이름으로 바로잡았고, 나머지는 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 그래프 데이터베이스 회사 Neo4j 소속이다. 그래프 RAG의 장점과 Neo4j 제품(Aura, Graph Academy, GraphRAG for Python)에 대한 설명은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>데이터는 <strong>표</strong>, <strong>벡터</strong>, <strong>지식 그래프</strong>로 표현할 수 있다. 표는 조인이 많아 느리고, 벡터는 사람이 읽을 수 없다. 지식 그래프는 사람과 기계가 모두 읽을 수 있다.</li>
+        <li><strong>그래프 RAG는 RAG의 한 종류다.</strong> 검색 경로에 지식 그래프가 포함된다는 점만 다르다.</li>
+        <li>검색 엔진으로 풀리는 질문은 <strong>벡터 RAG로 충분</strong>하다. 세 단계 이상 건너뛰어야 하는 질문, 여러 문서를 모아 세거나 합쳐야 하는 질문은 <strong>그래프 RAG</strong>가 필요하다.</li>
+        <li>발표자의 결론은 <strong>둘 다 쓰라</strong>는 것이다. 그래프가 벡터를 대체하는 게 아니라 벡터 위에 더해진다.</li>
+        <li>지식 그래프는 LLM으로 만들 수 있다. 문서를 모으고, 자르고, 임베딩하고, LLM에게 <strong>개체와 관계를 JSON으로 뽑게</strong> 한 뒤 Cypher로 그래프를 만든다.</li>
+        <li>실습에서는 GraphRAG for Python 패키지로 Graph Academy 강의 PDF를 그래프로 만들고, Aura 에이전트에 <strong>유사도 검색 도구</strong>와 <strong>자연어→Cypher 도구</strong>를 붙여 질문했다.</li>
+        <li>에이전트는 "강의가 몇 개냐"는 집계 질문에 30이라고 답했지만 실제는 15였다. 빌더를 두 번 돌려 데이터가 중복됐기 때문이다. <strong>그래프를 직접 조회하면 바로 드러난다.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="apple">
+        <header><span class="num">01</span><h2>사과 하나, 세 가지 표현 <span class="ts">07:10</span></h2></header>
+        <p>발표자는 AI의 블랙박스 문제를 넘으려면 지식과 데이터 자체가 투명해야 한다고 말한다. 같은 사과를 세 가지로 표현해 보면 차이가 보인다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>표현</th><th>모습</th><th>누가 읽나</th></tr></thead>
+            <tbody>
+              <tr><td>사람의 눈</td><td>빨갛고 둥근 과일 사진</td><td>사람</td></tr>
+              <tr><td>벡터 <span class="en">vector</span></td><td>소수점 숫자가 길게 늘어선 배열</td><td>기계. 사람은 외우지 않는 한 읽을 수 없다</td></tr>
+              <tr><td>지식 그래프 <span class="en">knowledge graph</span></td><td>사과 → 나무에서 난다, 둥글다, 빨갛다, 과일이다 (회사가 아니다)</td><td>사람과 기계 모두</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>세상의 모든 것은 벡터로도 표현할 수 있다. 하지만 지식 그래프는 <strong>사람이 이해하는 것을 기계도 이해하게</strong> 만들고, 둘의 읽기 방식을 하나로 합친다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="why-graph">
+        <header><span class="num">02</span><h2>표와 벡터가 놓치는 것 <span class="ts">09:10</span></h2></header>
+        <p>지금 대부분의 데이터는 표(행과 열)이거나 벡터다. 표로 저장하면 행과 행이 어떻게 이어지는지 알아내려고 조인을 여러 번 해야 하고, 조인이 쌓이면 애플리케이션이 느려진다.</p>
+        <p>같은 데이터를 지식 그래프로 두면 관계와 묶음이 바로 드러난다. 에이전트는 노드(동그라미)에서 관계(선)를 따라 다음 노드로 <strong>한 칸씩 건너뛰며</strong> 과거에 무슨 일이 있었는지 추적하고 설명할 수 있다.</p>
+        <div class="callout">
+          <span class="title">규제가 있는 분야에서 더 중요하다</span>
+          <span>금융, 의료, 법률처럼 규제가 있는 분야에서는 에이전트가 왜 그 결정을 내렸는지 맥락과 이력이 꼭 필요하다. 발표자는 "아무도 바이브 뱅킹을 원하지 않는다"고 농담했다. 에이전트가 내 돈에 접근해 마음대로 쓰는 상황은 실제로 본 적이 있다고 한다.</span>
+        </div>
+        <p class="note">에이전트 메모리는 이 발표에서 다루지 않았다. 발표자는 별도의 발표에서 다룬다고 했다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="architecture">
+        <header><span class="num">03</span><h2>RAG와 그래프 RAG의 구조 <span class="ts">11:40</span></h2></header>
+        <p>RAG <span class="en">Retrieval-Augmented Generation</span>는 질문에 답하기 전에 외부 자료를 찾아 LLM에 함께 넣어 주는 방식이다. 보통의 RAG와 그래프 RAG는 한 가지만 다르다.</p>
+        <div class="shift" aria-label="보통 RAG와 그래프 RAG의 차이">
+          <div><span class="tag">보통 RAG</span><b>벡터 저장소만 검색한다</b><span class="muted">PDF → 조각내기 → 임베딩 모델로 색인 → 질문도 같은 모델로 임베딩 → 가장 비슷한 조각 k개 → LLM → 답</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">그래프 RAG</span><b>검색 경로에 지식 그래프가 들어간다</b><span class="muted">나머지 흐름은 같다. 조각과 함께 그래프에서 연결된 노드와 관계를 꺼내 LLM에 준다</span></div>
+        </div>
+        <blockquote>그래프 RAG는 근본적으로 RAG다. 다만 검색 경로에 지식 그래프가 포함된다.<cite>발표자의 정의를 옮김 <span class="ts">12:30</span></cite></blockquote>
+      </section>
+
+      <!-- 4 -->
+      <section id="when">
+        <header><span class="num">04</span><h2>언제 그래프 RAG를 쓰나 <span class="ts">12:50</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">벡터 RAG로 충분한 경우</span>
+            <ul>
+              <li>검색 엔진으로 풀 수 있는 질문</li>
+              <li>비슷한 문단 하나를 찾으면 끝나는 질문</li>
+            </ul>
+            <p class="verdict">발표자도 대부분의 쓰임새에서 벡터 RAG가 <b>충분히 강력하다</b>고 인정한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">그래프 RAG가 필요한 경우</span>
+            <ul>
+              <li>여러 단계를 건너뛰어야 하는 질문. 발표자 기준은 <strong>세 단계 이상</strong></li>
+              <li>소스 코드 분석</li>
+              <li>공급망 질문</li>
+              <li>여러 문서의 내용을 <strong>모아 세거나 합쳐야</strong> 하는 질문</li>
+            </ul>
+            <p class="verdict">에이전트가 어디를 거쳐 답에 도달했는지 <b>볼 수 있다</b>는 점이 핵심이다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">결론: 둘 다 쓴다</span>
+          <span>그래프가 벡터 계층을 완전히 대체한다는 뜻이 아니다. 둘을 함께 쓰면 양쪽의 장점을 다 얻는다. 발표자의 표현으로는 "덧붙이자"다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="retriever">
+        <header><span class="num">05</span><h2>리트리버와 데이터 소스 <span class="ts">16:10</span></h2></header>
+        <p>리트리버 <span class="en">retriever</span>는 RAG의 핵심 부품이다. 외부 데이터에서 관련 정보를 찾아오는 일을 맡는다. 발표자는 공을 물어오는 골든 리트리버에 빗댄다. 질문이나 프롬프트 같은 비정형 입력을 받아, 구조화된 데이터를 뒤져 답의 맥락을 가져온다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Neo4j가 지원하는 리트리버</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>전문 검색 <span class="en">full-text</span></td><td>단어가 들어 있는 텍스트를 찾는다</td></tr>
+              <tr><td>벡터 검색 <span class="en">vector</span></td><td>뜻이 비슷한 텍스트 조각을 찾는다</td></tr>
+              <tr><td>텍스트→Cypher <span class="en">text-to-Cypher</span></td><td>자연어 질문을 그래프 질의어로 바꿔 그래프를 직접 조회한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>데이터 소스는 하나가 아니다 <span class="ts">17:20</span></h3>
+        <p>문서, API, 지식 그래프가 모두 데이터 소스가 될 수 있다. 발표자는 뉴스 챗봇을 예로 들었다.</p>
+        <ul class="plain">
+          <li><strong>뉴스 API</strong>: 최신 기사와 헤드라인을 가져온다</li>
+          <li><strong>지식 그래프</strong>: 주제들이 서로 어떻게 이어지는지, 역사적 맥락에서 어떤 관계인지 이해한다</li>
+          <li><strong>문서 데이터베이스</strong>: 기사, 보고서 같은 본문을 저장하고 꺼낸다</li>
+        </ul>
+        <p>그래프 RAG의 장점으로 발표자는 더 풍부한 맥락, 정확도 향상, 설명 가능성을 꼽는다. 그래프 탐색에 에이전트 메모리를 더하면 역사적 맥락까지 얻을 수 있다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="kg">
+        <header><span class="num">06</span><h2>지식 그래프란 <span class="ts">18:40</span></h2></header>
+        <p>지식 그래프는 현실 세계의 개체 <span class="en">entity</span>와 그 사이 관계 <span class="en">relationship</span>를 정리한 표현이다. 발표자는 자신과 동료를 예로 든다.</p>
+        <ul class="plain">
+          <li>발표자는 노드다. 동료 Jeremy도 노드다.</li>
+          <li>두 노드 사이에 관계가 둘 있다. "동료다", "친구다".</li>
+          <li>Zach, Ryan 같은 다른 동료 노드로 계속 이어진다.</li>
+        </ul>
+        <p>이것이 지식 그래프의 가장 단순한 형태다. 데이터를 가장 단순하게 표현한 것일 뿐이다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="build">
+        <header><span class="num">07</span><h2>LLM으로 지식 그래프 만들기 <span class="ts">19:50</span></h2></header>
+        <p>비정형 텍스트에서 지식 그래프를 만드는 과정은 다섯 단계다. 예시는 Neo4j 위키백과 문서다.</p>
+        <ol class="plain">
+          <li><strong>모으기</strong>: 문서에서 텍스트를 전부 가져온다.</li>
+          <li><strong>자르기</strong>: 텍스트를 조각 <span class="en">chunk</span>으로 나눈다.</li>
+          <li><strong>임베딩</strong>: 조각마다 벡터를 만든다.</li>
+          <li><strong>추출</strong>: LLM에게 개체와 관계를 뽑게 한다. 손으로 해도 되지만 LLM이 시간을 크게 줄인다.</li>
+          <li><strong>그래프 생성</strong>: 추출 결과를 파싱해 Cypher로 그래프를 만든다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">추출 프롬프트의 뼈대 <span class="ts">21:00</span></span>
+          <span>"주어진 텍스트에서 요청한 개체와 관계를 찾아라. 출력은 JSON 객체 목록을 담은 JSON 형식으로 만들어라." 이 출력을 파싱해 그래프를 만든다.</span>
+        </div>
+        <p>생성된 그래프 예시는 이렇다. 그래프 데이터베이스 Neo4j는 회사 Neo4j가 <strong>개발했고</strong>, Java로 <strong>구현됐다</strong>. 발표자는 회사가 그래프 데이터베이스 전체를 만든 게 아니라 Neo4j라는 제품을 만든 것이라고 덧붙였다.</p>
+        <p class="note">여담: Neo4j라는 이름은 영화 매트릭스의 Neo와 "for Java"에서 왔다고 발표자가 소개했다.</p>
+        <p>Cypher <span class="en">Cypher</span>는 그래프에 최적화된 질의 언어다. 관계형 데이터베이스의 SQL에 해당한다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="setup">
+        <header><span class="num">08</span><h2>실습 환경 준비 <span class="ts">23:10</span></h2></header>
+        <p>실습은 Neo4j의 무료 학습 플랫폼 Graph Academy 안의 "GraphRAG for Python" 과정을 따라간다. GraphRAG for Python은 Neo4j가 공개한 오픈소스 패키지로, 지식 그래프 구축과 검색, 에이전트 작업에 쓴다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>순서</th><th>할 일</th><th>비고</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Graph Academy 계정 만들기</td><td>graphacademy.neo4j.com. 무료</td></tr>
+              <tr><td>2</td><td>Neo4j Aura 인스턴스 만들기</td><td>반드시 <strong>무료</strong> 인스턴스를 고른다. 연결 정보 파일을 내려받아 보관한다</td></tr>
+              <tr><td>3</td><td>GitHub Codespaces 열기</td><td>과정 페이지의 "Open in GitHub Codespaces" 버튼. 설정은 기본값 그대로</td></tr>
+              <tr><td>4</td><td><code>.env</code> 만들기</td><td><code>.env.example</code>을 복사해 새 파일로 만들고 Aura 연결 정보와 OpenAI 키를 넣는다</td></tr>
+              <tr><td>5</td><td>환경 테스트</td><td><code>test_environment.py</code> 실행. 테스트 5개가 통과하면 준비 끝</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">Aura 인스턴스를 못 만들었다면</span>
+          <span>Graph Academy 안에 작은 무료 인스턴스가 있고, 과정 페이지에 그 접속 정보가 적혀 있다. 그걸 써도 된다. 어느 쪽이든 지식 그래프를 넣을 Neo4j 데이터베이스 연결 정보만 있으면 된다.</span>
+        </div>
+        <p class="note">워크숍용 OpenAI API 키는 발표자가 노트 문서에 공유했다. 사용량 제한이 걸려 있다고 했다. 노트 문서 주소는 자막에 dev.neo4j.com/workshop-genai-notes 로 들렸다(추정). 가장 흔한 실수는 <code>.env.example</code>을 그대로 둔 채 <code>.env</code>를 만들지 않는 것이다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="populate">
+        <header><span class="num">09</span><h2>그래프 생성과 확인 <span class="ts">28:40</span></h2></header>
+        <p>저장소에는 원본 데이터, 풀이 코드, 에이전트, 그리고 지식 그래프 빌더 두 개가 들어 있다. 이 중 <strong>구조화된 지식 그래프 빌더</strong>를 실행하면 Aura 인스턴스에 그래프가 실시간으로 쌓인다. 시간이 꽤 걸린다.</p>
+        <p>Aura 콘솔의 Query 화면에서 아래 질의를 실행하면 노드와 관계가 전부 그려진다. 빌더가 돌고 있는 동안 다시 실행하면 그래프가 커지는 게 보인다.</p>
+        <pre><code>MATCH p = ()-[]->()
+RETURN p</code></pre>
+        <p class="note">위 질의는 자막에서 "match p equals 빈 노드, 화살표, 빈 노드, return p"로 들린 것을 복원한 것이다. 뜻은 "모든 노드와 관계를 보여 달라"다.</p>
+        <p>이 화면은 그림만 보여 주는 도구가 아니다. 노드를 눌러 데이터를 살펴볼 수 있는 조회 도구다. 발표자는 미리 그래프를 채워 두었기 때문에, 다시 돌리면 중복 제거가 일어난다고 했다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="agent">
+        <header><span class="num">10</span><h2>Aura 에이전트 만들기 <span class="ts">32:00</span></h2></header>
+        <h3>먼저 기능을 켠다 <span class="ts">32:30</span></h3>
+        <p>콘솔에 Agents 메뉴가 안 보이면 조직 설정에서 꺼져 있는 것이다. 조직 설정으로 가서 회색으로 비활성화된 두 항목을 켠다.</p>
+        <ul class="plain">
+          <li>생성형 AI 지원 <span class="en">Generative AI assistance</span></li>
+          <li>Aura 에이전트 <span class="en">Aura Agent</span></li>
+        </ul>
+        <h3>에이전트를 정의한다 <span class="ts">33:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>값</th></tr></thead>
+            <tbody>
+              <tr><td>이름</td><td>GraphRAG fundamentals agent</td></tr>
+              <tr><td>설명</td><td>이 Graph Academy 과정에 근거한 Neo4j 그래프 RAG 정보를 제공한다</td></tr>
+              <tr><td>지시문</td><td>노트 문서에 있는 것을 복사해 넣는다</td></tr>
+              <tr><td>인스턴스</td><td>가장 최근에 만든 인스턴스가 자동으로 잡힌다</td></tr>
+              <tr><td>위치</td><td>내부 <span class="en">internal</span>. 무료다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>여기서 바로 만들지 않고, 먼저 도구를 붙인다. 유사도 검색 도구를 붙이려면 벡터 인덱스가 먼저 있어야 한다는 안내가 뜬다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="vector">
+        <header><span class="num">11</span><h2>벡터 인덱스와 유사도 검색 도구 <span class="ts">36:50</span></h2></header>
+        <h3>벡터 인덱스 만들기 <span class="ts">37:30</span></h3>
+        <p>벡터 인덱스 <span class="en">vector index</span>는 조각의 임베딩을 빠르게 비교하기 위한 색인이다. GraphRAG for Python 문서의 "Create vector index" 항목에 예시 Cypher가 있다. 이걸 복사해 Aura 콘솔의 <strong>Query 창</strong>에 붙여 넣고 실행한다. 에이전트 화면이 아니라 질의 창이다. 이미 만들었다면 "이미 존재한다"는 메시지가 나온다.</p>
+        <h3>유사도 검색 도구 설정 <span class="ts">40:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>값</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>도구 이름</td><td>Search lesson content</td><td>강의를 듣지 않고도 강의 내용에서 통찰을 찾는다</td></tr>
+              <tr><td>벡터 인덱스</td><td>chunk embedding</td><td>방금 만든 인덱스</td></tr>
+              <tr><td>top k</td><td>5</td><td>가장 비슷한 조각 5개를 가져온다</td></tr>
+              <tr><td>임베딩 제공자</td><td>OpenAI</td><td></td></tr>
+              <tr><td>임베딩 모델</td><td>text-embedding-3-small</td><td>차원 1536 (기본값)</td></tr>
+              <tr><td>연결된 그래프 데이터 반환</td><td>켬</td><td>그래프 인터페이스를 쓰는 이상 <strong>매우 중요</strong>하다</td></tr>
+              <tr><td>조회 방식</td><td>Cypher 질의</td><td>자연어로도 되지만 발표에서는 준비된 Cypher를 그대로 붙였다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">Cypher 질의의 조건 <span class="ts">43:00</span></span>
+          <span>이 도구에 넣는 Cypher는 결과에 <code>nodes</code>와 <code>scores</code>(유사도 점수)를 포함해야 한다. 발표자는 질의 출처도 노트에 링크하겠다고 했다.</span>
+        </div>
+        <p>도구를 둘 붙인 뒤 에이전트를 만든다. 하나는 방금 만든 유사도 검색, 다른 하나는 <strong>자연어→Cypher 도구</strong>다. 그래프가 계속 커지는 중이라면 "에이전트 업데이트"를 눌러 새 정보를 반영한다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="ask">
+        <header><span class="num">12</span><h2>에이전트에 묻기: 집계 질문의 함정 <span class="ts">44:00</span></h2></header>
+        <p>이제 에이전트와 대화할 수 있다. 답은 Neo4j 안의 지식 그래프에 있는 정보만으로 만들어진다.</p>
+        <h3>내용 질문 <span class="ts">44:40</span></h3>
+        <p>"temperature는 LLM에 어떤 영향을 주나"라고 물으면, temperature가 생성 텍스트의 무작위성을 조절하는 매개변수라는 답과 함께 Graph Academy 안의 출처를 돌려준다.</p>
+        <p class="note">동료 Jeremy가 짚은 대로, 데이터 폴더의 PDF는 모두 Graph Academy의 생성형 AI 입문 과정에서 가져온 것이다. Graph Academy 안에서 Graph Academy를 학습시킨 셈이다.</p>
+        <h3>집계 질문 <span class="ts">45:50</span></h3>
+        <p>보통 RAG 파이프라인은 "몇 개냐"처럼 모아서 세는 질문에 약하다. 그래프 RAG는 이걸 할 수 있다. 그런데 발표에서는 흥미로운 일이 생겼다.</p>
+
+        <figure class="chart" aria-label="과정의 강의 수: 에이전트 답 30, 그래프 직접 조회 15">
+          <span class="chart-title">"이 과정에 강의가 몇 개인가"에 대한 답 (개)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>에이전트의 답</span><span class="val">30</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="에이전트의 답: 30개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>그래프를 직접 조회한 결과 (실제)</span><span class="val">15</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="직접 조회: 15개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>15</span><span>30</span></div>
+          <span class="caption">발표자가 빌더를 두 번 실행해 강의 노드가 두 벌 들어갔고, 에이전트는 그 중복을 그대로 셌다.</span>
+        </figure>
+
+        <p class="note">발표자의 설명을 정리하면 이렇다. 처음 실행에서 강의 15개가 들어갔고, 빌더를 다시 돌리면서 15개가 더 생겨 30개가 됐다. 에이전트를 업데이트하지 않은 상태라는 말도 있었지만, 정확한 원인 설명은 자막에서 다소 흐릿하다. 분명한 것은 Aura 콘솔에서 Lesson 노드 타입을 직접 눌러 보면 15개가 맞게 나온다는 점이다.</p>
+        <div class="callout">
+          <span class="title">배울 점</span>
+          <span>그래프 RAG의 집계 능력은 <strong>그래프가 깨끗할 때</strong> 믿을 수 있다. 빌더를 다시 돌릴 때는 중복 제거가 제대로 되는지 확인하고, 에이전트의 숫자 답은 그래프를 직접 조회해 맞춰 본다. 그래프의 장점은 바로 이 확인이 쉽다는 데 있다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="code">
+        <header><span class="num">13</span><h2>빌더 코드 읽기 <span class="ts">47:30</span></h2></header>
+        <p>참가자 요청으로 구조화된 지식 그래프 빌더 파일을 훑었다. 구성은 이렇다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성 요소</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>드라이버</td><td>Neo4j 드라이버로 그래프 데이터베이스에 연결한다. 가장 단순한 연결 방법이다</td></tr>
+              <tr><td>LLM</td><td>OpenAI LLM</td></tr>
+              <tr><td>임베더</td><td>OpenAI 임베딩</td></tr>
+              <tr><td>텍스트 분할기</td><td>고정 크기 분할기 <span class="en">FixedSizeSplitter</span>. 조각 크기 500, 겹침 <span class="en">overlap</span> 있음. 조각 경계에서 내용을 놓치지 않기 위해서다</td></tr>
+              <tr><td>노드 타입</td><td>Technology, Concept, Example, Process, Challenge, Benefit</td></tr>
+              <tr><td>관계 타입</td><td>RELATED_TO, PART_OF, USED_IN 등</td></tr>
+              <tr><td>패턴</td><td>노드–관계–노드 조합. 예: Technology RELATED_TO Technology, Example USED_IN Technology</td></tr>
+              <tr><td>파이프라인</td><td>SimpleKGPipeline이 위 설정을 받아 그래프를 만든다</td></tr>
+              <tr><td>입력 데이터</td><td>data 폴더의 CSV 파일과 강의 PDF. CSV를 파싱해 함께 그래프로 만든다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">스키마가 LLM을 묶어 준다 <span class="ts">50:10</span></span>
+          <span>동료 Jeremy의 설명이다. 실습은 Graph Academy 데이터에 맞는 스키마를 썼지만, 실제로는 회사 문서 뭉치를 쓰게 된다. 스키마를 정할 때 LLM의 도움을 받아도 된다. 일단 스키마가 정해지면 LLM은 <strong>새 노드 타입이나 관계 타입을 지어내지 않고</strong> 그 안에서만 추출한다.</span>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="closing">
+        <header><span class="num">14</span><h2>마무리와 자료 <span class="ts">51:10</span></h2></header>
+        <p>발표자가 꼽은 그래프 RAG의 장점은 세 가지다. 더 높은 정확도, 더 쉬운 개발, 설명 가능성.</p>
+        <ul class="plain">
+          <li><strong>Graph Academy</strong>: 무료 실습 과정. Cypher 기초, 지식 그래프 구축, 컨텍스트 그래프 과정이 있다.</li>
+          <li><strong>밋업</strong>: 7월 1일 샌프란시스코 Digital Garage에서 5시부터 8시까지. Neo4j 창업자 겸 CEO Emil Eifrem과 기술팀이 참석한다. 주제는 결정의 "왜"를 가르치는 컨텍스트 그래프다.</li>
+          <li><strong>부스</strong>: P3, Microsoft 부스 옆.</li>
+        </ul>
+        <p class="note">워크숍 중 질문에 답하면 티셔츠, 양말 같은 한정 굿즈를 준다고 했다. 현장 참가자 대상이다.</p>
+      </section>
+
+      <!-- 15 -->
+      <section id="recap">
+        <header><span class="num">15</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>같은 데이터도 표, 벡터, 지식 그래프로 표현할 수 있다. <strong>지식 그래프만 사람과 기계가 함께 읽는다.</strong></li>
+          <li>표는 조인이 쌓여 느려지고, 벡터는 사람이 읽을 수 없다. 그래프는 관계를 따라 한 칸씩 건너뛰며 <strong>추적하고 설명</strong>할 수 있다.</li>
+          <li>그래프 RAG는 RAG다. <strong>검색 경로에 지식 그래프가 들어간다</strong>는 점만 다르다.</li>
+          <li>검색 엔진으로 풀리는 질문은 벡터 RAG로 충분하다. <strong>세 단계 이상</strong> 건너뛰는 질문, 소스 코드 분석, 공급망, 여러 문서를 모아 세는 질문은 그래프 RAG가 필요하다.</li>
+          <li>그래프는 벡터를 대체하지 않는다. <strong>둘 다 쓴다.</strong></li>
+          <li>리트리버는 정보를 물어오는 부품이다. Neo4j는 전문 검색, 벡터 검색, 텍스트→Cypher 세 가지를 지원한다.</li>
+          <li>지식 그래프 구축: 모으기 → 자르기 → 임베딩 → <strong>LLM으로 개체와 관계를 JSON 추출</strong> → Cypher로 생성.</li>
+          <li>스키마(노드 타입, 관계 타입, 패턴)를 정해 두면 LLM이 <strong>타입을 지어내지 않는다.</strong></li>
+          <li>Aura 에이전트의 유사도 검색 도구에는 벡터 인덱스가 먼저 필요하고, Cypher는 <strong>nodes와 scores</strong>를 반환해야 한다.</li>
+          <li>에이전트가 집계 질문에 30이라 답했지만 실제는 15였다. 빌더 재실행으로 생긴 중복 때문이다. <strong>숫자 답은 그래프를 직접 조회해 확인한다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 16 -->
+      <section id="quiz">
+        <header><span class="num">16</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>사과를 벡터로 표현한 것과 지식 그래프로 표현한 것의 가장 큰 차이는?</span></summary><div class="answer">벡터는 숫자 배열이라 사람이 읽을 수 없다. 지식 그래프는 "나무에서 난다, 둥글다, 과일이다" 같은 관계로 돼 있어 사람과 기계가 모두 읽는다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>데이터를 표로 저장했을 때 관계를 알아내려면 무엇이 필요하고, 그 비용은?</span></summary><div class="answer">조인을 여러 번 해야 한다. 조인이 쌓이면 애플리케이션 성능이 크게 떨어진다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>그래프 RAG를 한 문장으로 정의하면?</span></summary><div class="answer">검색 경로에 지식 그래프가 포함된 RAG. 나머지 흐름은 보통 RAG와 같다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>발표자가 "그래프 RAG가 꼭 필요하다"고 보는 질문의 기준은?</span></summary><div class="answer">세 단계 이상 건너뛰어야 하는 다중 홉 질문. 그 밖에 소스 코드 분석, 공급망 질문, 여러 문서를 모아 세거나 합쳐야 하는 질문.</div></details>
+          <details><summary><span class="qn">Q5</span><span>발표자는 벡터 RAG와 그래프 RAG 중 무엇을 고르라고 했나?</span></summary><div class="answer">둘 다. 그래프가 벡터 계층을 대체하는 게 아니라 그 위에 더해져 양쪽 장점을 다 얻는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>리트리버가 하는 일과, Neo4j가 지원하는 세 종류는?</span></summary><div class="answer">질문 같은 비정형 입력을 받아 구조화된 데이터에서 관련 정보를 찾아온다. 전문 검색, 벡터 검색, 텍스트→Cypher.</div></details>
+          <details><summary><span class="qn">Q7</span><span>LLM으로 지식 그래프를 만드는 다섯 단계는?</span></summary><div class="answer">모으기, 자르기(조각내기), 임베딩, LLM으로 개체와 관계를 JSON으로 추출, 파싱해서 Cypher로 그래프 생성.</div></details>
+          <details><summary><span class="qn">Q8</span><span>빌더 코드에서 스키마(노드 타입, 관계 타입, 패턴)를 미리 정하는 이유는?</span></summary><div class="answer">LLM이 추출할 때 새 노드 타입이나 관계 타입을 지어내지 않고 정해진 스키마 안에서만 뽑게 하기 위해서다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>유사도 검색 도구를 붙이기 전에 해야 할 일과, 도구의 Cypher가 반드시 반환해야 하는 것은?</span></summary><div class="answer">Aura 콘솔의 Query 창에서 벡터 인덱스를 먼저 만든다. Cypher는 nodes와 scores(유사도 점수)를 반환해야 한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>에이전트가 강의 수를 30이라고 답한 이유와, 실제 수를 확인한 방법은?</span></summary><div class="answer">빌더를 두 번 실행해 강의 노드가 중복으로 들어갔다. Aura 콘솔에서 그래프를 직접 조회하거나 Lesson 노드 타입을 눌러 보면 15개가 나온다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>그래프 RAG의 설명 가능성이 규제 분야에서 특히 중요한 이유는?</span></summary><div class="answer">금융, 의료, 법률에서는 에이전트가 왜 그 결정을 내렸는지 맥락과 이력을 추적할 수 있어야 한다. 그래프는 어떤 노드를 거쳐 답에 도달했는지 보여 준다.</div></details>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="apply">
+        <header><span class="num">17</span><h2>내 프로젝트에 적용하기</h2><p class="muted">워크숍 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 서비스의 질문 중 "세 단계 이상 건너뛰는" 질문을 골라낸다<span class="how">예: A를 만든 팀이 쓰는 라이브러리의 취약점은? 이런 질문이 없으면 벡터 RAG로 충분하다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>집계가 필요한 질문이 있는지 확인한다<span class="how">"몇 개", "전부 나열" 같은 질문은 벡터 검색이 약한 영역이다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>지식 그래프 스키마를 먼저 정한다<span class="how">노드 타입, 관계 타입, 허용 패턴. LLM에게 초안을 받되 사람이 확정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>추출 프롬프트가 JSON 목록을 내게 한다<span class="how">개체 목록과 관계 목록을 파싱 가능한 형식으로 받는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>조각 크기와 겹침을 정하고 기록한다<span class="how">발표 예시는 500에 겹침 있음. 우리 문서에 맞게 조정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>빌더 재실행 시 중복 제거를 검증한다<span class="how">확인: 같은 문서를 두 번 넣어도 노드 수가 늘지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>벡터 검색 결과에 연결된 그래프 데이터를 함께 반환한다<span class="how">조각만 주지 말고 그 조각에 이어진 노드와 관계를 LLM에 준다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트의 숫자 답을 그래프 직접 조회와 대조하는 절차를 둔다<span class="how">확인: 집계 질문 몇 개를 골라 정답과 비교했는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>벡터 검색을 버리지 않는다<span class="how">그래프는 더하는 층이다. 두 리트리버를 함께 쓴다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 18 -->
+      <section id="glossary">
+        <header><span class="num">18</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 답하기 전에 외부 자료를 찾아 LLM에 함께 넣어 주는 방식</td></tr>
+              <tr><td>그래프 RAG</td><td>GraphRAG. 검색 경로에 지식 그래프가 포함된 RAG</td></tr>
+              <tr><td>지식 그래프</td><td>Knowledge graph. 현실의 개체(노드)와 그 사이 관계(선)를 정리한 데이터 표현</td></tr>
+              <tr><td>노드 / 관계</td><td>Node / Relationship. 그래프의 동그라미와 그 사이를 잇는 선</td></tr>
+              <tr><td>개체</td><td>Entity. 사람, 회사, 기술처럼 그래프에서 노드가 되는 대상</td></tr>
+              <tr><td>벡터 / 임베딩</td><td>Vector / Embedding. 텍스트의 뜻을 숫자 배열로 바꾼 것. 비슷한 뜻이면 비슷한 숫자가 된다</td></tr>
+              <tr><td>조각</td><td>Chunk. 긴 문서를 임베딩하기 좋게 잘라 낸 단위</td></tr>
+              <tr><td>겹침</td><td>Overlap. 이웃한 조각이 일부 내용을 공유하게 해서 경계에서 뜻이 끊기지 않게 하는 것</td></tr>
+              <tr><td>top k</td><td>가장 비슷한 결과를 k개만 가져오는 설정</td></tr>
+              <tr><td>리트리버</td><td>Retriever. 질문에 맞는 정보를 외부 데이터에서 찾아오는 부품</td></tr>
+              <tr><td>다중 홉</td><td>Multi-hop. 답에 이르려면 관계를 여러 번 건너뛰어야 하는 질문</td></tr>
+              <tr><td>Cypher</td><td>Neo4j의 그래프 질의 언어. SQL의 그래프판</td></tr>
+              <tr><td>텍스트→Cypher</td><td>Text-to-Cypher. 자연어 질문을 LLM이 Cypher로 바꿔 그래프를 직접 조회하는 리트리버</td></tr>
+              <tr><td>벡터 인덱스</td><td>Vector index. 임베딩을 빠르게 비교하기 위한 색인</td></tr>
+              <tr><td>스키마</td><td>Schema. 허용하는 노드 타입, 관계 타입, 패턴의 목록</td></tr>
+              <tr><td>Neo4j Aura</td><td>Neo4j의 클라우드 호스팅 서비스. 무료 등급이 있다</td></tr>
+              <tr><td>Aura 에이전트</td><td>Aura 콘솔에서 그래프 인스턴스에 도구를 붙여 만드는 대화형 에이전트</td></tr>
+              <tr><td>Graph Academy</td><td>Neo4j의 무료 실습형 온라인 학습 플랫폼</td></tr>
+              <tr><td>GraphRAG for Python</td><td>Neo4j가 공개한 오픈소스 파이썬 패키지. 지식 그래프 구축과 검색에 쓴다</td></tr>
+              <tr><td>temperature</td><td>LLM이 텍스트를 만들 때 무작위성을 얼마나 줄지 정하는 매개변수</td></tr>
+              <tr><td>블랙박스</td><td>안에서 어떤 과정으로 결과가 나왔는지 볼 수 없는 시스템</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 19 -->
+      <section id="timeline">
+        <header><span class="num">19</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>인사, 청중 설문 (벡터 RAG, 그래프 RAG 사용 여부)</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>발표자 소개: 그래프 이론, 컨텍스트 엔지니어링, AI 거버넌스</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>동료 소개 (Jeremy, Ryan, Zach)</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>Graph Academy 소개와 계정 만들기</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>노트 문서, Aura 무료 인스턴스, 워크숍용 OpenAI 키</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>사과 하나의 세 가지 표현: 사람, 벡터, 지식 그래프</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>표와 조인의 한계, 그래프에서 노드를 건너뛰며 추적하기</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>에이전트 메모리와 규제 분야 (금융, 의료, 법률)</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>보통 RAG 파이프라인 구조</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>그래프 RAG 정의: 검색 경로에 지식 그래프</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>언제 그래프 RAG인가: 세 단계 이상, 소스 코드, 공급망, 집계</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>결론: 벡터와 그래프를 둘 다 쓴다</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>Graph Academy 과정으로 이동</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>리트리버란 (골든 리트리버 비유)</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>Neo4j의 리트리버 세 종류, 뉴스 챗봇 예시</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>그래프 RAG의 장점</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>지식 그래프란: 발표자와 동료를 노드로</td></tr>
+              <tr><td><span class="ts">19:50</span></td><td>LLM으로 지식 그래프 만들기 다섯 단계</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>추출 프롬프트와 JSON 출력, Cypher</td></tr>
+              <tr><td><span class="ts">22:20</span></td><td>생성된 그래프 예시, Neo4j 이름의 유래</td></tr>
+              <tr><td><span class="ts">23:10</span></td><td>GraphRAG for Python 과정, GitHub Codespaces</td></tr>
+              <tr><td><span class="ts">24:30</span></td><td>.env 설정, Aura 연결 정보, OpenAI 키</td></tr>
+              <tr><td><span class="ts">27:40</span></td><td>환경 테스트 5개 통과</td></tr>
+              <tr><td><span class="ts">28:40</span></td><td>구조화된 지식 그래프 빌더 실행</td></tr>
+              <tr><td><span class="ts">29:30</span></td><td>Aura Query 화면에서 그래프 조회</td></tr>
+              <tr><td><span class="ts">32:00</span></td><td>조직 설정에서 생성형 AI 지원과 Aura 에이전트 켜기</td></tr>
+              <tr><td><span class="ts">33:50</span></td><td>에이전트 이름, 설명, 지시문 입력</td></tr>
+              <tr><td><span class="ts">36:50</span></td><td>유사도 검색에는 벡터 인덱스가 필요</td></tr>
+              <tr><td><span class="ts">38:40</span></td><td>Query 창에서 벡터 인덱스 생성</td></tr>
+              <tr><td><span class="ts">40:20</span></td><td>유사도 검색 도구 설정: 인덱스, top 5, 임베딩 모델, 그래프 데이터 반환</td></tr>
+              <tr><td><span class="ts">42:20</span></td><td>도구용 Cypher: nodes와 scores</td></tr>
+              <tr><td><span class="ts">43:50</span></td><td>도구 둘을 붙여 에이전트 생성</td></tr>
+              <tr><td><span class="ts">44:40</span></td><td>질문: temperature가 LLM에 미치는 영향</td></tr>
+              <tr><td><span class="ts">45:50</span></td><td>집계 질문: 강의 수 30 vs 실제 15</td></tr>
+              <tr><td><span class="ts">47:30</span></td><td>빌더 코드 살펴보기: 드라이버, LLM, 임베더, 분할기</td></tr>
+              <tr><td><span class="ts">49:10</span></td><td>노드 타입, 관계 타입, 패턴</td></tr>
+              <tr><td><span class="ts">50:10</span></td><td>스키마가 LLM의 추출을 묶는다, CSV와 PDF 입력</td></tr>
+              <tr><td><span class="ts">51:10</span></td><td>마무리: 장점 세 가지, Graph Academy 자료</td></tr>
+              <tr><td><span class="ts">51:50</span></td><td>7월 1일 밋업, 부스 P3</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'LJ2a9nX3vlo:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

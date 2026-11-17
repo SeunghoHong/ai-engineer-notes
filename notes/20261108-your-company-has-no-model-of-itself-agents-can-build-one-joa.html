@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>회사의 세계 모델</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#oracle">회사의 세계 모델이 왜 필요한가</a></li>
+      <li><a href="#twoways">위에서 오는 자료, 아래에서 오는 자료</a></li>
+      <li><a href="#estimator">상태 추정기</a></li>
+      <li><a href="#slide">슬라이드 한 장도 읽기 어렵다</a></li>
+      <li><a href="#loop">다섯 단계 루프</a></li>
+      <li><a href="#update">갱신: 매달 이어 쓰기</a></li>
+      <li><a href="#age">노화: 사실의 반감기</a></li>
+      <li><a href="#observe">관측: 통째로 넣지 않기</a></li>
+      <li><a href="#grade">채점: 벌어진 일과 맞춰 보기</a></li>
+      <li><a href="#correct">교정: 사람에게 묻기</a></li>
+      <li><a href="#bottomup">현장 신호 모으기</a></li>
+      <li><a href="#sensor">꺼진 센서를 0으로 읽지 않기</a></li>
+      <li><a href="#usage">어디에 쓰나</a></li>
+      <li><a href="#open">아직 풀지 못한 문제</a></li>
+      <li><a href="#conclusion">결론과 오늘 할 일</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 회사에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-08 · 19분 · 영어 발표 한글 정리</span>
+      <h1>에이전트로 회사의 자기 모델 만들기</h1>
+      <p class="lead">회사의 실제 상태는 보고 슬라이드와 Slack 사이에 흩어져 있다. Citadel Securities는 로봇공학의 상태 추정 방식을 빌려, 증거가 낡으면 덜 믿고 실제 결과로 채점하는 회사 기록을 에이전트로 만들었다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=jDwc0aXTAFg" target="_blank" rel="noopener">Your Company Has No Model of Itself. Agents Can Build One</a></span>
+        <span>발표: Joao Wenzel (Citadel Securities)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에 Jan, Joan으로 적힌 발표자 이름은 영상 제목대로 적었다. 슬라이드는 보지 못했으므로 화면에만 나온 내용은 담지 못했다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>회사의 실제 사정은 <strong>오래 일한 고참의 머릿속</strong>에 있다. 고참은 늘릴 수 없고, 고참의 말은 글로 남지 않는다.</li>
+        <li>에이전트가 전략을 도우려면 회사를 깊이 알아야 한다. 전략은 <strong>지금 어디인가, 다음에 무슨 일이 생기나, 어쩌다 여기 왔나</strong>로 줄어든다.</li>
+        <li>보고 자료는 정돈됐지만 작성자의 의견이 섞인다. 현장 신호는 시끄럽지만 진실에 가깝다. <strong>모델은 둘이 만나는 곳</strong>에 둔다.</li>
+        <li>로봇공학의 <strong>상태 추정기</strong>를 빌린다. 증거를 못 본 지 오래될수록 덜 믿고, 새 증거가 오면 다시 믿는다.</li>
+        <li>루프는 <strong>갱신, 노화, 관측, 채점, 교정</strong> 다섯 단계다. 모델은 제안만 하고, 기록을 바꾸는 결정은 코드와 사람이 한다.</li>
+        <li>지난 기록을 고치지 않으므로 <strong>백테스트</strong>가 된다. 초록이지만 에이전트가 주의 표시를 단 항목은 노랑이나 빨강이 될 가능성이 2배였다.</li>
+        <li>오늘 할 일: <strong>아직 자료를 모으지 않았다면 지금 시작한다.</strong> 평가는 처음부터 설계에 넣는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="oracle">
+        <header><span class="num">01</span><h2>회사의 세계 모델이 왜 필요한가 <span class="ts">00:20</span></h2></header>
+        <p>회사마다 모르는 일이 없는 고참이 있다. 조직 개편을 17번 겪었고, 소문과 사내 정치를 다 안다. 큰 전략이 발표되면 결과를 먼저 맞힌다.</p>
+        <p>발표자는 이런 고참을 회사의 <strong>세계 모델</strong> <span class="en">world model</span>이라고 부른다. 세계 모델은 지금 상태를 이해하고 다음 일을 예측하게 해 주는 내부 그림이다. 약점은 둘이다. 이런 고참은 늘릴 수 없다. 고참이 하는 말을 적어 두는 사람도 없다.</p>
+        <p>발표자는 이 역할을 <strong>에이전트</strong> <span class="en">agent</span>로 흉내 내려 한다. 에이전트는 스스로 여러 단계를 밟아 일하는 AI 프로그램이다.</p>
+
+        <h3>경영진의 질문 <span class="ts">01:00</span></h3>
+        <p>발표자는 Citadel Securities가 기술을 실리콘 수준까지 직접 만든다고 소개한다. 직원의 3분의 2 이상이 코드를 쓴다. 에이전트는 이미 많은 일을 돕고 있다.</p>
+        <p>그러자 경영진이 물었다. <strong>하네스</strong> <span class="en">harness</span>가 좋은 코드를 쓰는 건 알겠다. 그렇다면 회사의 전략을 세우고 다듬는 일도 도울 수 있나? 하네스는 모델에 도구와 실행 규칙을 입힌 실행 틀이다.</p>
+
+        <h3>전략은 세 질문이다 <span class="ts">01:30</span></h3>
+        <p>발표자는 Tim Urban의 그림을 빌려 전략을 세 질문으로 줄인다.</p>
+        <ol class="plain">
+          <li>지금 어디에 서 있나?</li>
+          <li>다음에 무슨 일이 일어나나?</li>
+          <li>어쩌다 여기까지 왔나?</li>
+        </ol>
+        <p>어느 질문에 답하든 에이전트는 자기가 일하는 회사를 자세히 알아야 한다.</p>
+
+        <h3>에이전트에게 필요한 맥락 <span class="ts">01:50</span></h3>
+        <p>그래서 이 발표의 주제는 <strong>제도 기억 층</strong> <span class="en">institutional memory layer</span>을 만드는 일이다. 제도 기억은 조직이 일을 겪으며 쌓은 맥락이다. 발표자는 세 가지를 예로 든다.</p>
+        <ul class="plain">
+          <li><strong>관계</strong>: 같이 일하던 두 팀이 조직 개편 뒤로 더는 대화하지 않는다.</li>
+          <li><strong>경위</strong>: 어떤 일의 범위가 왜 여러 번 바뀌었는가.</li>
+          <li><strong>정치</strong>: 회의실에 누가 있고, 무엇을 말하고, 무엇을 말하지 않는가.</li>
+        </ul>
+      </section>
+
+      <!-- 2 -->
+      <section id="twoways">
+        <header><span class="num">02</span><h2>위에서 오는 자료, 아래에서 오는 자료 <span class="ts">02:10</span></h2></header>
+        <p>회사의 상태를 파악하는 입구는 둘이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">위에서 아래로 · top-down</span>
+            <p>슬라이드 묶음(<span class="en">deck</span>, 이하 덱), 전략 문서, 회의 보고, 상태 보고.</p>
+            <p class="verdict"><b>장점</b>: 정돈되어 있다. <b>약점</b>: 작성자의 생각과 의견이 들어간다. 일부러 넣기도 한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">아래에서 위로 · bottom-up</span>
+            <p>회의 노트, Slack, 코드 변경, 코딩 하네스의 세션 기록.</p>
+            <p class="verdict"><b>장점</b>: 의외로 쓸 만한 신호가 많다. <b>약점</b>: 시끄러워서 신호를 찾아내기 어렵다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">수박 프로젝트 <span class="en">watermelon project</span> <span class="ts">02:30</span></span>
+          <span>겉은 초록이고 속은 빨강인 프로젝트를 발표자가 부르는 말이다. 보고서에는 순조롭다고 적혀 있지만 안에서는 문제가 생기고 있다.</span>
+        </div>
+        <p>회사의 모델은 이 두 흐름이 만나는 곳에 있다. 증거는 이 지점에서 합쳐진다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="estimator">
+        <header><span class="num">03</span><h2>상태 추정기 <span class="ts">03:00</span></h2></header>
+        <p>증거에는 문제가 있다. 일부만 있거나 틀렸을 수 있다. 발표자는 로봇공학에서 답을 가져온다. <strong>상태 추정기</strong> <span class="en">state estimator</span>다. 불완전한 신호들로 지금 상태를 짐작하는 방법이다.</p>
+        <ol class="plain">
+          <li>관심 있는 대상에 대해 믿음을 하나 갖는다.</li>
+          <li>뒷받침하는 증거를 못 본 시간이 길어질수록 덜 믿는다. 믿음이 흐릿해진다.</li>
+          <li>덱, 스레드, 회의 노트 같은 새 증거가 들어오면 다시 확실해진다.</li>
+          <li>이때 기록을 갱신한다.</li>
+        </ol>
+
+        <h3>갱신할 때 따지는 세 가지 <span class="ts">03:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>얼마나 오래됐나</td><td>마지막 신호를 받은 지 시간이 얼마나 지났는가</td></tr>
+              <tr><td>어디서 왔나</td><td>신호의 출처가 아직 믿을 만한가</td></tr>
+              <tr><td>다른 센서와 맞나</td><td>다른 정보원과 대체로 일치하는가</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>센서 <span class="en">sensor</span>는 자율주행에 빗댄 말이다. 이 발표에서는 슬라이드, Slack, 코드 변경 같은 정보원을 뜻한다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="slide">
+        <header><span class="num">04</span><h2>슬라이드 한 장도 읽기 어렵다 <span class="ts">04:00</span></h2></header>
+        <p>가장 쉬워 보이는 예부터 본다. BizOps(사업 운영 조직) 담당자가 매달 만드는 상태 보고 덱이다. 이 슬라이드에서 데이터를 꺼내는 일은 보기보다 어렵다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방법</th><th>생기는 문제</th></tr></thead>
+            <tbody>
+              <tr><td>파일 파싱</td><td>PowerPoint 파일을 풀면 XML이 나온다. 그러면 "초록은 어떤 색 코드인가"부터 정해야 한다. 이런 스크립트는 금방 깨진다.</td></tr>
+              <tr><td>스크린샷 + 비전 모델</td><td>이미지를 읽는 비전 모델 <span class="en">vision model</span>에 넘긴다. 누가 스크린샷을 덱에 다시 붙여 넣었다면, 해상도가 높아도 Claude가 31인지 81인지 구분하느라 애를 먹는다.</td></tr>
+              <tr><td>둘 다 쓰기 <span class="ts">05:00</span></td><td>XML과 비전 모델의 출력을 함께 쓰면 실제 모습에 가까워진다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 이 예가 발표 전체의 주제를 보여 준다고 말한다. <strong>깔끔한 해법은 정보를 더하고 합치는 데서 나온다.</strong></p>
+
+        <h3>시간으로 잇기 <span class="ts">05:10</span></h3>
+        <p>회사 자료는 계속 쌓인다. 한 장을 잘 읽는 것으로는 부족하다. 발표의 예에서는 어떤 프로젝트가 3월에 갑자기 이름을 바꿨다. 그래서 시간을 따라 추적할 수 있는 감사 기록이 필요하다.</p>
+
+        <h3>그래도 절반은 놓친다 <span class="ts">05:40</span></h3>
+        <p>덱을 아무리 잘 읽어도 그 덱은 5일 전 것일 수 있다. Slack에서는 누군가 "일정대로 갈 것 같다"고 쓴다. 다른 사람이 대시보드 사진을 답글로 붙이자 이야기가 뒤집힌다. 여러 자료를 제대로 합치지 않으면 이런 어긋남을 처리할 수 없다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="loop">
+        <header><span class="num">05</span><h2>다섯 단계 루프 <span class="ts">06:10</span></h2></header>
+        <blockquote>회사에는 자기 자신에 대한 모델이 없다.<cite>발표자의 표현을 옮김</cite></blockquote>
+        <p>발표자는 앞서 말한 상태 추정기를 다섯 단계 루프로 정리한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>갱신 <span class="en">update</span></td><td>지난 기록과 새 자료로 새 기록을 쓴다</td></tr>
+              <tr><td>노화 <span class="en">age</span></td><td>주장마다 날짜를 붙이고, 오래된 주장은 덜 믿는다</td></tr>
+              <tr><td>관측 <span class="en">observe</span></td><td>에이전트들이 자료를 나눠서 자세히 살핀다</td></tr>
+              <tr><td>채점 <span class="en">grade</span></td><td>관측한 것과 예상한 것을 비교한다</td></tr>
+              <tr><td>교정 <span class="en">correct</span></td><td>사람이 피드백을 주어 시스템의 동작을 바로잡는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">핵심 규칙 <span class="ts">06:40</span></span>
+          <span>Citadel Securities의 시스템에는 루프의 모든 단계에 에이전트가 있다. 하지만 모델은 변경을 <strong>제안</strong>만 한다. 기록을 어떻게 바꿀지는 <strong>코드와 사람</strong>이 결정한다.</span>
+        </div>
+
+        <h3>왜 RAG로는 부족한가 <span class="ts">07:00</span></h3>
+        <p>RAG <span class="en">Retrieval-Augmented Generation</span>는 관련 문서를 검색해 모델에게 붙여 주고 답하게 하는 방식이다. 발표자는 3월 16일 시점으로 어떤 프로젝트가 순조로운지 물었다. 모델은 Slack 메시지 몇 개와 슬라이드 몇 장을 찾아 "초록입니다"라고 쉽게 답했다. 맥락이 많이 빠진 답이다.</p>
+        <p class="note">이 비교는 발표자가 보여 준 사례 하나에 근거한다. RAG와 이 시스템을 수치로 비교한 결과는 자막에 나오지 않는다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="update">
+        <header><span class="num">06</span><h2>갱신: 매달 이어 쓰기 <span class="ts">07:20</span></h2></header>
+        <p>첫 단계의 목표는 정보를 일관되고 튼튼하게 갱신하는 것이다.</p>
+        <p>새 달이 오면 지난달 기록과 이번 달 슬라이드를 함께 놓는다. 그리고 <strong>종단 기록</strong> <span class="en">longitudinal record</span>을 이어 쓴다. 종단 기록은 같은 대상을 시간 순서대로 이어 붙인 기록이다. 발표자는 이 작업을 3년째 해 왔고, 쌓인 기록이 회사 세계 모델의 바탕이 됐다고 말한다.</p>
+
+        <h3>바뀐 이름 찾기 <span class="ts">08:00</span></h3>
+        <p>모델은 의외로 기초적인 일에서 막힌다. 프로젝트 이름이 갑자기 바뀌면 같은 프로젝트인지 모른다. 과거 기록이 있으면 판단할 수 있다. 참여한 사람이 같고 목표가 이어지면, 새 이름이 Project Northstar를 가리킨다고 추론한다.</p>
+
+        <h3>보고와 증거를 구별하기 <span class="ts">08:20</span></h3>
+        <p>더 중요한 일은 보고된 내용과 실제 증거를 구별하는 것이다. 발표의 예에서 덱의 상태는 초록이었다. 그런데 아직 해결되지 않은 의존성을 언급한 댓글이 있었다. 에이전트는 이 프로젝트를 노랑으로 보아야 한다고 판단하고 <strong>플래그</strong> <span class="en">flag</span>를 달았다. 플래그는 주의가 필요하다는 표시다.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>갱신 단계가 쓰는 항목</th><th>예시</th></tr></thead>
+            <tbody>
+              <tr><td>보고된 내용</td><td>초록</td></tr>
+              <tr><td>증거가 가리키는 쪽</td><td>노랑</td></tr>
+              <tr><td>이유</td><td>덱의 댓글에 아직 해결되지 않은 의존성이 적혀 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">예시: 세 항목은 발표(<span class="ts">09:00</span>)에 나온다. 값은 앞의 사례를 표로 옮긴 것이다.</p>
+
+        <div class="callout">
+          <span class="title">지난달 기록은 건드리지 않는다 <span class="ts">08:50</span></span>
+          <span>새로 알게 된 내용은 앞으로 쓸 기록에만 반영한다. 발표자는 이를 피드포워드 <span class="en">feed forward</span> 방식이라고 부른다. 과거 기록이 그대로 남아야 나중에 제대로 평가할 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="age">
+        <header><span class="num">07</span><h2>노화: 사실의 반감기 <span class="ts">09:10</span></h2></header>
+        <p>발표자는 모든 사실에 <strong>반감기</strong> <span class="en">half-life</span>가 있다고 말한다. 시간이 지나면 어떤 사실이든 믿기 어려워진다는 비유다.</p>
+        <p>옛 슬라이드를 보면 출시일이 계속 밀린다. 1월에는 2분기였고, 그다음은 3분기였고, 지금은 10월이다. 자료를 모으면 이런 움직임을 숫자로 볼 수 있다.</p>
+
+        <figure class="chart" aria-label="납기 100건 기준 비교: 2개월 안에 바뀌는 납기 50건, 그중 더 늦은 날짜로 바뀌는 납기 45건">
+          <span class="chart-title">납기 100건은 2개월 안에 어떻게 되나 (지난 3년 평균) <span class="ts">09:40</span></span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>전체 납기</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="전체 납기: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>2개월 안에 바뀜</span><span class="val">50</span></div>
+              <div class="track"><div class="fill" style="width:50%" title="2개월 안에 바뀜: 50"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>그중 원래보다 늦은 날짜로 바뀜</span><span class="val">45</span></div>
+              <div class="track"><div class="fill key" style="width:45%" title="원래보다 늦은 날짜로 바뀜: 45"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">납기는 완료 예정일이다. 발표자는 "절반"과 "그중 90%"만 말했다. 45는 두 값을 곱한 계산값이다(50 × 0.9).</span>
+        </figure>
+
+        <p>그래서 주장마다 <strong>날짜를 붙인다.</strong> 프로젝트나 사람, 회사의 의도를 물었을 때 에이전트가 최근 증거에 더 무게를 둘 수 있게 하기 위해서다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="observe">
+        <header><span class="num">08</span><h2>관측: 통째로 넣지 않기 <span class="ts">10:10</span></h2></header>
+        <p>처음에는 모델에게 자료 전체를 던져 주는 방법이 매력적이었다. 발표자는 이를 YOLO 방식이라고 부른다. 해 보니 세부를 놓치고 정보가 많이 사라졌다.</p>
+        <p>그래서 단순한 에이전트 작업 흐름을 만들었다.</p>
+        <ol class="plain">
+          <li>전문 에이전트 여러 개가 자료를 나눠서 뜯어 본다.</li>
+          <li>각자 정해진 것을 찾는다.</li>
+          <li>다른 에이전트가 그 결과를 검토한다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">결과 <span class="ts">10:50</span></span>
+          <span>프로젝트 하나에 대해 나오는 쓸모 있는 갱신의 양이 2배 넘게 늘었다. 발표자의 교훈은 작업 흐름을 의도적으로 설계하라는 것이다. YOLO 방식이 통할 거라고 가정하면 안 된다.</span>
+        </div>
+        <p class="note">절대 수치는 자막에 없다. 어떤 갱신을 쓸모 있다고 판단했는지도 발표에 나오지 않는다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="grade">
+        <header><span class="num">09</span><h2>채점: 벌어진 일과 맞춰 보기 <span class="ts">11:10</span></h2></header>
+        <p>세계 모델은 다음에 무슨 일이 일어날지 말해야 한다. 어떤 프로젝트가 곧 밀릴지, 어떤 초록이 다음 달에 빨강이 될지를 말해야 한다.</p>
+        <p>이건 <strong>백테스트</strong> <span class="en">back test</span>로 확인할 수 있다. 과거 데이터로 예측을 검증하는 방법이다.</p>
+        <ol class="plain">
+          <li>2월 같은 과거 시점의 상태를 스냅샷으로 뜬다.</li>
+          <li>그 시점에 에이전트가 무엇이 밀릴 것이라고 플래그를 달았는지 본다.</li>
+          <li>그 뒤에 실제로 붙은 상태와 비교한다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">결과 <span class="ts">11:50</span></span>
+          <span>초록이지만 에이전트가 플래그를 단 상태는 실제로 노랑이나 빨강으로 바뀔 가능성이 <strong>2배</strong>였다.</span>
+        </div>
+        <p>발표자는 이 결과를 조심스럽게 해석한다. 정확히 무엇이 잘못될지 맞히는 것은 아니다. 어디를 봐야 할지 알려 주는 수준이다.</p>
+        <p class="note">무엇의 2배인지는 자막에 없다. 플래그가 없는 초록과 비교한 것으로 읽힌다(추정). 발표자는 에이전트가 플래그를 단 사례를 18건이라고 언급했다(<span class="ts">12:00</span>). 이 18건이 2배 결과의 표본이라면 작은 표본이다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="correct">
+        <header><span class="num">10</span><h2>교정: 사람에게 묻기 <span class="ts">12:10</span></h2></header>
+        <p>플래그가 달린 사례는 볼 수 있다. 그렇다면 플래그가 달리지 않은 사례는 어떻게 찾나? 발표자는 여기서 제품 감각이 필요하다고 말한다. 실제 사용자와 이해관계자를 어떻게 루프에 넣을지, 무엇을 물을지, 어디서 만날지 정해야 한다. 발표자는 이 문제에 적지 않은 시간을 들였다고 한다.</p>
+
+        <h3>어디서 묻나 <span class="ts">12:30</span></h3>
+        <p>사용자가 이미 있는 곳에서 묻는다. 쓰던 앱, Slack, 이메일 같은 곳이다. 사용자에게 가까울수록, 피드백 방식이 단순할수록 과정이 더 크게 더 안정적으로 돌아간다.</p>
+
+        <h3>무엇을 묻나 <span class="ts">12:40</span></h3>
+        <div class="shift" aria-label="사실을 묻는 경우와 규칙을 묻는 경우의 차이">
+          <div><span class="tag">사실을 묻는다</span><b>출력 하나만 고친다</b><span class="muted">그 답이 적용되는 곳은 한 군데다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">규칙을 묻는다</span><b>해당하는 출력을 모두 고친다</b><span class="muted">에이전트가 패턴을 이해하면 지금과 앞으로의 출력에 모두 적용된다</span></div>
+        </div>
+        <p>이제 기록에는 에이전트가 <strong>추론한</strong> 것만 있지 않다. 사람이 신호를 준 뒤 <strong>확인된</strong> 것도 함께 담긴다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="bottomup">
+        <header><span class="num">11</span><h2>현장 신호 모으기 <span class="ts">13:10</span></h2></header>
+        <p>이제 아래에서 올라오는 자료를 본다. 발표자는 이 자료들을 모두 살펴보라고 권한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>출처</th><th>알려 주는 것</th></tr></thead>
+            <tbody>
+              <tr><td>회의</td><td>사람들이 입 밖으로 꺼낸 강한 신호</td></tr>
+              <tr><td>Slack</td><td>끊임없고 시끄럽지만 진실에 매우 가깝다</td></tr>
+              <tr><td>코드 변경</td><td>실제로 출시된 것</td></tr>
+              <tr><td>에이전트 세션</td><td>일이 실제로 어떻게 만들어졌는가</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Slack에서 뽑는 것 <span class="ts">13:40</span></h3>
+        <p>모든 스레드를 살핀다. 첨부 파일, 참여자, 내용을 보고 에이전트가 기록하거나 갱신할 주장을 고른다. 주장마다 언제인지, 누가 책임지거나 관련되는지, 어느 프로젝트인지, 증거 링크가 무엇인지를 함께 남긴다.</p>
+
+        <h3>PR과 세션 기록 <span class="ts">14:00</span></h3>
+        <p>PR <span class="en">pull request</span>은 코드 변경을 합쳐 달라는 요청이다. PR을 보면 무엇이 바뀌었고 프로젝트가 어떻게 변해 왔는지 알 수 있다.</p>
+        <p>프로젝트가 실제로 어떻게 운영되는지는 <strong>세션 기록</strong> <span class="en">session trace</span>에 더 잘 드러난다. 세션 기록은 사람과 에이전트가 함께 일한 과정의 기록이다. 발표자 팀은 동의한 사용자와 엔지니어의 기록만 본다. 요구가 어떻게 바뀌었는지, 어떤 테스트가 실패했는지, 개발자가 어떤 결정을 했는지가 보인다.</p>
+        <p>이 과정은 결국 PR 하나로 끝난다. 발표자는 과정까지 합쳐 보는 것이 큰 차이를 만든다고 본다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="sensor">
+        <header><span class="num">12</span><h2>꺼진 센서를 0으로 읽지 않기 <span class="ts">14:30</span></h2></header>
+        <p>고속도로에서 속도계가 갑자기 꺼졌다고 시속 0으로 달리는 것은 아니다. 신호가 고장 난 것이다.</p>
+        <p>발표자 팀도 같은 문제를 겪었다. 어떤 채널이 조용해졌다는 주장이 나왔다. 실제로는 신호가 없는 것을 0으로 잘못 처리한 경우였다. 그래서 여러 번 고쳐 가며 다음 내용을 기록에 넣었다.</p>
+        <ul class="plain">
+          <li>이 센서에서 마지막으로 정보를 가져오려 한 시각</li>
+          <li>이 센서가 마지막으로 정상이었던 시각</li>
+          <li>두 시각이 어긋날 때 어떻게 처리할지</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">조용함과 데이터 없음은 다르다</span>
+          <span>"아무 일도 없다"와 "정보를 받지 못했다"는 다른 상태다. 둘을 같은 값으로 저장하면 멀쩡한 프로젝트에 경고가 뜬다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="usage">
+        <header><span class="num">13</span><h2>어디에 쓰나 <span class="ts">15:20</span></h2></header>
+        <p>이제 기록이 프로젝트의 실제 상태를 보여 준다.</p>
+        <div class="shift" aria-label="덱만 볼 때와 세계 모델로 볼 때의 차이">
+          <div><span class="tag">덱만 볼 때</span><b>초록</b><span class="muted">순조롭다는 보고</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">세계 모델로 볼 때</span><b>노랑</b><span class="muted">출시일이 두 번 밀렸다. 사람들이 실패하는 테스트를 이야기한다.</span></div>
+        </div>
+
+        <h3>세 가지 쓰임 <span class="ts">15:40</span></h3>
+        <ul class="plain">
+          <li><strong>경영진 대화</strong>: 덱을 돌려 다 같이 훑게 하지 않는다. 덱과 증거가 어긋나는 곳부터 이야기한다.</li>
+          <li><strong>주간 읽을거리</strong>: 관리자와 리더에게 무엇이 막혔고 무엇이 조용해졌는지 알려 준다.</li>
+          <li><strong>공통 맥락 층</strong>: 회사의 모든 에이전트가 기댈 수 있는 맥락이 생긴다. 발표자는 이것이 가장 중요하다고 본다.</li>
+        </ul>
+
+        <h3>고객 쪽으로 넓히기 <span class="ts">16:10</span></h3>
+        <p>발표자 팀은 이 패턴을 다른 곳에도 쓸 수 있게 만들고 있다. 고객 사업이 그 예다. 어떤 고객이 무엇을 보유했고 무엇에 관심이 있는지 파악하려 한다. 내부와 외부의 여러 자료를 합쳐 고객의 필요를 미리 읽으려는 것이다.</p>
+        <p class="note">이 발표는 발표자가 소속 회사에서 직접 만든 시스템의 소개다. 성과 수치는 회사 내부 결과이고 외부에서 확인할 수 없으니 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="open">
+        <header><span class="num">14</span><h2>아직 풀지 못한 문제 <span class="ts">16:30</span></h2></header>
+        <p>발표자는 두 가지가 아직 어렵다고 말한다.</p>
+        <h3>같은 고객을 어떻게 잇나 <span class="ts">16:40</span></h3>
+        <p>고객 한 곳의 기록이 네 시스템에 네 벌 있고, <strong>정규 식별자</strong> <span class="en">canonical identifier</span>가 없다. 정규 식별자는 어느 시스템에서나 같은 대상을 가리키는 공통 번호다. 이 기록들을 깔끔하게 연결하는 방법에 대해 발표자는 명확한 답이 없다고 말한다.</p>
+        <h3>사람에게서 신호를 어떻게 받나 <span class="ts">17:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>상황</th><th>처리</th></tr></thead>
+            <tbody>
+              <tr><td>모델이 확신하고 위험이 낮다</td><td>자동으로 적용한다</td></tr>
+              <tr><td>모델이 확신하지 못하고 위험이 낮다</td><td>증거를 더 기다린다</td></tr>
+              <tr><td>위험이 높다</td><td>누구에게, 언제, 어떤 방식으로 물을지가 중요하다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="conclusion">
+        <header><span class="num">15</span><h2>결론과 오늘 할 일 <span class="ts">17:20</span></h2></header>
+        <p>발표자가 남긴 세 가지다.</p>
+        <ol class="plain">
+          <li><strong>회사의 모델을 상태 추정기로 생각한다.</strong> 모든 자료를 색인하고 분류하는 것으로는 부족하다. 중요한 정보는 행간에 있어서 최고 수준의 모델도 잡기 어렵다.</li>
+          <li><strong>다음에 벌어진 일로 채점한다.</strong> 평가 <span class="en">eval</span>는 처음부터 설계에 넣는다.</li>
+          <li><strong>모델, 에이전트, 이해관계자가 잘 맞물리는 방법을 찾는다.</strong></li>
+        </ol>
+        <div class="callout">
+          <span class="title">발표자가 제안하는 오늘 할 일 <span class="ts">18:10</span></span>
+          <span>아직 자료를 모으지 않았다면 지금 시작한다. 덱이 수천 개 있는 큰 회사라면 특히 그렇다. 발표자는 에이전트가 회사의 기억을 되살려 일상 업무에 쓰는 능력이 실제로 나아졌다고 말한다.</span>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="recap">
+        <header><span class="num">16</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>회사의 실제 사정을 아는 고참은 늘릴 수 없고, 고참의 지식은 글로 남지 않는다.</li>
+          <li>전략은 세 질문이다. <strong>지금 어디인가, 다음에 무슨 일이 생기나, 어쩌다 여기 왔나.</strong></li>
+          <li>정돈된 보고는 <strong>수박 프로젝트</strong>를 숨긴다. 현장 신호는 시끄럽지만 진실에 가깝다. 모델은 둘이 만나는 곳에 둔다.</li>
+          <li><strong>상태 추정기</strong>처럼 증거가 오래될수록 덜 믿고, 새 증거가 오면 갱신한다. 나이, 출처, 다른 센서와의 일치를 따진다.</li>
+          <li>슬라이드 한 장도 XML과 비전 모델의 결과를 합쳐야 제대로 읽힌다.</li>
+          <li>루프는 <strong>갱신, 노화, 관측, 채점, 교정</strong>이다. 모델은 제안하고 코드와 사람이 결정한다.</li>
+          <li>지난 기록은 고치지 않고 앞으로만 반영한다. 그래야 나중에 평가할 수 있다.</li>
+          <li>납기의 절반은 2개월 안에 바뀌고, 바뀐 것의 90%는 뒤로 밀렸다. 그래서 주장마다 날짜를 붙인다.</li>
+          <li>플래그가 달린 초록은 노랑이나 빨강이 될 가능성이 2배였다. 사람에게는 사실보다 <strong>규칙</strong>을 묻는다.</li>
+          <li>꺼진 센서를 0으로 읽지 않는다. 오늘 할 일은 <strong>자료를 모으기 시작하고 평가를 처음부터 넣는 것</strong>이다.</li>
+        </ol>
+      </section>
+
+      <!-- 17 -->
+      <section id="quiz">
+        <header><span class="num">17</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 회사의 세계 모델의 원형은 무엇이고, 약점은 무엇인가?</span></summary><div class="answer">회사의 사정을 다 아는 고참이다. 고참은 늘릴 수 없고, 고참이 하는 말을 적어 두는 사람도 없다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>수박 프로젝트란 무엇인가?</span></summary><div class="answer">겉은 초록이고 속은 빨강인 프로젝트다. 보고서에는 순조롭다고 적혀 있지만 실제로는 문제가 있다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>상태 추정기에서 믿음은 어떻게 변하고, 갱신할 때 무엇을 따지나?</span></summary><div class="answer">증거를 못 본 시간이 길수록 믿음이 흐려지고, 새 증거가 오면 다시 확실해진다. 신호의 나이, 출처의 신뢰도, 다른 센서와의 일치를 따진다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>슬라이드를 XML만으로, 비전 모델만으로 읽으면 각각 어떤 문제가 생기나?</span></summary><div class="answer">XML만 보면 "초록은 어떤 색 코드인가" 같은 문제로 스크립트가 깨진다. 비전 모델만 쓰면 다시 붙여 넣은 스크린샷의 숫자를 잘못 읽을 수 있다. 둘을 합쳐야 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>다섯 단계 루프의 이름과, 기록을 바꾸는 결정권은?</span></summary><div class="answer">갱신, 노화, 관측, 채점, 교정. 모델은 변경을 제안만 하고, 기록을 어떻게 바꿀지는 코드와 사람이 결정한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>지난달 기록을 고치지 않는 이유는?</span></summary><div class="answer">과거 기록이 그대로 남아야 그때의 판단을 나중에 평가할 수 있기 때문이다. 새로 알게 된 내용은 앞으로 쓸 기록에만 반영한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>지난 3년 납기 데이터의 두 숫자는 무엇을 말하나?</span></summary><div class="answer">평균적으로 납기의 절반이 2개월 안에 바뀌었고, 바뀐 것의 90%는 원래보다 늦은 날짜로 갔다. 그래서 주장에 날짜를 붙여 최근 증거에 더 무게를 둔다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>자료 전체를 모델에게 통째로 넣는 대신 무엇을 했고, 결과는 어땠나?</span></summary><div class="answer">전문 에이전트들이 자료를 나눠 살피고 다른 에이전트가 검토하게 했다. 프로젝트별로 쓸모 있는 갱신의 양이 2배 넘게 늘었다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>백테스트는 어떻게 하고, 결과는 어떻게 해석하나?</span></summary><div class="answer">과거 시점의 스냅샷을 잡고 에이전트의 플래그를 그 뒤의 실제 상태와 비교한다. 플래그 달린 초록은 나빠질 가능성이 2배였다. 무엇이 잘못될지 맞히는 것이 아니라 어디를 볼지 알려 주는 수준이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>사람에게 사실이 아니라 규칙을 물으면 무엇이 달라지나?</span></summary><div class="answer">사실은 출력 하나만 고친다. 규칙은 에이전트가 패턴을 이해하게 해서 해당하는 출력을 지금과 앞으로 모두 고친다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>속도계 비유가 말하는 실수는 무엇이고, 어떻게 고쳤나?</span></summary><div class="answer">신호가 없는 것을 0으로 처리한 실수다. 센서에서 마지막으로 정보를 가져오려 한 시각, 마지막으로 정상이었던 시각, 둘이 어긋날 때의 처리를 기록에 넣었다.</div></details>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="apply">
+        <header><span class="num">18</span><h2>내 회사에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>상태 보고 자료를 월별로 모으기 시작한다<span class="how">덱, 전략 문서, 회의 보고</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>현장 신호의 출처를 목록으로 적는다<span class="how">Slack, 회의 노트, PR, 에이전트 세션. 세션 기록은 동의한 사람의 것만 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>프로젝트 기록을 매달 이어 쓴다<span class="how">지난달 기록 + 이번 달 자료로 새 기록을 쓴다. 지난달 기록은 고치지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>기록에 보고 내용, 증거, 이유를 따로 적는다<span class="how">확인: 덱의 초록과 증거의 노랑이 구분되어 보이는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>모든 주장에 날짜와 출처를 붙인다<span class="how">확인: 에이전트가 최근 증거에 더 무게를 둘 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>정보원마다 마지막 조회 시각과 마지막 정상 시각을 기록한다<span class="how">확인: "변화 없음"과 "데이터 없음"을 구분하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>과거 스냅샷으로 백테스트를 돌린다<span class="how">확인: 플래그를 단 항목이 실제로 나빠졌는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>사람에게 사실보다 규칙을 묻는다<span class="how">쓰던 앱, Slack, 이메일에서 짧게 묻는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>자동 적용 기준을 정한다<span class="how">모델이 확신하고 위험이 낮을 때만 자동으로 적용한다. 위험이 높으면 사람에게 묻는다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 19 -->
+      <section id="glossary">
+        <header><span class="num">19</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>세계 모델</td><td>World model. 지금 상태를 이해하고 다음 일을 예측하게 해 주는 내부 그림</td></tr>
+              <tr><td>제도 기억</td><td>Institutional memory. 조직이 일을 겪으며 쌓은 맥락</td></tr>
+              <tr><td>에이전트</td><td>Agent. 스스로 여러 단계를 밟아 일하는 AI 프로그램</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델에 도구와 실행 규칙을 입힌 실행 틀</td></tr>
+              <tr><td>덱</td><td>Deck. 슬라이드 묶음</td></tr>
+              <tr><td>수박 프로젝트</td><td>Watermelon project. 보고는 초록이지만 실제로는 문제가 있는 프로젝트</td></tr>
+              <tr><td>상태 추정기</td><td>State estimator. 불완전한 신호들로 지금 상태를 짐작하는 방법</td></tr>
+              <tr><td>센서</td><td>Sensor. 이 발표에서는 슬라이드, Slack, 코드 변경 같은 정보원</td></tr>
+              <tr><td>비전 모델</td><td>Vision model. 이미지를 읽는 AI 모델</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 관련 문서를 검색해 모델에게 붙여 주고 답하게 하는 방식</td></tr>
+              <tr><td>종단 기록</td><td>Longitudinal record. 같은 대상을 시간 순서대로 이어 붙인 기록</td></tr>
+              <tr><td>플래그</td><td>Flag. 주의가 필요하다는 표시</td></tr>
+              <tr><td>피드포워드</td><td>Feed forward. 지난 기록을 고치지 않고 앞으로 쓸 기록에만 반영하는 방식</td></tr>
+              <tr><td>반감기</td><td>Half-life. 여기서는 시간이 지나 사실을 믿기 어려워지는 현상의 비유</td></tr>
+              <tr><td>백테스트</td><td>Back test. 과거 데이터로 예측을 검증하는 방법</td></tr>
+              <tr><td>평가</td><td>Eval. 모델이나 시스템의 결과 품질을 재는 테스트</td></tr>
+              <tr><td>PR</td><td>Pull request. 코드 변경을 합쳐 달라는 요청</td></tr>
+              <tr><td>세션 기록</td><td>Session trace. 사람과 에이전트가 함께 일한 과정의 기록</td></tr>
+              <tr><td>정규 식별자</td><td>Canonical identifier. 어느 시스템에서나 같은 대상을 가리키는 공통 번호</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 20 -->
+      <section id="timeline">
+        <header><span class="num">20</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:20</span></td><td>모든 걸 아는 고참이 회사의 세계 모델이다</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>Citadel Securities 소개와 경영진의 질문</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>전략의 세 질문</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>제도 기억 층: 관계, 경위, 정치</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>위에서 아래로: 덱과 보고, 수박 프로젝트</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>아래에서 위로: 회의, Slack, 코드, 세션</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>상태 추정기</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>갱신할 때 따지는 세 가지</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>슬라이드에서 데이터 꺼내기: XML의 한계</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>비전 모델의 한계와 두 방법 합치기</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>프로젝트 이름 변경과 시간 축</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>덱과 Slack이 어긋날 때</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>다섯 단계 루프</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>모델은 제안하고 코드와 사람이 결정한다</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>왜 RAG로는 부족한가</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>갱신: 매달 기록을 이어 쓰기</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>바뀐 이름 찾기</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>보고와 증거 구별하기</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>지난달 기록은 건드리지 않는다</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>노화: 사실의 반감기</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>납기 통계: 절반, 그중 90%</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>관측: YOLO에서 전문 에이전트로</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>채점: 백테스트</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>플래그 달린 초록은 2배</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>사람을 루프에 넣기</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>사실을 묻기와 규칙을 묻기</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>현장 신호 네 가지</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>Slack 스레드에서 주장 뽑기</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>PR과 세션 기록</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>꺼진 센서를 0으로 읽은 실수</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>완성된 기록의 모습</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>쓰임: 경영진 대화, 주간 읽을거리, 공통 맥락 층</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>고객 사업으로 넓히기</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>풀지 못한 문제: 기록 연결</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>사람에게 언제 물을지의 기준</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>결론 세 가지</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>지금 모으기 시작하라</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'jDwc0aXTAFg:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트를 위한 검색</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#mixedbread">Mixedbread가 만드는 것</a></li>
+      <li><a href="#question">분석가의 질문 하나</a></li>
+      <li><a href="#grep">grep으로 찾으면</a></li>
+      <li><a href="#rag">RAG는 단계마다 샌다</a></li>
+      <li><a href="#single-vector">점 하나로는 구분이 안 된다</a></li>
+      <li><a href="#agents">에이전트가 더 열심히 찾으면</a></li>
+      <li><a href="#bottleneck">병목은 데이터 접근</a></li>
+      <li><a href="#history">검색 기술 32년</a></li>
+      <li><a href="#late-interaction">페이지 하나에 벡터 여러 개</a></li>
+      <li><a href="#demo">데모: 페이지를 그림째 본다</a></li>
+      <li><a href="#agentic">어려운 질문은 에이전틱 검색</a></li>
+      <li><a href="#case">헤지펀드 사례: 36% → 98%</a></li>
+      <li><a href="#trial">도입 전에 내 자료로 재 보기</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-03 · 16분 · 영어 발표 한글 정리</span>
+      <h1>에이전트가 틀리는 건 검색 때문이다</h1>
+      <p class="lead">에이전트가 사내 문서를 보고 틀린 답을 내는 이유는 모델이 모자라서가 아니라 필요한 자료를 못 찾아서다. 발표자는 기존 RAG가 단계마다 정보를 잃는다고 진단한다. 그리고 페이지를 그림째 읽는 다중 벡터 검색으로 한 헤지펀드의 정답률을 36%에서 98%로 올렸다고 주장한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=3Ad73Onx3Aw" target="_blank" rel="noopener">Better Search Took This AI Agent From 36% to 98% Accuracy</a></span>
+        <span>발표: Aamir Shakir (Mixedbread)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다(rack → RAG, spine cone → Pinecone, cloud code → Claude Code). 확실하지 않은 이름은 들린 대로 쓰고 "(추정)"을 붙였다. 발표자는 검색 제품을 파는 Mixedbread 소속이라 자사 제품 이야기가 많다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>발표자의 진단: 에이전트의 병목은 <strong>지능이 아니라 데이터에 닿는 길</strong>이다.</li>
+        <li>grep 같은 단어 검색은 결과에 순위가 없다. 그래서 에이전트가 문서를 다 읽고, 질문 하나에 <strong>10~20달러</strong>가 든다. 스캔본이나 이미지 PDF는 아예 검색되지 않는다.</li>
+        <li>기존 RAG는 <strong>파싱 → 청킹 → 임베딩</strong> 단계마다 정보를 잃는다. 단계별 업체를 고르는 데만 6~8개월이 걸린다.</li>
+        <li>문서 하나를 점 하나로 바꾸면 <strong>비슷한 문서끼리 구분이 안 된다.</strong> 같은 회사의 다른 해 보고서가 거의 같은 점이 된다. 문서가 늘수록 품질이 떨어진다.</li>
+        <li>대안은 <strong>후기 상호작용 모델</strong>이다. 페이지마다 맥락을 아는 벡터를 여러 개 만든다. 페이지는 OCR 대신 그림으로 보고 임베딩한다.</li>
+        <li>어려운 질문은 여러 번 검색하는 <strong>에이전틱 검색</strong>에 맡긴다. 에이전트가 grep, 일반 검색, 에이전틱 검색 중에서 고른다.</li>
+        <li>발표자 회사의 헤지펀드 고객 사례: 정답률 <strong>36% → 98%</strong>, LLM 비용 <strong>3분의 1</strong>.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="mixedbread">
+        <header><span class="num">01</span><h2>Mixedbread가 만드는 것 <span class="ts">00:00</span></h2></header>
+        <p>Mixedbread는 검색<span class="en">retrieval</span>을 연구하는 곳으로 시작했다. 발표자는 검색 분야의 흐름이 아쉬워서 시작했다고 말한다. 2년 반 동안 검색을 잘 만드는 방법을 연구했다.</p>
+        <p>그 결과로 나온 제품은 어떤 자료든 넣어 두면 <strong>에이전트가 검색할 수 있게</strong> 만들어 준다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>발표자가 말한 내용</th></tr></thead>
+            <tbody>
+              <tr><td>넣을 수 있는 자료</td><td>PDF, 스프레드시트, 이미지, 영상, 음성. 100개 넘는 언어</td></tr>
+              <tr><td>직접 만든 것</td><td>검색 전용 모델(처음부터 학습), 데이터베이스, 자료 수집 파이프라인<span class="en">ingestion pipeline</span></td></tr>
+              <tr><td>수집 파이프라인을 만든 이유</td><td>사용자가 OCR 같은 전처리를 고민하지 않고 자료를 넣기만 하면 되게 하려고</td></tr>
+              <tr><td>보안 <span class="ts">01:20</span></td><td>데이터 무보존<span class="en">zero data retention</span>, ISO 인증, 고객 저장소를 그대로 쓰는 방식<span class="en">bring your own bucket</span></td></tr>
+              <tr><td>현황 <span class="ts">01:10</span></td><td>출시 5개월. 최근 3개월 사이 은행과 헤지펀드가 고객이 됐다. 문서 수십억 건이 들어가 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 Mixedbread 소속이다. 이 발표의 진단은 모두 자사 제품이라는 해법으로 이어진다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="question">
+        <header><span class="num">02</span><h2>분석가의 질문 하나 <span class="ts">01:40</span></h2></header>
+        <p>발표자는 주식 분석가의 질문 하나를 예로 든다.</p>
+        <p>발표 전날 Intel이 새 GPU "D270"(추정)을 공개했다. 이 GPU는 설계가 특이하다. 보통 쓰는 고대역폭 메모리<span class="en">HBM</span> 대신 LPDDR5 메모리를 많이 쓴다.</p>
+        <div class="callout">
+          <span class="title">분석가가 시스템에 묻는 질문</span>
+          <span>"왜 Intel의 새 D270은 LPDDR5 메모리를 쓰나?"</span>
+        </div>
+        <p>금융 회사에는 데이터 업체가 보낸 자료가 쌓여 있다. 팟캐스트, 인터뷰, 리서치 보고서 같은 것이다. 답은 그 많은 자료 어딘가에 있다. 이 질문을 에이전트가 어떻게 푸느냐가 발표의 출발점이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="grep">
+        <header><span class="num">03</span><h2>grep으로 찾으면 <span class="ts">02:20</span></h2></header>
+        <p>Claude Code나 Claude Cowork에 로컬 파일을 주면, 에이전트는 터미널에서 어휘 검색<span class="en">lexical search</span>을 쓴다. 어휘 검색은 글자가 그대로 들어 있는지 찾는 방식이다. 대표 도구가 grep이다. 에이전트는 "LPDDR5", "Intel", "GPU" 같은 단어로 문서를 찾는다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">문제 1 · 순위가 없다 <span class="ts">02:50</span></span>
+            <ul>
+              <li>문서가 많으면 걸리는 결과도 많다</li>
+              <li>어느 결과가 더 관련 있는지 알 수 없다</li>
+              <li>결국 모델이 문서를 하나하나 다 읽는다</li>
+            </ul>
+            <p class="verdict">결과: 토큰 비용이 계속 오른다. 발표자는 문서가 많으면 <b>기본 질문 하나에 10~20달러</b>가 든다고 했다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">문제 2 · 검색이 안 되는 형식 <span class="ts">03:10</span></span>
+            <ul>
+              <li>PDF 대부분은 grep으로 잘 찾아지지 않는다</li>
+              <li>바이너리 형식이거나, 스캔본이거나, 이미지가 들어 있다</li>
+            </ul>
+            <p class="verdict">결과: 그림, 표, 스캔 속 정보를 <b>전혀 쓰지 못한다.</b></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="rag">
+        <header><span class="num">04</span><h2>RAG는 단계마다 샌다 <span class="ts">03:30</span></h2></header>
+        <p>다음 방법은 RAG다. 검색 증강 생성<span class="en">Retrieval-Augmented Generation</span>이라고 한다. 관련 자료를 먼저 찾아서 질문과 함께 모델에게 주고 답하게 하는 방식이다. 발표자가 손을 들어 보라고 하자 청중 대부분이 안다고 했다.</p>
+        <p>보통의 RAG 파이프라인은 아래 순서로 돈다. 발표자의 요지는 <strong>모든 단계가 정보를 잃는다</strong>는 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th><th>잃는 것</th></tr></thead>
+            <tbody>
+              <tr><td>파싱 <span class="en">parsing</span></td><td>음성은 받아쓰고, PDF는 OCR로 글자를 뽑는다</td><td>표나 도표를 제대로 못 읽으면 그 정보가 사라진다</td></tr>
+              <tr><td>청킹 <span class="en">chunking</span></td><td>문서를 작은 조각으로 자른다</td><td>그림, 표, 페이지가 섞인 곳에서는 어디를 잘라야 할지 애매하다</td></tr>
+              <tr><td>임베딩 <span class="en">embedding</span></td><td>조각 하나를 숫자 벡터로 바꾼다. 공간 속 점 하나다</td><td>풍부한 정보가 점 하나로 눌린다</td></tr>
+              <tr><td>벡터 DB · 재순위</td><td>질문과 가까운 점을 찾고, 찾은 결과의 순서를 다시 매긴다<span class="en">rerank</span></td><td>앞 단계에서 잃은 정보는 되찾을 수 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>프랑켄슈타인 스택 <span class="ts">05:00</span></h3>
+        <p>단계마다 업체를 따로 골라야 한다는 문제도 있다. 가장 좋은 OCR, 청킹 방법, 임베딩 모델, 벡터 DB, 재순위 모델을 각각 평가해야 한다.</p>
+        <ul class="plain">
+          <li>업체 평가에 6~8개월이 걸린다</li>
+          <li>업체마다 보안 심사를 거친다</li>
+          <li>4~5명이 붙어야 한다</li>
+          <li>그렇게 만들어도 방식 자체의 한계 때문에 결국 잘 안 된다</li>
+        </ul>
+        <p>Mixedbread 안에서는 이렇게 이어 붙인 구조를 <strong>프랑켄슈타인 스택</strong><span class="en">Frankenstein stack</span>이라고 부른다.</p>
+
+        <h3>"RAG는 제대로 된 적이 없다" <span class="ts">06:00</span></h3>
+        <p>예전에는 "Pinecone 같은 벡터 DB에 넣기만 하면 된다"는 약속이 있었다. 발표자는 그 약속이 지켜진 적이 없다고 본다. 이유는 두 가지다. 모든 단계에서 정보가 샌다. 그리고 지금 쓰는 임베딩 모델이 충분히 좋지 않다.</p>
+        <p class="note">"RAG는 한 번도 제대로 된 적이 없다"는 검색 제품을 파는 회사의 주장이다. 발표자는 단일 벡터 모델이 안 되는 이유를 보여 주는 증명이 있다고 했지만, 발표 안에서 자세히 설명하지는 않았다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="single-vector">
+        <header><span class="num">05</span><h2>점 하나로는 구분이 안 된다 <span class="ts">06:20</span></h2></header>
+        <p>임베딩 모델이 하는 일은 이렇다. "I love bread"(나는 빵을 좋아한다)라는 문장을 넣으면 공간 어딘가의 점 하나가 된다. 나중에 "누가 빵을 좋아하나?"라고 물으면 질문도 점 하나가 된다. 그리고 질문 점과 가까운 문서 점을 찾는다.</p>
+        <p>짧은 문장이라면 이걸로 된다. 문제는 복잡한 문서다.</p>
+        <h3>Nvidia 실적 보고서의 예 <span class="ts">06:50</span></h3>
+        <p>SEC 공시<span class="en">SEC filing</span>는 미국 상장사가 내는 재무 보고서다. 순이익, 매출 같은 표가 가득하다. 이 보고서 전체를 점 하나로 만들면 그 점은 무엇을 나타낼까. 아마 "Nvidia의 실적 보고서"라는 정도다.</p>
+        <p>그러면 1996년, 2000년, 2026년 Nvidia 보고서가 거의 같은 자리에 찍힌다. 특정 연도의 숫자를 물어도 어느 해 보고서인지 가려내지 못한다.</p>
+        <div class="callout">
+          <span class="title">문서가 늘면 무너진다 <span class="ts">07:20</span></span>
+          <span>발표자가 고객사에서 본 패턴이다. 문서가 수십~수백 개일 때는 품질이 괜찮다. 실제 서비스 규모로 늘리면 답의 품질이 크게 떨어진다. 비슷해 보이는 문서가 많아질수록 점 하나로는 세밀한 차이를 가르지 못하기 때문이다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="agents">
+        <header><span class="num">06</span><h2>에이전트가 더 열심히 찾으면 <span class="ts">07:40</span></h2></header>
+        <p>에이전트는 어떻게든 답을 내려고 한다. 검색이 나쁘면 검색을 더 한다.</p>
+        <ul class="plain">
+          <li>검색 질의를 공격적으로 늘린다</li>
+          <li>서브 에이전트<span class="en">sub-agent</span>를 수십 개 띄운다</li>
+          <li>컨텍스트 윈도우<span class="en">context window</span>가 금방 찬다. 모델이 한 번에 볼 수 있는 입력 범위다</li>
+          <li>질문 하나하나가 비싸진다</li>
+        </ul>
+        <p>에이전트를 많이 붙이면 답은 나온다. 발표자는 이걸 그대로 서비스에 내보낼 거냐고 묻는다.</p>
+        <p>펀드나 벤처캐피털의 일 대부분을 에이전트가 하는 날이 오면 에이전트 트래픽은 계속 는다. 검색이 비효율적이면 <strong>운영 비용이 치솟는다.</strong> <span class="ts">08:10</span></p>
+      </section>
+
+      <!-- 7 -->
+      <section id="bottleneck">
+        <header><span class="num">07</span><h2>병목은 데이터 접근 <span class="ts">08:20</span></h2></header>
+        <p>Mixedbread가 고객들과 일하며 일찍 내린 결론이다.</p>
+        <blockquote>지능은 이미 있다. 진짜 병목은 내 데이터와 지식에 닿는 일이다.<cite>발표자의 말을 옮김 · 08:20</cite></blockquote>
+        <p>발표자는 <strong>지능과 데이터가 분리</strong><span class="en">unbundling</span>될 거라고 본다. 지능은 여러 모델 가운데 골라 쓴다. 대신 어떤 모델을 쓰든 내 데이터에 제대로 닿게 해 주는 층이 따로 필요하다. 발표자는 Mixedbread를 그 층으로 만들었다고 말한다.</p>
+        <div class="shift" aria-label="에이전트 정확도를 올리는 방법에 대한 관점 변화">
+          <div><span class="tag">흔한 대응</span><b>답이 틀리면 더 똑똑한 모델로</b><span class="muted">모델을 바꾸거나 에이전트를 더 붙인다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 주장</span><b>답이 틀리면 더 좋은 검색으로</b><span class="muted">모델에게 맞는 자료를 정확히 가져다준다</span></div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="history">
+        <header><span class="num">08</span><h2>검색 기술 32년 <span class="ts">09:00</span></h2></header>
+        <p>발표자는 다음 주에 공개할 그래프를 미리 보여 주며 검색 기술의 흐름을 정리했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시점</th><th>일어난 일</th></tr></thead>
+            <tbody>
+              <tr><td>1994</td><td>BM25. 질문과 문서에 같은 단어가 얼마나 있는지로 순위를 매긴다. Elasticsearch가 쓰는 방식이다</td></tr>
+              <tr><td>2022</td><td>처음으로 쓸 만한 임베딩 모델이 나왔다. 글 검색에서 BM25를 확실히 넘어선 첫 방법이다</td></tr>
+              <tr><td>2022 이후</td><td>조금씩 꾸준히 나아졌다. ChatGPT 같은 큰 도약은 없었다. 발표자는 RAG가 안 된 이유도 여기서 찾는다</td></tr>
+              <tr><td>2025 말 ~ 2026 초</td><td>Mixedbread 첫 모델. 작년 말 학습을 끝내고 올해 초 공개했다. 발표자는 "꽤 괜찮았다"고 했다</td></tr>
+              <tr><td>발표 다음 주</td><td>새 모델 공개 예정. 이미 여러 고객이 쓰고 있다. 발표자는 이를 계단식 도약<span class="en">step function change</span>이라 부른다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 BM25에서 좋은 임베딩 모델까지 27년이 걸렸다고 말했다. 1994년부터 2022년까지는 28년이다. 1994년부터 발표 시점(2026년)까지 32년이라는 계산은 맞다.</p>
+        <p class="note">새 모델은 발표 시점에 공개 전이었다. "계단식 도약"이라는 평가는 발표자 회사의 자기 평가다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="late-interaction">
+        <header><span class="num">09</span><h2>페이지 하나에 벡터 여러 개 <span class="ts">10:00</span></h2></header>
+        <p>새 모델은 후기 상호작용 모델<span class="en">late interaction model</span>이다. 문서에 벡터를 하나만 만들지 않는다. 문서에도 벡터 여러 개, 질문에도 벡터 여러 개를 만든다. 그래서 한 페이지 안의 세밀한 정보를 따로따로 나타낼 수 있다.</p>
+        <p>Nvidia 보고서로 다시 보자. 모델은 순이익, 매출 같은 항목마다 벡터를 만든다. 그런데 이 벡터들을 문서 전체를 한 번에 보며 만들기 때문에, 각 벡터는 자기가 "Nvidia 보고서"의 일부라는 것도 안다. 발표자는 이를 <strong>맥락화된</strong><span class="en">contextualized</span> 임베딩이라고 불렀다.</p>
+        <div class="shift" aria-label="단일 벡터에서 후기 상호작용으로">
+          <div><span class="tag">단일 벡터</span><b>보고서 하나 → 점 하나</b><span class="muted">연도와 항목이 한 점에 섞여 비슷한 보고서끼리 구분이 어렵다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">후기 상호작용</span><b>보고서 하나 → 항목별 점 여러 개</b><span class="muted">각 점이 어느 회사, 어느 문서인지 맥락을 함께 담는다</span></div>
+        </div>
+        <p>발표자는 품질이 크게 뛴 이유를 세 가지로 꼽았다. 이 기법, 더 큰 모델, 더 좋은 학습 데이터다. <span class="ts">10:30</span></p>
+        <div class="callout">
+          <span class="title">발표에 없는 일반 설명: 점수는 어떻게 매기나</span>
+          <span>후기 상호작용 모델은 보통 이렇게 점수를 낸다. 질문의 벡터 하나하나에 대해 문서에서 가장 비슷한 벡터를 고른다. 그 유사도를 모두 더해 문서 점수로 쓴다. 문서 벡터는 미리 만들어 두고, 질문과 맞대어 보는 일은 검색할 때 늦게 한다. 그래서 "후기(late)" 상호작용이라고 부른다.</span>
+        </div>
+        <p>이 모델 위에 만든 제품은 쓰는 법이 단순하다고 발표자는 말한다. 자료를 올리면 Mixedbread가 페이지마다 보이는 그대로 색인한다. 에이전트에게 Mixedbread 접근 권한을 주면 검색, 읽기, grep을 에이전트가 알아서 한다. 개발자는 실제 애플리케이션을 만드는 데 집중한다. <span class="ts">10:40</span></p>
+      </section>
+
+      <!-- 10 -->
+      <section id="demo">
+        <header><span class="num">10</span><h2>데모: 페이지를 그림째 본다 <span class="ts">11:00</span></h2></header>
+        <p>발표자는 Intel 실적 발표 자료를 Mixedbread에 올려 두었다. 행사장 인터넷이 느려서 처음에는 화면이 뜨지 않았다.</p>
+        <h3>OCR이 놓치는 것 <span class="ts">11:50</span></h3>
+        <p>슬라이드 한 장에 도표가 있다. 2025년 2분기 Intel 매출을 알고 싶다고 하자. OCR로 글자만 뽑으면 도표에 담긴 정보가 사라진다. 그러면 이 페이지를 질문과 맞춰 찾아내지 못한다. 페이지를 이해하려면 도표를 봐야 하기 때문이다.</p>
+        <p>Mixedbread는 <strong>모델이 페이지 스크린샷을 직접 보고</strong> 임베딩을 만든다. 그래서 앞에서 말한 OCR, 청킹 단계의 손실을 건너뛴다. <span class="ts">12:10</span></p>
+        <p>다만 모든 LLM이 이미지를 읽지는 못한다. 그래서 Mixedbread는 레이아웃 정보와 OCR 글자도 함께 준다. 다음 단계의 모델에 스크린샷을 넣을지 글자를 넣을지는 사용자가 정한다. <span class="ts">12:20</span></p>
+
+        <h3>숫자 하나를 묻는 질문 <span class="ts">12:30</span></h3>
+        <div class="callout">
+          <span class="title">데모 질문</span>
+          <span>"2025년 2분기 Intel 파운드리 부문의 영업이익률은?"</span>
+        </div>
+        <ul class="plain">
+          <li>Intel Foundry를 다룬 페이지를 찾아냈다</li>
+          <li>그 페이지가 2025년 2분기 이야기이고 부문별 매출을 다룬다는 것도 맞혔다</li>
+          <li>발표자에 따르면 평소 응답은 200밀리초 미만이다. 데모 중에는 네트워크 때문에 느렸다</li>
+        </ul>
+        <h3>출처를 위치까지 가리킨다 <span class="ts">13:00</span></h3>
+        <p>페이지 레이아웃 정보가 있으니 바운딩 박스<span class="en">bounding box</span>로 답의 위치를 표시할 수 있다. 바운딩 박스는 페이지 안에서 정보가 있는 영역을 둘러싼 사각형이다. 분석가나 에이전트가 결론을 내렸을 때, 그 근거가 어느 문서 어느 자리에서 왔는지 거슬러 올라가 인용할 수 있다. Mixedbread는 이런 화면을 직접 만들 수 있게 API와 기본 기능<span class="en">primitives</span>을 제공한다고 했다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="agentic">
+        <header><span class="num">11</span><h2>어려운 질문은 에이전틱 검색 <span class="ts">13:20</span></h2></header>
+        <div class="callout">
+          <span class="title">두 번째 데모 질문</span>
+          <span>"Intel 파운드리의 수익성이 나아지고 있나? 무엇 때문인가?"</span>
+        </div>
+        <p>숫자 하나를 찾는 질문이 아니다. 여러 자료를 엮어 해석해야 한다. 시스템은 복잡한 질문이라고 판단하고 에이전틱 검색<span class="en">agentic search</span>으로 넘긴다. <span class="ts">13:40</span></p>
+        <ul class="plain">
+          <li>에이전틱 검색은 검색을 여러 번 하면서 단계적으로 추론하는 에이전트다. 이런 추론을 멀티홉 추론<span class="en">multi-hop reasoning</span>이라고 한다</li>
+          <li>질문을 쪼개서 필요한 자료를 모아 온다</li>
+          <li>모은 자료는 LLM에 넘겨 설명을 만든다</li>
+          <li>이 에이전트도 Mixedbread가 직접 학습시킨 모델이다. 이름은 자막에서 "toast one"처럼 들렸다(추정)</li>
+        </ul>
+        <p>발표자는 이 모델이 Astra(추정), Fable(추정) 같은 모델만큼 잘하면서 <strong>40배 빠르고 싸다</strong>고 말했다.</p>
+        <p class="note">비교 대상 모델의 정확한 이름, 측정 방법, 과제는 발표에 나오지 않았다. 자사 모델에 대한 주장이니 감안해서 읽자.</p>
+
+        <h3>에이전트가 도구를 고른다 <span class="ts">14:10</span></h3>
+        <p>에이전틱 검색도 기본 기능 하나로 열어 두었다. 화면은 데모일 뿐이다. 실제로는 에이전트에게 도구를 주고, 질문의 복잡도에 따라 에이전트가 고르게 하라는 것이 발표자의 제안이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>도구</th><th>어울리는 질문 (예시)</th></tr></thead>
+            <tbody>
+              <tr><td>grep</td><td>정확한 단어나 제품명이 들어 있는지만 확인하면 될 때</td></tr>
+              <tr><td>일반 검색</td><td>숫자 하나 같은 사실을 찾을 때. 데모의 영업이익률 질문</td></tr>
+              <tr><td>에이전틱 검색</td><td>여러 자료를 엮어 해석해야 할 때. 데모의 수익성 질문</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">이 표의 "어울리는 질문" 칸은 발표의 두 데모 질문을 기준으로 이 노트가 나눈 예시다. 발표자는 "복잡도에 따라 고르게 하라"고만 했다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="case">
+        <header><span class="num">12</span><h2>헤지펀드 사례: 36% → 98% <span class="ts">14:30</span></h2></header>
+        <p>발표자가 소개한 고객 사례다. 발표 2주 뒤에 공개할 예정이라고 했다.</p>
+        <ul class="plain">
+          <li>고객: 아주 큰 헤지펀드. 이름은 밝히지 않았다</li>
+          <li>문서 10억 건 이상</li>
+          <li>도입하는 데 1주 반이 걸렸다</li>
+          <li>용도: 분석가와 펀드매니저를 위한 사내 에이전트 플랫폼. 정성 분석을 하고 투자 판단을 돕는다</li>
+          <li>이전 구성: 앞에서 말한 조립식 구성. OCR, 청킹, 임베딩 모델, 벡터 DB</li>
+          <li>채점: 사람 전문가가 답을 아는 질문으로 에이전트의 답을 채점했다 <span class="ts">15:00</span></li>
+        </ul>
+
+        <figure class="chart" aria-label="헤지펀드 에이전트의 정답률: 이전 구성 36%, Mixedbread 적용 후 98%">
+          <span class="chart-title">헤지펀드 에이전트의 정답률 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>이전 구성 (OCR + 청킹 + 임베딩 + 벡터 DB)</span><span class="val">36</span></div>
+              <div class="track"><div class="fill" style="width:36%" title="이전 구성: 정답률 36%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Mixedbread 적용 후</span><span class="val">98</span></div>
+              <div class="track"><div class="fill key" style="width:98%" title="Mixedbread 적용 후: 정답률 98%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">틀린 답의 비율로 바꾸면 64%에서 2%로 줄었다(이 노트의 계산). 발표자 회사의 고객 사례다.</span>
+        </figure>
+
+        <p>발표자는 이 차이도 같은 이유로 설명한다. 문제는 지능이 아니라 <strong>맞는 자료를 가져오는 일</strong>이었다. 에이전트에게 훨씬 나은 검색을 주기만 해도 성능이 크게 오른다는 것이다.</p>
+        <p>질문을 멀티모달 질문과 글 질문으로 나눈 결과도 보여 줬다. 그림이나 표가 섞인 멀티모달 질문에서 오른 폭이 특히 컸다고 했다. 자막에는 세부 숫자가 없다. <span class="ts">15:20</span></p>
+
+        <h3>토큰도 덜 쓴다 <span class="ts">15:30</span></h3>
+        <p>LLM 비용은 3분의 1로 줄었다. 발표자의 설명은 이렇다. 토큰 대부분은 정보를 찾고, 파싱하고, 읽는 데 쓰인다. 처음부터 좋은 자료를 넣어 주면 LLM은 중요한 내용에만 집중하면 된다.</p>
+        <figure class="chart" aria-label="LLM 비용 비교: 이전을 100으로 놓으면 Mixedbread 적용 후 약 33">
+          <span class="chart-title">LLM 비용 (이전 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>이전 구성</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="이전 구성: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Mixedbread 적용 후</span><span class="val">약 33</span></div>
+              <div class="track"><div class="fill key" style="width:33.3%" title="Mixedbread 적용 후: 약 33 (3분의 1)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자는 "3배 줄었다"고만 말했다. 막대는 3분의 1로 그렸다.</span>
+        </figure>
+        <div class="callout warn">
+          <span class="title">이 숫자를 읽을 때</span>
+          <span>발표자 회사의 고객 사례이고, 발표 시점에는 공개 전이었다. 질문 수, 채점 기준, 이전 구성의 세부 사항은 발표에 나오지 않았다. 36%와 98%는 발표자가 인용한 숫자다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="trial">
+        <header><span class="num">13</span><h2>도입 전에 내 자료로 재 보기 <span class="ts">15:50</span></h2></header>
+        <p>발표자는 마지막으로 써 보는 방법을 안내했다.</p>
+        <ul class="plain">
+          <li>가입하면 무료 크레딧을 준다</li>
+          <li>보안이 걱정되면 연락하라고 했다. 고객 저장소를 그대로 쓰는 방식을 5분 안에 켜 준다고 했다 <span class="ts">16:10</span></li>
+          <li>자료가 아주 많은 고객에게는 크레딧을 넉넉히 줘서, 도입 전에 직접 벤치마크할 수 있게 한다</li>
+        </ul>
+        <p>제품 안내와 별개로, <strong>도입 전에 내 자료로 직접 재 본다</strong>는 원칙은 어느 검색 도구를 고르든 쓸 만하다. 앞의 36% → 98%도 그 회사 자료와 질문으로 잰 숫자다.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>발표자의 진단: 에이전트의 병목은 지능이 아니라 <strong>데이터에 닿는 길</strong>이다.</li>
+          <li>grep 같은 어휘 검색은 순위가 없어 에이전트가 문서를 다 읽게 만든다. 질문 하나에 10~20달러가 든다.</li>
+          <li>스캔본, 이미지, 표가 든 PDF는 grep으로 찾아지지 않는다.</li>
+          <li>RAG는 파싱, 청킹, 임베딩 단계마다 정보를 잃는다. 단계별 업체 선정에만 6~8개월이 걸린다.</li>
+          <li>문서 하나를 점 하나로 만들면 <strong>비슷한 문서끼리 구분이 안 된다.</strong> 문서가 늘수록 품질이 떨어진다.</li>
+          <li>검색이 나쁘면 에이전트는 검색과 서브 에이전트를 늘린다. 컨텍스트가 차고 비용이 치솟는다.</li>
+          <li>BM25(1994) 이후 쓸 만한 임베딩(2022)까지 28년이 걸렸다. 그 뒤로는 조금씩만 나아졌다.</li>
+          <li><strong>후기 상호작용 모델</strong>은 페이지마다 맥락을 아는 벡터를 여러 개 만든다. 페이지를 그림으로 보고 임베딩하면 OCR 손실도 피한다.</li>
+          <li>질문 복잡도에 따라 에이전트가 grep, 일반 검색, 에이전틱 검색을 고르게 한다. 답에는 바운딩 박스로 출처를 단다.</li>
+          <li>발표자 회사의 헤지펀드 사례: 정답률 <strong>36% → 98%</strong>, LLM 비용 3분의 1. 자사 사례라는 점을 감안한다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 에이전트의 진짜 병목은?</span></summary><div class="answer">모델의 지능이 아니라 내 데이터와 지식에 닿는 길, 즉 검색이다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>grep으로 사내 문서를 찾을 때 생기는 두 가지 문제는?</span></summary><div class="answer">첫째, 결과에 관련도 순위가 없어 모델이 문서를 다 읽는다. 질문 하나에 10~20달러가 든다. 둘째, PDF 대부분은 바이너리, 스캔본, 이미지라 grep으로 찾아지지 않는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>RAG 파이프라인의 단계와, 각 단계에서 잃는 것은?</span></summary><div class="answer">파싱은 표와 도표를 놓친다. 청킹은 그림과 표가 섞인 곳에서 경계를 잘못 자른다. 임베딩은 풍부한 정보를 점 하나로 누른다. 벡터 DB 검색과 재순위는 앞에서 잃은 정보를 되찾지 못한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>"프랑켄슈타인 스택"은 무엇을 가리키나?</span></summary><div class="answer">OCR, 청킹, 임베딩, 벡터 DB, 재순위를 각각 다른 업체로 이어 붙인 구성. 업체 평가에 6~8개월, 4~5명이 들고, 그래도 구조적 한계로 잘 안 된다는 것이 발표자의 주장이다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>단일 벡터 임베딩이 1996년과 2026년 Nvidia 보고서를 구분하지 못하는 이유는?</span></summary><div class="answer">보고서 전체가 점 하나로 눌리면 그 점은 "Nvidia 실적 보고서" 정도만 나타낸다. 연도와 항목 같은 세부 정보가 사라져 두 점이 거의 같은 자리에 찍힌다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>문서 수십 개에서 잘 되던 RAG가 서비스 규모에서 무너지는 이유는?</span></summary><div class="answer">문서가 늘면 비슷해 보이는 문서도 는다. 점 하나짜리 표현으로는 그 세밀한 차이를 가르지 못한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>검색이 나쁠 때 에이전트는 어떻게 행동하고, 무엇이 문제인가?</span></summary><div class="answer">검색을 공격적으로 늘리고 서브 에이전트를 수십 개 띄운다. 컨텍스트가 차고 질문마다 비싸진다. 에이전트 트래픽이 늘면 운영 비용이 치솟는다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>후기 상호작용 모델은 단일 벡터 모델과 무엇이 다른가?</span></summary><div class="answer">문서와 질문 모두에 벡터를 여러 개 만든다. 각 벡터는 문서 전체를 한 번에 보고 만들어서 회사, 문서 같은 맥락을 함께 담는다. 그래서 한 페이지 안의 세부 정보를 따로 찾을 수 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>페이지를 그림으로 임베딩하면서도 레이아웃과 OCR 글자를 함께 주는 이유는?</span></summary><div class="answer">모든 LLM이 이미지를 읽지는 못하기 때문이다. 다음 단계 모델에 스크린샷을 넣을지 글자를 넣을지 사용자가 고르게 한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>바운딩 박스는 분석 업무에서 왜 쓸모 있나?</span></summary><div class="answer">답의 근거가 어느 문서의 어느 자리에서 왔는지 표시할 수 있다. 분석가나 에이전트가 결론을 거슬러 올라가 확인하고 인용할 수 있다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>헤지펀드 사례의 두 숫자와, 읽을 때 감안할 점은?</span></summary><div class="answer">정답률 36% → 98%, LLM 비용 3분의 1. 발표자 회사의 고객 사례이고 발표 시점에 공개 전이었다. 질문 수와 채점 기준은 나오지 않았다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 "27년"이라 한 기간을 다시 계산하면?</span></summary><div class="answer">BM25가 나온 1994년부터 좋은 임베딩 모델이 나온 2022년까지 28년이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>전문가가 정답을 아는 질문 세트로 에이전트 정답률을 잰다<span class="how">사례처럼 사람이 채점한다. 멀티모달 질문과 글 질문을 나눠서 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>질문 하나에 드는 토큰과 비용을 기록한다<span class="how">확인: 토큰 대부분이 자료를 찾고 읽는 데 쓰이고 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>내 자료 중 글자 검색으로 안 잡히는 형식이 얼마나 되는지 센다<span class="how">스캔 PDF, 이미지, 표, 도표</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>실제 서비스 규모의 문서 수로 검색 품질을 시험한다<span class="how">수십 개에서 괜찮아도 규모가 커지면 떨어질 수 있다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>비슷한 문서끼리 구분되는지 시험한다<span class="how">예: 같은 회사의 다른 해 보고서에 특정 연도 숫자를 묻는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>에이전트에게 검색 도구를 여러 개 주고 고르게 한다<span class="how">grep, 일반 검색, 여러 번 검색하는 에이전틱 검색</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>답마다 출처 위치를 붙이게 한다<span class="how">문서, 페이지, 가능하면 페이지 안의 영역까지</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>검색 도구를 고르기 전에 내 자료로 벤치마크한다<span class="how">업체가 낸 정확도 숫자를 그대로 쓰지 않는다. 데이터 보존 정책도 함께 확인한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>검색</td><td>Retrieval. 질문에 맞는 자료를 많은 문서 가운데서 찾아오는 일</td></tr>
+              <tr><td>어휘 검색</td><td>Lexical search. 글자가 그대로 들어 있는지로 찾는 검색</td></tr>
+              <tr><td>grep</td><td>파일에서 특정 글자가 든 줄을 찾는 터미널 명령</td></tr>
+              <tr><td>BM25</td><td>질문과 문서에 같은 단어가 얼마나 있는지로 순위를 매기는 전통적 검색 방식</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 자료를 먼저 찾아 질문과 함께 모델에 주고 답하게 하는 방식</td></tr>
+              <tr><td>OCR</td><td>이미지나 스캔 속 글자를 텍스트로 뽑아내는 기술</td></tr>
+              <tr><td>파싱</td><td>Parsing. 원본 파일에서 글자와 구조를 뽑아내는 단계</td></tr>
+              <tr><td>청킹</td><td>Chunking. 문서를 검색하기 좋은 작은 조각으로 자르는 단계</td></tr>
+              <tr><td>임베딩</td><td>Embedding. 글이나 그림을 숫자 벡터로 바꾼 것. 의미가 비슷하면 공간에서 가까이 놓인다</td></tr>
+              <tr><td>벡터 DB</td><td>임베딩을 저장하고 가까운 벡터를 빨리 찾아 주는 데이터베이스. 예: Pinecone</td></tr>
+              <tr><td>재순위</td><td>Rerank. 1차로 찾은 결과의 순서를 더 정밀한 모델로 다시 매기는 단계</td></tr>
+              <tr><td>단일 벡터 모델</td><td>문서 하나를 벡터 하나로 나타내는 임베딩 모델</td></tr>
+              <tr><td>후기 상호작용 모델</td><td>Late interaction model. 문서와 질문을 각각 벡터 여러 개로 나타내고, 검색할 때 벡터끼리 맞대어 점수를 매기는 모델</td></tr>
+              <tr><td>맥락화된 임베딩</td><td>Contextualized embedding. 조각 하나의 벡터가 문서 전체의 맥락도 함께 담는 것</td></tr>
+              <tr><td>멀티모달</td><td>Multimodal. 글뿐 아니라 이미지, 음성, 영상 같은 여러 형식을 함께 다루는 것</td></tr>
+              <tr><td>에이전틱 검색</td><td>Agentic search. 에이전트가 검색을 여러 번 하며 단계적으로 자료를 모으는 검색</td></tr>
+              <tr><td>멀티홉 추론</td><td>Multi-hop reasoning. 찾은 정보를 바탕으로 다음 검색을 하며 여러 단계를 거쳐 답에 닿는 추론</td></tr>
+              <tr><td>서브 에이전트</td><td>Sub-agent. 큰 에이전트가 일을 나눠 맡기려고 띄우는 작은 에이전트</td></tr>
+              <tr><td>컨텍스트 윈도우</td><td>Context window. 모델이 한 번에 볼 수 있는 입력의 최대 범위</td></tr>
+              <tr><td>바운딩 박스</td><td>Bounding box. 페이지나 이미지 안에서 특정 정보가 있는 영역을 둘러싼 사각형</td></tr>
+              <tr><td>데이터 무보존</td><td>Zero data retention. 서비스가 고객 데이터를 처리한 뒤 자기 쪽에 남기지 않는 것</td></tr>
+              <tr><td>고객 저장소 연결</td><td>Bring your own bucket. 고객이 가진 클라우드 저장소에 데이터를 두고 서비스가 거기서 쓰는 방식</td></tr>
+              <tr><td>SEC 공시</td><td>SEC filing. 미국 상장사가 증권거래위원회에 내는 재무 보고서</td></tr>
+              <tr><td>HBM · LPDDR5</td><td>둘 다 메모리 종류. HBM은 GPU에 흔히 쓰는 고대역폭 메모리, LPDDR5는 저전력 메모리</td></tr>
+              <tr><td>계단식 도약</td><td>Step function change. 조금씩 나아지는 게 아니라 한 번에 크게 뛰는 변화</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>Mixedbread 소개: 검색 연구, 자체 모델과 데이터베이스</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>은행·헤지펀드 고객, 보안 요건</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>예시: Intel GPU의 LPDDR5 메모리를 묻는 분석가</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>Claude Code의 grep 검색과 그 한계</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>문서를 다 읽는 비용, grep이 안 되는 PDF</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>RAG 파이프라인: 파싱, 청킹, 임베딩, 벡터 DB, 재순위</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>단계마다 업체 선정, 프랑켄슈타인 스택</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>RAG가 안 된 이유</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>임베딩의 원리: "I love bread"</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>Nvidia 보고서: 연도가 달라도 같은 점</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>문서가 늘면 품질이 떨어진다</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>에이전트가 검색과 서브 에이전트를 늘린다</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>병목은 데이터 접근, 지능과 데이터의 분리</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>검색 기술 32년: BM25에서 임베딩까지</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>Mixedbread 첫 모델과 다음 주 새 모델</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>후기 상호작용 모델, 맥락화된 임베딩</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>제품 사용 흐름: 올리고, 에이전트에게 연결</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>데모 시작: Intel 실적 자료</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>OCR이 도표를 놓치는 문제, 페이지를 그림으로 임베딩</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>질문: 2025년 2분기 파운드리 영업이익률</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>바운딩 박스로 출처 표시</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>질문: 파운드리 수익성은 나아지고 있나</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>에이전틱 검색 모델, "40배 빠르고 싸다"</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>에이전트가 grep, 검색, 에이전틱 검색을 고르게</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>헤지펀드 사례: 문서 10억 건, 도입 1주 반</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>정답률 36% → 98%</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>멀티모달 질문의 향상, LLM 비용 3분의 1</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>무료 크레딧, 고객 저장소 연결, 도입 전 벤치마크</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '3Ad73Onx3Aw:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

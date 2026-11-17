@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>은행 AI 배포 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#demo">데모는 됐는데 출시는 안 됐다</a></li>
+      <li><a href="#four">배포가 기대는 결정 네 가지</a></li>
+      <li><a href="#discovery">발견이 곧 엔지니어링이다</a></li>
+      <li><a href="#questions">발견 회의에서 물어볼 것</a></li>
+      <li><a href="#scope">스펙이 없을 때: 따라가기, 초안, 줄이기</a></li>
+      <li><a href="#grow">한 번에 한 칸씩 키우기</a></li>
+      <li><a href="#autonomy">권한은 최소로: 자율성 사다리</a></li>
+      <li><a href="#boundary">같은 모델, 다른 행동 경계</a></li>
+      <li><a href="#evaluation">리스크 팀이 쓸 수 있는 평가</a></li>
+      <li><a href="#evidence">증거 묶음 다섯 파일</a></li>
+      <li><a href="#friday">금요일까지 답할 다섯 가지</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-13 · 15분 · 영어 발표 한글 정리</span>
+      <h1>은행에 AI를 넣는 일은 엔지니어링 문제가 아니다</h1>
+      <p class="lead">데모가 잘 돌아가고 모델도 멀쩡한데 출시가 안 되는 이유는 코드가 아니다. 배포는 데이터 소유자, 모델 리스크, 외부 업체 리스크, 감사 담당자의 결정에 기대고 있다. 그 사람들을 첫 주에 찾아 설계에 끌어들이는 일이 곧 엔지니어링이다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=3ZlQk4-knWM" target="_blank" rel="noopener">Deploying AI Inside a Bank Is Not an Engineering Problem</a></span>
+        <span>발표: Paden Gayle (Applied AI Engineers. Accenture, Bloomberg, Google을 거쳐 스타트업의 창립 포워드 디플로이드 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 발표에 나오는 사례와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 영상 제목에 적힌 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>고객 문서를 읽고 예외 보고서 초안을 쓰는 시스템을 만들었다. 데모는 됐고 모델도 괜찮았다. 그런데 보안, 데이터 소유자, 리스크 담당자의 질문 세 개에 막혀 <strong>출시하지 못했다.</strong></li>
+        <li>배포는 <strong>데이터, 모델 리스크, 외부 업체 리스크, 감사</strong> 네 가지 결정에 기댄다. 결정마다 설명할 사람, 필요한 증거, 다음 단계를 첫 주에 찾는다.</li>
+        <li><strong>발견이 곧 엔지니어링이다.</strong> 모든 데이터에는 소유자가 있다. 조회할 수 있다는 것과 써도 된다는 것은 다르다.</li>
+        <li>스펙이 없으면 <strong>따라가고, 초안을 쓰고, 줄인다.</strong> 분석가 옆에 앉아 실제 순서를 적고, 세 줄짜리 초안을 후원자 앞에 놓고, 한 번에 한 칸씩만 키운다.</li>
+        <li>권한은 <strong>문제를 푸는 최소한</strong>만 준다. 제안, 초안, 승인 후 실행, 실행의 사다리를 아래부터 오른다. 다음 칸으로 갈지는 실제 운영 증거로 정한다.</li>
+        <li>평가는 리스크 팀이 증거로 쓸 수 있어야 한다. <strong>의도된 용도, 데이터 계보, 실패 유형, 구간별 결과, 통제</strong> 다섯 파일을 첫 스프린트에 만든다.</li>
+        <li>금요일까지 다섯 가지 질문에 답한다. 예가 4~5개면 출시 경로가 보이고, 0~2개면 범위를 줄이거나 다시 정한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="demo">
+        <header><span class="num">01</span><h2>데모는 됐는데 출시는 안 됐다 <span class="ts">00:30</span></h2></header>
+        <p>발표자는 하나의 예시로 시작한다. 시스템이 고객 문서를 검토하고, 분석가가 처리할 예외 보고서 초안을 쓴다. 데모는 의도한 흐름을 잘 보여 줬고, 보는 사람 모두 쓸모를 이해했다.</p>
+        <p>그다음에 질문이 들어온다.</p>
+        <ul class="plain">
+          <li><strong>보안</strong>: 어느 환경에서 돌릴 것인가?</li>
+          <li><strong>데이터 소유자</strong>: 이 문서를 이렇게 쓰는 데 누가 동의했는가?</li>
+          <li><strong>리스크</strong>: 잘못된 예외 보고서가 다음 시스템으로 넘어가기 전에 누가 검토하는가?</li>
+        </ul>
+        <p>모두 합리적인 질문이다. 그리고 질문 하나하나가 <strong>만들어도 되는 것의 범위를 바꾼다.</strong> 팀은 이미 설계에 투자했지만, 그 설계에 책임이 있는 사람들은 설계를 본 적이 없었다.</p>
+        <blockquote>데모는 됐다. 모델은 괜찮았다. 그래도 출시되지 않았다.<cite>발표자의 표현을 옮김 <span class="ts">01:00</span></cite></blockquote>
+        <p>이 발표의 목표는 이런 결정들을 <strong>첫 주에</strong> 드러내서, 프로덕션으로 가는 믿을 만한 경로가 있는 시스템을 설계하는 방법을 보여 주는 것이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="four">
+        <header><span class="num">02</span><h2>배포가 기대는 결정 네 가지 <span class="ts">01:10</span></h2></header>
+        <p>배포는 네 종류의 결정에 기댄다. 결정마다 <strong>그 결정을 설명할 수 있는 사람, 그 사람이 필요로 하는 증거, 다음 단계</strong>를 찾는다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">데이터 <span class="en">data</span> <span class="ts">01:20</span></span>
+            <ul>
+              <li>원천 데이터는 누가 소유하는가</li>
+              <li>접근 권한은 누가 주는가</li>
+              <li>이 워크플로에서 쓰는 것은 누가 승인하는가</li>
+            </ul>
+            <p class="verdict">세 역할은 서로 다른 사람일 수 있다. <b>데이터를 조회할 수 있다</b>고 해서 애플리케이션이 그걸 써도 된다는 질문까지 해결되지는 않는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">모델 리스크 <span class="en">model risk</span> <span class="ts">01:30</span></span>
+            <ul>
+              <li>의도한 용도에 어떤 검토가 적용되는지 말해 줄 사람을 찾는다</li>
+              <li>이전 제출 자료가 어떤 모습이었는지 묻는다</li>
+              <li>출시 후 시스템을 누가 소유하고, 유지하려면 어떤 증거가 필요한지 알아낸다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">외부 업체 리스크 <span class="en">third-party risk</span> <span class="ts">01:40</span></span>
+            <ul>
+              <li>실제 의존 관계 사슬을 그린다: 모델 제공사, 호스팅 방식, 운영에서 우리의 역할</li>
+              <li>이미 검토된 관계는 무엇인가</li>
+              <li>제안한 변경 중 새 결정이 필요한 것은 무엇인가</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">감사 <span class="en">audit</span> <span class="ts">02:00</span></span>
+            <p>중요한 행동 하나를 나중에 재구성하려면 무엇이 필요한지 묻는다.</p>
+            <ul>
+              <li>어떤 입력을 썼나</li>
+              <li>어떤 설정이 그 출력을 만들었나</li>
+              <li>검토자는 무엇을 봤나</li>
+              <li>누가 승인했나</li>
+            </ul>
+            <p class="verdict">이 답이 <b>처음부터 남겨야 할 기록</b>을 정한다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">왜 첫 주인가 <span class="ts">02:20</span></span>
+          <span>시스템을 다 만든 뒤에 이 답을 들으면 배포 경계, 데이터 경로, 시스템이 하는 행동 자체를 바꿔야 할 수 있다. 이 사람들을 설계 초기에 끌어들이면, 그 사람들의 책임이 우리가 실제로 운영할 수 있는 시스템의 모양을 알려 준다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="discovery">
+        <header><span class="num">03</span><h2>발견이 곧 엔지니어링이다 <span class="ts">02:40</span></h2></header>
+        <p>발견<span class="en">discovery</span>은 무엇을 만들어야 하는지 알기 위해 누구를 찾아야 하는지 알아내는 일이다.</p>
+
+        <h3>모든 데이터에는 소유자가 있다 <span class="ts">02:50</span></h3>
+        <p>발표자는 Bloomberg 데이터 플랫폼 팀에서 이걸 몸으로 배웠다고 말한다. LLM용 인프라를 만든다는 것은 어떤 데이터를 써도 되는지, 그 사용을 누가 승인하는지 이해하는 일이었다. 은행 배포에도, 사실 어떤 배포에도 같은 원칙이 적용된다.</p>
+        <ul class="plain">
+          <li>검색 기능<span class="en">retrieval</span>을 설계하기 전에, 원천마다 책임자를 찾는다</li>
+          <li>허용된 용도와 처리가 시작될 수 있는 환경을 확인한다</li>
+          <li>이 답이 바뀌면 설계도 함께 바뀐다</li>
+        </ul>
+        <p>발표자는 슬라이드의 열쇠 그림을 "진짜 소유자가 있는 진짜 권한"으로 보라고 말한다. 그 열쇠를 어디서 받아야 하는지 알려면 소유자의 이름을 댈 수 있어야 한다.</p>
+
+        <h3>조직도를 두 줄로 읽기 <span class="ts">03:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>줄</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>윗줄 (기술)</td><td>문서가 모델에 들어가고, 분석가가 출력을 검토한다. 몇 분이면 그릴 수 있는 시스템이다</td></tr>
+              <tr><td>아랫줄 (사람)</td><td>문서에는 데이터 소유자가 있다. 모델 서비스에는 플랫폼 소유자가 필요하다. 분석가 워크플로에는 관련 리스크 요건을 확인해 줄 사람이 필요하다. 그리고 마지막 칸에는 아직 물음표가 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>그 물음표가 <strong>의존성</strong>이다. 의도한 용도가 허용되는지, 어떤 증거가 필요한지 말해 줄 사람을 찾지 않은 채 워크플로를 설계한 것이다.</p>
+        <ol class="plain">
+          <li>후원자<span class="en">sponsor</span>나 믿을 만한 사람과 이 그림을 함께 본다. 문서는 누가 소유하나? 이 용도를 들어 봤나? 적절한 검토자에게 닿으려면 누가 도와줄 수 있나?</li>
+          <li>그 답을 해당 사람들에게 직접 확인한다.</li>
+        </ol>
+        <p>실제 지도는 이보다 관계가 많다. 기술 부품 하나가 승인 여러 개에 기댈 수 있고, 어떤 결정은 시스템 전체에 걸친다. 핵심은 <strong>설계를 바꾸기 쉬울 때 의존성을 눈에 보이게 만드는 것</strong>이다. 이름 없는 소유자는 담당자가 정해진 구체적인 할 일이 된다. 이렇게 발견은 불확실성을 구현 계획으로 바꾸기 시작한다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="questions">
+        <header><span class="num">04</span><h2>발견 회의에서 물어볼 것 <span class="ts">04:50</span></h2></header>
+        <p>발표자가 발견 회의<span class="en">discovery call</span>에 들고 가는 질문이다.</p>
+        <ol class="plain">
+          <li>데이터는 어디에 있고, 읽는 것은 누가 승인하는가?</li>
+          <li>비슷한 프로젝트를 전에 누가 막았고, 왜 막았는가?</li>
+          <li>기존 통제<span class="en">control</span> 중 이 워크플로를 덮을 수 있는 것은 무엇이고, 누가 소유하는가?</li>
+          <li>프로덕션은 어디서 돌고, 그 환경의 관리자는 누구인가?</li>
+          <li>관련 리스크 검토에 누가 서명하고, 전에는 무엇에 서명했는가?</li>
+          <li>후원자가 개인적으로 걱정하는 의무는 무엇이고, 그걸 설명해 줄 사람은 누구인가?</li>
+        </ol>
+        <div class="callout">
+          <span class="title">회의에서 들고 나와야 하는 것</span>
+          <span><strong>이름, 결정, 또는 다음 대화</strong> 셋 중 하나다. 누군가 "보안은 괜찮을 거예요"라고 하면, 실제로 누가 설계를 검토하고 언제 만날 수 있는지 묻는다.</span>
+        </div>
+        <p>그다음 고리를 닫는다. 소유자마다 제안한 용도를 짧게 적어 보내고, 우리에게 무엇이 필요한지 확인받는다. <strong>금요일까지, 배포가 기대는 결정의 주인들이 이 프로젝트의 존재를 알아야 한다.</strong> 그래야 범위 정하기가 훨씬 단단한 출발점을 갖는다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="scope">
+        <header><span class="num">05</span><h2>스펙이 없을 때: 따라가기, 초안, 줄이기 <span class="ts">05:50</span></h2></header>
+        <p>결정의 주인을 알고 나면 범위를 정할 수 있다. 고객이 스펙을 써 주지 못할 때 발표자는 세 가지에 기댄다. <strong>따라가기<span class="en">shadow</span>, 초안<span class="en">draft</span>, 줄이기<span class="en">shrink</span>.</strong></p>
+
+        <h3>따라가기 <span class="ts">06:00</span></h3>
+        <p>Bloomberg에서 현금 흐름을 다루는 시스템을 만들 때, 그 작업은 반드시 대사<span class="en">reconcile</span>되어야 했다. 그래서 흐름과 그 흐름의 책임자를 따라가는 것이 구체적인 출발점이 됐다. 후원자가 "온보딩에 AI를 쓰고 싶다"고 하면 같은 방법을 쓴다.</p>
+        <ul class="plain">
+          <li>분석가 옆에 앉는다</li>
+          <li>어떤 시스템을 여는지, 어디서 판단을 내리는지, 언제 허락을 구하는지 본다</li>
+          <li>문서가 없으면 어떻게 되는지 묻는다</li>
+          <li>실제 순서를 적는다. 그것이 스펙의 시작이다</li>
+        </ul>
+
+        <h3>초안 <span class="ts">06:30</span></h3>
+        <p>문서 예외 보조 시스템을 만든다고 하자. 발표자는 후원자 앞에 세 줄을 놓는다.</p>
+        <ol class="plain">
+          <li>문서를 검토한다</li>
+          <li>예외 보고서 초안을 쓴다</li>
+          <li>분석가가 제출한다</li>
+        </ol>
+        <p>그다음 각 줄을 구체적으로 만든다. 분석가가 접근할 수 있는 문서는 무엇인가? 그 접근이 이 처리에 대해 승인된 것인가? 모델은 무엇을 내놓는가? 강조된 구절인가, 초안 양식인가, 둘 다인가? 초안은 누가 확인하고 누가 제출하는가?</p>
+        <div class="callout">
+          <span class="title">첫 버전의 모양 <span class="ts">07:00</span></span>
+          <span>출력은 강조된 예외와 초안 양식이다. 분석가가 원문을 확인하고, 양식을 고치고, 제출한다. 이것이 <strong>사람이 바로잡을 수 있는 경계</strong>다. 성공 기준은 "검토 시간은 줄고, 놓친 예외는 늘지 않는다"를 제안한다. 현재 워크플로와 비교해 어떻게 잴지는 따로 합의해야 한다.</span>
+        </div>
+        <p class="note">자막에는 성공 기준이 "no increases and misconceptions"로 적혀 있다. 문맥상 "놓친 예외<span class="en">missed exceptions</span>가 늘지 않는다"로 읽었다. (추정)</p>
+        <p>합의 전까지는 제안일 뿐이다. 초안을 후원자와 통제 소유자에게 가져가면, 문서 유형 하나를 지우거나, 검토자를 바꾸거나, 출력 자체를 거절할 수 있다. <strong>수정 하나하나가 그 위에 설계를 쌓을 수 있는 결정이 된다.</strong> 워크플로가 완성되면 범위는 승인 질문의 연속이 된다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="grow">
+        <header><span class="num">06</span><h2>한 번에 한 칸씩 키우기 <span class="ts">07:40</span></h2></header>
+        <p>같은 가상 시스템을 한 단계씩 키워 보면, 단계마다 새 승인 질문이 생긴다. 발표자는 이것을 네 가지 서로 다른 엔지니어링 범위라고 부른다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>시스템이 하는 일</th><th>새로 생기는 질문</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>분석가가 이미 가진 문서를 요약한다</td><td>기존 접근 권한이 이 용도까지 덮는가</td></tr>
+              <tr><td>2</td><td>두 번째 시스템에서 데이터를 읽는다</td><td>새 데이터 경로다. 누가 승인하는가</td></tr>
+              <tr><td>3</td><td>고객이 볼 답변 초안을 쓴다</td><td>내용은 누가 확인하고, 어떤 검토가 적용되는가</td></tr>
+              <tr><td>4</td><td>답변을 자동으로 보낸다</td><td>그 행동은 누가 소유하는가. 잘못 보내면 어떻게 되는가. 어떻게 멈추고 복구하는가</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>어떤 검토가 적용되는지는 기관과 용도에 따라 다르다. 그래서 결정을 소유한 사람에게 확인한다. 그다음 <strong>어느 단계가 오늘 쓸모 있는 가치를 만드는지</strong> 묻는다. 분석가의 현재 워크플로 안에서 초안만 써 줘도 문제의 상당 부분이 풀리는가? 그렇다면 거기서 시작한다. 기존 통제가 정말 맞는지 확인하고, 승인 경로가 믿을 만한 가장 작은 유용한 버전을 만든다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="autonomy">
+        <header><span class="num">07</span><h2>권한은 최소로: 자율성 사다리 <span class="ts">08:40</span></h2></header>
+        <p>발표자는 <strong>문제를 푸는 데 필요한 최소한의 권한</strong>에서 시작한다. 그다음 어떤 과제를 증거로 삼아 권한을 더 줄 수 있는지 묻는다.</p>
+        <p>Bloomberg에서 현금 흐름을 다룰 때 자동화를 많이 생각했다고 한다. 자동화된 단계마다 통제가 있어야 하고, 누군가가 그 숫자를 책임진다. 이 규율을 AI에도 그대로 가져온다.</p>
+        <ul class="plain">
+          <li>결과에 영향을 미치는 행동<span class="en">consequential action</span>을 찾는다</li>
+          <li>그 행동의 소유자를 이름으로 정한다</li>
+          <li>시스템이 틀렸을 때 어떻게 되는지 정한다</li>
+        </ul>
+        <p>가상의 예외 워크플로에서는 제출이 그 행동이다. 초안을 검토하는 분석가가 진짜 판단을 하려면 <strong>원문 증거와 눈에 보이는 불확실성</strong>이 필요하다. 검토 버튼은 사람이 실제로 일을 확인할 수 있을 때만 쓸모가 있다.</p>
+
+        <h3>사다리는 아래에서 위로 읽는다 <span class="ts">09:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>실행 <span class="en">acts</span></td><td>이미 승인된 한도 안에서 시스템이 스스로 움직인다</td></tr>
+              <tr><td>승인 후 실행 <span class="en">acts with approval</span></td><td>행동마다 사람이 먼저 허가한다</td></tr>
+              <tr><td>초안 <span class="en">draft</span></td><td>시스템이 준비하고, 분석가가 확인하고 제출한다. 발표자가 강조한 칸이다</td></tr>
+              <tr><td>제안 <span class="en">suggest</span></td><td>분석가가 추천을 받고, 어떻게 할지 스스로 정한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>한 칸 올라갈 때마다 <strong>오류의 결과</strong>가 달라진다. 동시에 <strong>어떤 통제가 작동해야 하는지</strong>와 <strong>어떤 검토자를 설득해야 하는지</strong>도 달라진다.</p>
+        <div class="callout">
+          <span class="title">다음 칸으로 갈지 정하는 법</span>
+          <span>가치가 생기는 가장 낮은 칸에서 시작한다. 거기서 증거를 모은다. 검토자가 초안을 자주 뒤집는가? 어떤 실패가 반복되는가? 뭔가 망가졌을 때 사람이 복구할 수 있는가? 이 관찰로 다음 권한 결정을 내린다. 모델이 똑똑하다고 권한이 저절로 늘지 않는다. <strong>이 워크플로가 모델에게 얼마만큼의 권한을 줘야 하는지</strong>가 답해야 할 질문이다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="boundary">
+        <header><span class="num">08</span><h2>같은 모델, 다른 행동 경계 <span class="ts">10:00</span></h2></header>
+        <p>같은 예외 보조 시스템으로 구체화해 보자.</p>
+        <div class="shift" aria-label="행동 경계의 이동">
+          <div><span class="tag">처음 요청</span><b>에이전트가 끝까지 한다</b><span class="muted">고객 문서를 읽고, 정책 밖인 문서를 가려내고, 예외 보고서를 자동으로 접수한다. 모델의 판단이 분석가 확인 없이 운영상의 행동이 된다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">경계를 바꾼 설계</span><b>모델 → 사람 → 제출</b><span class="muted">모델은 그대로 두고 행동 경계만 바꾼다. 예외로 보이는 곳을 강조하고, 관련 원문을 가리키고, 초안 양식을 준비한다. 분석가가 증거를 확인하고, 양식을 고치고, 제출할지 정한다</span></div>
+        </div>
+        <p>이 설계를 발견 단계에서 찾은 사람들에게 가져간다. 분석가의 기존 워크플로를 쓸 수 있는가? 승인된 데이터 접근이 이 처리를 덮는가? 어떤 통제가 적용되는가? 검토자는 어떤 증거가 필요한가?</p>
+        <div class="callout warn">
+          <span class="title">사람 검토가 만능은 아니다 <span class="ts">10:50</span></span>
+          <span>사람이 검토한다고 승인이 보장되지는 않는다. 사람 검토가 규제상 분류를 혼자 정하지도 않는다. 의도된 용도와 필요한 검토는 여전히 확인해야 한다.</span>
+        </div>
+        <p>쓸모 있는 질문은 이것이다. <strong>이 초안 버전이 먼저 출시할 만큼 문제를 푸는가?</strong> 그렇다면 그 경계 안에서 운영하며 오류, 검토자의 뒤집기, 복구에 대한 증거를 모을 수 있다. 다음 권한 결정은 실제 사용에서 일어난 일을 근거로 삼는다. 그래서 평가가 운영 계획의 일부가 된다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="evaluation">
+        <header><span class="num">09</span><h2>리스크 팀이 쓸 수 있는 평가 <span class="ts">11:10</span></h2></header>
+        <p>네 번째 약속은 리스크 팀이 증거로 쓸 수 있는 평가다. 리스크 팀이 관리할 책임이 있는 것들을 다루는 평가라는 뜻이다.</p>
+        <p>발표자가 Google에서 답해야 했던 질문은 이랬다. 시스템이 망가지면 어떻게 되나? 누가 알아채나? 무엇이 멈추나? 누가 책임지나? 되살리는 데 얼마나 걸리나? AI 배포에도 같은 수준으로 구체적인 설명이 필요하다.</p>
+        <ul class="plain">
+          <li>의도된 용도</li>
+          <li>위협 모델<span class="en">threat model</span></li>
+          <li>실패 유형<span class="en">failure modes</span></li>
+          <li>대응 계획</li>
+        </ul>
+        <p>모델이 틀렸을 때 통제가 작동하는 모습을 보여 준다. 경보를 받고 워크플로를 멈출 수 있는 사람의 이름을 댄다.</p>
+
+        <h3>예외 보조 시스템의 실패 세 가지 <span class="ts">11:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>실패</th><th>감지와 대체 경로</th></tr></thead>
+            <tbody>
+              <tr><td>없는 예외를 지어낸다</td><td>분석가가 원문 구절을 확인하고 초안을 거절한다</td></tr>
+              <tr><td>추출 결과가 읽을 수 없는 글자다</td><td>멈추고 깨끗한 파일을 요청한다</td></tr>
+              <tr><td>예외를 놓친다</td><td>표적 오프라인 사례로 약점을 드러낸다. 다만 실제 운영에서 놓치는 것을 전부 잡지는 못하니, 영향받는 작업은 수동 검토 아래 둔다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>실패마다 <strong>감지 경로, 대체 경로, 소유자</strong>를 이름으로 정한다. 이 결정을 증거 묶음에 넣는다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="evidence">
+        <header><span class="num">10</span><h2>증거 묶음 다섯 파일 <span class="ts">12:20</span></h2></header>
+        <p>이 다섯 파일이 검토를 완성한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>파일</th><th>기록하는 것</th></tr></thead>
+            <tbody>
+              <tr><td>의도된 용도</td><td>사용자, 경계, 금지된 행동</td></tr>
+              <tr><td>데이터 계보 <span class="en">data lineage</span></td><td>원천마다 어디서 왔고 어떤 사용이 승인됐는지</td></tr>
+              <tr><td>실패 유형</td><td>감지 방법과 대체 경로</td></tr>
+              <tr><td>구간별 결과</td><td>구간마다 얼마나 덮었고 오류가 얼마나 나는지</td></tr>
+              <tr><td>통제</td><td>검토, 기준값, 멈춤 규칙, 소유자</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>평가를 돌릴 때마다 증거를 만든다. 그 옆에 입력, 프롬프트, 모델 버전, 설정, 출력, 검토자의 행동을 함께 보존한다. 나중에 모델을 다시 부르면 다른 답이 나올 수 있다. 그래서 <strong>실제로 일어난 일을 보존한다.</strong> 검토자는 그 기록을 근거로 과거 결정을 재구성할 수 있다.</p>
+
+        <h3>구간별 결과를 정리하는 법 <span class="ts">13:00</span></h3>
+        <ul class="plain">
+          <li>깨끗한 문서, 스캔본, 드문 예외, 새 문서 유형으로 나눈다</li>
+          <li>구간마다 오류와 통제의 동작을 잰다</li>
+          <li><strong>가장 약한 결과를 맨 앞에</strong> 둔다. 평균은 한 구간의 심각한 구멍을 가린다</li>
+          <li>증거가 적은 구간은 그렇다고 말하고, 충분해질 때까지 그 용도를 제한한다</li>
+        </ul>
+        <p>이렇게 하면 검토자는 결과가 무엇을 뒷받침하는지 안다. 그리고 이것은 다시 첫 주의 결정으로 돌아간다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="friday">
+        <header><span class="num">11</span><h2>금요일까지 답할 다섯 가지 <span class="ts">13:30</span></h2></header>
+        <p>첫 주 금요일까지 발표자가 원하는 답 다섯 개다.</p>
+        <ol class="plain">
+          <li>데이터 소유자가 참여하고 있고 이 프로젝트를 아는가?</li>
+          <li>프로덕션 환경과 그 관리자의 이름이 정해졌는가?</li>
+          <li>후원자가 "AI"라는 말 없이 워크플로를 설명할 수 있는가?</li>
+          <li>가장 작은 유용한 범위가 기존 통제에 맞고, 그 소유자에게 확인받았는가?</li>
+          <li>리스크 서명자가 누구인지, 지난번 서명한 사람은 어떻게 됐는지 아는가?</li>
+        </ol>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>예의 개수</th><th>읽는 법</th></tr></thead>
+            <tbody>
+              <tr><td>4~5개</td><td>출시로 가는 믿을 만한 경로가 보인다</td></tr>
+              <tr><td>3개</td><td>풀리지 않은 결정에 담당자와 날짜가 필요하다</td></tr>
+              <tr><td>0~2개</td><td>납품을 약속하기 전에 결정을 먼저 푼다. 범위를 줄이거나 다시 정하는 것도 포함한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 점수는 승인을 예측하지 않는다. 대신 <strong>다음 주에 시간을 어디에 써야 하는지</strong> 알려 준다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="conclusion">
+        <header><span class="num">12</span><h2>결론 <span class="ts">14:20</span></h2></header>
+        <ul class="plain">
+          <li><strong>발견이 곧 엔지니어링이다.</strong></li>
+          <li>스펙 초안을 쓰고, 그다음 줄인다.</li>
+          <li>시스템에는 필요한 권한만 준다.</li>
+          <li>증거 묶음은 첫 스프린트에 만든다.</li>
+        </ul>
+        <blockquote>데모는 됐다. 모델은 괜찮았다. 그래도 출시되지 않았다. 그러면 어떻게 하나? 사람을 찾으러 간다.<cite>발표자의 마무리를 옮김 <span class="ts">14:30</span></cite></blockquote>
+        <p class="note">발표자는 포워드 디플로이드 엔지니어링<span class="en">forward deployed engineering</span>에 관한 책을 O'Reilly에서 쓰고 있다고 밝혔다. 자막에는 "FTE"로 들리지만 문맥상 FDE로 읽었다. (추정) 발표 전체가 그 직무의 가치를 보여 주는 쪽으로 기울어 있다는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>은행에서 AI가 출시되지 않는 이유는 코드가 아니라 <strong>결정의 주인을 찾지 않아서</strong>다.</li>
+          <li>배포는 <strong>데이터, 모델 리스크, 외부 업체 리스크, 감사</strong> 네 결정에 기댄다. 결정마다 사람, 증거, 다음 단계를 찾는다.</li>
+          <li>모든 데이터에는 소유자가 있다. <strong>조회할 수 있다 ≠ 써도 된다.</strong></li>
+          <li>조직도의 아랫줄을 읽는다. 물음표가 남은 칸이 의존성이고, 이름 없는 소유자는 담당자가 있는 할 일이 된다.</li>
+          <li>발견 회의에서는 <strong>이름, 결정, 다음 대화</strong> 중 하나를 들고 나온다. "괜찮을 거예요"는 답이 아니다.</li>
+          <li>스펙이 없으면 <strong>따라가고, 초안을 쓰고, 줄인다.</strong> 세 줄 초안을 후원자 앞에 놓고 수정을 받아 결정으로 바꾼다.</li>
+          <li>시스템은 한 번에 한 칸씩 키운다. 칸마다 새 승인 질문이 생기므로, 오늘 가치가 나는 가장 작은 칸에서 시작한다.</li>
+          <li>권한은 <strong>제안 → 초안 → 승인 후 실행 → 실행</strong> 사다리를 아래부터 오른다. 다음 칸은 실제 운영 증거로 정한다.</li>
+          <li>평가는 리스크 팀이 증거로 쓸 수 있어야 한다. 실패마다 감지 경로, 대체 경로, 소유자를 정하고 다섯 파일 증거 묶음을 만든다.</li>
+          <li>금요일까지 다섯 질문에 답한다. 예가 4~5개면 경로가 보이고, 0~2개면 범위를 다시 정한다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>데모가 됐는데 출시되지 않은 시스템에 들어온 질문 세 개는?</span></summary><div class="answer">보안: 어느 환경에서 돌리나. 데이터 소유자: 이 문서 사용에 누가 동의했나. 리스크: 잘못된 예외 보고서를 다음 시스템 전에 누가 검토하나.</div></details>
+          <details><summary><span class="qn">Q2</span><span>배포가 기대는 네 가지 결정과, 결정마다 찾아야 할 세 가지는?</span></summary><div class="answer">데이터, 모델 리스크, 외부 업체 리스크, 감사. 결정마다 설명할 수 있는 사람, 그 사람이 필요로 하는 증거, 다음 단계를 찾는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>"데이터를 조회할 수 있다"가 해결하지 못하는 질문은?</span></summary><div class="answer">애플리케이션이 그 데이터를 이 워크플로에서 써도 되는가. 소유자, 접근 권한 부여자, 사용 승인자는 다른 사람일 수 있다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>감사 담당자가 중요한 행동을 재구성할 때 필요한 네 가지는?</span></summary><div class="answer">어떤 입력을 썼나, 어떤 설정이 출력을 만들었나, 검토자는 무엇을 봤나, 누가 승인했나. 이 답이 처음부터 남길 기록을 정한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>발견 회의에서 들고 나와야 하는 세 가지 결과물은?</span></summary><div class="answer">이름, 결정, 또는 다음 대화. "보안은 괜찮을 거예요"라고 하면 누가 언제 검토하는지 묻는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>스펙이 없을 때 쓰는 세 가지 방법은?</span></summary><div class="answer">따라가기(분석가 옆에 앉아 실제 순서를 적기), 초안(세 줄을 후원자 앞에 놓고 구체화하기), 줄이기(한 번에 한 칸씩 키우며 오늘 가치가 나는 가장 작은 범위에서 시작하기).</div></details>
+          <details><summary><span class="qn">Q7</span><span>예외 보조 시스템 첫 버전의 출력과 분석가의 역할은?</span></summary><div class="answer">강조된 예외와 초안 양식. 분석가가 원문을 확인하고, 양식을 고치고, 제출한다. 사람이 바로잡을 수 있는 경계다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>자율성 사다리의 네 칸을 아래부터 말하면?</span></summary><div class="answer">제안, 초안, 승인 후 실행, 실행. 한 칸 오를 때마다 오류의 결과, 작동해야 할 통제, 설득할 검토자가 달라진다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>다음 권한 칸으로 올라갈지 정할 때 보는 증거는?</span></summary><div class="answer">검토자가 초안을 자주 뒤집는가, 어떤 실패가 반복되는가, 망가졌을 때 사람이 복구할 수 있는가. 모델 성능이 아니라 운영 증거로 정한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>증거 묶음의 다섯 파일은?</span></summary><div class="answer">의도된 용도, 데이터 계보, 실패 유형, 구간별 결과, 통제.</div></details>
+          <details><summary><span class="qn">Q11</span><span>구간별 결과를 보고할 때 평균 대신 무엇을 앞세우나?</span></summary><div class="answer">가장 약한 구간의 결과. 평균은 한 구간의 심각한 구멍을 가린다. 증거가 적은 구간은 그렇다고 말하고 용도를 제한한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>금요일 다섯 질문에서 예가 3개면 어떻게 읽나?</span></summary><div class="answer">풀리지 않은 결정에 담당자와 날짜를 붙여야 한다. 4~5개면 경로가 보이고, 0~2개면 납품 약속 전에 결정을 풀거나 범위를 다시 정한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>네 가지 결정(데이터, 모델 리스크, 외부 업체 리스크, 감사)마다 설명할 사람의 이름을 적는다<span class="how">이름이 비면 그 칸이 의존성이다. 담당자와 날짜를 붙인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>쓰려는 데이터 원천마다 소유자, 접근 권한 부여자, 사용 승인자를 확인한다<span class="how">조회 가능 여부가 아니라 이 워크플로에서의 사용 승인을 받는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>발견 회의 질문 여섯 개를 들고 가서 이름, 결정, 다음 대화 중 하나를 받아 온다<span class="how">회의 후 각 소유자에게 제안한 용도를 짧게 보내 고리를 닫는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>실제 사용자 옆에 앉아 현재 워크플로의 순서를 적는다<span class="how">어떤 시스템을 열고, 어디서 판단하고, 언제 허락을 구하고, 문서가 없으면 어떻게 하는지</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>세 줄짜리 초안과 성공 기준을 후원자와 통제 소유자에게 보여 주고 수정을 받는다<span class="how">지운 항목, 바뀐 검토자, 거절된 출력을 결정으로 기록한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>자율성 사다리에서 가치가 나는 가장 낮은 칸을 고르고, 결과에 영향을 미치는 행동의 소유자를 정한다<span class="how">검토자에게 원문 증거와 불확실성이 보이는지 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>실패 유형마다 감지 경로, 대체 경로, 소유자를 적는다<span class="how">경보를 받고 워크플로를 멈출 수 있는 사람의 이름까지</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>첫 스프린트에 다섯 파일 증거 묶음을 만들고, 평가마다 입력·프롬프트·모델 버전·설정·출력·검토자 행동을 보존한다<span class="how">구간별로 나눠 가장 약한 결과를 앞세운다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>첫 주 금요일에 다섯 질문으로 점수를 매긴다<span class="how">3개 이하면 다음 주 시간을 결정 풀기에 쓴다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>발견</td><td>Discovery. 무엇을 만들어야 하는지 알기 위해 결정의 주인과 제약을 찾아내는 단계</td></tr>
+              <tr><td>후원자</td><td>Sponsor. 프로젝트를 요청하고 조직 안에서 밀어 주는 사람</td></tr>
+              <tr><td>통제</td><td>Control. 잘못된 일이 일어나지 않도록 조직이 두는 검토, 기준값, 멈춤 규칙 같은 장치</td></tr>
+              <tr><td>통제 소유자</td><td>Control owner. 특정 통제가 제대로 작동하는지 책임지는 사람</td></tr>
+              <tr><td>모델 리스크</td><td>Model risk. 모델이 틀린 결과를 내서 생기는 위험. 금융권에서는 전용 검토 절차가 있다</td></tr>
+              <tr><td>외부 업체 리스크</td><td>Third-party risk. 모델 제공사, 호스팅 업체 같은 외부 의존 관계에서 생기는 위험</td></tr>
+              <tr><td>감사</td><td>Audit. 과거의 결정과 행동을 나중에 재구성하고 검증하는 일</td></tr>
+              <tr><td>예외 보고서</td><td>Exception. 문서나 거래가 정책 기준에서 벗어났을 때 분석가가 올리는 기록</td></tr>
+              <tr><td>대사</td><td>Reconcile. 두 기록이 서로 맞는지 대조해 확인하는 것. 현금 흐름 처리의 기본 통제</td></tr>
+              <tr><td>따라가기</td><td>Shadow. 실제 사용자 옆에서 일하는 모습을 관찰해 워크플로를 알아내는 방법</td></tr>
+              <tr><td>결과에 영향을 미치는 행동</td><td>Consequential action. 되돌리기 어렵거나 다른 시스템과 사람에게 영향을 주는 행동. 예: 제출, 발송</td></tr>
+              <tr><td>행동 경계</td><td>Action boundary. 시스템이 스스로 할 수 있는 일과 사람이 해야 하는 일을 가르는 선</td></tr>
+              <tr><td>자율성 사다리</td><td>제안, 초안, 승인 후 실행, 실행 순으로 시스템 권한을 나눈 단계</td></tr>
+              <tr><td>위협 모델</td><td>Threat model. 시스템이 어떤 방식으로 공격받거나 오용될 수 있는지 정리한 것</td></tr>
+              <tr><td>실패 유형</td><td>Failure mode. 시스템이 잘못되는 구체적인 방식. 예: 없는 예외를 지어내기</td></tr>
+              <tr><td>데이터 계보</td><td>Data lineage. 데이터가 어디서 와서 어떻게 쓰이는지 추적한 기록</td></tr>
+              <tr><td>구간별 결과</td><td>Results by segment. 입력을 종류별로 나눠 각각 성능을 잰 것. 평균이 가리는 구멍을 드러낸다</td></tr>
+              <tr><td>증거 묶음</td><td>Evidence pack. 리스크 검토자가 승인 판단에 쓸 수 있도록 모은 문서 다섯 개</td></tr>
+              <tr><td>포워드 디플로이드 엔지니어</td><td>Forward Deployed Engineer. 고객 조직 안에 들어가 제품을 실제로 배포하고 맞추는 엔지니어</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개: Accenture, Bloomberg, Google, 스타트업</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>예시: 문서 예외 보조 시스템. 데모는 됐지만 출시 안 됨</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>배포가 기대는 네 가지 결정</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>데이터: 소유자, 접근, 사용 승인</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>모델 리스크와 외부 업체 리스크</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>감사: 행동을 재구성하는 데 필요한 것</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>왜 첫 주에 사람을 끌어들이나</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>모든 데이터에는 소유자가 있다</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>조직도 두 줄 읽기, 물음표는 의존성</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>발견 회의 질문 여섯 개</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>고리 닫기: 금요일까지 소유자에게 알리기</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>스펙이 없을 때: 따라가기, 초안, 줄이기</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>세 줄 초안과 첫 버전</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>한 칸씩 키우기: 네 가지 엔지니어링 범위</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>최소 권한과 결과에 영향을 미치는 행동</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>자율성 사다리</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>같은 모델, 다른 행동 경계</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>사람 검토가 승인을 보장하지는 않는다</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>리스크 팀이 쓸 수 있는 평가</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>실패 세 가지와 대체 경로</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>증거 묶음 다섯 파일</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>실제로 일어난 일을 보존하기</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>구간별 결과, 가장 약한 것부터</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>금요일까지 다섯 가지 답</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>점수 읽는 법</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>결론: 사람을 찾으러 간다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '3ZlQk4-knWM:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>데이터 PR 자동 리뷰</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#gap">CI 초록불과 안전한 머지 사이</a></li>
+      <li><a href="#approach">세 층, 세 주인</a></li>
+      <li><a href="#example">예제 PR: 컬럼 하나 넓히기</a></li>
+      <li><a href="#layer1">1층: 스크립트가 사실을 확인한다</a></li>
+      <li><a href="#layer2">2층: 에이전트가 코드를 읽는다</a></li>
+      <li><a href="#found">에이전트가 찾은 숨은 소비자</a></li>
+      <li><a href="#review">리뷰 결과와 예제 PR의 결말</a></li>
+      <li><a href="#protected">에이전트가 승인할 수 없는 변경</a></li>
+      <li><a href="#feedback">사람의 반박으로 규칙을 고친다</a></li>
+      <li><a href="#mistakes">두 가지 실수를 센다</a></li>
+      <li><a href="#results">성과</a></li>
+      <li><a href="#wrong">잘못 설계한 부분과 다음 방향</a></li>
+      <li><a href="#lessons">세 가지 교훈</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-10 · 28분 · 영어 발표 한글 정리</span>
+      <h1>봇이 연 PR은 누가 리뷰하나</h1>
+      <p class="lead">Robinhood 데이터 플랫폼 팀은 AI가 여는 데이터 파이프라인 PR을 AI로 리뷰한다. 확인할 수 있는 사실은 스크립트가, 맥락이 필요한 판단은 에이전트가, 사람만 내려야 할 결정은 사람이 맡는다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=MQiojLnK-E0" target="_blank" rel="noopener">60% of Our Data PRs Now Merge With No Human Review</a></span>
+        <span>발표: Chetas Joshi (Robinhood 데이터 플랫폼 팀 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 용어(lineage, ingestion, ad hoc 등)는 알려진 이름으로 바로잡았다. 발표자 이름은 자막에 "Jas"로 찍혀서 영상 제목의 이름을 썼다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI 코딩 도구 덕분에 데이터 파이프라인 PR이 <strong>기계 속도로</strong> 들어온다. 안전하게 리뷰할 맥락을 가진 사람 수는 그대로다.</li>
+        <li>해법은 세 층이다. <strong>스크립트는 사실</strong>, <strong>에이전트는 판단</strong>, <strong>사람은 보호된 결정</strong>을 맡는다.</li>
+        <li>스크립트는 스키마 레지스트리, 카탈로그, 리니지, 스테이징 성능 테스트로 사실을 확인한다. 실패하면 CI가 PR을 막는다.</li>
+        <li>에이전트는 저장소 코드를 읽어 <strong>리니지에 등록되지 않은 소비자</strong>를 찾는다. 예제 PR에서 INT→BIGINT 변경이 깨뜨릴 숨은 작업을 찾아 사람에게 넘겼다.</li>
+        <li>민감 데이터 권한, 데이터의 의미를 바꾸는 마이그레이션, 자신 없는 판정은 <strong>에이전트가 절대 승인하지 않는다.</strong></li>
+        <li>사람의 반박과 이유를 매일 모으고, 매주 규칙을 손으로 고친다. <strong>놓친 PR과 괜히 넘긴 PR을 둘 다 센다.</strong></li>
+        <li>발표자가 밝힌 결과(2026-08-31 기준): PR 약 <strong>60%</strong>가 사람 리뷰 없이 머지됐다. 수동 리뷰 작업은 약 <strong>75%</strong>, 관련 사고는 약 <strong>30%</strong> 줄었다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="gap">
+        <header><span class="num">01</span><h2>CI 초록불과 안전한 머지 사이 <span class="ts">00:00</span></h2></header>
+        <p>데이터 파이프라인의 스키마를 바꾸는 PR이 하나 있다. CI<span class="en">Continuous Integration</span>는 초록불이다. CI는 코드를 올릴 때마다 테스트와 검사를 자동으로 돌리는 장치다. 테스트도 통과했고, 린터<span class="en">linter</span>도 문제없다고 한다.</p>
+        <p>그래도 머지해도 안전한지는 모른다. 이런 변경은 여전히 이런 일을 낼 수 있다.</p>
+        <ul class="plain">
+          <li><strong>신선도 SLA</strong><span class="en">freshness SLA</span>를 어긴다. 데이터를 정해진 시각까지 준비하겠다는 약속이다.</li>
+          <li>세 팀 건너에 있는 <strong>소비자</strong><span class="en">consumer</span>를 깨뜨린다. 소비자는 이 데이터를 읽어 가는 작업이다.</li>
+          <li>접근하면 안 되는 데이터를 열어 버린다.</li>
+        </ul>
+        <p>"CI 통과"와 "정말 안전한 변경" 사이의 틈을 매일 메우는 것이 발표자 팀의 일이다. 발표 제목의 봇은 PR을 여는 쪽이면서, 그 PR을 리뷰하는 쪽이기도 하다.</p>
+
+        <h3>기계 속도로 쌓이는 PR <span class="ts">01:10</span></h3>
+        <p>AI 코딩 도구 덕분에 PR을 여는 비용이 싸졌다. 새 쿼리, 스키마 변경, 접근 권한 부여<span class="en">grant</span>가 몇 분이면 된다. 어시스턴트는 어떤 사람 팀보다 빨리 PR을 연다.</p>
+        <p>이 발표가 다루는 PR은 데이터 파이프라인 PR이다. 스키마 변경, 파이프라인 코드, 설정 변경, 데이터 접근 권한 부여가 여기에 들어간다. 이런 PR은 데이터 플랫폼 팀이 리뷰한다. 그래서 PR이 쌓이면 이 팀 앞에 쌓인다.</p>
+        <p>기존 안전망도 잘 돌아갔다. CI 검사와 사람 리뷰가 함께 깨진 코드, 비효율적인 쿼리, 하위 작업 파손, 민감 데이터 유출을 잡아 왔다. <span class="ts">02:30</span></p>
+        <p>문제는 사람 쪽 절반이다. 사람은 사람 속도로만 일한다. 그리고 자기 머릿속에 있는 맥락만 쓸 수 있다. 이 테이블을 누가 읽나? 얼마나 큰가? 데이터는 얼마나 민감한가?</p>
+        <div class="callout">
+          <span class="title">발표자가 말한 불일치</span>
+          <span>PR은 기계 속도로 오는데, 무엇이 안전한지 아는 사람 수는 전혀 늘지 않았다. 대기열은 맥락을 가진 소수 앞에 쌓이고, 거기서 실수가 새어 나온다. 그래서 목표는 PR이 열리는 속도를 따라갈 AI 리뷰어를 만드는 것이었다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="approach">
+        <header><span class="num">02</span><h2>세 층, 세 주인 <span class="ts">03:30</span></h2></header>
+        <p>발표자는 답부터 말한다. 할 일이 셋이고, 주인도 셋이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>누가</th><th>맡는 일</th><th>어떻게</th></tr></thead>
+            <tbody>
+              <tr><td>스크립트 (1층)</td><td>증명할 수 있는 사실</td><td>정답 출처<span class="en">source of truth</span>와 대조한다. 실패하면 CI가 빨간불이 되고, 고칠 때까지 PR이 막힌다</td></tr>
+              <tr><td>에이전트 (2층)</td><td>맥락이 필요한 판단</td><td>1층이 못 잡는 위험을 찾는다. 위험 점수를 매기고 승인하거나 사람에게 넘긴다</td></tr>
+              <tr><td>사람</td><td>사람만 내려야 할 결정</td><td>에이전트가 넘긴 위험을 확인하고 최종 결정을 내린다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>두 층은 같은 PR을 함께 본다. 머지하려면 <strong>검사가 통과하고, 리뷰가 승인해야</strong> 한다.</p>
+        <p>에이전트의 규칙에는 1층이 이미 무엇을 확인하는지 적혀 있다. 그래서 에이전트는 1층이 못 잡는 위험에 집중한다.</p>
+        <div class="callout">
+          <span class="title">왜 섞었나</span>
+          <span>이미 정답이 있는 질문까지 AI에게 맡기고 싶지 않았다. 스크립트가 조회하면 되는 사실을 AI가 다시 찾게 하면 비용만 든다. AI는 판단에만 쓴다. 이것이 AI 비용도 낮춘다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="example">
+        <header><span class="num">03</span><h2>예제 PR: 컬럼 하나 넓히기 <span class="ts">05:20</span></h2></header>
+        <p>발표 내내 PR 하나를 따라간다. 데이터 레이크<span class="en">data lake</span>의 테이블 하나를 두 군데 바꾸는 PR이다. 데이터 레이크는 회사의 데이터를 한곳에 모아 두는 큰 저장소다. 발표자 팀이 늘 보는 종류의 PR이다.</p>
+        <ol class="plain">
+          <li><strong>새 컬럼 가져오기.</strong> 원천 테이블<span class="en">upstream</span>에 새 컬럼이 생겼다. 이 PR은 수집 파이프라인<span class="en">ingestion pipeline</span>이 그 컬럼도 가져오게 한다. 수집 파이프라인은 원천 테이블을 읽어 데이터 레이크에 쓰는 작업이다.</li>
+          <li><strong>타입 넓히기.</strong> 기존 컬럼의 타입을 정수(INT)에서 큰 정수(BIGINT)로 바꾼다. 더 큰 값을 담기 위해서다.</li>
+        </ol>
+        <p>타입 넓히기는 가장 안전한 스키마 변경처럼 들린다. 하지만 컬럼이 바뀌면 진짜 질문은 하나다. <strong>이 컬럼을 하위에서 누가 읽나?</strong></p>
+        <p>읽는 쪽 일부는 리니지 도구<span class="en">lineage</span>에 등록되어 있다. 리니지는 데이터가 어디서 와서 어디로 가는지 기록한 것이다. 발표자는 두 번째 질문을 기억해 두라고 한다. <strong>등록된 게 전부일까?</strong></p>
+        <p class="note">발표에서는 데이터 레이크의 이 테이블을 "our table"이라고 부른다. 이 노트에서는 "우리 테이블"이라고 쓴다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="layer1">
+        <header><span class="num">04</span><h2>1층: 스크립트가 사실을 확인한다 <span class="ts">06:40</span></h2></header>
+        <p>1층 스크립트는 실제로 돌고 있는 시스템에 사실을 묻는다. 코드만 봐서는 알 수 없는 것들이다. 검사는 네 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>검사</th><th>무엇을 확인하나</th><th>예제 PR 결과</th></tr></thead>
+            <tbody>
+              <tr><td>데이터 계약<br><span class="en">data contract</span> <span class="ts">07:00</span></td><td>바뀐 스키마와 키를 스키마 레지스트리<span class="en">schema registry</span>와 비교한다. 스키마 레지스트리는 스키마의 공식 기록이다</td><td>새 컬럼이 원천에 실제로 등록되어 있다. 통과</td></tr>
+              <tr><td>필수 태그<br><span class="en">required tags</span></td><td>모든 테이블에 소유자가 있는지, 개인 정보(PII)에 라벨이 붙었는지 카탈로그에서 직접 확인한다</td><td>소유자 있음, PII 라벨 있음. 통과</td></tr>
+              <tr><td>리니지 블라스트 반경<br><span class="en">lineage blast radius</span> <span class="ts">08:00</span></td><td>바뀐 컬럼을 읽는 하위 작업을 리니지 기록에서 모두 찾는다. 그중 깨지는 작업이 있는지 본다</td><td>등록된 소비자는 BIGINT로 바뀌어도 모두 괜찮다. 통과</td></tr>
+              <tr><td>성능<br><span class="en">performance</span></td><td>운영과 같은 양의 모의 데이터로 스테이징에서 변경을 돌린다. 클러스터 크기가 맞는지, 신선도 SLA를 지키는지 본다</td><td>통과</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>하나라도 실패하면 토론도 없고 모델도 끼지 않는다. 다른 CI 실패와 똑같이 빨간불이 된다. 고칠 때까지 PR은 막힌다.</p>
+        <p>성능 검사는 몇 주 뒤에야 사고로 드러날 문제를 머지 전에 잡는다. 올바른 변경도 너무 느리거나 너무 비쌀 수 있기 때문이다.</p>
+        <div class="callout warn">
+          <span class="title">리니지 검사의 경계</span>
+          <span>리니지 검사는 진짜 시스템을 대상으로 한 진짜 검사다. 하지만 리니지에 기록된 것만 볼 수 있다. 하위를 보는 눈은 그 기록만큼만 완전하다.</span>
+        </div>
+        <p>예제 PR은 네 검사를 모두 통과했다. <span class="ts">09:20</span> 발표자는 "스크립트가 볼 수 있는 한" 안전하다고 일부러 단서를 붙였다. 이 결과는 시스템에 기록된 작업과 컬럼에 대한 말일 뿐이다. 전체 이야기가 아니다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="layer2">
+        <header><span class="num">05</span><h2>2층: 에이전트가 코드를 읽는다 <span class="ts">10:20</span></h2></header>
+        <p>에이전트가 받는 재료는 세 가지다.</p>
+        <ul class="plain">
+          <li><strong>diff</strong>: 무엇이 실제로 바뀌었나.</li>
+          <li><strong>PR 설명과 커밋 메시지</strong>: 작성자가 무엇을 하려 했나.</li>
+          <li><strong>파일 도구</strong>: 저장소 파일을 읽고, 검색하고, 목록을 본다. diff 밖으로 따라가 파이프라인 정의와 접근 권한 파일까지 본다. 작성자가 놓친 관계를 찾기 위해서다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">의도는 발견을 지우지 못한다</span>
+          <span>PR 설명은 안전하다는데 코드가 아니라고 하면 코드가 이긴다.</span>
+        </div>
+        <p>도구는 <strong>저장소 전용</strong>이다. 에이전트는 실제 카탈로그, 리니지 도구, 운영 상태를 조회할 수 없다. 실시간 사실은 계속 1층의 일이다. 에이전트는 코드를 두고 추론한다.</p>
+
+        <h3>규칙은 1층이 못 보는 곳을 겨눈다 <span class="ts">11:10</span></h3>
+        <p>에이전트의 규칙은 PR의 변경 종류별로 설정한다. 1층이 이미 무엇을 확인하는지 알고 짠다. 겨누는 곳은 세 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>겨누는 위험</th><th>발표자의 예</th></tr></thead>
+            <tbody>
+              <tr><td>쿼리 안티패턴<br><span class="en">anti-pattern</span></td><td>파티션 조건 없는 크로스 조인은 결과는 맞아도 클러스터를 혹사시킨다</td></tr>
+              <tr><td>민감 데이터 접근</td><td>평범해 보이는 권한 부여가 민감 데이터를 열 수 있다</td></tr>
+              <tr><td>리니지 밖의 소비자</td><td>스키마 변경이면 저장소의 파이프라인 정의와 접근 권한을 뒤져 등록되지 않은 소비자를 찾는다. 사람이 손으로 하던 지루한 검색이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="found">
+        <header><span class="num">06</span><h2>에이전트가 찾은 숨은 소비자 <span class="ts">12:00</span></h2></header>
+        <p>1층은 등록된 소비자가 모두 괜찮다고 했다. 에이전트는 코드를 따라가다 리니지가 모르는 작업 하나를 찾았다. 그 작업은 저장소 안에 그대로 있었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>순서</th><th>위치</th><th>상태</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>원천 테이블</td><td>새 컬럼이 생겼다</td></tr>
+              <tr><td>2</td><td>수집 파이프라인 → 우리 테이블</td><td>컬럼을 INT에서 BIGINT로 넓힌다</td></tr>
+              <tr><td>3</td><td>리니지에 등록된 소비자</td><td>모두 괜찮다 (1층 확인)</td></tr>
+              <tr><td>4</td><td>리니지에 없는 작업</td><td>우리 테이블의 넓힌 컬럼을 읽어 다른 테이블에 쓴다</td></tr>
+              <tr><td>5</td><td>그 작업이 쓰는 다른 테이블</td><td>같은 컬럼이 <strong>아직 INT</strong>다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>INT에 담을 수 없는 큰 값이 처음 들어오는 순간, 그 쓰기가 실패한다. 스키마 변경은 올바르다. CI는 초록불이다. 등록된 검사는 모두 통과했다. 그래도 하위 작업은 깨진다.</p>
+        <p class="note">보충(발표에 없는 내용): 많은 데이터베이스에서 INT는 약 21억(2,147,483,647)까지, BIGINT는 약 922경까지 담는다.</p>
+        <p>에이전트는 이 연쇄를 리뷰 코멘트에 이유와 함께 적었다. 사람이 우리 컬럼에서 실패하는 쓰기까지 경로 전체를 볼 수 있게 했다.</p>
+        <div class="shift" aria-label="1층이 본 그림과 에이전트가 본 그림">
+          <div><span class="tag">1층 스크립트가 본 그림</span><b>등록된 소비자 모두 괜찮음</b><span class="muted">리니지에 기록된 작업만 본다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">2층 에이전트가 본 그림</span><b>등록 안 된 작업이 INT 컬럼에 쓴다</b><span class="muted">저장소 코드를 따라가 찾았다</span></div>
+        </div>
+
+        <h3>리니지는 왜 놓쳤나 <span class="ts">13:10</span></h3>
+        <p>실제 기업 데이터 환경은 지저분하다. 작업은 여러 쿼리 엔진에서 돈다. 엔진마다 자기 리니지를 따로 내보내야 한다. 한 엔진이 안 내보내면 그 관계는 그림에서 빠진다. 모든 것을 자동으로 보는 단일 카탈로그는 없다. 등록된 그림은 쓸모 있지만 전체 그림은 아니다.</p>
+
+        <h3>코드 탐색의 한계 <span class="ts">13:40</span></h3>
+        <p>발표자는 코드 탐색을 과장하지 않는다. 에이전트는 저장소 안에 있는 것만 찾는다. 파이프라인 코드, 접근 권한, 저장소에 정의된 작업이다. 숨은 작업도 그래서 찾았다.</p>
+        <p>저장소 밖의 사용처는 보이지 않는다. 사람이 손으로 돌리는 애드혹 쿼리<span class="en">ad hoc query</span>와 대시보드가 그렇다. 아무리 꼼꼼히 찾아도 이런 소비자는 나오지 않는다.</p>
+        <p>그래서 에이전트에게 정직하라고 시킨다. 아무것도 못 찾으면 "하위 소비자가 없다"고 말할 수 없다. "찾아본 곳에서는 못 찾았다"고 말해야 한다. 에이전트는 "모두 안전하다"<span class="en">all-clear</span>고 선언하지 못한다.</p>
+        <blockquote>못 찾았다는 것은 없다는 것과 같지 않다.<cite>발표자의 표현을 옮김 · "None found is not the same as none exist." <span class="ts">14:10</span></cite></blockquote>
+      </section>
+
+      <!-- 7 -->
+      <section id="review">
+        <header><span class="num">07</span><h2>리뷰 결과와 예제 PR의 결말 <span class="ts">14:20</span></h2></header>
+        <p>에이전트의 결과물은 좋은 사람 리뷰어의 리뷰와 모양이 같다.</p>
+        <ol class="plain">
+          <li><strong>줄 단위 코멘트.</strong> 중요한 줄에 이유를 단다. "위험해 보인다" 같은 막연한 말은 쓰지 않는다. "이 줄이 이 컬럼을 바꾸고, 이 작업이 그걸 읽는다"처럼 쓴다.</li>
+          <li><strong>위험 점수.</strong> 찾은 것이 얼마나 심각한가. 이 점수가 다음 단계를 정한다.</li>
+          <li><strong>판정.</strong> 심각한 위험이 없으면 승인한다. 사람이 봐야 할 위험이면 에스컬레이션<span class="en">escalate</span>한다. 에스컬레이션은 사람에게 넘기는 것이다. 코멘트와 이유가 같이 넘어가므로 사람은 처음부터 조사하지 않아도 된다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">머지 조건 <span class="ts">15:20</span></span>
+          <span>1층 검사가 모두 통과해야 한다. 그리고 리뷰가 승인해야 한다. 승인은 에이전트가 하거나, 에스컬레이션 뒤에 사람이 한다. 둘 다 "예"여야 머지된다.</span>
+        </div>
+
+        <h3>예제 PR의 결말 <span class="ts">15:40</span></h3>
+        <ol class="plain">
+          <li>에이전트는 진짜 하위 파손을 찾았다. 그래서 위험을 높게 매기고 사람에게 넘겼다. 리뷰 코멘트에 연쇄 전체를 적었다.</li>
+          <li>사람은 에이전트가 못 하는 일을 했다. 에이전트는 저장소만 보므로 그 작업이 운영에서 실제로 도는지 모른다. 사람이 확인해 보니 그 소비자는 살아 있었다. 이론상의 위험이 아니었다.</li>
+          <li>해결은 PR 거절이 아니라 <strong>순서 바꾸기</strong>였다. 하위 테이블을 먼저 고쳐 넓은 타입을 받을 수 있게 했다.</li>
+          <li>그다음에 PR을 머지하고 배포했다. 사고는 없었다.</li>
+        </ol>
+        <p>스크립트는 안전하다고 했다. 에이전트는 틈을 찾았다. 사람이 결정을 내렸다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="protected">
+        <header><span class="num">08</span><h2>에이전트가 승인할 수 없는 변경 <span class="ts">16:50</span></h2></header>
+        <p>대부분의 변경은 에이전트가 처리한다. 검사가 통과하고 에이전트가 판정에 자신 있으면 혼자 승인한다.</p>
+        <p>하지만 에이전트가 아무리 자신 있어 보여도 "승인"을 말할 수 없는 변경이 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>경우</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>민감 데이터에 닿는 권한 부여</td><td>누가 민감 데이터에 닿을 수 있는지는 매번 사람이 정한다</td></tr>
+              <tr><td>의도를 바꾸는 마이그레이션 <span class="ts">17:10</span></td><td>데이터를 옮기거나 저장하는 방식이 아니라 데이터의 뜻을 바꾸는 변경은 사람이 정한다</td></tr>
+              <tr><td>에이전트가 자기 판정에 자신 없을 때 <span class="ts">17:30</span></td><td>구체적으로 잘못된 게 안 나왔다고 해서 승인으로 반올림하지 않는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>세 경우 모두 에이전트의 일은 위험과 이유를 드러내는 데서 끝난다. 결정은 사람이 한다. 발표자는 마지막에 이 원칙을 "표시만 하고, 통과시키지 않는다"<span class="en">flag, never clear</span>로 정리한다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="feedback">
+        <header><span class="num">09</span><h2>사람의 반박으로 규칙을 고친다 <span class="ts">17:50</span></h2></header>
+        <p>PR 하나가 아니라 모든 PR에서 리뷰어는 어떻게 나아질까. 지적이 쓸모 있는지, 규칙을 바꾼 게 도움이 됐는지 어떻게 알까.</p>
+        <ol class="plain">
+          <li>에이전트가 리뷰 코멘트에 판정과 이유를 남긴다.</li>
+          <li>사람이 답글로 동의하거나 반대한다. 그리고 <strong>이유</strong>를 적는다. 이유가 있어야 단순한 투표가 아니라 쓸모 있는 피드백이 된다.</li>
+          <li>답글을 매일 모은다.</li>
+          <li>일주일에 한 번 온콜<span class="en">on-call</span> 담당이 피드백을 읽고 리뷰 규칙을 손으로 고친다. <span class="ts">18:20</span></li>
+          <li>고친 규칙이 다음 리뷰를 바꾼다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">아직 수동이다</span>
+          <span>스스로 재학습하는 부분도, 자동으로 바뀌는 규칙도 없다. 사고 조사 에이전트가 주간 작업을 돕게 하자는 아이디어는 있지만 만들지 않았다. 발표자는 피드백이 없으면 모든 규칙 변경이 추측이 된다고 말한다.</span>
+        </div>
+
+        <h3>사례: 암호화된 개인 정보 컬럼 <span class="ts">18:50</span></h3>
+        <p>예제 PR과 다른 별도 사례다.</p>
+        <ol class="plain">
+          <li>어떤 컬럼이 원천 데이터베이스에서 개인 정보(PII)로 표시되어 있었다.</li>
+          <li>데이터 레이크에 들어올 때는 수집 파이프라인이 이미 암호화한 뒤였다.</li>
+          <li>PR은 레이크에서 이 컬럼을 "민감하지 않음"으로 라벨링하자고 했다.</li>
+          <li>에이전트가 이를 표시했다. 원천이 PII라고 하니 "민감하지 않음"은 틀려 보였다.</li>
+          <li>작성자가 반박했다. 원천 태그만 보지 말고, 다른 테이블의 비슷한 컬럼이 어떻게 분류됐는지 보라고 했다.</li>
+          <li>사람 리뷰어가 작성자 편을 들었다. 쓰기 전에 암호화하므로 이 컬럼은 "민감하지 않음"이 맞았다.</li>
+        </ol>
+        <p>이런 교정이 규칙을 똑똑하게 만드는 신호다. 다음에 비슷한 컬럼이 오면 그 맥락이 불필요한 에스컬레이션을 막는다.</p>
+        <div class="callout warn">
+          <span class="title">일반 규칙이 아니다 <span class="ts">20:00</span></span>
+          <span>이 판단은 그 파이프라인이 쓰기 전에 암호화한다는 사실에 기댄다. 암호화하면 언제나 민감하지 않다는 뜻이 아니다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="mistakes">
+        <header><span class="num">10</span><h2>두 가지 실수를 센다 <span class="ts">20:10</span></h2></header>
+        <p>리뷰어가 잘하고 있는지 알려면 실수 두 종류를 본다. 나쁜 PR을 승인한 경우와, 괜찮은 PR을 괜히 사람에게 넘긴 경우다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>에이전트가 승인</th><th>사람에게 넘김</th></tr></thead>
+            <tbody>
+              <tr><td>괜찮은 PR</td><td>맞음</td><td><strong>거짓 에스컬레이션</strong><span class="en">false escalation</span>. 사람의 시간을 쓴다</td></tr>
+              <tr><td>나쁜 PR</td><td><strong>놓침</strong><span class="en">miss</span>. 변경이 배포되므로 위험하다</td><td>맞음</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>모든 것을 사람에게 넘기는 관문은 놓침은 피할 수 있다. 하지만 리뷰 부담은 전혀 줄이지 못한다.</p>
+        <p>발표자에 따르면 2026년 8월 31일 기준 놓침 비율은 <strong>약 2%</strong>였다. <span class="ts">20:50</span> 대부분 판단 실패보다 규칙의 빈틈에서 나왔다.</p>
+        <p>거짓 에스컬레이션은 깔끔한 단일 수치가 없다고 발표자가 밝혔다. 주된 원인은 맥락 부족이다. 앞의 암호화 컬럼 사례가 그 예다.</p>
+        <ul class="plain">
+          <li><strong>놓침</strong>은 새 규칙을 준다.</li>
+          <li><strong>거짓 에스컬레이션</strong>은 리뷰어에게 어떤 맥락이 필요한지 보여 준다.</li>
+        </ul>
+
+        <h3>사례: 재태깅이 깨뜨린 소비자 <span class="ts">21:20</span></h3>
+        <p>이것도 예제 PR과 다른 별도 사례다.</p>
+        <ol class="plain">
+          <li>어떤 데이터에 누구나 읽을 수 있는 공개 사본<span class="en">open copy</span>이 있었다. 하위 작업 하나가 이 사본의 몇몇 컬럼을 읽고 있었다.</li>
+          <li>개인정보 보호 담당<span class="en">Privacy</span>이 그 컬럼들을 PII로 다시 태깅했다.</li>
+          <li>PII가 된 컬럼은 접근이 더 제한된 사본으로 옮겨지고, 공개 사본에서는 사라진다.</li>
+          <li>재태깅은 괜찮아 보였고 머지됐다. 공개 사본에서 그 컬럼을 아직 읽는 곳이 있는지는 아무도 확인하지 않았다.</li>
+          <li>읽는 곳이 있었다. 컬럼이 사라지자 그 작업이 깨졌다.</li>
+        </ol>
+        <p>사람에게 넘겨야 했는데 승인된 PR, 즉 놓침이다. 발표자는 판단 실패가 아니라 규칙의 빈틈이라고 본다. 아무도 적어 두지 않은 예외 상황<span class="en">corner case</span>이었다.</p>
+        <div class="callout">
+          <span class="title">그래서 생긴 새 규칙 <span class="ts">22:10</span></span>
+          <span>컬럼이 민감 데이터로 재태깅되면, 곧 그 컬럼을 잃을 사본에서 아직 그 컬럼을 읽는 곳이 있는지 코드베이스를 검색한다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="results">
+        <header><span class="num">11</span><h2>성과 <span class="ts">23:20</span></h2></header>
+        <p>발표자가 밝힌 2026년 8월 31일 기준 결과다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>값</th></tr></thead>
+            <tbody>
+              <tr><td>사람 리뷰 없이 머지된 데이터 파이프라인 PR</td><td>약 60%</td></tr>
+              <tr><td>수동 리뷰 작업</td><td>약 75% 감소</td></tr>
+              <tr><td>아낀 엔지니어 시간</td><td>월 약 132시간</td></tr>
+              <tr><td>이 PR들과 연결된 사고</td><td>약 30% 감소</td></tr>
+              <tr><td>놓침 비율</td><td>약 2%</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <figure class="chart" aria-label="도입 전을 100으로 놓은 비교: 수동 리뷰 작업 25, 이 PR들과 연결된 사고 70">
+          <span class="chart-title">도입 전 = 100으로 놓은 변화 (2026-08-31 기준, 발표자 인용)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>수동 리뷰 작업</span><span class="val">25 · −75%</span></div>
+              <div class="track"><div class="fill key" style="width:25%" title="수동 리뷰 작업: 25 (−75%)"></div><div class="baseline" style="left:calc(100% - 2px)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>이 PR들과 연결된 사고</span><span class="val">70 · −30%</span></div>
+              <div class="track"><div class="fill key" style="width:70%" title="이 PR들과 연결된 사고: 70 (−30%)"></div><div class="baseline" style="left:calc(100% - 2px)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 도입 전 (100)</span><span>100</span></div>
+          <span class="caption">짧을수록 좋다. 발표의 "약 75% 감소"와 "약 30% 감소"를 도입 전 100에 대한 값으로 바꿔 그렸다.</span>
+        </figure>
+
+        <p>발표자는 리뷰 작업이 줄어든 이유를 에이전트의 구체적인 코멘트와 이유에서 찾는다. 사람이 모든 위험을 처음부터 다시 짜 맞추지 않아도 된다. 리뷰할 곳에 바로 집중할 수 있다.</p>
+        <div class="callout">
+          <span class="title">사람 없는 리뷰가 아니다 <span class="ts">24:00</span></span>
+          <span>보호된 결정은 설계상 여전히 사람에게 간다. 목표는 리뷰 일을 줄이는 것이다. 책임을 없애는 것이 아니다.</span>
+        </div>
+        <p class="note">이 수치는 리뷰어를 만든 팀이 자기 시스템을 직접 잰 결과다. 어떻게 쟀는지는 발표에 자세히 나오지 않았다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="wrong">
+        <header><span class="num">12</span><h2>잘못 설계한 부분과 다음 방향 <span class="ts">24:10</span></h2></header>
+        <p>발표자는 지금 구조의 한계를 직접 밝혔다.</p>
+        <ul class="plain">
+          <li>1층과 2층은 <strong>따로 실행되는 별개 시스템</strong>이다. 동시에 돌고 결과도 각자 낸다. 만들 때는 당연한 설계로 보였다.</li>
+          <li>어느 쪽도 상대가 통과했는지, 실패했는지, 장애가 났는지 모른다. 2층은 1층이 무엇을 검사하도록 설정됐는지는 안다. 하지만 실제로 돌았을 때 무슨 일이 있었는지는 모른다.</li>
+          <li>머지에는 여전히 검사 통과와 승인이 둘 다 필요하다. 하지만 실행 중의 전체 그림을 가진 시스템은 없다.</li>
+          <li>에이전트는 1층 검사를 부를 수 없다. 판단에 운영 시스템의 실시간 사실이 필요해도 직접 가져오지 못한다.</li>
+          <li>한쪽이 끝나지 못하면 사람을 기다린다. 자동 대체 경로<span class="en">fallback</span>는 없다.</li>
+        </ul>
+
+        <h3>제안: 하나의 진입점 <span class="ts">25:10</span></h3>
+        <div class="shift" aria-label="현재 구조와 제안 구조">
+          <div><span class="tag">지금</span><b>두 층이 따로 돈다</b><span class="muted">서로의 결과를 모른다. 에이전트는 저장소 도구만 쓴다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">제안</span><b>진입점 하나가 PR 전체를 본다</b><span class="muted">분류기가 리뷰 단위를 정하고, 에이전트가 1층 검사를 도구로 부른다</span></div>
+        </div>
+        <ul class="plain">
+          <li><strong>분류기</strong><span class="en">classifier</span>가 PR 전체를 본다. 어떤 변경을 따로 리뷰하고, 어떤 변경을 함께 리뷰할지 정한다. 파일마다 따로 보내는 방식이 아니라 PR 전체를 두고 내리는 결정이다.</li>
+          <li>에이전트는 저장소 도구와 함께 <strong>1층 검사를 부를 수 있는 도구</strong>로 받는다. 판단에 실시간 사실이 필요하면 맞는 검사를 요청한다.</li>
+          <li>목표는 PR 전체를 한눈에 보는 하나의 시스템이다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">아직 만들지 않았다</span>
+          <span>발표자는 이것이 지금 돌아가는 구조가 아니라 제안이라고 분명히 했다. 결과가 아니라 방향이다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="lessons">
+        <header><span class="num">13</span><h2>세 가지 교훈 <span class="ts">26:10</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 결정론적 평가</span>
+            <b>증명할 수 있으면 스크립트가 증명한다</b>
+            <p>예·아니오로 답이 나오는 사실에 판단을 쓰지 않는다. 더 깔끔할 뿐 아니라 더 싸다. 스크립트가 증명한 사실 하나하나가 AI가 할 필요 없는 리뷰 일이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 표시만, 통과는 금지 <span class="ts">26:30</span></span>
+            <b>무서운 변경은 표시만 하고 승인하지 않는다</b>
+            <p>모든 PR이 아니라 사람들이 정말 걱정하는 변경에 적용한다. 민감 데이터 권한, 마이그레이션의 의도, 자신 없는 판정이다. 에이전트의 일은 위험과 이유를 드러내는 데서 멈춘다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 거짓 에스컬레이션 세기 <span class="ts">26:50</span></span>
+            <b>놓침만큼 거짓 에스컬레이션도 잰다</b>
+            <p>모든 걸 넘기는 관문은 누구의 시간도 아끼지 않는다. 일을 옮길 뿐이다. 그 비용을 놓침과 같은 방식으로 잰다.</p>
+          </div>
+        </div>
+        <p>봇은 누가 리뷰하나. 발표자의 답은 이렇다. 정답 출처로 증명할 수 있는 건 스크립트가, 맥락과 판단이 필요한 건 에이전트가, 사람만 내려야 할 결정은 사람이 맡는다. <span class="ts">27:40</span></p>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>PR은 기계 속도로 오는데, 안전하게 리뷰할 맥락을 가진 사람 수는 그대로다.</li>
+          <li><strong>CI 초록불은 안전한 머지를 보장하지 않는다.</strong> 하위 파손, 신선도 SLA, 민감 데이터 노출이 남는다.</li>
+          <li>세 층으로 나눈다. <strong>스크립트는 사실, 에이전트는 판단, 사람은 보호된 결정.</strong></li>
+          <li>1층은 데이터 계약, 필수 태그, 리니지 블라스트 반경, 성능을 실제 시스템과 대조한다. 실패하면 CI가 막는다.</li>
+          <li>리니지 검사는 등록된 것만 본다. 쿼리 엔진마다 리니지를 따로 내보내므로 빠지는 관계가 생긴다.</li>
+          <li>2층 에이전트는 저장소 코드만 읽어 리니지 밖의 소비자를 찾는다. 예제 PR에서 INT 컬럼에 쓰는 숨은 작업을 찾았다.</li>
+          <li>에이전트는 <strong>"못 찾음"을 "없음"이라고 말하지 않는다.</strong> PR 설명과 코드가 다르면 코드를 믿는다.</li>
+          <li>민감 데이터 권한, 의미를 바꾸는 마이그레이션, 자신 없는 판정은 <strong>표시만 하고 승인하지 않는다.</strong></li>
+          <li>사람의 반박과 이유를 매일 모아 매주 규칙을 고친다. 놓침은 새 규칙이 되고, 거짓 에스컬레이션은 필요한 맥락을 알려 준다.</li>
+          <li>결과(발표자 인용): PR 약 60%가 사람 리뷰 없이 머지, 수동 리뷰 75% 감소, 사고 30% 감소. 다음 과제는 두 층을 하나의 시스템으로 합치는 것이다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 문제를 한 문장으로 말하면?</span></summary><div class="answer">PR은 기계 속도로 들어오는데, 안전하게 리뷰하는 일은 여전히 사람 속도다. 무엇이 안전한지 아는 사람 수는 늘지 않았다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>세 층의 주인과 각자 맡는 일은?</span></summary><div class="answer">스크립트는 정답 출처로 증명할 수 있는 사실, 에이전트는 맥락이 필요한 판단, 사람은 사람만 내려야 할 보호된 결정을 맡는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>1층 스크립트 검사 네 가지는?</span></summary><div class="answer">데이터 계약(스키마 레지스트리와 대조), 필수 태그(소유자와 PII 라벨), 리니지 블라스트 반경(등록된 하위 작업이 깨지는지), 성능(스테이징에서 운영 규모로 실행).</div></details>
+          <details><summary><span class="qn">Q4</span><span>예제 PR의 문제를 리니지 검사가 못 잡은 이유는?</span></summary><div class="answer">문제의 작업이 리니지에 등록되어 있지 않았다. 리니지 검사는 기록된 것만 본다. 쿼리 엔진마다 리니지를 따로 내보내야 해서 빠지는 관계가 생긴다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>에이전트가 쓸 수 있는 도구와 쓸 수 없는 것은?</span></summary><div class="answer">저장소 파일을 읽고, 검색하고, 목록을 보는 도구만 쓴다. 실제 카탈로그, 리니지 도구, 운영 상태는 조회할 수 없다. 실시간 사실은 1층의 일이다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>INT→BIGINT 변경은 왜 하위 작업을 깨뜨렸나?</span></summary><div class="answer">등록되지 않은 작업이 넓힌 컬럼을 읽어 다른 테이블에 쓰는데, 그 테이블의 컬럼은 아직 INT였다. INT에 담을 수 없는 큰 값이 처음 오면 쓰기가 실패한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>에이전트가 하위 소비자를 하나도 못 찾았다면 뭐라고 말해야 하나?</span></summary><div class="answer">"하위 소비자가 없다"가 아니라 "찾아본 곳에서는 못 찾았다"고 말한다. 애드혹 쿼리와 대시보드처럼 저장소 밖의 사용처는 보이지 않기 때문이다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>PR이 머지되려면 무엇이 필요한가?</span></summary><div class="answer">1층 검사가 모두 통과하고, 리뷰가 승인해야 한다. 승인은 에이전트가 하거나 에스컬레이션 뒤 사람이 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>예제 PR은 어떻게 마무리됐나?</span></summary><div class="answer">에이전트가 위험을 높게 매겨 사람에게 넘겼다. 사람이 그 소비자가 운영에서 살아 있음을 확인했다. 하위 테이블을 먼저 고친 뒤 PR을 머지했고 사고는 없었다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>에이전트가 절대 승인하지 못하는 세 경우는?</span></summary><div class="answer">민감 데이터에 닿는 권한 부여, 데이터의 뜻을 바꾸는 마이그레이션, 에이전트가 자기 판정에 자신 없을 때.</div></details>
+          <details><summary><span class="qn">Q11</span><span>암호화 컬럼 사례에서 얻은 것과 주의할 점은?</span></summary><div class="answer">쓰기 전에 암호화하는 파이프라인이라면 원천이 PII여도 레이크에서는 "민감하지 않음"일 수 있다는 맥락을 얻었다. 다만 암호화하면 언제나 민감하지 않다는 일반 규칙은 아니다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>놓침과 거짓 에스컬레이션은 무엇이고, 왜 둘 다 세나?</span></summary><div class="answer">놓침은 나쁜 PR을 승인한 것, 거짓 에스컬레이션은 괜찮은 PR을 사람에게 넘긴 것이다. 모든 걸 넘기면 놓침은 없지만 리뷰 부담이 그대로다. 놓침은 새 규칙을, 거짓 에스컬레이션은 필요한 맥락을 알려 준다.</div></details>
+          <details><summary><span class="qn">Q13</span><span>지금 구조의 한계와 제안된 방향은?</span></summary><div class="answer">두 층이 따로 돌아 서로의 결과를 모르고, 에이전트는 실시간 사실을 가져올 수 없으며, 자동 대체 경로가 없다. 제안은 분류기가 PR 전체를 보는 진입점 하나와, 1층 검사를 에이전트의 도구로 주는 것이다. 아직 만들지 않았다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>리뷰 질문 중 정답 출처가 있는 것을 골라 스크립트 검사로 만든다<span class="how">예: 스키마 레지스트리, 카탈로그 태그. 실패하면 CI가 PR을 막게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트 규칙에 "스크립트가 이미 확인하는 것"을 적어 준다<span class="how">확인: 에이전트가 같은 사실을 다시 찾느라 비용을 쓰지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>PR 설명보다 코드를 믿으라고 규칙에 적는다<span class="how">설명이 안전하다고 해도 코드에서 찾은 위험은 지우지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>에이전트가 "못 찾음"과 "없음"을 구분해 말하게 한다<span class="how">찾아본 범위를 리뷰 코멘트에 함께 적게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>리니지에 기록되지 않는 사용처가 어디인지 적어 둔다<span class="how">리니지를 안 내보내는 쿼리 엔진, 애드혹 쿼리, 대시보드</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>에이전트가 승인할 수 없는 변경 목록을 정한다<span class="how">발표의 예: 민감 데이터 권한, 데이터 뜻을 바꾸는 마이그레이션, 자신 없는 판정</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>사람이 판정에 동의하거나 반대할 때 이유를 남기게 한다<span class="how">이유가 있어야 규칙을 고칠 수 있다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>피드백을 읽고 규칙을 고칠 담당과 주기를 정한다<span class="how">발표자 팀은 주 1회 온콜 담당이 손으로 고친다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>놓침과 거짓 에스컬레이션을 둘 다 잰다<span class="how">놓친 사례는 새 규칙으로, 거짓 에스컬레이션은 부족한 맥락으로 정리한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>PR</td><td>Pull request. 바꾼 코드를 본 코드에 합쳐 달라는 요청</td></tr>
+              <tr><td>CI</td><td>Continuous Integration. 코드를 올릴 때마다 빌드, 테스트, 검사를 자동으로 돌리는 장치</td></tr>
+              <tr><td>린터</td><td>Linter. 코드 스타일과 흔한 실수를 자동으로 검사하는 도구</td></tr>
+              <tr><td>스키마</td><td>Schema. 테이블의 컬럼 이름과 타입 정의</td></tr>
+              <tr><td>스키마 레지스트리</td><td>Schema registry. 데이터 스키마의 공식 기록을 모아 둔 곳</td></tr>
+              <tr><td>데이터 계약</td><td>Data contract. 데이터를 주고받는 쪽끼리 약속한 스키마와 키</td></tr>
+              <tr><td>카탈로그</td><td>Catalog. 테이블 목록과 소유자, 태그 같은 정보를 모아 둔 곳</td></tr>
+              <tr><td>PII</td><td>Personally Identifiable Information. 특정 개인을 알아볼 수 있는 정보</td></tr>
+              <tr><td>리니지</td><td>Lineage. 데이터가 어디서 와서 어떤 작업을 거쳐 어디로 가는지 기록한 것</td></tr>
+              <tr><td>블라스트 반경</td><td>Blast radius. 변경 하나가 영향을 줄 수 있는 범위</td></tr>
+              <tr><td>신선도 SLA</td><td>Freshness SLA. 데이터를 정해진 시각까지 준비하겠다는 약속</td></tr>
+              <tr><td>데이터 레이크</td><td>Data lake. 회사의 데이터를 한곳에 모아 두는 큰 저장소</td></tr>
+              <tr><td>수집 파이프라인</td><td>Ingestion pipeline. 원천 시스템의 데이터를 읽어 데이터 레이크에 쓰는 작업</td></tr>
+              <tr><td>소비자</td><td>Consumer. 어떤 데이터를 읽어 가는 작업이나 사람</td></tr>
+              <tr><td>INT / BIGINT</td><td>정수 타입. BIGINT가 INT보다 훨씬 큰 값을 담는다</td></tr>
+              <tr><td>권한 부여</td><td>Grant. 누군가에게 데이터에 접근할 권한을 주는 설정</td></tr>
+              <tr><td>쿼리 안티패턴</td><td>Query anti-pattern. 결과는 맞아도 비용이나 성능에 해로운 쿼리 습관</td></tr>
+              <tr><td>크로스 조인</td><td>Cross join. 두 테이블의 모든 행을 서로 짝짓는 조인. 결과가 아주 커질 수 있다</td></tr>
+              <tr><td>애드혹 쿼리</td><td>Ad hoc query. 필요할 때 사람이 직접 돌리는 일회성 쿼리</td></tr>
+              <tr><td>에스컬레이션</td><td>Escalation. 에이전트가 판단을 사람에게 넘기는 것</td></tr>
+              <tr><td>놓침</td><td>Miss. 나쁜 PR을 승인해 버린 경우</td></tr>
+              <tr><td>거짓 에스컬레이션</td><td>False escalation. 괜찮은 PR을 괜히 사람에게 넘긴 경우</td></tr>
+              <tr><td>온콜</td><td>On-call. 정해진 기간 동안 운영 문제를 맡는 당번 엔지니어</td></tr>
+              <tr><td>분류기</td><td>Classifier. 입력을 보고 어느 범주에 넣을지 정하는 모델이나 규칙</td></tr>
+              <tr><td>대체 경로</td><td>Fallback. 원래 경로가 실패했을 때 자동으로 쓰는 다른 경로</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>CI를 통과한 PR은 안전한가</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>문제: 기계 속도의 PR, 사람 속도의 리뷰</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>범위: 데이터 파이프라인 PR</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>왜 문제인가: 맥락을 가진 사람은 그대로</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>해법: 세 층, 세 주인</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>발표 순서</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>예제 PR: 새 컬럼과 INT→BIGINT</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>1층: 데이터 계약, 필수 태그</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>1층: 리니지 블라스트 반경, 성능 테스트</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>1층 결과: 모두 통과</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>2층: 에이전트의 재료와 도구</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>규칙: 1층이 못 잡는 위험</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>에이전트가 찾은 등록 안 된 작업</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>리니지가 놓친 이유</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>코드 탐색의 한계, "못 찾음 ≠ 없음"</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>리뷰 결과물: 코멘트, 위험 점수, 판정</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>머지 조건</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>예제 PR의 결말</td></tr>
+              <tr><td><span class="ts">16:50</span></td><td>에이전트가 승인할 수 없는 세 경우</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>사람 피드백으로 규칙 고치기</td></tr>
+              <tr><td><span class="ts">18:50</span></td><td>사례: 암호화된 PII 컬럼</td></tr>
+              <tr><td><span class="ts">20:10</span></td><td>두 가지 실수와 2×2 표</td></tr>
+              <tr><td><span class="ts">20:50</span></td><td>놓침 비율 약 2%</td></tr>
+              <tr><td><span class="ts">21:20</span></td><td>사례: PII 재태깅으로 깨진 소비자</td></tr>
+              <tr><td><span class="ts">22:30</span></td><td>예제 PR 전체 정리</td></tr>
+              <tr><td><span class="ts">23:20</span></td><td>성과: 60%, 75%, 132시간, 30%</td></tr>
+              <tr><td><span class="ts">24:10</span></td><td>잘못 설계한 부분</td></tr>
+              <tr><td><span class="ts">25:10</span></td><td>제안: 하나의 진입점</td></tr>
+              <tr><td><span class="ts">26:10</span></td><td>세 가지 교훈</td></tr>
+              <tr><td><span class="ts">27:00</span></td><td>마무리: 봇은 누가 리뷰하나</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'MQiojLnK-E0:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

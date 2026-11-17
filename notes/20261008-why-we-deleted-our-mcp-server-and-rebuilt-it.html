@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MCP 서버를 지운 이유</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#reducto">Reducto가 푸는 문제</a></li>
+      <li><a href="#agent-first">"에이전트 우선"은 구조 문제</a></li>
+      <li><a href="#buckets">세 가지 방식</a></li>
+      <li><a href="#first-mcp">첫 MCP 서버</a></li>
+      <li><a href="#broke">팀에 풀자마자 무너졌다</a></li>
+      <li><a href="#rebuild">파일을 통째로 지웠다</a></li>
+      <li><a href="#runtime">실행 중의 실패는 조용하다</a></li>
+      <li><a href="#uncertainty">불확실성이 보이게</a></li>
+      <li><a href="#judgment">최종 판단은 사람에게</a></li>
+      <li><a href="#construction">에이전트가 가장 쓸모 있는 자리</a></li>
+      <li><a href="#instrumentation">기록이 다음 안내가 된다</a></li>
+      <li><a href="#adoption">시키지 않았는데 쓰기 시작했다</a></li>
+      <li><a href="#conclusion">에이전트는 먼저 가지 않는다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-08 · 17분 · 영어 발표 한글 정리</span>
+      <h1>MCP 서버를 지우고 다시 만든 이유</h1>
+      <p class="lead">Reducto는 API를 그대로 옮긴 MCP 서버를 팀에 풀었다가, 에이전트가 자신 있게 틀리는 모습을 보고 통째로 지웠다. 다시 만든 서버는 도구 수를 줄이고, 일의 구조와 에이전트의 불확실성을 사람이 볼 수 있게 했다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=jJQoVkd5yLg" target="_blank" rel="noopener">Why We Deleted Our MCP Server and Rebuilt It</a></span>
+        <span>발표: Abhi Arya (Reducto 제품 담당)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 사례는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 "Avi", "Cloud Code"로 들린 이름은 영상 제목과 문맥에 맞춰 Abhi Arya, Claude Code로 고쳤다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트 우선 소프트웨어는 모델을 다듬는 일이 아니라 <strong>구조의 문제</strong>다. 기준 질문은 <strong>"에이전트가 틀리면 누가 값을 치르나"</strong>다.</li>
+        <li>자동 모드는 조용히 틀리고, 사용자 우선은 채팅봇에 머문다. 이기는 쪽은 <strong>사람이 확인할 수 있는 범위에서 에이전트에게 능력을 주는 방식</strong>이다.</li>
+        <li>첫 MCP 서버는 API 엔드포인트마다 도구를 하나씩 붙인 큰 파일이었다. 데모는 잘 됐지만 팀에 풀자 <strong>자신 있게 틀렸다.</strong></li>
+        <li>그 파일을 지우고 <strong>일의 구조를 담은 더 적은 도구</strong>로 다시 만들었다. 단계를 묶고, 다음 단계를 안내하고, 현재 상태를 한 번에 돌려준다.</li>
+        <li>실행 중 실패는 오류 없이 조용히 일어난다. 결과의 신뢰도를 모델에 돌려주고, 모호하면 <strong>추측하지 말고 묻게</strong> 했다.</li>
+        <li>세션 기록에서 사람이 고친 곳, 신뢰도가 낮던 곳, 질문한 곳을 모아 안내를 고쳤다. 쓸수록 나아졌고 <strong>영업팀이 시키지 않아도 쓰기 시작했다.</strong></li>
+        <li>결론: 연결은 누구나 한다. 차별점은 <strong>에이전트가 자신 있게 틀렸을 때 누가, 얼마나 빨리 알아차리는가</strong>다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="reducto">
+        <header><span class="num">01</span><h2>Reducto가 푸는 문제 <span class="ts">00:10</span></h2></header>
+        <p>Reducto는 스스로를 에이전트형 문서 플랫폼 <span class="en">agentic document platform</span>이라고 소개한다. 정리되지 않은 문서를 도구와 AI 에이전트가 읽을 수 있는 데이터로 바꿔 준다.</p>
+        <ul class="plain">
+          <li>지난 3년 동안 문서 30억 건 이상을 처리했다.</li>
+          <li>고객으로 Harvey, Scale AI, 세계 상위 5위 안의 기술 기업, 헤지펀드를 들었다.</li>
+        </ul>
+        <p>깨끗한 문서를 최신 모델에 넣으면 60% 정도는 그냥 된다. 어려운 건 실제 운영 환경이다. 스캔한 문서나 돌아간 페이지가 섞이면 모델이 없는 내용을 지어낸다. 이걸 환각 <span class="en">hallucination</span>이라고 한다. 기업 데이터의 큰 부분이 이런 비정형 <span class="en">unstructured</span> 데이터다.</p>
+        <p>Reducto는 모델과 데이터 사이에 놓이는 층이다. 복잡한 배치 분석과 후처리를 맡는다. 이런 파이프라인을 설계하다 보니 에이전트도 많이 직접 만들게 됐다.</p>
+        <p class="note">처리량과 고객 목록은 발표자가 소개한 자사 수치다. 자사 제품 소개라는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="agent-first">
+        <header><span class="num">02</span><h2>"에이전트 우선"은 구조 문제 <span class="ts">01:40</span></h2></header>
+        <p>발표자는 여자친구에게서 영화 Mean Girls를 패러디한 스티커를 받았다. 문구는 "타, 루저. 우리는 에이전트 우선 소프트웨어를 만든다"였다. AI 일을 하지 않는 여자친구가 물었다. "에이전트 우선 소프트웨어 <span class="en">agent-first software</span>가 뭐야?"</p>
+        <p>답이 여러 개 떠올랐다. 좋은 하네스 <span class="en">harness</span>, 좋은 API, 프롬프트 다듬기. 그런데 이것들은 에이전트를 앞에 두는 일이 아니었다. 모델을 최적화하는 일에 가까웠다.</p>
+        <p>발표자의 결론은 이렇다. <strong>에이전트 우선은 구조 <span class="en">architecture</span>의 문제다.</strong> 그 구조는 질문 하나로 정해진다.</p>
+        <blockquote>에이전트가 틀리면, 그 값은 누가 치르는가?<cite>발표의 중심 질문 <span class="ts">02:40</span></cite></blockquote>
+      </section>
+
+      <!-- 3 -->
+      <section id="buckets">
+        <header><span class="num">03</span><h2>세 가지 방식 <span class="ts">02:40</span></h2></header>
+        <p>이 질문에 따라 에이전트 제품을 세 가지로 나눌 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>무엇을 앞세우나</th><th>어떻게 되나</th></tr></thead>
+            <tbody>
+              <tr><td>자동 모드<br><span class="en">auto mode</span></td><td>자율성. 프롬프트를 쓰고 에이전트가 알아서 하게 둔다</td><td>에이전트는 반드시 실수한다. 그런데 자신만만해서 틀린 줄 아무도 모른다. 값은 만든 쪽이 치른다. 틀린 결과가 고객과 사용자에게 나간다</td></tr>
+              <tr><td>사용자 우선<br><span class="en">user-first</span></td><td>사람이 쓰는 화면. 사용자에게 설정 손잡이를 전부 준다</td><td>에이전트는 할 수 있는 게 거의 없다. 사실상 채팅봇이다. 사용자가 제품을 이해하는 폭도, 에이전트의 능력도 둘 다 막힌다</td></tr>
+              <tr><td>사용자를 돕는 에이전트 경험<br><span class="en">agent experience in service of the user</span></td><td>에이전트에게 풍부하지만 범위가 정해진 능력을 준다</td><td>에이전트가 사용자가 원하는 일을 돕는다. 사람은 그 결과를 확인할 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">발표자가 고른 답: 세 번째</span>
+          <span>이렇게 보면 에이전트 경험은 모델의 문제가 아니게 된다. <strong>맥락</strong> <span class="en">context</span>, <strong>능력</strong> <span class="en">capability</span>, <strong>자기 개선</strong> <span class="en">self-improvement</span>의 문제가 된다. 아래는 발표자가 이 세 가지를 어떻게 찾았는지에 대한 이야기다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="first-mcp">
+        <header><span class="num">04</span><h2>첫 MCP 서버 <span class="ts">04:00</span></h2></header>
+        <p>Reducto는 문서 일을 처음부터 끝까지 자동화하는 파이프라인 <span class="en">pipeline</span> 도구를 만든다. 순서는 이렇다.</p>
+        <ol class="plain">
+          <li>문서를 파싱한다 <span class="en">parse</span>. 글, 표, 배치를 읽어 낸다.</li>
+          <li>문서를 분류하거나 <span class="en">classify</span> 구역으로 나눈다 <span class="en">split</span>.</li>
+          <li>필요한 정보를 추출한다 <span class="en">extract</span>.</li>
+        </ol>
+        <p>쓰임새는 송장 처리, 계약 관리처럼 사람의 입력이 필요한 일이다.</p>
+        <p>일찍부터 문제가 보였다. 사용자, 특히 사내 영업팀이 결과보다 설정에 시간을 다 쓰고 있었다. 기존 화면이 파이프라인을 "만드는" 일에 맞춰 설계됐기 때문이다. 에이전트 시대에는 최종 결과물이 중요하다. 사용자를 거기까지 얼마나 빨리 데려가느냐가 중요하다.</p>
+        <p>그래서 MCP 서버 <span class="en">Model Context Protocol server</span>를 택했다 <span class="ts">04:50</span>. 무거운 일은 에이전트가 맡는다. 사용자는 자기 용도를 생각하고 프롬프트만 쓰면 된다.</p>
+
+        <h3>데모는 아무것도 말해 주지 않았다 <span class="ts">05:00</span></h3>
+        <p>방향을 확인하려고 Claude Code로 MVP(최소 기능 제품)를 만들었다. 앱을 움직이는 API 엔드포인트 <span class="en">endpoint</span>마다 MCP 도구를 하나씩 붙였다. 전부 거대한 파일 하나에 들어 있었다.</p>
+        <p>아주 구체적인 프롬프트를 주고 Slack에 올렸다. 꽤 괜찮았다. 하지만 발표자는 자기가 무엇을 하는지 정확히 아는 사람이었다. 잘 고른 상황에서 보여 준 데모였다. <strong>그래서 그 데모로는 아무것도 알 수 없었다.</strong></p>
+      </section>
+
+      <!-- 5 -->
+      <section id="broke">
+        <header><span class="num">05</span><h2>팀에 풀자마자 무너졌다 <span class="ts">05:20</span></h2></header>
+        <p>진짜 시험은 MCP를 팀 전원에게 줬을 때 왔다. 바로 무너졌다.</p>
+        <ul class="plain">
+          <li>누군가 고객 통화에서 나온 어설픈 설명이나 Notion 페이지를 그대로 넣었다.</li>
+          <li>에이전트는 곧장 일을 시작해 워크플로 전체를 끝까지 만들었다.</li>
+          <li>그리고 모든 게 맞다고 자신 있게 말했다.</li>
+          <li>하지만 사용자도 에이전트도 그 워크플로가 실제로 무엇을 하는지 설명하지 못했다.</li>
+        </ul>
+        <p>이것이 운영 환경에서 만난 자동 모드의 실제 모습이다. 에이전트는 한 번도 "잘 모르겠다"고 하지 않았다. 가진 도구를 전부 썼다. 사람이 중간에 확인하거나 생각할 자리는 없었다.</p>
+        <blockquote>우리 시스템과 통신하는 것은 만들었다. 하지만 우리 시스템과 함께 일하는 것은 만들지 못했다.<cite>발표자의 말을 옮김 <span class="ts">06:00</span></cite></blockquote>
+      </section>
+
+      <!-- 6 -->
+      <section id="rebuild">
+        <header><span class="num">06</span><h2>파일을 통째로 지웠다 <span class="ts">06:10</span></h2></header>
+        <p>흔히 떠올리는 해결책은 시스템 프롬프트를 더 자세히 쓰거나 모델에 안내를 더 주는 것이다. 발표자는 진짜 문제가 구조라고 봤다. 그래서 MCP 도구를 담은 파일 전체를 커밋 하나로 지웠다.</p>
+        <p>새로 만든 것은 더 많은 도구가 아니었다. 오히려 도구 수는 줄었다. 대신 도구 하나하나가 <strong>실제 일의 구조</strong>를 담았다.</p>
+        <div class="shift" aria-label="MCP 도구 설계의 변화">
+          <div><span class="tag">처음 MCP</span><b>API 엔드포인트마다 도구 하나</b><span class="muted">"만들기" 같은 단계를 에이전트가 반복 호출하고, 파이프라인이 제대로 조립되기를 빈다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">다시 만든 MCP</span><b>일의 구조를 담은 더 적은 도구</b><span class="muted">제품이 실제로 어떻게 돌아가는지 아는 도구. 정답이 정해진 부분은 도구가 정한다</span></div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>바꾼 것</th><th>내용</th><th>효과</th></tr></thead>
+            <tbody>
+              <tr><td>단계 묶기 <span class="ts">06:50</span></td><td>분류 결과를 추출로 넘기는 흔한 조합을 <code>classify → extract</code> 도구 하나로 만들었다</td><td>에이전트가 두 단계를 어떻게 이을지 프롬프트를 보고 추측하지 않는다</td></tr>
+              <tr><td>다음 단계 안내</td><td>단계마다 끝나면 다음에 무엇을 할지 맥락에 맞는 안내를 준다. 일부 도구는 자동으로 다음 단계로 이어진다</td><td>이미 정답이 정해진 부분을 에이전트가 마음대로 하지 않는다</td></tr>
+              <tr><td>상태 스냅샷 <span class="ts">07:30</span></td><td>한 번 호출로 파이프라인의 현재 상태를 돌려준다. 전체 흐름의 맥락부터 구체적인 오류 코드까지 담는다</td><td>에이전트는 상태가 없다 <span class="en">stateless</span>. 스냅샷이 있으면 변수 이름을 추측하거나 지어내지 않고, 실제로 있는 것을 참조한다</td></tr>
+              <tr><td>모양 제한</td><td>도구는 엔지니어가 의도한 모양의 파이프라인만 만들게 한다</td><td>사람이 무슨 일이 있었는지 따라갈 수 있다. 결과를 다른 사용자에게 설명할 수도 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">핵심</span>
+          <span>맥락을 프롬프트에서 구조로 옮겼다. 그러자 에이전트는 <strong>추측을 멈추고 참조하기 시작했다.</strong></span>
+        </div>
+
+        <h3>API가 아니라 전문성을 건넨다 <span class="ts">08:10</span></h3>
+        <p>자동 모드를 피하려면 에이전트에게 API를 그대로 건네면 안 된다. 전문성을 담은 도구를 건네야 한다. 발표자가 꼽은 전문성은 세 가지다.</p>
+        <ul class="plain">
+          <li><strong>올바른 패턴</strong>: 어떤 단계를 어떤 순서로 잇는지</li>
+          <li><strong>상태</strong>: 지금 무엇이 만들어져 있고 어디서 오류가 났는지</li>
+          <li><strong>검증기</strong> <span class="en">validator</span>: 결과가 맞는지 확인하는 장치</li>
+        </ul>
+        <p>목표는 <strong>맞는 길이 가장 쉬운 길</strong>이 되게 하는 것이다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="runtime">
+        <header><span class="num">07</span><h2>실행 중의 실패는 조용하다 <span class="ts">08:30</span></h2></header>
+        <p>여기까지로 "만드는 단계"의 문제는 풀렸다. 도구가 구조를 드러냈고, 사람이 에이전트가 한 일을 따라갈 수 있었다. 이번에는 실행 단계에서 문제가 생겼다. 에이전트가 만들려는 결과 자체가 틀리면 누가 알아차릴까?</p>
+        <ul class="plain">
+          <li>추출할 항목을 정한 스키마 <span class="en">schema</span>가 나쁘다.</li>
+          <li>사용자가 실제 용도를 제대로 말하지 않았다.</li>
+          <li>문서 100건을 돌렸는데 30쪽에 있는 스캔 이미지를 놓쳤다.</li>
+          <li>어떤 종류의 문서가 들어오는지 사용자가 정하지 않았다.</li>
+        </ul>
+        <p>이럴 때 세그폴트 <span class="en">seg fault</span> 같은 눈에 보이는 오류는 나지 않는다. 파이프라인은 그대로 끝까지 돈다.</p>
+        <div class="callout warn">
+          <span class="title">모두 같은 실패다</span>
+          <span>에이전트는 자신 있게 틀린다. 에이전트가 가진 불확실성은 전혀 보이지 않는다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="uncertainty">
+        <header><span class="num">08</span><h2>불확실성이 보이게 <span class="ts">09:30</span></h2></header>
+        <p>해결은 변화 하나로 모였다. <strong>불확실성을 읽을 수 있게 만드는 것</strong>이다. 불확실성은 두 종류다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">결과의 불확실성 <span class="ts">09:50</span></span>
+            <p>Reducto의 추출 결과에는 실패 정보가 붙는다.</p>
+            <ul>
+              <li>신뢰도 점수 <span class="en">confidence score</span>: 이 값이 얼마나 확실한지</li>
+              <li>바운딩 박스 <span class="en">bounding box</span>: 문서의 어느 위치에서 읽었는지</li>
+            </ul>
+            <p>이 정보를 모델에 다시 넣어 주는 도구를 만들었다.</p>
+            <p class="verdict"><b>결과</b>: 추출 스키마가 시간이 갈수록 나아졌고, 문서 결과가 더 정확해졌다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">에이전트 자신의 불확실성 <span class="ts">10:10</span></span>
+            <p>필드를 두 가지로 읽을 수 있거나, 처음 보는 문서 종류를 만났을 때다.</p>
+            <ul>
+              <li>추측하지 않는다.</li>
+              <li>그 자리에서 그냥 멈추지도 않는다.</li>
+              <li>"두 가지로 읽힌다. 어느 뜻인가?"라고 사용자에게 묻는다.</li>
+            </ul>
+            <p>평가 <span class="en">eval</span>에서 근거가 약한 가정 위에 만든 결과는 실패로 처리했다. 하네스에는 Claude Code 같은 하네스가 주는 질문 도구를 쓰라고 안내했다.</p>
+            <p class="verdict"><b>원칙</b>: 추측이 아니라 질문에 점수를 준다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="judgment">
+        <header><span class="num">09</span><h2>최종 판단은 사람에게 <span class="ts">10:40</span></h2></header>
+        <p>판단은 에이전트 혼자 하지 않는다. 파이프라인 전체는 여전히 사용자가 감독한다.</p>
+        <p>에이전트의 신뢰도와 추론 과정을 MCP의 프롬프트 안내로 내보냈다. 이제 에이전트는 무언가를 새로 만들 때마다 무엇을 왜 했는지 사용자에게 설명한다. 사용자는 그 설명을 보고 검토한다.</p>
+        <p>이 장치가 없으면 에이전트는 사용자가 <strong>원한 결과</strong>가 아니라 사용자가 <strong>적은 문장</strong>을 만족시키는 데 그친다.</p>
+        <p class="note">11:00 전후는 자막이 중간에 끊겨 있다. 앞뒤 문장으로 뜻을 짐작해 이어 썼다.</p>
+        <p>불확실성을 드러내고 최종 판단을 책임질 수 있는 사람에게 두면, <strong>확인 질문 하나가 세 가지 일을 한다.</strong></p>
+        <ul class="plain">
+          <li>모델에게 맥락을 준다.</li>
+          <li>모델이 할 수 있는 일을 넓힌다.</li>
+          <li>사람이 루프 안에서 판단하고 확인하게 한다. 이를 사람 확인 루프 <span class="en">human in the loop</span>라고 한다.</li>
+        </ul>
+
+        <h3>세 실패의 공통 모양 <span class="ts">11:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>실패</th><th>모습</th></tr></thead>
+            <tbody>
+              <tr><td>자동 모드</td><td>아무도 들여다볼 수 없었다</td></tr>
+              <tr><td>조용한 오답</td><td>틀린 결과가 아무 경고 없이 도착했다</td></tr>
+              <tr><td>보상 해킹 <span class="en">reward hacking</span></td><td>에이전트가 채점 기준의 빈틈을 맞춰 테스트를 통과했거나, 무엇을 했는지 숨겼다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">밑에 깔린 모양은 하나다</span>
+          <span>에이전트의 <strong>자율성과 권한이 사람이 확인할 수 있는 범위보다 컸다.</strong></span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="construction">
+        <header><span class="num">10</span><h2>에이전트가 가장 쓸모 있는 자리 <span class="ts">12:10</span></h2></header>
+        <p>발표자는 에이전트의 지능이 쓰이는 곳을 구성 단계 <span class="en">construction</span>로 본다.</p>
+        <ul class="plain">
+          <li>파이프라인 만들기</li>
+          <li>스키마 만들기</li>
+          <li>알맞은 맥락 끌어오기</li>
+        </ul>
+        <p>이 단계에서 에이전트는 가장 강하다. 실수도 가장 싸다. <strong>사람이 바로 옆에 있기 때문이다.</strong></p>
+        <p>이 쓰임에 맞춰 만들자 MCP에 대한 사용자 만족도가 올랐다. 무슨 일이 일어나는지 볼 수 있었기 때문이다.</p>
+        <p>에이전트에게 맡기기 어려운 부분, 곧 정확한 파싱과 추출은 Reducto의 문서 층이 맡는다. 에이전트가 일하는 곳에서는 확인할 수 있고 정확해야 신뢰를 얻는다.</p>
+        <blockquote>에이전트는 상자 속 지능일 뿐이다. 그 둘레의 하네스가 결과를 낸다.<cite>발표자의 표현을 옮김 <span class="ts">12:50</span></cite></blockquote>
+        <p class="note">사용자 만족도가 올랐다는 말에 수치는 없었다. "Reducto가 정확한 파싱과 추출을 보장한다"는 것은 자사 제품에 대한 주장이니 감안해 읽자.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="instrumentation">
+        <header><span class="num">11</span><h2>기록이 다음 안내가 된다 <span class="ts">13:10</span></h2></header>
+        <p>다음으로 계측 <span class="en">instrumentation</span>, 곧 사용 기록을 모으는 일에 집중했다.</p>
+        <ol class="plain">
+          <li>MCP 세션마다 모델이 보낸 프롬프트를 기록했다.</li>
+          <li>영업팀과 다른 팀원들에게 자기 Claude Code 세션을 내보내 달라고 했다.</li>
+          <li>기록에서 세 가지 신호를 찾았다: <strong>사람이 에이전트를 뒤집은 곳</strong>, <strong>모델의 신뢰도가 낮던 곳</strong>, <strong>에이전트가 질문한 곳</strong>.</li>
+          <li>이 신호를 MCP가 오래 쓰는 안내에 반영했다.</li>
+        </ol>
+        <p>그 결과 시스템은 파이프라인을 더 만들수록 파이프라인을 더 잘 만들게 됐다. 사람이 손으로 다시 쓰지 않아도 됐다. 조직별, 사용자별로 <strong>스스로 나아지는 루프</strong>가 생겼다.</p>
+        <p>바탕은 같은 결정이었다. 모델은 잘 안내되고 들여다볼 수 있게 둔다. 모델을 이끄는 일은 그 둘레의 정보가 맡는다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="adoption">
+        <header><span class="num">12</span><h2>시키지 않았는데 쓰기 시작했다 <span class="ts">14:00</span></h2></header>
+        <p>발표자는 영업팀에게 이 에이전트를 쓰라고 한 적이 없다. 회사의 Claude Enterprise(추정)에 제품 도구로 열어 두기만 했다.</p>
+        <p>영업팀과 다른 팀원들이 스스로 자기 일에 엮어 넣었다.</p>
+        <ol class="plain">
+          <li>고객 통화 전에 Circleback이나 Slack으로 고객에 대해 알아본다.</li>
+          <li>MCP에게 그 고객에 대해 묻는다.</li>
+          <li>그 고객에 맞는 파이프라인을 만든다.</li>
+        </ol>
+        <p>사람들은 떠밀려서가 아니라 필요해서 이 도구를 찾았다. 회사 전체가 쓰는 자원이 됐다.</p>
+        <p>결과를 믿게 되자 가치가 큰 고객 앞에도 내놓았다. 데모가 그냥 돌아간 게 아니었다. 사람이 "제가 만들었어요, 와서 보세요"라고 말할 수 있었다. 이것이 영업 통화에서 효과를 냈다.</p>
+        <p class="note">사내 사례다. 근거로 보여 준 것은 Slack 반응 화면이고, 수치로 잰 결과는 발표에 없다. 자막에서 "Cloud Enterprise"로 들린 곳을 Claude Enterprise로 추정했다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="conclusion">
+        <header><span class="num">13</span><h2>에이전트는 먼저 가지 않는다 <span class="ts">15:10</span></h2></header>
+        <div class="shift" aria-label="에이전트 우선의 뜻 변화">
+          <div><span class="tag">몇 달 전 발표자의 답</span><b>가장 좋은 모델</b><span class="muted">가장 빠른 추론, 가장 높은 지능</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">지금 발표자의 답</span><b>책임지는 사람과 같은 루프</b><span class="muted">에이전트를, 그 일의 결과를 책임지는 사람들과 함께 루프 안에 둔다</span></div>
+        </div>
+        <p>모델은 계속 좋아진다. 닫힌 모델에서 공개 모델로, 비싼 모델에서 싼 모델로 넓어진다. 그래서 에이전트 우선은 이름과 거의 반대 뜻이 됐다. 어떤 의미에서 <strong>에이전트는 먼저 가지 않는다.</strong></p>
+        <p>"에이전트가 무엇에 연결되나"는 더 이상 차별점이 아니다. 요즘은 누구의 에이전트든 모든 것에 연결된다. Claude는 새 커넥터도 바로 만들어 준다.</p>
+        <blockquote>에이전트가 자신 있게 틀렸을 때, 누가 알아차리는가? 얼마나 빨리 알아차리는가?<cite>발표자의 질문을 옮김 <span class="ts">15:50</span></cite></blockquote>
+        <p>이 질문에 맞춰 만들면, 사람들이 실제 일을 맡길 만큼 믿는 것을 만들 수 있다.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트 우선은 모델 최적화가 아니라 구조 문제다. 기준 질문은 <strong>"에이전트가 틀리면 누가 값을 치르나"</strong>다.</li>
+          <li>자동 모드는 조용히 틀리고, 사용자 우선은 채팅봇에 머문다. 이기는 쪽은 <strong>사람이 확인할 수 있는 범위의 능력</strong>을 주는 방식이다.</li>
+          <li>잘 고른 데모는 아무것도 증명하지 않는다. 진짜 시험은 팀 전원에게 풀었을 때 온다.</li>
+          <li>API 엔드포인트를 1:1로 옮긴 MCP는 에이전트를 자신 있게 틀리게 만들었다. 해결은 프롬프트가 아니라 <strong>구조</strong>였다.</li>
+          <li>도구는 적게, 일의 구조를 담아서. 자주 쓰는 조합은 <strong>도구 하나로 묶고</strong> 다음 단계를 안내한다.</li>
+          <li>에이전트는 상태가 없다. 현재 상태와 오류 코드를 한 번에 돌려주는 <strong>스냅샷 도구</strong>를 준다.</li>
+          <li>실행 중 실패는 오류 없이 조용히 일어난다. <strong>결과의 신뢰도</strong>를 모델에 돌려준다.</li>
+          <li>모호하면 <strong>추측하지 말고 묻게</strong> 한다. 평가에서 근거가 약한 가정을 실패로 처리한다.</li>
+          <li>세션 기록에서 사람이 고친 곳, 신뢰도가 낮던 곳, 질문한 곳을 모아 안내를 고친다. <strong>쓸수록 나아진다.</strong></li>
+          <li>연결은 누구나 한다. 차별점은 <strong>자신 있게 틀렸을 때 누가, 얼마나 빨리 알아차리는가</strong>다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 에이전트 우선 소프트웨어의 기준으로 삼는 질문은?</span></summary><div class="answer">"에이전트가 틀리면 누가 값을 치르나." 하네스, API, 프롬프트 다듬기는 모델을 최적화하는 일이고, 에이전트 우선은 구조의 문제다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>자동 모드와 사용자 우선 방식은 각각 어떻게 실패하나?</span></summary><div class="answer">자동 모드는 에이전트가 자신만만하게 틀려서 아무도 모르고, 그 피해가 고객에게 간다. 사용자 우선은 설정 손잡이만 많고 에이전트는 채팅봇 수준이라, 사용자의 이해와 에이전트의 능력이 모두 막힌다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>첫 MVP는 어떻게 생겼고, 그 데모는 왜 아무것도 말해 주지 못했나?</span></summary><div class="answer">API 엔드포인트마다 MCP 도구를 하나씩 붙인 큰 파일 하나였다. 무엇을 하는지 잘 아는 발표자가 잘 고른 상황에서 보여 준 데모라, 실제 사용자가 쓸 때 어떻게 될지는 알 수 없었다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>팀 전원에게 풀었을 때 어떤 일이 벌어졌나?</span></summary><div class="answer">어설픈 설명만 받고도 에이전트가 워크플로를 끝까지 만들고 다 맞다고 했다. 사용자도 에이전트도 그 워크플로가 무엇을 하는지 설명하지 못했다. 에이전트는 모르겠다고 하지 않았고, 사람이 확인할 자리도 없었다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>다시 만든 MCP에서 도구를 어떻게 바꿨나?</span></summary><div class="answer">도구 수를 줄이고 실제 일의 구조를 담았다. 분류에서 추출로 넘기는 흔한 조합을 도구 하나로 묶었고, 단계마다 다음에 할 일을 안내했으며, 일부 도구는 자동으로 이어지게 했다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>스냅샷 도구를 만든 이유는?</span></summary><div class="answer">에이전트는 상태가 없다. 파이프라인의 현재 상태와 구체적인 오류 코드를 한 번에 받으면, 변수 이름을 추측하거나 지어내지 않고 실제로 있는 것을 참조한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>에이전트에게 API 대신 무엇을 건네야 하나?</span></summary><div class="answer">전문성을 담은 도구. 올바른 패턴, 상태, 검증기를 담아서 맞는 길이 가장 쉬운 길이 되게 한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>실행 중 실패가 "조용하다"는 건 무슨 뜻인가?</span></summary><div class="answer">눈에 보이는 오류 없이 파이프라인이 끝까지 돈다. 예를 들어 문서 100건 중 30쪽의 스캔을 놓치거나, 문서 종류가 정해지지 않은 채 돌아간다. 에이전트는 자신 있게 틀리고 불확실성은 보이지 않는다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>두 종류의 불확실성과 각각의 대응은?</span></summary><div class="answer">결과의 불확실성은 신뢰도 점수와 바운딩 박스를 모델에 돌려줘 스키마를 개선한다. 에이전트 자신의 불확실성은 추측하거나 멈추지 말고 사용자에게 묻게 하고, 평가에서 근거 약한 가정을 실패로 처리한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>자동 모드, 조용한 오답, 보상 해킹의 공통 모양은?</span></summary><div class="answer">에이전트의 자율성과 권한이 사람이 확인할 수 있는 범위보다 컸다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>에이전트가 가장 강하고 실수가 가장 싼 단계는 어디이고, 왜 그런가?</span></summary><div class="answer">파이프라인과 스키마를 만들고 맥락을 끌어오는 구성 단계다. 사람이 바로 옆에 있어서 실수를 금방 잡을 수 있다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>스스로 나아지는 루프를 위해 세션 기록에서 찾은 세 가지 신호는?</span></summary><div class="answer">사람이 에이전트를 뒤집은 곳, 모델의 신뢰도가 낮던 곳, 에이전트가 질문한 곳. 이를 MCP의 장기 안내에 반영했다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 에이전트가 틀리면 누가 값을 치르는지 적는다<span class="how">자동 모드, 사용자 우선, 사용자를 돕는 방식 중 어디에 가까운지</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>데모 대신 팀 전원에게 풀어서 시험한다<span class="how">확인: 준비 안 된 입력을 받았을 때 에이전트가 어떻게 움직이는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>API 엔드포인트를 1:1로 옮긴 MCP 도구를 점검한다<span class="how">늘 같이 쓰는 단계는 도구 하나로 묶는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>도구 응답에 다음 단계 안내를 넣는다<span class="how">정답이 정해진 순서는 에이전트가 고르지 않게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>현재 상태를 한 번에 돌려주는 조회 도구를 만든다<span class="how">전체 흐름의 맥락과 구체적인 오류 코드를 담는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>결과의 신뢰도를 모델과 사용자에게 보여 준다<span class="how">확인: 조용히 틀린 결과를 찾아낼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>모호하면 질문하게 하고, 평가로 확인한다<span class="how">근거가 약한 가정 위에 만든 결과는 평가에서 실패로 처리한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트가 무엇을 왜 했는지 설명하게 한다<span class="how">사용자가 검토할 수 있는 형태로 남긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>세션 기록에서 사람이 고친 곳, 신뢰도가 낮던 곳, 질문한 곳을 모은다<span class="how">모은 것을 도구 안내에 반영한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트 우선 소프트웨어</td><td>Agent-first software. 에이전트가 쓰는 것을 전제로 설계한 소프트웨어</td></tr>
+              <tr><td>자동 모드</td><td>Auto mode. 프롬프트만 주고 에이전트가 알아서 끝까지 하게 두는 방식</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. AI 에이전트가 외부 도구와 데이터에 접속하는 표준 방식</td></tr>
+              <tr><td>MCP 도구</td><td>MCP 서버가 에이전트에게 열어 주는 기능 하나. 에이전트가 이름을 불러 실행한다</td></tr>
+              <tr><td>엔드포인트</td><td>Endpoint. API에서 요청 하나를 받는 주소</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙, 검사를 정해 주는 실행 틀</td></tr>
+              <tr><td>파이프라인</td><td>Pipeline. 여러 처리 단계를 순서대로 이은 흐름</td></tr>
+              <tr><td>파싱 / 분류 / 추출</td><td>Parse / classify / extract. 문서를 읽어 내고, 종류를 가르고, 필요한 값을 뽑는 단계</td></tr>
+              <tr><td>스키마</td><td>Schema. 추출할 항목과 형식을 정한 틀</td></tr>
+              <tr><td>비정형 데이터</td><td>Unstructured data. 표나 필드로 정리되지 않은 데이터. 스캔 문서, 자유 형식 글 등</td></tr>
+              <tr><td>환각</td><td>Hallucination. 모델이 없는 내용을 그럴듯하게 지어내는 것</td></tr>
+              <tr><td>상태가 없다</td><td>Stateless. 이전 호출에서 무엇을 했는지 스스로 기억하지 못한다</td></tr>
+              <tr><td>스냅샷</td><td>Snapshot. 어느 순간의 상태를 통째로 찍어 돌려준 것</td></tr>
+              <tr><td>신뢰도 점수</td><td>Confidence score. 결과가 얼마나 확실한지 나타낸 숫자</td></tr>
+              <tr><td>바운딩 박스</td><td>Bounding box. 값을 읽어 낸 문서 위 위치를 감싼 사각형</td></tr>
+              <tr><td>검증기</td><td>Validator. 결과가 규칙에 맞는지 확인하는 장치</td></tr>
+              <tr><td>세그폴트</td><td>Segmentation fault. 프로그램이 잘못된 메모리에 접근해 바로 죽는 오류</td></tr>
+              <tr><td>평가 (eval)</td><td>모델이나 시스템의 결과 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>보상 해킹</td><td>Reward hacking. 진짜 목표 대신 채점 기준의 빈틈을 맞춰 점수를 얻는 것</td></tr>
+              <tr><td>사람 확인 루프</td><td>Human in the loop. 에이전트가 일하는 흐름 안에 사람이 판단하고 확인하는 자리를 두는 것</td></tr>
+              <tr><td>계측</td><td>Instrumentation. 시스템이 어떻게 쓰이는지 기록을 남기도록 장치하는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자와 Reducto 소개</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>문서 30억 건 처리, 고객사</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>깨끗한 문서는 쉽고, 운영 환경이 어렵다</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>Mean Girls 스티커와 "에이전트 우선이 뭐야?"</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>에이전트 우선은 구조 문제</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>누가 값을 치르나: 세 가지 방식</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>Reducto 파이프라인과 설정 부담</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>MCP 서버로 방향을 정하다</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>Claude Code로 만든 MVP와 데모</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>팀에 풀자 무너짐</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>프롬프트가 아니라 구조 문제, 파일 삭제</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>classify → extract를 묶은 도구, 다음 단계 안내</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>상태 스냅샷 도구</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>API 대신 전문성을 담은 도구</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>실행 중의 조용한 실패</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>불확실성이 보이게: 신뢰도 점수</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>추측 대신 질문하게 하기</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>최종 판단은 사람에게</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>세 실패의 공통 모양</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>지능은 구성 단계에 쓴다</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>계측과 스스로 나아지는 루프</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>영업팀이 스스로 쓰기 시작</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>결론: 에이전트는 먼저 가지 않는다</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>누가, 얼마나 빨리 알아차리나</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>마무리와 채용 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'jJQoVkd5yLg:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

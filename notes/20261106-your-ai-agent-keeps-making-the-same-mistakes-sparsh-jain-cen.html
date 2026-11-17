@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 경험 메모리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#problem">같은 실수를 반복하는 에이전트</a></li>
+      <li><a href="#context">맥락을 더 넣으면 될까</a></li>
+      <li><a href="#judgment">사람이 나아지는 이유</a></li>
+      <li><a href="#structure">기억의 구조</a></li>
+      <li><a href="#drift">세상이 바뀌면 기억도 낡는다</a></li>
+      <li><a href="#lifecycle">기억의 생명주기</a></li>
+      <li><a href="#forget">잊는 능력</a></li>
+      <li><a href="#verifier">모델이 검증자가 된다</a></li>
+      <li><a href="#retrieval">검색이 성능의 상한</a></li>
+      <li><a href="#speed">맥락 수집 20분 → 2분</a></li>
+      <li><a href="#dreaming">꿈꾸기 주기</a></li>
+      <li><a href="#rules">세 가지 원칙</a></li>
+      <li><a href="#team">팀 전체의 경험이 쌓인다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-06 · 15분 · 영어 발표 한글 정리</span>
+      <h1>에이전트는 왜 같은 실수를 반복하나</h1>
+      <p class="lead">사람은 일할수록 경험이 쌓이지만 에이전트는 매번 처음부터 시작한다. 발표자는 사실 대신 경험을 저장하고, 그 기억을 계속 고치고 잊고 골라 꺼내는 메모리 인프라로 이 문제를 풀자고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=SUqQlvyI3N8" target="_blank" rel="noopener">Your AI Agent Keeps Making the Same Mistakes</a></span>
+        <span>발표: Sparsh Jain (CentralAgent AI)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 "Sheriv Sherosky"로 들린 이름은 기억술사 솔로몬 셰레셰프스키로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트는 교정받은 내용을 다음 세션이나 다른 팀으로 가져가지 못한다. 그래서 <strong>같은 실수를 반복한다.</strong></li>
+        <li>맥락을 전부 넣어 주는 방법은 규모가 커지면 비용과 시간만 늘고 정확도는 떨어진다. <strong>맥락이 많다고 더 똑똑해지지 않는다.</strong></li>
+        <li>빠진 조각은 <strong>경험 기억</strong>이다. 장기 기억을 사실과 경험으로 나누고, 경험은 사례·전략·스킬 세 층으로 쌓는다.</li>
+        <li>기억은 한 번 만들고 끝나지 않는다. <strong>형성·갱신·검색</strong>의 생명주기로 관리하고, 갱신에는 비활성화와 잊기가 들어간다.</li>
+        <li><strong>검색이 시스템 성능의 상한</strong>이다. 엉뚱한 기억을 꺼내면 나머지가 다 소용없다.</li>
+        <li>모델이 <strong>검증자</strong> 역할을 할 만큼 좋아져서, 사람 없이 매일 교훈을 뽑고 검증해 반영하는 루프를 돌릴 수 있다.</li>
+        <li>원칙 셋: <strong>다 쏟아붓지 말고 단계적으로 보여 준다. 계속 개선한다. 프롬프트 대신 루프를 쓴다.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="problem">
+        <header><span class="num">01</span><h2>같은 실수를 반복하는 에이전트 <span class="ts">00:00</span></h2></header>
+        <p>2년 동안 AI 에이전트와 일했다면 사람은 2년치 경험을 얻는다. 에이전트는 그대로다.</p>
+        <p>팀원 10명이 같은 에이전트를 쓰면 사람 쪽 경험은 합쳐서 20년이 된다. 에이전트는 여전히 제자리다.</p>
+        <blockquote>문제는 에이전트가 똑똑하지 않다는 게 아니다. 같은 실수를 계속 반복한다는 것이다.<cite>세계 최대 헤지펀드의 한 임원이 발표자에게 한 말 (발표자가 전한 것을 옮김)</cite></blockquote>
+        <p>그 임원은 오늘 바로잡아도 다음 세션이나 다른 팀에서 같은 실수가 다시 나온다고 했다. 실수가 너무 많아서 하나하나 고칠 수도 없다. 그래서 이 문제를 푸는 <strong>장치, 곧 시스템</strong>이 필요하다고 했다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="context">
+        <header><span class="num">02</span><h2>맥락을 더 넣으면 될까 <span class="ts">01:00</span></h2></header>
+        <p>업계가 흔히 내놓는 답은 맥락 <span class="en">context</span>과 기억 <span class="en">memory</span>을 전부 에이전트에게 넘기는 것이다. 그러면 에이전트가 알아서 판단한다는 생각이다.</p>
+        <p>처음에는 잘 됐다. 기업 규모로 커지자 맥락이 너무 커졌다. 사실을 모두 넣으면 이렇게 된다.</p>
+        <ul class="plain">
+          <li>비용이 늘어난다</li>
+          <li>에이전트가 들이는 노력이 늘어난다</li>
+          <li>전체 시간이 늘어난다</li>
+          <li><strong>정확도와 성능은 오히려 떨어진다</strong></li>
+        </ul>
+        <div class="shift" aria-label="맥락에 대한 생각의 변화">
+          <div><span class="tag">처음 생각</span><b>맥락이 많을수록 똑똑해진다</b><span class="muted">맥락이 작을 때는 맞는 말이다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">겪어 본 뒤</span><b>어느 지점부터는 맥락이 늘어도 똑똑해지지 않는다</b><span class="muted">다른 방식이 필요하다</span></div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="judgment">
+        <header><span class="num">03</span><h2>사람이 나아지는 이유 <span class="ts">02:00</span></h2></header>
+        <p>발표자 팀은 처음으로 돌아가 물었다. 사람은 왜 시간이 지날수록 일을 더 잘하게 되나.</p>
+        <p>사람에게는 경험에서 나오는 <strong>판단력</strong>이 있다. 판단력은 배울 때, 실수할 때, 그 실수를 바로잡을 때마다 좋아진다.</p>
+        <p>에이전트에게 빠진 것이 이 조각이다. 기존 메모리는 정보를 저장할 뿐 배우지는 않았다.</p>
+        <p>발표자는 이 점을 반영해 시스템을 다시 만들자 성능이 <strong>10배</strong> 좋아졌다고 말한다.</p>
+        <p class="note">무엇을 성능으로 쟀는지, 무엇과 비교했는지는 발표에 나오지 않는다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="structure">
+        <header><span class="num">04</span><h2>기억의 구조 <span class="ts">02:50</span></h2></header>
+        <p>발표자 팀이 정리한 메모리의 구조는 이렇다. 먼저 단기 기억과 장기 기억으로 나누고, 장기 기억을 다시 둘로 나눈다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기억</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>단기 기억</td><td>작업 기억 <span class="en">working memory</span>. 지금 진행 중인 세션에서 쓰는 기억이다</td></tr>
+              <tr><td>장기 · 사실 기억</td><td><span class="en">fact-based memory</span>. 사실을 저장한다</td></tr>
+              <tr><td>장기 · 경험 기억</td><td><span class="en">experiential memory</span>. 에이전트와 함께 한 일에서 뽑아낸 교훈이다. <strong>그동안 빠져 있던 층</strong>이고, 발표자는 이것이 사람과 기존 AI를 가르는 차이라고 본다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>경험 기억의 세 층 <span class="ts">03:20</span></h3>
+        <p>경험 기억은 다시 세 가지로 나뉜다. 아래로 갈수록 더 일반화된다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">사례 기반 · case-based</span>
+            <p>구체적인 사건 하나와 거기서 얻은 교훈을 자세히 남긴다.</p>
+            <p class="verdict"><b>예시</b>: "결제 API를 바꾸다가 타임아웃 설정을 빠뜨려 장애가 났다. 원인과 고친 과정은 이렇다."</p>
+          </div>
+          <div class="card">
+            <span class="tag">전략 기반 · strategy-based</span>
+            <p>그런 상황에 놓였을 때 어떤 방법이 통했고, 다음에는 무엇을 써야 하는지 남긴다.</p>
+            <p class="verdict"><b>예시</b>: "외부 API를 바꿀 때는 타임아웃과 재시도 설정부터 확인한다."</p>
+          </div>
+          <div class="card">
+            <span class="tag">스킬 기반 · skill-based</span>
+            <p>여러 상황에 두루 통하는 것을 뽑아 스킬 <span class="en">skill</span>로 만든다. 에이전트는 이 스킬을 반복해서 꺼내 쓴다.</p>
+            <p class="verdict"><b>예시</b>: "API 교체 점검 절차"라는 문서를 만들어 두고, 비슷한 작업마다 에이전트가 따른다.</p>
+          </div>
+        </div>
+        <p class="note">카드 아래쪽 예시는 이해를 돕기 위해 만든 것이고 발표에는 없다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="drift">
+        <header><span class="num">05</span><h2>세상이 바뀌면 기억도 낡는다 <span class="ts">04:10</span></h2></header>
+        <p>경험 기억을 만들고 나서 발표자 팀은 문제를 다 풀었다고 생각했다. 실제로는 시작일 뿐이었다. 이 단계에 와서야 더 큰 문제가 보였다.</p>
+        <p>시스템은 아주 빨리 바뀐다. 발표자는 세 가지 변화를 꼽는다.</p>
+        <ul class="plain">
+          <li><strong>데이터 드리프트</strong> <span class="en">data drift</span>: 다루는 데이터가 바뀐다</li>
+          <li><strong>시스템 드리프트</strong> <span class="en">system drift</span>: 쓰는 시스템이 바뀐다</li>
+          <li><strong>환경 드리프트</strong> <span class="en">environment drift</span>: 일하는 환경 전체가 바뀐다</li>
+        </ul>
+        <p>세상은 매주, 매달 바뀐다. 발표자는 AI 분야에서는 1년이 10년처럼 느껴진다고 말한다. 오늘 잘 되는 에이전트가 한 달 뒤, 1년 뒤에도 잘 된다는 보장이 없다.</p>
+        <p>여러 실험 끝에 내린 결론: <strong>기억은 한 번 만들고 끝나는 게 아니라 시간이 지나며 계속 고쳐 나가야 한다.</strong></p>
+      </section>
+
+      <!-- 6 -->
+      <section id="lifecycle">
+        <header><span class="num">06</span><h2>기억의 생명주기 <span class="ts">05:10</span></h2></header>
+        <p>그래서 발표자 팀은 메모리를 세 단계의 생명주기로 다룬다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>형성 <span class="en">formation</span></td><td>경험과 사실에서 기억을 만든다. 앞에서 본 사실 기억과 경험 기억이 여기서 생긴다</td></tr>
+              <tr><td>갱신 <span class="en">update</span></td><td>새 경험이나 사실이 생기면 노트를 더한다. 오래된 노트를 고친다. 쓸모없어진 노트를 비활성화한다. 그리고 잊는다</td></tr>
+              <tr><td>검색 <span class="en">retrieval</span></td><td>지금 필요한 기억을 골라 꺼낸다. 발표자는 이 단계를 아주 중요하게 본다 (9장)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>최종 판단만 남기면 생기는 문제 <span class="ts">05:50</span></h3>
+        <p>갱신할 때 최종 결론만 남기고 예전 노트를 지우면 위험하다. 에이전트가 실수로, 이미 버린 예전 결론으로 되돌아갈 수 있다.</p>
+        <p>그래서 버린 노트를 지우지 않고 <strong>비활성 노드</strong>로 남긴다. 비활성 노드는 시스템이 지금의 결론에 이르기까지 거쳐 온 시간 순서의 기록이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">얕은 조사 · surface-level</span>
+            <p><strong>활성 노드만</strong> 본다. 지금 유효한 결론만 빠르게 쓴다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">깊은 조사 · deeper research</span>
+            <p><strong>활성 노드와 비활성 노드를 함께</strong> 본다. 결론이 어떻게 바뀌어 왔는지까지 확인한다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="forget">
+        <header><span class="num">07</span><h2>잊는 능력 <span class="ts">06:10</span></h2></header>
+        <p>갱신의 마지막 요소는 잊기 <span class="en">forgetting</span>다. 발표자는 이것을 빼놓을 수 없는 부분이라고 강조한다.</p>
+        <div class="callout">
+          <span class="title">거의 모든 것을 기억한 사람 <span class="ts">06:20</span></span>
+          <span>솔로몬 셰레셰프스키는 거의 완벽한 기억력으로 알려진 사람이다. 발표자의 설명에 따르면, 연구자들이 셰레셰프스키의 삶을 살펴보니 작은 결정조차 무척 힘들어했다. 모든 기억이 같은 무게로 앞다퉈 떠올랐기 때문이다. 보통 사람이 순식간에 내리는 결정에서도 머릿속에서는 생각 백 개가 서로 싸웠다.</span>
+        </div>
+        <p class="note">발표에서는 "20세기 후반"의 인물이라고 했지만, 셰레셰프스키(1886~1958)를 심리학자 알렉산드르 루리야가 연구한 것은 1920년대부터다.</p>
+        <p>에이전트도 같다. 모든 것을 쌓기만 하고, 더는 사실이 아니거나 필요 없는 것을 잊지 않으면 시스템이 과부하에 걸린다. 결과도 나아지지 않는다.</p>
+        <p>그래서 <strong>잊는 장치</strong>가 따로 있어야 한다. 발표는 비활성화와 잊기를 따로 꼽지만, 둘을 어떤 기준으로 나누는지는 자세히 말하지 않았다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="verifier">
+        <header><span class="num">08</span><h2>모델이 검증자가 된다 <span class="ts">07:40</span></h2></header>
+        <p>발표자 팀은 단계를 밟아 왔다.</p>
+        <ol class="plain">
+          <li>에이전트에게 기억을 준다</li>
+          <li>경험에서 배우는 에이전트를 만든다</li>
+          <li>그 경험을 계속 고쳐 가는 에이전트를 만든다</li>
+        </ol>
+        <p>그런데 이 모든 과정을 사람이 손으로 했다. 발표자는 이것을 <strong>해결책의 절반</strong>이라고 부른다.</p>
+
+        <h3>지난 6개월의 진짜 변화 <span class="ts">08:00</span></h3>
+        <p>모델이 더 똑똑해진 것은 작은 부분이다. 더 큰 변화는 모델이 <strong>검증자</strong> <span class="en">verifier</span> 역할을 할 만큼 좋아졌다는 점이다.</p>
+        <div class="shift" aria-label="검증 주체의 이동">
+          <div><span class="tag">지금까지</span><b>사람이 루프 안에서 모든 것을 리뷰한다</b><span class="muted">사람이 빠지면 시스템이 나아지지 않는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이제</span><b>모델 검증 층을 시스템 안에 넣는다</b><span class="muted">시스템이 시간이 지나며 스스로 나아진다</span></div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="retrieval">
+        <header><span class="num">09</span><h2>검색이 성능의 상한 <span class="ts">08:40</span></h2></header>
+        <p>생명주기의 마지막 단계는 검색이다. 발표자의 주장은 짧다. <strong>시스템의 최대 성능은 검색의 최대 성능을 넘지 못한다.</strong></p>
+        <div class="callout">
+          <span class="title">"집 가는 지도" <span class="ts">09:00</span></span>
+          <span>발표자는 샌프란시스코에서 일하고, 샌프란시스코와 뉴욕에 집이 있다. 퇴근길에 에이전트에게 집 가는 지도를 부탁했다. 에이전트에게는 둘 다 "집"이었고, 뉴욕 집 경로를 띄웠다. 발표자는 가는 도중에야 잘못 가고 있다는 걸 알았다.</span>
+        </div>
+        <p>기억을 아무리 잘 만들고, 잘 고치고, 경험을 많이 쌓아도 소용없다. 검색이 맞는 정보를 꺼내지 못하면 <strong>시스템 전체가 쓸모없어진다.</strong></p>
+      </section>
+
+      <!-- 10 -->
+      <section id="speed">
+        <header><span class="num">10</span><h2>맥락 수집 20분 → 2분 <span class="ts">10:00</span></h2></header>
+        <p>형성, 갱신, 검색이 다 갖춰지면 메모리의 생명주기가 완성된다. 발표자는 그 효과를 숫자로 든다.</p>
+
+        <figure class="chart" aria-label="에이전트가 맥락을 모으는 데 걸린 시간: 이전 20분, 메모리를 쌓은 뒤 2분">
+          <span class="chart-title">에이전트가 맥락을 모으는 데 걸린 시간 (분)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>이전</span><span class="val">20분</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="이전: 20분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>맥락을 미리 모아 둔 뒤</span><span class="val">2분</span></div>
+              <div class="track"><div class="fill key" style="width:10%" title="맥락을 미리 모아 둔 뒤: 2분"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>10</span><span>20</span></div>
+          <span class="caption">발표자 팀의 여러 작업에서 걸린 시간. 10분의 1로 줄었다.</span>
+        </figure>
+
+        <p>시간만 준 게 아니다. 에이전트가 들이는 노력과 토큰 비용도 줄었다. 긴 작업 <span class="en">long-horizon task</span>의 성능도 좋아졌다. 이미 생각해 둔 것을 다시 생각할 필요가 없기 때문이다.</p>
+        <p class="note">발표자는 CentralAgent AI 소속이다. 10배 성능, 20분에서 2분 같은 수치는 발표자 팀이 만든 시스템에 대한 주장이고, 무엇을 어떻게 쟀는지는 발표에 나오지 않는다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="dreaming">
+        <header><span class="num">11</span><h2>꿈꾸기 주기 <span class="ts">10:40</span></h2></header>
+        <p>다음 단계는 시스템이 스스로 진화하고 경험을 쌓게 만드는 것이다. 발표자 팀은 이를 꿈꾸기 주기 <span class="en">dreaming cycle</span>라고 부른다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>하는 일</th><th>사람이 잘 때 (발표자의 비유)</th><th>에이전트의 꿈꾸기 주기</th></tr></thead>
+            <tbody>
+              <tr><td>정리</td><td>더는 중요하지 않은 것을 치운다</td><td>더는 중요하지 않은 기억을 치운다</td></tr>
+              <tr><td>우선순위</td><td>중요한 것을 앞으로 가져온다</td><td>먼저 써야 할 기억을 갱신한다</td></tr>
+              <tr><td>재배치</td><td>남은 것을 다시 정돈한다</td><td>맥락이 쌓일 때마다 다시 정돈한다</td></tr>
+              <tr><td>결과</td><td>다음 날 개운하게 깨어 맑게 생각한다</td><td>맥락이 쌓일수록 일을 더 잘한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이를 위해 발표자 팀은 반복 실행하는 루프와 평가 <span class="en">eval</span> 인프라를 만들었다.</p>
+        <p class="note">주기를 얼마마다 돌리는지, 무엇으로 평가하는지 같은 구현 세부는 발표에 나오지 않는다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="rules">
+        <header><span class="num">12</span><h2>세 가지 원칙 <span class="ts">11:50</span></h2></header>
+        <p>발표자는 2년 동안 이 인프라를 만들며 얻은 원칙 세 가지를 꼽는다. 이제는 어느 한 사람보다 많은 경험을 에이전트에게 줄 수 있다고 말한다.</p>
+        <ol class="plain">
+          <li><strong>다 쏟아붓지 않는다.</strong> 필요한 만큼씩 단계적으로 보여 준다. 이를 단계적 공개 <span class="en">progressive disclosure</span>라고 한다.</li>
+          <li><strong>한 번 만들고 끝내지 않는다.</strong> 시스템이 계속 잘할 거라고 가정하지 말고 꾸준히 개선한다.</li>
+          <li><strong>프롬프트 대신 루프를 쓴다.</strong> 그래야 인프라 전체가 사람 손 없이 돌아간다.</li>
+        </ol>
+
+        <h3>루프를 쌓는 순서 <span class="ts">12:20</span></h3>
+        <p>발표자가 든 예시는 세 층이다.</p>
+        <ol class="plain">
+          <li><strong>메모리 층</strong>: 형성, 갱신, 검색을 만든다.</li>
+          <li><strong>관측 층</strong>: 메모리 층 둘레에 관측 가능성 <span class="en">observability</span>을 만든다. 시스템 안에서 무슨 일이 일어나는지 보이게 한다.</li>
+          <li><strong>루프 + 평가 층</strong>: 세션이 끝날 때마다, 하루가 끝날 때마다 돈다.
+            <ul class="plain">
+              <li>교훈을 뽑는다</li>
+              <li>시스템을 개선한다</li>
+              <li>실제 시스템과 떨어진 곳에서 따로 테스트한다</li>
+              <li>통과하면 실제 시스템에 반영한다</li>
+            </ul>
+          </li>
+        </ol>
+        <p class="note">루프와 평가, 메모리 인프라를 둘러싼 보안 가드레일 <span class="en">guardrail</span>은 다음 발표 주제로 미뤘다. 자막의 "security gardens"는 guardrails로 읽었다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="team">
+        <header><span class="num">13</span><h2>팀 전체의 경험이 쌓인다 <span class="ts">13:00</span></h2></header>
+        <p>처음 문제로 돌아간다. 이제 에이전트는 발표자와 일할 때도, 팀원 누구와 일할 때도 경험을 얻는다.</p>
+
+        <figure class="chart" aria-label="1년 동안 쌓이는 경험: 사람 한 명 1년치, 팀원 10명과 일한 에이전트 10년치">
+          <span class="chart-title">1년 동안 쌓이는 경험 (년치)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>사람 한 명</span><span class="val">1</span></div>
+              <div class="track"><div class="fill" style="width:10%" title="사람 한 명: 1년치"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>팀원 10명과 일한 에이전트</span><span class="val">10</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="팀원 10명과 일한 에이전트: 10년치"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>5</span><span>10</span></div>
+          <span class="caption">발표자의 계산. 팀원 10명이 가르친 것이 모두 에이전트 하나에 쌓인다고 가정한다. 처음에 나온 "10명 × 2년 = 20년"도 같은 계산이다.</span>
+        </figure>
+
+        <p>발표자는 이런 에이전트가 팀의 어느 한 사람보다 나아진다고 말한다. 사람과 AI 에이전트가 함께 움직이는 자율 팀도 나타나고 있다고 한다. 발표자가 아는 몇몇 팀은 10배, 100배의 효과를 본다고 했다.</p>
+        <p class="note">10배·100배 팀, 최고의 엔지니어보다 나은 에이전트는 발표자가 아는 사례로 든 것이고 근거 자료는 제시되지 않았다.</p>
+
+        <h3>발표자의 전망 <span class="ts">13:50</span></h3>
+        <p>앞으로 6~9개월 안에 에이전트끼리 협업하고 모든 것을 기억하는 자율 AI 회사가 늘어난다고 예측한다. 발표 시점(2026년 11월)으로 따지면 2027년 중반쯤이다.</p>
+        <p>에이전트는 한 사람이 아니라 팀원 모두와 함께 배우므로, 성과가 시간에 따라 복리로 커진다는 것이 발표자의 주장이다.</p>
+        <blockquote>실수를 기억하지 못하는 사람도, 에이전트도 그 실수를 되풀이하게 된다.<cite>발표자의 마지막 말을 옮김 <span class="ts">14:40</span></cite></blockquote>
+        <p class="note">조지 산타야나의 "과거를 기억하지 못하는 사람은 그것을 되풀이하게 된다"를 바꿔 쓴 말로 보인다.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트는 교정받은 내용을 다음 세션과 다른 팀으로 가져가지 못해 <strong>같은 실수를 반복한다.</strong></li>
+          <li>맥락을 전부 넣으면 규모가 커질수록 비용과 시간은 늘고 정확도는 준다. <strong>맥락의 양은 지능이 아니다.</strong></li>
+          <li>사람은 경험에서 판단력을 얻어 나아진다. 에이전트에게 빠진 것이 이 <strong>경험 기억</strong>이다.</li>
+          <li>기억은 단기(작업 기억)와 장기로 나뉘고, 장기 기억은 <strong>사실 기억과 경험 기억</strong>으로 나뉜다.</li>
+          <li>경험 기억은 <strong>사례 → 전략 → 스킬</strong>로 갈수록 일반화된다.</li>
+          <li>데이터·시스템·환경이 계속 바뀌므로 기억은 <strong>형성·갱신·검색</strong>의 생명주기로 계속 관리한다.</li>
+          <li>버린 결론은 <strong>비활성 노드</strong>로 남겨 깊은 조사 때 과정을 볼 수 있게 한다. 더는 맞지 않는 것은 <strong>잊는다.</strong></li>
+          <li>시스템 성능의 상한은 <strong>검색</strong>이다. 엉뚱한 기억을 꺼내면 나머지는 소용없다.</li>
+          <li>모델이 <strong>검증자</strong>가 되면서, 세션마다 교훈을 뽑고 따로 테스트해 반영하는 루프(꿈꾸기 주기)를 사람 없이 돌릴 수 있다.</li>
+          <li>원칙 셋: <strong>단계적 공개, 지속 개선, 프롬프트 대신 루프.</strong> 그러면 팀 전체의 경험이 에이전트 하나에 쌓인다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>헤지펀드 임원이 말한 에이전트의 진짜 문제는?</span></summary><div class="answer">에이전트가 똑똑하지 않은 게 아니다. 교정받은 내용을 다음 세션이나 다른 팀에서 기억하지 못해 같은 실수를 반복한다. 실수가 너무 많아 하나씩 고칠 수도 없으니 시스템이 필요하다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>모든 맥락과 기억을 넘겨주는 방법은 규모가 커지면 왜 실패하나?</span></summary><div class="answer">맥락이 너무 커져 비용, 노력, 시간이 늘고 정확도와 성능은 오히려 떨어진다. 어느 지점을 넘으면 맥락이 늘어도 더 똑똑해지지 않는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>장기 기억의 두 갈래와 경험 기억의 세 층은?</span></summary><div class="answer">장기 기억은 사실 기억과 경험 기억으로 나뉜다. 경험 기억은 사례 기반(구체적 사건과 교훈), 전략 기반(그 상황에서 통한 방법), 스킬 기반(일반화해 반복해서 쓰는 것)으로 나뉜다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>기억을 한 번 만들고 끝낼 수 없는 이유는?</span></summary><div class="answer">데이터, 시스템, 환경이 계속 바뀐다(드리프트). 오늘 잘 되는 에이전트가 한 달 뒤에는 안 될 수 있다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>메모리 생명주기의 세 단계와, 갱신 단계에서 하는 일은?</span></summary><div class="answer">형성, 갱신, 검색. 갱신에서는 새 노트를 더하고, 오래된 노트를 고치고, 쓸모없어진 노트를 비활성화하고, 잊는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>최종 결론만 남기지 않고 비활성 노드를 두는 이유는?</span></summary><div class="answer">최종 결론만 있으면 에이전트가 실수로 이미 버린 예전 결론으로 돌아갈 수 있다. 얕은 조사는 활성 노드만 보고, 깊은 조사는 비활성 노드까지 보며 결론에 이른 과정을 확인한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>셰레셰프스키 이야기가 에이전트 설계에 주는 교훈은?</span></summary><div class="answer">모든 것을 기억하면 모든 기억이 같은 무게로 다퉈 작은 결정도 어려워진다. 에이전트에도 더는 맞지 않거나 필요 없는 기억을 잊는 장치가 있어야 한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>발표자가 꼽은 지난 6개월의 더 큰 변화는?</span></summary><div class="answer">모델이 검증자 역할을 할 만큼 좋아졌다. 그래서 사람이 모든 것을 리뷰하는 대신 모델 검증 층을 시스템 안에 넣어 시스템이 스스로 나아지게 할 수 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>"집 가는 지도" 예시가 보여 주는 것은?</span></summary><div class="answer">형성과 갱신이 아무리 좋아도 검색이 엉뚱한 기억(뉴욕 집)을 꺼내면 소용없다. 시스템의 최대 성능은 검색의 최대 성능을 넘지 못한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>꿈꾸기 주기에서 에이전트가 하는 세 가지 일은?</span></summary><div class="answer">더는 중요하지 않은 기억을 치우고, 먼저 써야 할 기억을 갱신하고, 맥락이 쌓일 때마다 다시 정돈한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>발표자의 세 가지 원칙은?</span></summary><div class="answer">다 쏟아붓지 말고 단계적으로 보여 준다. 한 번 만들고 끝내지 말고 계속 개선한다. 프롬프트 대신 루프를 쓴다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트에게 두 번 이상 한 교정을 모은다<span class="how">확인: 같은 실수가 어떤 세션, 어떤 팀원에게서 반복되는지 목록이 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>팀원 모두의 교정이 같은 기억에 쌓이게 한다<span class="how">한 사람이 바로잡은 내용을 다른 팀원의 세션에서도 쓸 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>맥락을 통째로 넣지 않고 필요한 만큼 단계적으로 보여 준다<span class="how">확인: 정확도는 유지하면서 토큰과 응답 시간이 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>교훈을 사례·전략·스킬로 나눠 적는다<span class="how">여러 번 통한 전략은 스킬 문서로 올린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>기억에 날짜와 상태(활성/비활성)를 단다<span class="how">버린 결론도 지우지 말고 버린 이유와 함께 남긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>더는 맞지 않는 기억을 지우는 주기를 정한다<span class="how">확인: 낡은 사실 때문에 생기는 오류가 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>검색이 맞는 기억을 꺼내는지 점검한다<span class="how">"집"처럼 뜻이 여러 개인 요청을 테스트 사례로 넣는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>세션이 끝날 때마다 교훈을 뽑는 루프를 만든다<span class="how">관측 → 교훈 추출 → 따로 테스트 → 반영 순서. 반영 전후를 평가로 비교한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>맥락</td><td><span class="en">context</span>. 모델이 답을 만들 때 함께 받는 정보</td></tr>
+              <tr><td>단기 기억</td><td><span class="en">working memory</span>. 지금 진행 중인 세션에서 쓰는 기억. 작업 기억이라고도 한다</td></tr>
+              <tr><td>사실 기억</td><td><span class="en">fact-based memory</span>. 사실을 저장하는 장기 기억</td></tr>
+              <tr><td>경험 기억</td><td><span class="en">experiential memory</span>. 해 본 일에서 뽑아낸 교훈을 저장하는 장기 기억</td></tr>
+              <tr><td>사례 · 전략 · 스킬</td><td>경험 기억의 세 층. 구체적 사건, 그 상황에서 통한 방법, 일반화해 반복해서 쓰는 작업 방법</td></tr>
+              <tr><td>스킬</td><td><span class="en">skill</span>. 에이전트가 반복해서 꺼내 쓸 수 있게 일반화한 작업 방법</td></tr>
+              <tr><td>드리프트</td><td><span class="en">drift</span>. 시간이 지나며 데이터, 시스템, 환경이 바뀌어 예전 기준이 맞지 않게 되는 것</td></tr>
+              <tr><td>형성 · 갱신 · 검색</td><td><span class="en">formation · update · retrieval</span>. 기억을 만들고, 고치고, 꺼내는 생명주기의 세 단계</td></tr>
+              <tr><td>활성 / 비활성 노드</td><td>지금 유효한 기억 / 지금은 쓰지 않지만 결론에 이른 과정을 보여 주려고 남긴 기억</td></tr>
+              <tr><td>잊기</td><td><span class="en">forgetting</span>. 더는 사실이 아니거나 필요 없는 기억을 치우는 것</td></tr>
+              <tr><td>검증자</td><td><span class="en">verifier</span>. 결과가 맞는지 확인하는 역할. 발표에서는 모델이 사람 대신 이 역할을 맡는다</td></tr>
+              <tr><td>휴먼 인 더 루프</td><td><span class="en">human in the loop</span>. 사람이 반복 과정 안에서 매번 확인하는 방식</td></tr>
+              <tr><td>꿈꾸기 주기</td><td><span class="en">dreaming cycle</span>. 쉬는 동안 기억을 정리하고 우선순위를 바꾸고 다시 정돈하는 반복 작업</td></tr>
+              <tr><td>단계적 공개</td><td><span class="en">progressive disclosure</span>. 정보를 한꺼번에 주지 않고 필요할 때 필요한 만큼 보여 주는 방식</td></tr>
+              <tr><td>관측 가능성</td><td><span class="en">observability</span>. 시스템 안에서 무슨 일이 일어나는지 밖에서 볼 수 있는 정도</td></tr>
+              <tr><td>평가</td><td><span class="en">eval</span>. 모델이나 시스템의 결과 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>가드레일</td><td><span class="en">guardrail</span>. 시스템이 위험한 동작을 하지 않도록 막는 장치</td></tr>
+              <tr><td>긴 작업</td><td><span class="en">long-horizon task</span>. 여러 단계를 오래 이어 가야 끝나는 작업</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>사람은 2년치 경험, 에이전트는 제자리</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>헤지펀드 임원의 말: 같은 실수의 반복</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>맥락과 기억을 전부 넘기는 방법</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>규모가 커지면 비용은 늘고 정확도는 준다</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>사람이 나아지는 이유: 경험과 판단력</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>성능 10배 주장</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>단기 기억과 장기 기억, 사실 기억과 경험 기억</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>경험 기억의 세 층: 사례·전략·스킬</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>드리프트: 세상이 계속 바뀐다</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>생명주기: 형성·갱신·검색</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>최종 판단만 남기면 생기는 문제, 활성·비활성 노드</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>잊기의 필요성</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>셰레셰프스키 이야기</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>지금까지는 모두 사람 손으로: 해결책의 절반</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>모델이 검증자가 되었다</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>검색이 성능의 상한</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>"집 가는 지도" 예시</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>맥락 수집 20분 → 2분</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>꿈꾸기 주기</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>세 가지 원칙</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>메모리 층 → 관측 층 → 루프·평가 층</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>보안 가드레일은 다음 발표로</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>팀원 모두에게서 경험을 얻는 에이전트</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>사람과 에이전트의 자율 팀, 10배·100배 팀</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>6~9개월 전망: 자율 AI 회사</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>마무리: 실수를 기억하지 못하면 되풀이한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'SUqQlvyI3N8:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+<p></p>
+</html>

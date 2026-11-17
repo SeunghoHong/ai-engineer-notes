@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>컨텍스트 그래프 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#brain">컨텍스트 그래프는 회사의 두뇌</a></li>
+      <li><a href="#mcp">MCP 몇 개로는 부족하다</a></li>
+      <li><a href="#sync">동기화 계층: 사본을 가져온다</a></li>
+      <li><a href="#router">라우터와 요약기</a></li>
+      <li><a href="#skills">스킬: 회사마다 기준이 다르다</a></li>
+      <li><a href="#flow">질문 하나의 처리 흐름</a></li>
+      <li><a href="#tiers">컨텍스트의 네 층</a></li>
+      <li><a href="#select">컨텍스트를 고르는 순서</a></li>
+      <li><a href="#provenance">출처를 버리지 않는다</a></li>
+      <li><a href="#acme">종합 예시: Acme 상태 보고</a></li>
+      <li><a href="#takeaways">핵심 메시지와 Merge 제품</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-09 · 15분 · 영어 발표 한글 정리</span>
+      <h1>회사에는 왜 컨텍스트 그래프가 필요한가</h1>
+      <p class="lead">에이전트에 MCP 서버 몇 개를 붙인다고 회사를 이해하는 AI가 되지는 않는다. 데이터 사본, 실시간 조회, 회사의 판단 절차, 출처 기록을 한데 묶은 "회사의 두뇌"가 필요하다. 이 발표는 그 두뇌를 어떤 부품으로 짜는지 설명한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=cSz7aL2nl2U" target="_blank" rel="noopener">Why Your Company Needs a Context Graph (and How to Build It)</a></span>
+        <span>발표: Gil Feig (Merge 공동 창업자, CTO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름(발표자 이름, Merge, syncing)은 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>발표자가 말하는 컨텍스트 그래프는 노드와 엣지 구조가 아니다. <strong>외부 데이터, 정리된 문서, 메모리, 스킬을 묶은 회사의 두뇌</strong>다.</li>
+        <li>MCP로 외부 서비스를 그때그때 조회하면 "지난 1년간 화난 고객은?" 같은 넓은 질문에 답하지 못한다. 티켓을 100개씩 퍼 오다 <strong>시간 초과로 끊긴다.</strong></li>
+        <li>그래서 넓게 훑거나 뜻으로 찾을 데이터는 <strong>사본을 동기화해 자기 쪽 벡터 DB에 둔다.</strong> 고객 한 명 조회나 행동 하나는 실시간 조회로 충분하다.</li>
+        <li>가져온 데이터를 통째로 넘기지 않는다. <strong>라우터가 길을 정하고, 요약기가 줄여서 돌려준다.</strong></li>
+        <li>"화난 고객"의 뜻은 회사마다 다르다. 그 판단 기준을 <strong>스킬로 적고, 에이전트는 스킬부터 확인한다.</strong></li>
+        <li>컨텍스트는 네 층이다. 프롬프트·스킬·메모리, 실시간 API, 동기화 데이터, 그리고 가져오며 새로 만든 <strong>파생 컨텍스트</strong>.</li>
+        <li>모든 데이터에 <strong>출처를 남긴다.</strong> 어디서, 언제, 어떤 권한으로 가져왔고, 언제 버려야 하는지.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="brain">
+        <header><span class="num">01</span><h2>컨텍스트 그래프는 회사의 두뇌 <span class="ts">02:10</span></h2></header>
+        <p>발표자가 말하는 컨텍스트 그래프<span class="en"> context graph</span>는 점(노드)과 선(엣지)으로 이은 진짜 그래프 구조가 아니다. 에이전트가 회사에 대해 알아야 할 것을 모은 "회사의 두뇌"다. 네 가지로 이뤄진다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">외부 서비스 데이터 · third-party data</span>
+            <p>회사가 쓰는 다른 시스템의 데이터다. 예로 NetSuite, Jira를 든다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">정리된 컨텍스트 · structured context</span>
+            <p>외부에서 들어온 데이터나 직접 넣어 둔 자료다. 에이전트에 늘 함께 넘길 고정 문서도 여기 들어간다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">메모리 · memory</span>
+            <p>에이전트를 쓰면서 생기는 기억이다. 사용자가 기억하라고 한 것과 에이전트가 스스로 남긴 것이 있다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">스킬 · skill</span>
+            <p>회사가 일을 처리하는 방식을 적은 것이다. 발표자는 이걸 아주 중요한 부분으로 꼽는다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">발표가 다루지 않는 것</span>
+          <span>어떤 기술 제품을 쓸지는 말하지 않는다. 발표자는 그건 에이전트에게 물어보면 된다고 한다. 대신 왜 필요한지, 어떤 부품으로 어떻게 짜는지에 집중한다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="mcp">
+        <header><span class="num">02</span><h2>MCP 몇 개로는 부족하다 <span class="ts">03:10</span></h2></header>
+        <p>MCP<span class="en"> Model Context Protocol</span>는 에이전트를 외부 도구와 데이터에 연결하는 표준이다. 발표자는 MCP 서버 한두 개를 연결하고 끝내면 왜 부족한지 예로 보여 준다. 에이전트는 고객 지원 티켓 서비스 Zendesk에 연결돼 있다. 같은 질문을 조금씩 넓혀 본다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>에이전트가 할 일</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>"고객 A는 지난주에 왜 화가 났나?"</td><td>고객 A가 지난주에 낸 티켓만 찾는다</td><td>답할 수 있다. 티켓 3개, 원인은 API 동기화 고장</td></tr>
+              <tr><td>"지난주에 화난 고객은 누구인가?"</td><td>지난주 티켓을 전부 불러온다</td><td>훨씬 어려워진다</td></tr>
+              <tr><td>"지난 1년간 화난 고객은 누구인가?"</td><td>티켓을 100개씩 수천 번 불러온다</td><td>시간 초과<span class="en"> timeout</span>로 끝내 답하지 못한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>문제는 MCP 자체가 아니다. MCP 뒤에 있는 각 서비스의 API가 이런 대량 실시간 조회에 맞게 만들어져 있지 않다.</p>
+
+        <h3>서비스들은 의미 검색 창구를 열 이유가 없다 <span class="ts">04:40</span></h3>
+        <p>Jira 같은 서비스가 "지난주 화난 고객은?"을 영어 문장으로 물어볼 수 있는 엔드포인트<span class="en"> endpoint</span>를 준다면 문제는 풀린다. 발표자는 그럴 일이 없다고 본다. 이유는 두 가지다.</p>
+        <ul class="plain">
+          <li>데이터를 벡터화<span class="en"> vectorize</span>하는 데 서비스 회사의 돈이 든다. 벡터화는 글을 뜻이 담긴 숫자 목록으로 바꾸는 작업이다.</li>
+          <li>그런 창구가 생기면 사용자가 그 서비스에 덜 들어온다.</li>
+        </ul>
+      </section>
+
+      <!-- 3 -->
+      <section id="sync">
+        <header><span class="num">03</span><h2>동기화 계층: 사본을 가져온다 <span class="ts">04:50</span></h2></header>
+        <p>그래서 실시간 조회 위에 동기화 계층<span class="en"> syncing layer</span>이 필요하다. 외부 데이터의 사본을 가져와 자기 쪽 벡터 DB<span class="en"> vector database</span>에 둔다. 벡터 DB는 글자가 같은지가 아니라 뜻이 비슷한지로 찾아 주는 데이터베이스다.</p>
+        <p>모든 데이터를 동기화할 필요는 없다. 질문의 모양에 따라 나눈다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">실시간 조회 · live lookup <span class="ts">05:10</span></span>
+            <ul>
+              <li>특정 고객 한 명에 대해 묻는다</li>
+              <li>행동 하나를 실행한다</li>
+              <li>발표의 예: Stripe에 고객 한 명의 결제를 묻거나 결제 작업 하나를 한다</li>
+            </ul>
+            <p class="verdict"><b>MCP로 충분하다</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">동기화 사본 · synced copy</span>
+            <ul>
+              <li>뜻으로 찾는다 (의미 검색<span class="en"> semantic lookup</span>)</li>
+              <li>큰 데이터 전체를 훑어 분석한다</li>
+              <li>발표의 예: 지난 1년간 화난 고객 찾기</li>
+            </ul>
+            <p class="verdict"><b>사본이 꼭 필요하다</b></p>
+          </div>
+        </div>
+        <p>벡터 DB를 만드는 일은 AI가 꽤 쉽게 도와준다. 어려운 건 <strong>어떤 구조로 저장하고 어떻게 꺼낼지</strong> 정하는 전략이다.</p>
+        <p class="note">발표자는 외부 서비스 데이터 동기화 제품(Merge Unified)을 파는 회사의 CTO다. "MCP만으로는 부족하고 동기화가 필요하다"는 주장은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="router">
+        <header><span class="num">04</span><h2>라우터와 요약기 <span class="ts">06:00</span></h2></header>
+        <p>이제 데이터는 두 곳에서 온다. 벡터 DB에서 뜻으로 찾은 데이터와 실시간으로 조회한 데이터다. 이걸 모두 에이전트에게 쏟아부을 수는 없다. 양이 너무 많다. 그래서 부품 두 개를 더한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>부품</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>라우터 <span class="en">router</span></td><td>프롬프트가 들어오면 어느 에이전트가 맡을지, 어디로 보낼지 정한다</td></tr>
+              <tr><td>요약기 <span class="en">summarizer</span></td><td>동기화 데이터와 실시간 데이터를 모아 요약한다. 요약본을 프롬프트를 보낸 에이전트에게 돌려준다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="skills">
+        <header><span class="num">05</span><h2>스킬: 회사마다 기준이 다르다 <span class="ts">06:40</span></h2></header>
+        <p>메모리와 스킬은 따로 둬도 될 것 같다. 발표자는 이것도 컨텍스트 계층에 넣어야 한다고 말한다. <strong>컨텍스트를 고르는 일 자체가 회사의 원칙과 절차</strong>이기 때문이다.</p>
+        <p>"지난주에 화난 고객"을 가려내는 방법도 회사마다 다르다.</p>
+        <ul class="plain">
+          <li>열린 티켓 수로 볼 수 있다.</li>
+          <li>그런데 티켓 내용이 칭찬이라면 티켓 수는 불만의 증거가 아니다.</li>
+          <li>티켓 시스템을 아예 쓰지 않는 회사도 있다. 그런 회사는 고객 만족을 볼 때 늘 설문 서비스 Qualtrics부터 확인한다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">에이전트는 스킬부터 본다</span>
+          <span>"우리 회사는 고객이 만족했는지 어떻게 판단하나" 같은 스킬이 있으면, 어디서 무슨 데이터를 가져올지가 정해진다. 그다음에 동기화 데이터와 실시간 데이터를 찾고, 요약해서 돌려준다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="flow">
+        <header><span class="num">06</span><h2>질문 하나의 처리 흐름 <span class="ts">07:30</span></h2></header>
+        <ol class="plain">
+          <li><strong>라우팅</strong>: 프롬프트가 들어온다. 라우터가 맞는 에이전트로 보낸다.</li>
+          <li><strong>스킬·메모리 확인</strong>: 에이전트는 이 질문이나 작업에 맞는 메모리나 스킬이 있는지 본다.</li>
+          <li><strong>데이터 위치 결정</strong>: 그 결과로 동기화 캐시 DB와 실시간 MCP 조회 중 어디를 볼지 정한다.</li>
+          <li><strong>요약과 응답</strong>: 가져온 데이터를 요약해 돌려준다.</li>
+        </ol>
+        <p>발표자는 여기에 마법이 없다고 강조한다. 자기 사례에 맞게 계산만 잘하면 된다.</p>
+        <p>앞에서 본 "열린 티켓 수" 질문은 실시간 조회로는 불가능했다. 로컬 사본이 있으니 간단해졌다. 모든 고객의 티켓 수를 모으고, 티켓을 요약하고, 고객마다 상태를 매길 수 있다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="tiers">
+        <header><span class="num">07</span><h2>컨텍스트의 네 층 <span class="ts">08:30</span></h2></header>
+        <p>발표자는 에이전트에 들어가는 모든 것을 컨텍스트로 본다. 프롬프트, 스킬, 메모리를 컨텍스트라 부를지는 논란이 있을 수 있다. 그래도 모두 컨텍스트 계층에 넣는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>무엇인가</th><th>언제 쓰나</th><th>부담</th></tr></thead>
+            <tbody>
+              <tr><td>프롬프트·스킬·메모리</td><td>질문, 회사의 판단 절차, 쌓인 기억</td><td>늘. 데이터를 어디서 가져올지 정한다</td><td>-</td></tr>
+              <tr><td>실시간 API 호출</td><td>질문할 때 외부 서비스를 바로 부른다</td><td>단순 조회, 단순 가져오기</td><td>만들기 쉽고, 덧붙이기 쉽고, 돌리는 비용이 싸다</td></tr>
+              <tr><td>캐시(동기화) 데이터</td><td>외부 데이터의 사본을 벡터 DB에 둔다</td><td>의미 검색, 복잡한 조회, 깊은 질문</td><td>만들기 더 복잡하다. 벡터 DB와 계속되는 동기화 때문에 비싸다. 최신 상태를 지키기 어렵다</td></tr>
+              <tr><td>파생 컨텍스트 <span class="en">derived context</span></td><td>데이터를 가져오면서 새로 만든 요약 같은 정보</td><td>같은 질문이 반복될 때</td><td>다시 찾고 다시 요약하는 일을 줄인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>파생 컨텍스트의 예</strong> <span class="ts">09:20</span>: 고객 한 명의 티켓 전체를 가져올 때마다 요약을 만들어 정리된 컨텍스트 저장소에 넣어 둔다. 다음에 흔한 질문이 오면 다시 찾고 다시 요약하지 않아도 된다.</p>
+        <div class="callout">
+          <span class="title">고르는 기준</span>
+          <span>단순 조회라면 실시간 API를 먼저 쓴다. 넓게 훑거나 뜻으로 찾아야 할 때만 동기화 사본을 쓴다. 사본은 강력하지만 비싸고 관리가 어렵다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="select">
+        <header><span class="num">08</span><h2>컨텍스트를 고르는 순서 <span class="ts">10:00</span></h2></header>
+        <p>발표자가 보여 준 순서도를 표로 옮겼다. 프롬프트가 들어오면 1단계부터 내려간다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>확인할 것</th><th>예</th><th>아니오</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>맞는 스킬이나 메모리가 있나</td><td>그 스킬을 실행하고 2단계로</td><td>3단계로 가서 데이터를 고른다</td></tr>
+              <tr><td>2</td><td>스킬에 외부 데이터가 필요한가</td><td>3단계로</td><td>바로 답을 만들어 보낸다</td></tr>
+              <tr><td>3</td><td>동기화 데이터가 신선한가 (SLA 안인가)</td><td>캐시 컨텍스트를 쓴다</td><td>실시간 API를 부른다</td></tr>
+              <tr><td>4</td><td>컨텍스트가 충분한가</td><td>필요하면 알아낸 것을 메모리에 저장하고, 답을 만들어 보낸다</td><td>실시간 API로 더 모은다. 충분해질 때까지 몇 번 돈다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>여기서 SLA<span class="en"> Service Level Agreement</span>는 "이 데이터가 얼마나 최근이어야 믿고 쓸 수 있나"를 정한 신선도 기준이다.</p>
+        <p>새로 알아낸 것을 메모리로 남겨 두면, 다음 질문은 1단계에서 바로 찾을 수 있다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="provenance">
+        <header><span class="num">09</span><h2>출처를 버리지 않는다 <span class="ts">11:30</span></h2></header>
+        <p>추적 가능성<span class="en"> traceability</span>과 출처 기록<span class="en"> provenance</span>은 처음엔 중요해 보이지 않는다. 발표자는 데이터가 어디서 왔는지 절대 버리지 말라고 한다.</p>
+        <ul class="plain">
+          <li>MCP로 가져온 데이터에는 출처가 따라온다.</li>
+          <li>벡터 DB에 동기화한 데이터는 메타데이터<span class="en"> metadata</span>에 출처를 함께 저장한다. 메타데이터는 데이터 자체가 아니라 데이터에 대한 정보다.</li>
+        </ul>
+        <p>ChatGPT 같은 서비스가 답 끝에 "출처 3개"를 링크로 붙이는 것과 같은 원리다. 업무상 중요한 결정을 내릴 때는 더 중요하다. 데이터는 버전이 바뀌고 낡는다. 1년 전에 동기화한 데이터로 결정을 내리면 안 된다.</p>
+
+        <h3>남길 항목 <span class="ts">12:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>예시 값 (발표에 없음)</th></tr></thead>
+            <tbody>
+              <tr><td>어디서 가져왔나</td><td>Zendesk 티켓 API</td></tr>
+              <tr><td>언제 가져왔나</td><td>2026-10-09 09:12 UTC</td></tr>
+              <tr><td>어떤 ID와 스코프로 가져왔나</td><td>연동 계정 <code>support-sync</code>, 티켓 읽기 범위</td></tr>
+              <tr><td>누가 접근했나</td><td>질문한 사용자 <code>user-123</code></td></tr>
+              <tr><td>어떤 권한을 썼나</td><td>읽기 전용</td></tr>
+              <tr><td>변환했나, 원래 모습은</td><td>티켓 12개를 요약함. 원본 티켓 ID 목록을 함께 보관</td></tr>
+              <tr><td>무엇이 오면 무효인가</td><td>가져온 지 한 달이 지나면 쓰지 않는다 (발표의 예)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">왼쪽 질문 목록은 발표 내용이다. 오른쪽 값은 이해를 돕기 위해 만든 예시다.</p>
+        <p>이 기록은 두 곳에 쓰인다. 하나는 서비스 화면에 출처를 보여 주는 것이다. 다른 하나는 뭔가 잘못됐을 때 원인을 조사하는 것이다. 발표자는 잘못될 일은 반드시 생긴다고 덧붙인다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="acme">
+        <header><span class="num">10</span><h2>종합 예시: Acme 상태 보고 <span class="ts">12:40</span></h2></header>
+        <p>요청은 이렇다. "고객 Acme의 상태를 한 문단으로 정리해 줘. 재계약 위험과 마지막 지원 문의도 넣어서." 이 예에서는 맞는 스킬이 없다고 가정한다.</p>
+        <ol class="plain">
+          <li>캐시에서 Acme의 계정 요약을 찾는다.</li>
+          <li>요약이 낡았거나 없으면 CRM을 실시간 API로 조회한다.</li>
+          <li>티켓 시스템에서 마지막 지원 문의를 찾는다. 신선도 기준 안이면 캐시를, 아니면 실시간 조회를 쓴다.</li>
+          <li>실시간 조회라면 <strong>티켓은 최근 5개만</strong> 가져온다. 전체 이력을 끌어오면 시간 초과 위험이 있다.</li>
+          <li>파생 요약을 만든다. 필요하면 저장해 두고, 답으로 돌려준다.</li>
+        </ol>
+        <p>앞에서 본 부품이 모두 들어 있다. 캐시 우선, 신선도 확인, 실시간 조회의 양 제한, 파생 컨텍스트 저장이다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="takeaways">
+        <header><span class="num">11</span><h2>핵심 메시지와 Merge 제품 <span class="ts">13:30</span></h2></header>
+        <div class="shift" aria-label="에이전트 컨텍스트를 보는 관점의 이동">
+          <div><span class="tag">흔한 방식</span><b>도구를 연결한다</b><span class="muted">MCP 서버 몇 개를 붙이고 끝낸다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표의 제안</span><b>회사의 두뇌를 만든다</b><span class="muted">데이터, 동기화 사본, 회사의 절차, 도구와 행동을 한데 묶는다</span></div>
+        </div>
+        <ul class="plain">
+          <li><strong>도구는 컨텍스트가 아니다.</strong> 컨텍스트 그래프는 에이전트가 회사 전체를 가로질러 추론하게 해 준다.</li>
+          <li><strong>회사의 절차도 컨텍스트다.</strong> "고객이 항의하면 무엇을 하나", "어디로 보내나"를 적은 것이 스킬이다.</li>
+          <li><strong>데이터는 많을수록 좋은 게 아니다.</strong> 신선하고 질 좋은 데이터를 필요한 만큼만 가져온다. 동기화할 때는 맞는 방식으로 꺼낼 수 있게 구조를 잡는다.</li>
+          <li><strong>모든 답은 추적할 수 있어야 한다.</strong> AI가 나쁜 결정을 했는데 왜 그랬는지 모르는 상황을 만들지 않는다.</li>
+        </ul>
+
+        <h3>Merge 제품 소개 <span class="ts">14:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>제품</th><th>발표자의 설명</th><th>이 발표에서 맞닿는 부품</th></tr></thead>
+            <tbody>
+              <tr><td>Gateway</td><td>LLM 라우터</td><td>라우터</td></tr>
+              <tr><td>Unified</td><td>고객사가 쓰는 외부 서비스에서 데이터를 동기화</td><td>동기화 계층</td></tr>
+              <tr><td>Agent Handler</td><td>수백 개 도구에 미리 만든 실시간 MCP 연결. 권한이 관리된 신원과 출처 기록 포함</td><td>실시간 조회, 출처 기록</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 Merge의 공동 창업자이자 CTO다. 발표 초반에 엔터프라이즈 고객 400곳 이상(OpenAI, Ramp, Netflix, Perplexity 등), 직원 130명, 창업 6년이라고 회사를 소개했다. 발표의 구조도는 Merge 제품 세 가지와 그대로 맞물린다. 설계 원칙 자체는 일반적이지만 결론이 자사 제품 소개로 이어진다는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>컨텍스트 그래프는 외부 서비스 데이터, 정리된 컨텍스트, 메모리, 스킬을 묶은 <strong>회사의 두뇌</strong>다.</li>
+          <li>실시간 MCP 조회만으로는 넓은 질문에 답하지 못한다. 외부 API가 대량 조회에 맞지 않아 시간 초과가 난다.</li>
+          <li>서비스 회사들은 의미 검색 창구를 열 동기가 없다. 벡터화 비용이 들고 방문이 줄기 때문이다.</li>
+          <li>넓게 훑거나 뜻으로 찾을 데이터는 <strong>사본을 동기화해 벡터 DB에 둔다.</strong> 단건 조회와 단건 행동은 실시간으로 충분하다.</li>
+          <li>라우터가 요청을 맞는 곳으로 보내고, 요약기가 모은 데이터를 줄여 돌려준다.</li>
+          <li>무엇을 어디서 가져올지는 회사마다 다르다. 그 기준이 <strong>스킬</strong>이고, 에이전트는 스킬부터 본다.</li>
+          <li>컨텍스트는 네 층이다. 프롬프트·스킬·메모리, 실시간 API, 캐시 데이터, 파생 컨텍스트.</li>
+          <li>캐시가 신선도 기준(SLA) 안이면 캐시를, 아니면 실시간 API를 쓴다. 충분해질 때까지 반복한다.</li>
+          <li>모든 데이터에 <strong>출처, 시각, ID와 권한, 변환 여부, 무효 조건</strong>을 남긴다.</li>
+          <li>도구는 컨텍스트가 아니다. 데이터는 <strong>신선하고 필요한 만큼</strong>이 좋고, 모든 답은 추적할 수 있어야 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 컨텍스트 그래프의 네 구성 요소는?</span></summary><div class="answer">외부 서비스 데이터, 정리된 컨텍스트, 메모리, 스킬. 노드와 엣지로 된 그래프 구조 이야기가 아니다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>"고객 A는 왜 화났나"는 답하는데 "지난 1년간 화난 고객은?"은 못 하는 이유는?</span></summary><div class="answer">실시간 조회로는 티켓을 100개씩 수천 번 불러와야 하고, 결국 시간 초과로 끊긴다. 외부 서비스의 API가 이런 대량 조회에 맞지 않는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Jira 같은 서비스가 의미 검색 엔드포인트를 열지 않는 이유로 발표자가 든 두 가지는?</span></summary><div class="answer">데이터를 벡터화하는 비용을 서비스 회사가 떠안아야 한다. 그리고 사용자가 그 서비스에 덜 들어오게 된다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Stripe 조회는 왜 동기화 없이 MCP 실시간 조회로 충분한가?</span></summary><div class="answer">늘 고객 한 명에 대해 묻거나 행동 하나를 실행하기 때문이다. 큰 데이터 전체를 훑을 일이 없다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>라우터와 요약기는 각각 무슨 일을 하나?</span></summary><div class="answer">라우터는 들어온 프롬프트를 맞는 에이전트와 경로로 보낸다. 요약기는 동기화 데이터와 실시간 데이터를 모아 줄인 뒤 에이전트에 돌려준다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>스킬을 컨텍스트 계층에 넣어야 하는 이유는?</span></summary><div class="answer">컨텍스트를 고르는 일 자체가 회사의 원칙이기 때문이다. "화난 고객"을 티켓 수로 볼지, 티켓 내용으로 볼지, Qualtrics 설문으로 볼지는 회사마다 다르다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>실시간 API와 캐시(동기화) 데이터를 비교하면?</span></summary><div class="answer">실시간 API는 만들기 쉽고 싸서 단순 조회에 먼저 쓴다. 캐시 데이터는 의미 검색과 깊은 질문에 꼭 필요하지만, 만들기 복잡하고 비싸며 최신 상태를 지키기 어렵다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>파생 컨텍스트란 무엇이고, 왜 저장하나?</span></summary><div class="answer">데이터를 가져오면서 새로 만든 정보다. 예를 들어 고객 한 명의 티켓 전체 요약이다. 저장해 두면 같은 질문이 왔을 때 다시 찾고 다시 요약하지 않아도 된다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>캐시를 쓸지 실시간 API를 부를지는 무엇으로 정하나?</span></summary><div class="answer">캐시 데이터가 신선도 기준(SLA) 안에 있는지로 정한다. 안이면 캐시를 쓰고, 벗어나면 실시간 API를 부른다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>출처 기록에 남겨야 할 항목은?</span></summary><div class="answer">어디서, 언제 가져왔나. 어떤 ID와 스코프로, 누가 접근했고 어떤 권한을 썼나. 변환했나와 원래 모습. 무엇이 오면 무효가 되나(예: 한 달 경과).</div></details>
+          <details><summary><span class="qn">Q11</span><span>Acme 예시에서 티켓을 최근 5개만 가져오는 이유는?</span></summary><div class="answer">실시간 조회로 전체 이력을 끌어오면 시간 초과 위험이 있기 때문이다. 필요한 만큼만 가져온다는 원칙과도 맞는다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트가 받을 질문을 "단건 조회"와 "넓은 분석"으로 나눠 적는다<span class="how">단건 조회는 실시간 MCP, 넓은 분석은 동기화 사본으로 보낸다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>넓은 분석이 필요한 데이터 소스를 골라 사본을 동기화한다<span class="how">확인: "지난 1년간"을 묻는 질문에 시간 초과 없이 답하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>동기화 데이터마다 신선도 기준(SLA)을 정한다<span class="how">기준을 넘으면 실시간 API로 다시 가져온다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>회사만의 판단 기준을 스킬로 쓴다<span class="how">예: "고객이 불만인지 어떻게 판단하나", "고객이 항의하면 어디로 보내나"</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>가져온 데이터를 통째로 넘기지 않고 요약해서 넘긴다<span class="how">확인: 라우터와 요약기 역할을 하는 단계가 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>실시간 조회에는 가져올 양의 상한을 둔다<span class="how">발표의 예: 최근 티켓 5개만</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>자주 나오는 질문의 요약을 파생 컨텍스트로 저장한다<span class="how">확인: 같은 요약을 매번 다시 만들고 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>모든 데이터에 출처 메타데이터를 붙인다<span class="how">어디서, 언제, 어떤 ID·스코프·권한으로, 변환 여부, 무효 조건</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>답변에 출처를 보여 준다<span class="how">확인: AI가 틀린 판단을 했을 때 근거 데이터를 거슬러 찾을 수 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>컨텍스트</td><td>Context. 에이전트에 들어가는 모든 정보. 발표자는 프롬프트, 스킬, 메모리, 데이터를 모두 포함한다</td></tr>
+              <tr><td>컨텍스트 그래프</td><td>Context graph. 이 발표에서는 노드·엣지 구조가 아니라, 회사의 데이터·절차·도구를 묶은 "회사의 두뇌"</td></tr>
+              <tr><td>컨텍스트 계층</td><td>Context layer. 에이전트와 회사 데이터 사이에서 무엇을 어디서 가져올지 정하는 층</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. AI 에이전트를 외부 도구와 데이터에 연결하는 표준</td></tr>
+              <tr><td>실시간 조회</td><td>Live lookup. 질문할 때마다 외부 서비스 API를 직접 부르는 방식</td></tr>
+              <tr><td>동기화</td><td>Sync. 외부 서비스의 데이터를 가져와 자기 쪽에 사본을 두고 최신으로 맞추는 것</td></tr>
+              <tr><td>벡터화</td><td>Vectorize. 글을 뜻이 담긴 숫자 목록(벡터)으로 바꾸는 것</td></tr>
+              <tr><td>벡터 DB</td><td>Vector database. 벡터를 저장하고 뜻이 비슷한 것을 찾아 주는 데이터베이스</td></tr>
+              <tr><td>의미 검색</td><td>Semantic lookup. 글자가 같은지가 아니라 뜻이 비슷한지로 찾는 검색</td></tr>
+              <tr><td>엔드포인트</td><td>Endpoint. API에서 특정 기능을 부르는 주소</td></tr>
+              <tr><td>라우터</td><td>Router. 들어온 요청을 맞는 에이전트나 경로로 보내는 부품</td></tr>
+              <tr><td>요약기</td><td>Summarizer. 여러 곳에서 가져온 데이터를 줄여 에이전트에 돌려주는 부품</td></tr>
+              <tr><td>스킬</td><td>Skill. 특정 일을 회사 방식대로 처리하는 절차를 적은 지시 묶음</td></tr>
+              <tr><td>메모리</td><td>Memory. 에이전트를 쓰면서 쌓이는 기억. 사용자가 기억하라고 했거나 에이전트가 스스로 남긴 것</td></tr>
+              <tr><td>파생 컨텍스트</td><td>Derived context. 데이터를 가져오며 새로 만든 요약 같은 정보. 다음에 다시 쓰려고 저장한다</td></tr>
+              <tr><td>SLA</td><td>Service Level Agreement. 이 발표에서는 데이터가 얼마나 최근이어야 쓸 수 있는지 정한 신선도 기준</td></tr>
+              <tr><td>시간 초과</td><td>Timeout. 정해진 시간 안에 응답이 없어 요청이 끊기는 것</td></tr>
+              <tr><td>추적 가능성</td><td>Traceability. 답이 어떤 데이터를 근거로 나왔는지 거슬러 확인할 수 있는 성질</td></tr>
+              <tr><td>출처 기록</td><td>Provenance. 데이터가 어디서, 언제, 누구 권한으로 왔고 어떻게 바뀌었는지의 기록</td></tr>
+              <tr><td>메타데이터</td><td>Metadata. 데이터 자체가 아니라 데이터에 대한 정보. 출처, 가져온 시각 등</td></tr>
+              <tr><td>스코프</td><td>Scope. 접근 권한이 미치는 범위</td></tr>
+              <tr><td>Zendesk / Qualtrics</td><td>고객 지원 티켓 서비스 / 고객 설문 서비스</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 다룰 것과 다루지 않을 것</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>Merge 소개</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>발표 순서 안내</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>컨텍스트 그래프란: 네 구성 요소</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>예시: 고객 A는 왜 화났나</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>질문을 넓히면 생기는 문제</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>MCP가 못 푸는 이유와 서비스들의 동기</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>동기화 계층</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>실시간으로 충분한 경우: Stripe</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>라우터와 요약기</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>메모리와 스킬이 필요한 이유</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>질문 하나의 처리 흐름</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>컨텍스트의 네 층</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>파생 컨텍스트</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>컨텍스트 선택 순서도</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>캐시 신선도 확인과 실시간 API</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>추적 가능성과 출처 기록</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>남길 항목</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>종합 예시: Acme 상태 보고</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>핵심 메시지</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>Merge 제품 소개</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'cSz7aL2nl2U:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

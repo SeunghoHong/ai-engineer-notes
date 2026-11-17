@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>선언형 에이전트 계약 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#naming">원하는 것에 이름 붙이기</a></li>
+      <li><a href="#declare">방법 말고 결과를 선언한다</a></li>
+      <li><a href="#two-things">기억할 두 가지</a></li>
+      <li><a href="#contents">프로그램에 적는 것</a></li>
+      <li><a href="#events">잡 = 계약 + 트리거</a></li>
+      <li><a href="#pin">방법을 고정하고 싶을 때</a></li>
+      <li><a href="#demo">데모: 말로 잡 만들기</a></li>
+      <li><a href="#backpressure">PR 리뷰를 브레이크로 쓰기</a></li>
+      <li><a href="#verify">계약 검증과 DSPy와의 차이</a></li>
+      <li><a href="#quant">사례: 은행 퀀트 모델 문서화</a></li>
+      <li><a href="#when">언제 쓰고 언제 안 쓰나</a></li>
+      <li><a href="#compose">계약을 조합한다</a></li>
+      <li><a href="#origin">커널의 출처와 스펙 주도 개발</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-18 · 50분 · 영어 발표 한글 정리</span>
+      <h1>에이전트에게 방법 말고 결과를 말하라</h1>
+      <p class="lead">에이전트가 똑똑해질수록 "어떻게 하라"고 적은 프롬프트는 손해다. OpenProse 팀은 원하는 끝 상태를 마크다운 계약으로 선언하고, 사건이 생길 때마다 하네스가 그 계약을 채우게 하자고 제안한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=7T-gldvgfpo" target="_blank" rel="noopener">Stop Telling Agents How</a></span>
+        <span>발표: Dan Barrett (OpenProse 제작자), Raymond Weitekamp (run.prose.md 담당), Jose Montes de Oca (초기 Google Cloud 출신), 모두 OpenProse</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 사례는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 바로잡았고, 아니면 들린 대로 적고 "(추정)"을 붙였다. 자막에 화자 표시가 없어 누가 말했는지 분명하지 않은 대목은 "발표팀"으로 적었다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">세 발표자는 모두 OpenProse를 만드는 사람이다. 제품의 장점, 비용 절감, 고객 사례는 자기 제품에 대한 주장이니 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>프롬프팅, 컨텍스트 엔지니어링, 하네스가 차례로 풀렸다. 남은 일은 <strong>원하는 것을 정확히 이름 붙이는 것</strong>이다.</li>
+        <li><strong>방법 말고 결과를 선언한다.</strong> 끝난 상태를 적은 글을 계약이라 부른다. 방법은 똑똑한 모델이 스스로 찾는다.</li>
+        <li>OpenProse는 <strong>전부 마크다운</strong>이다. 컴파일러와 런타임까지 하나의 큰 프롬프트다.</li>
+        <li><strong>채팅이 아니라 이벤트</strong>로 돈다. 잡은 계약 하나와 트리거 하나(크론, 웹훅)를 묶은 것이다.</li>
+        <li>매번 <strong>새 세션이 계약을 기준으로 결과를 검사</strong>한다. 자기 일을 자기가 검사하는 편향을 피한다. 발표자의 PR은 리뷰를 1~14 라운드 거쳤다.</li>
+        <li>계약은 <strong>조합</strong>한다. 중간 계약을 체크포인트로 이으면 방법도 어느 정도 정할 수 있다. 잘 된 실행은 방법으로 고정해 더 싸게 돌린다.</li>
+        <li>쓸 곳은 <strong>반복·신뢰·감사가 필요한 일</strong>이다. 은행의 퀀트 모델 문서화가 대표 사례다. 한 번 하고 끝나는 탐색에는 채팅이 낫다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="naming">
+        <header><span class="num">01</span><h2>원하는 것에 이름 붙이기 <span class="ts">00:00</span></h2></header>
+        <p>Dan Barrett은 2021년 4월 EleutherAI 디스코드에서 "최고의 프롬프터"로 뽑혔다. 그때는 그 기술이 오래 쓸모 있을 줄 알았다. 실제로는 2~3년쯤 갔다.</p>
+        <p>그 뒤로 많은 것이 바뀌었지만 하나는 그대로다. 모델이 아무리 똑똑해져도, 사람은 원하는 것을 머릿속에서 꺼내 모델에 전해야 한다.</p>
+
+        <h3>한 층씩 올라온 역사 <span class="ts">02:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시기</th><th>사람이 한 일</th><th>부르는 이름</th></tr></thead>
+            <tbody>
+              <tr><td>처음</td><td>다음 토큰을 이어 쓰는 모델에 맞는 좋은 문장 패턴을 고른다</td><td>프롬프팅</td></tr>
+              <tr><td>몇 년 뒤</td><td>검색 결과, 도구 호출 결과를 손으로 컨텍스트 창에 채운다</td><td>컨텍스트 엔지니어링 <span class="en">context engineering</span></td></tr>
+              <tr><td>그다음</td><td>하네스가 컨텍스트를 대신 채운다. 사람은 하네스를 만든다</td><td>하네스 엔지니어링</td></tr>
+              <tr><td>최근 8~10개월</td><td>하네스가 스스로 구조를 바꾸며 서브 에이전트를 관리한다</td><td>Anthropic이 소개한 동적 워크플로 등</td></tr>
+              <tr><td>다음</td><td>원하는 것을 정확히 이름 붙인다</td><td>계약 작성과 조합 <span class="en">contract composition</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Dan은 이제 하네스가 스스로 모양을 바꾸고, 여러 갈래로 나뉘고, 루프를 돌 수 있다고 본다. 그러면 남는 질문은 하나다. <strong>원하는 것을 어떻게 이름 붙일까.</strong></p>
+        <p>문장 하나를 쓰면 기계가 그 문장을 사실로 만든다. 그래서 이제는 어떤 문장을 쓰느냐가 기술이 된다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="declare">
+        <header><span class="num">02</span><h2>방법 말고 결과를 선언한다 <span class="ts">04:00</span></h2></header>
+        <p>OpenProse는 고전 소프트웨어 공학의 원칙 두 개를 프롬프트에 가져온다.</p>
+        <ul class="plain">
+          <li><strong>조합</strong> <span class="en">composition over inheritance</span>: 작은 조각을 이어 붙인다. 큰 틀을 물려받아 고쳐 쓰지 않는다.</li>
+          <li><strong>선언형</strong> <span class="en">declarative</span>: 무엇을 원하는지 쓴다. 어떻게 할지는 쓰지 않는다. 절차형·명령형 <span class="en">procedural / imperative</span>의 반대다.</li>
+        </ul>
+        <p>발표팀이 말하는 <strong>계약</strong> <span class="en">contract</span>은 결과, 목표, 끝난 상태를 적은 글이다.</p>
+        <p>Dan은 방법까지 적어 주면 비용과 지능을 그냥 버리는 셈이라고 말한다. 똑똑한 모델은 방법을 스스로 찾기 때문이다.</p>
+        <p>조합할 수 있게 쓰는 이유는 복잡도 관리다. 팀이나 회사 곳곳에 걸친 시스템이라도, 각 부분의 복잡도를 그 부분 안에 가둘 수 있다.</p>
+        <div class="shift" aria-label="프롬프트 작성 방식의 이동">
+          <div><span class="tag">지금까지</span><b>방법을 적는다</b><span class="muted">"먼저 A를 하고, 다음에 B를 해라"</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">OpenProse</span><b>끝난 상태를 선언한다</b><span class="muted">"끝났을 때 이런 조건을 만족해야 한다"</span></div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="two-things">
+        <header><span class="num">03</span><h2>기억할 두 가지 <span class="ts">06:00</span></h2></header>
+        <p>Raymond Weitekamp는 OpenProse에 대해 두 가지만 기억하라고 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 전부 마크다운이다</span>
+            <p>에이전트용 프로그래밍 언어라고도, 프레임워크라고도 부른다. 하지만 전부 텍스트다. 결국 하나의 거대한 프롬프트다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 채팅이 아니라 이벤트 기반이다</span>
+            <p>에이전트와 대화하지 않는다. 사건이 생기면 여러 에이전트가 일하는 흐름이 돈다.</p>
+          </div>
+        </div>
+        <p>오픈소스라서 <code>npx skills</code>로 내 컴퓨터에서 돌릴 수 있다. Raymond는 호스팅 버전인 run.prose.md를 만들었다. 팀이 대신 구축해 주기도 한다.</p>
+
+        <h3>누구에게 왜 쓸모 있나 <span class="ts">07:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>듣는 사람</th><th>발표자가 말한 이점</th></tr></thead>
+            <tbody>
+              <tr><td>규제 산업 (금융 등)</td><td>전부 텍스트라 구매 부서나 IT 부서를 거칠 소프트웨어 배포가 없다. 이미 쓰는 코딩 에이전트, 추론 환경, 가드레일 위에 마크다운 파일만 얹는다.</td></tr>
+              <tr><td>코드를 안 쓰는 실무자 (PM 등)</td><td>논리적인 영어를 읽을 수 있으면 읽힌다. 문법을 외워 처음부터 쓰라는 게 아니다. 일을 설명하면 에이전트가 프로그램을 쓴다. 사람은 읽고 고친다. 그 프로그램이 재사용 워크플로가 된다.</td></tr>
+              <tr><td>AI 엔지니어·개발자</td><td>"프레임워크가 아닌 프레임워크"다. 컴파일러와 가상 머신까지 프롬프트라서, Claude Code나 Codex가 프로그램을 컴파일한다. 복잡한 다중 에이전트 흐름을 어떤 코딩 에이전트에서든 표현할 수 있다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="contents">
+        <header><span class="num">04</span><h2>프로그램에 적는 것 <span class="ts">09:20</span></h2></header>
+        <p>가장 단순한 프로그램은 목표, 그리고 "이 계약이 지키는 것"의 정의 정도다. 발표에서는 문법을 일부러 자세히 다루지 않았다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>선언하는 것</th><th>뜻</th><th>발표 속 예</th></tr></thead>
+            <tbody>
+              <tr><td>서브 에이전트</td><td>일을 나눠 맡는 하위 에이전트</td><td>조사 담당, 작성 담당</td></tr>
+              <tr><td>스킬</td><td>특정 서브 에이전트에 붙이는 작업 지침</td><td>회사나 조직 전용 스킬</td></tr>
+              <tr><td>도구</td><td>쓸 수 있는 CLI나 API</td><td>검색은 일반 웹 검색 대신 늘 Exa를 쓰게 한다. Raymond에게는 더 빠르고 싸서다</td></tr>
+              <tr><td>입력</td><td>프로그램이 받는 것</td><td>GitHub 이슈 내용</td></tr>
+              <tr><td>출력</td><td>계약이 반드시 내놓아야 하는 것</td><td>커밋</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>의존성이 하나라도 없으면 실행하지 않는다. Raymond는 이것을 "컴파일하지 마라"에 빗댄다. 지정한 도구를 못 찾았다고 다른 도구로 대충 때우지 않는다는 뜻이다.</p>
+        <p>CLI에서는 이 선언을 <code>prose write</code> 기능(자막에는 "pros write", 추정)이 대신 써 준다. 앱에서는 앱 전체를 움직이는 에이전트가 그 일을 한다.</p>
+        <blockquote>"너는 컴파일러다. 이것은 비유가 아니다."<cite>OpenProse 런타임 프롬프트에 들어 있는 문장. Raymond Weitekamp가 좋아하는 문장으로 소개했다. <span class="ts">11:00</span></cite></blockquote>
+        <p>런타임 자체도 거대한 프롬프트다. Raymond에 따르면 이 문장이 실제로 잘 먹힌다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="events">
+        <header><span class="num">05</span><h2>잡 = 계약 + 트리거 <span class="ts">11:20</span></h2></header>
+        <p>두 번째 축은 모든 일을 대화로 보지 않는 것이다. 사건에 반응하는 이벤트 기반 <span class="en">event-driven</span> 시스템을 만든다.</p>
+        <ul class="plain">
+          <li>정해진 시간이 됐다 (크론 <span class="en">cron</span>)</li>
+          <li>GitHub에 새 이슈나 PR이 올라왔다</li>
+          <li>다른 서비스가 웹훅 <span class="en">webhook</span>으로 알려 왔다. 예: Stripe 결제가 안 된다</li>
+        </ul>
+        <p>트리거가 오면 미리 써 둔 워크플로가 끝까지 돌아 계약을 채운다.</p>
+        <p>run.prose.md에서 <strong>잡</strong> <span class="en">job</span>은 계약 하나와 트리거 하나를 묶은 것이다. 지금 구현된 트리거는 웹훅과 크론 두 가지다. Raymond는 웹훅만으로도 많은 것이 덮인다고 말한다. Slack 앱도 GitHub 연동도 결국 웹훅이다.</p>
+
+        <h3>Raymond가 직접 쓰는 두 잡 <span class="ts">13:30</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">GitHub 이슈 → 커밋</span>
+            <p>이슈를 어떻게 풀지 Prose 프로그램으로 쓴다. 단순할 수도 있고 다중 에이전트일 수도 있다.</p>
+            <p class="verdict">입력은 이슈, 출력은 커밋. <b>끝까지 해내야 한다.</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">PR → 적대적 리뷰 <span class="ts">14:00</span></span>
+            <p>PR이 올라올 때마다 리뷰 에이전트가 깐깐하게 검토한다. 적대적 리뷰 <span class="en">adversarial review</span>라 부른다.</p>
+            <p class="verdict">개발 에이전트는 이 리뷰를 <b>통과해야</b> 일이 끝난다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">왜 리뷰를 따로 띄우나 <span class="ts">14:10</span></span>
+          <span>같은 세션에게 "배포 전에 한 번만 더 확인해 줘"라고 하면, 자기가 잘했다고 믿는 쪽으로 기운다. 사람도 마찬가지다. Raymond는 그날 오전 Anthropic 워크숍에서 나온 자기 검토의 어려움을 예로 들었다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="pin">
+        <header><span class="num">06</span><h2>방법을 고정하고 싶을 때 <span class="ts">15:10</span></h2></header>
+        <p>청중 질문에 대한 답이다. 질문 자체는 자막에 잡히지 않았지만, 방법을 직접 정하고 싶은 경우를 물은 것으로 보인다.</p>
+        <p>방법을 아예 버리는 건 아니다. OpenProse에는 방법을 고정 <span class="en">pin</span>하는 문법이 있다.</p>
+        <ol class="plain">
+          <li>처음에는 결과만 느슨하게 선언한다.</li>
+          <li>아주 똑똑한, 그래서 비싼 모델이 길을 찾게 둔다.</li>
+          <li>성공한 에이전트 트레이스 <span class="en">trace</span>를 가져와 방법으로 굳힌다.</li>
+          <li>이제 더 구체적이고 결정적인 지시로 돈다. 비용이 내려간다.</li>
+        </ol>
+        <p>한쪽 끝은 "무엇"만 적은 상태다. 다른 끝은 "어떻게"까지 적은 상태다. 마크다운 결과 선언에서 시작해, 필요한 만큼 절차형 지시 쪽으로 옮겨 간다.</p>
+        <p>Raymond는 "골든 세션" <span class="en">golden session</span> 기능도 소개했다. 최고였던 Claude Code 세션을 골라 재사용 워크플로로 바꾸는 기능이다.</p>
+        <div class="callout">
+          <span class="title">같은 결과가 매번 안 나오는 이유 (Raymond의 견해)</span>
+          <span>첫째, 모델은 비결정적이다. Raymond는 버전을 고정했다는 엔드포인트도 회사들의 연산 자원이 모자라 실제로는 바뀐다고 본다. 둘째, 기대가 변한다. 처음 Fable 같은 모델을 썼을 때 감탄한 결과도 익숙해지면 평범해 보인다.</span>
+        </div>
+
+        <h3>보이는 마크다운은 일부일 뿐 <span class="ts">17:40</span></h3>
+        <p>사용자가 보는 마크다운 밑에는 커널 <span class="en">kernel</span>이 있다. Raymond가 마지막으로 확인했을 때 7만~8만 토큰이었다. Dan은 그보다 길다고 했다. 모델이 똑똑해진 만큼 줄이는 중이다.</p>
+        <p>커널은 마크다운 위에 엄격한 타입 시스템을 덧씌운다. 에이전트가 복잡한 다중 에이전트 결과물을 어떻게 내놓을지도 정한다.</p>
+
+        <h3>하네스 위의 한 층 <span class="ts">18:20</span></h3>
+        <p>반대로 하네스가 이미 잘하는 일에는 손대지 않는다. Claude Code와 Codex는 서브 에이전트를 다루는 방식이 서로 다르다. OpenProse는 어느 한쪽에 맞추지 않는다.</p>
+        <p>발표팀은 반쯤 농담으로 자신들을 "메타 하네스"라 부른다. 하네스는 사용자가 가져온다. OpenProse는 하네스가 컴파일하는 대상이 되려 한다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="demo">
+        <header><span class="num">07</span><h2>데모: 말로 잡 만들기 <span class="ts">19:00</span></h2></header>
+        <p>run.prose.md 편집 화면의 프로그램은 마크다운이다. Dan이 H3 제목에 타입을 입혀 두었다.</p>
+        <p>클라우드 설정은 마크다운 맨 앞의 프런트매터 <span class="en">front matter</span>에 들어 있다. 그래서 프로그램을 순수 마크다운 파일로 내보내 친구에게 보내면, 친구 클라우드에서도 똑같이 올라간다.</p>
+        <p>그래도 이 마크다운이 입구는 아니다. 입구는 앱 안의 에이전트다.</p>
+
+        <h3>음성으로 요청하기 <span class="ts">20:40</span></h3>
+        <p>Raymond는 음성으로 이렇게 요청했다. "새 PR이 올라올 때마다 리뷰하는 Prose 프로그램을 run-prose 저장소에 써 줘. AI가 만든 코드를 싫어하는 까칠한 시니어 개발자처럼 리뷰하게."</p>
+        <p>에이전트는 요청을 받아 연결까지 포함한 새 프로그램을 만든다.</p>
+        <div class="callout">
+          <span class="title">돈이 드는 동작은 사람이 확인한다 <span class="ts">21:20</span></span>
+          <span>돈을 쓰거나 청구할 수 있는 동작은 모두 사용자가 버튼을 눌러 확인해야 한다. Raymond는 이것을 모범 사례로 꼽았다. 데모에서도 프로그램 생성과 잡 배포 때 확인을 거쳤다.</span>
+        </div>
+
+        <h3>손으로 만들기 <span class="ts">21:50</span></h3>
+        <ul class="plain">
+          <li>잡 탭에서 새 잡을 만든다.</li>
+          <li>"일정"은 크론이다.</li>
+          <li>웹훅은 열려 있다. run.prose.md 웹훅을 쓰거나, 내 웹훅을 듣게 연결한다.</li>
+          <li>GitHub PR은 바로 고를 수 있게 해 두었다.</li>
+          <li>모델을 고른다. 당시에는 OpenAI 상위 모델 세 개가 있었다.</li>
+        </ul>
+        <p>얼마 뒤 에이전트가 만든 "Grumpy AI skeptic PR review" 잡이 잡 목록에 올라왔다. <span class="ts">30:10</span></p>
+      </section>
+
+      <!-- 8 -->
+      <section id="backpressure">
+        <header><span class="num">08</span><h2>PR 리뷰를 브레이크로 쓰기 <span class="ts">22:40</span></h2></header>
+        <p>Raymond는 행사 전 며칠 동안 이 시스템으로 이 시스템을 개발했다. 발표에 맞춰 GitHub 웹훅 기능을 만들던 때다.</p>
+        <p>3~4일 사이에 PR이 수십 개 쌓였다. PR마다 리뷰 에이전트 여러 개가 돌았다.</p>
+
+        <figure class="chart" aria-label="PR 하나가 리뷰를 통과하기까지 걸린 라운드 수: 가장 짧은 경우 1번, 가장 긴 경우 14번">
+          <span class="chart-title">PR 하나가 리뷰를 통과하기까지 걸린 라운드 수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>바로 통과한 PR</span><span class="val">1</span></div>
+              <div class="track"><div class="fill" style="width:7.1%" title="바로 통과한 PR: 1라운드"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>가장 오래 걸린 PR</span><span class="val">14</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="가장 오래 걸린 PR: 14라운드"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>7</span><span>14</span></div>
+          <span class="caption">Raymond가 화면으로 보여 준 자기 저장소의 PR 목록. 리뷰 에이전트들의 의견이 맞을 때까지 라운드가 반복된다.</span>
+        </figure>
+
+        <p>발표 당일에도 마음에 안 드는 점이 있어 고쳤다. 운영 환경은 건드리지 말고, 스테이징 서버에서 트리거 조건을 바꾸게 했다. 조건이 하나 붙었다. 바꾸는 작업도 이 시스템을 직접 써서 하라는 것이다. 그래서 지금은 개발 버전과 운영 버전이 서로 다른 리뷰를 낸다.</p>
+        <p>개발 에이전트는 리뷰 피드백을 반영하기 전에는 일이 끝났다고 볼 수 없다. Raymond는 이것을 백프레셔 <span class="en">backpressure</span>라 부른다. 뒤 단계가 앞 단계를 붙잡아 거는 제동이다.</p>
+        <div class="callout">
+          <span class="title">일반 채팅·에이전트 흐름과 다른 점 <span class="ts">24:40</span></span>
+          <span>발표팀의 정리다. 결과는 매번 새 세션이 선언형 계약을 기준으로 잰다. 같은 모델이 자기 일을 검사하는 자기 확신의 고리에서 벗어난다. 새 세션을 띄워 계약에 대고 튕겨 보는 편이 더 나은 패턴이라는 것이다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="verify">
+        <header><span class="num">09</span><h2>계약 검증과 DSPy와의 차이 <span class="ts">25:10</span></h2></header>
+        <p>청중이 물었다. "Jeff" 같은 원샷 분류기를 쓸 좋은 기회 아니냐는 질문이다. 자막에는 "Jeff", "Jev"로 들리며, 어떤 모델인지는 확인하지 못했다(추정).</p>
+        <p>발표팀은 결정 모델 <span class="en">decision model</span>에 기대가 크다고 답했다. 계약은 이상적인 상태다. 현실은 지저분한 상태다. 결정 모델은 둘을 비교해 통과인지 아닌지 판단한다.</p>
+        <p>Raymond는 OpenProse 언어 자체는 그런 모델이 맡을 자리가 아니라고 본다. 언어를 만들고 이해하는 생성 작업이기 때문이다. 대신 두 자리를 꼽았다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">검증기 <span class="ts">27:30</span></span>
+            <p>OpenProse의 약점은 에이전트가 "계약을 채웠다"고 스스로 말한다는 점이다. 잡 끝에 아주 빠르고 싼 결정 모델을 붙여 확인한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">라우터 <span class="ts">27:40</span></span>
+            <p>이슈는 이슈 잡으로, PR은 리뷰 잡으로 사람이 나눌 필요가 없다. 들어오는 GitHub 이벤트를 모두 받아 알아서 보낸다. Raymond가 만들고 싶은 기능이다.</p>
+          </div>
+        </div>
+
+        <h3>DSPy와 같은 목표, 반대 구현 <span class="ts">26:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구분</th><th>DSPy</th><th>OpenProse</th></tr></thead>
+            <tbody>
+              <tr><td>목표</td><td colspan="2">복잡한 워크플로를 표현하는 추상화 층. 둘이 같다</td></tr>
+              <tr><td>LLM 호출</td><td>호출 하나하나를 블랙박스로 철저히 가둔다</td><td>전부 모호한 영역에 맡긴다</td></tr>
+              <tr><td>나머지 부분</td><td>결정적 코드와 타입이 있는 인터페이스</td><td>마크다운. AI가 컴파일러다</td></tr>
+              <tr><td>대가</td><td>원하는 결과의 형태(시그니처)를 정확히 적어야 움직인다 <span class="ts">40:10</span></td><td>모델마다 결과가 크게 다르다(Haiku와 Fable). 에이전트가 끝났다고 스스로 선언한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">자막의 "Haku"는 Anthropic의 Haiku 모델로 바로잡았다.</p>
+
+        <h3>강화학습은? <span class="ts">28:10</span></h3>
+        <p>청중이 다시 물었다. 계약에 대고 돌린 좋은 실행 기록이 이렇게 쌓이면 강화학습 <span class="en">RL</span>을 돌리면 되지 않느냐는 것이다.</p>
+        <p>발표팀은 텍스트로 쓰는 이유를 두 갈래로 답했다. 사람 쪽에서는 git으로 버전 관리하고 Notion이나 Jira로 팀과 나누기 쉽다. 엔지니어링 쪽에서는 RL에 딱 맞는 형태다.</p>
+        <p>지금은 하지 않는다. 몇몇 고객 후보와 이야기하는 중이다. 모델을 직접 호스팅한다면 약 10만 토큰짜리 공통 앞부분을 더 효율적인 표현으로 바꿀 수 있다고도 했다.</p>
+        <p class="note">커널 크기를 17:50에서는 7만~8만 토큰, 29:00에서는 약 10만 토큰이라고 했다. 둘 다 어림값으로 읽자.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="quant">
+        <header><span class="num">10</span><h2>사례: 은행 퀀트 모델 문서화 <span class="ts">31:10</span></h2></header>
+        <p>Dan Barrett이 금융권 사례를 Codex로 보여 줬다.</p>
+
+        <h3>사내에서 돌리는 이유 <span class="ts">31:20</span></h3>
+        <ul class="plain">
+          <li>온프레미스 <span class="en">on-prem</span>로 돌릴 수 있다. 클라우드 버전은 필수가 아니다.</li>
+          <li>Dan이 보는 가장 흥미로운 쓰임은 오픈 모델과 자기 하네스 위에 응용 층으로 얹는 것이다.</li>
+          <li>데이터를 대형 AI 연구소로 보내지 않아도 된다.</li>
+          <li>데이터보다 중요한 것도 지킨다. Dan은 OpenProse를 조직의 운영 지식, 곧 표준 운영 절차 <span class="en">SOP</span>를 문서로 쓴 것으로 본다.</li>
+          <li>허용적 라이선스의 오픈 코어 <span class="en">open core</span>다. Dan에 따르면 큰 회사 여러 곳이 이미 사내에서 쓴다.</li>
+          <li>회사가 이미 승인한 모델로 돌린다.</li>
+        </ul>
+
+        <h3>왜 퀀트 문서화인가 <span class="ts">33:10</span></h3>
+        <p>퀀트 모델에는 규제 의무가 붙는다. 1년이나 3년마다, 또는 특정 사건이 생기면 모델 문서를 새로 써야 한다.</p>
+        <p>문서에는 이런 내용이 들어간다. 모델을 어디에 쓰는지, 어떤 조건에서 테스트했는지, 위쪽에서 어떤 모델이 이 모델을 참조하는지 등이다. 규제 기관, 내부 감사, 컴플라이언스가 요구한다.</p>
+        <p>똑똑한 사람이 오래 붙어야 하는 일이다. Dan은 규제 문서 자체가 OpenProse 프로그램과 닮았다고 본다. 요구사항을 산문으로 적은 글이기 때문이다.</p>
+
+        <h3>실행 방법 <span class="ts">34:20</span></h3>
+        <ol class="plain">
+          <li>하네스(데모에서는 Codex)에게 "커널을 부팅하라"고 한다.</li>
+          <li><code>prose run</code>으로 특정 프로그램을 실행한다.</li>
+        </ol>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">커널 <span class="ts">34:50</span></span>
+            <p>사람이 아니라 에이전트가 읽도록 쓴 마크다운이다. 무엇을 예상해야 하는지 알려 주는 동작 지침이다.</p>
+            <p class="verdict">부트로더처럼, 필요한 문서를 찾아가는 <b>색인</b> 역할을 한다. 공개돼 있다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">프로그램 <span class="ts">35:20</span></span>
+            <p>역시 마크다운이다. 규제 기관, 컴플라이언스, 감사가 요구하는 항목을 담는다.</p>
+            <p class="verdict">최종 결과가 만족해야 할 <b>이상적인 상태</b>를 적는다.</p>
+          </div>
+        </div>
+        <p>넣는 것은 이 두 개뿐이다. Dan은 하네스와 모델이 좋을수록 결과가 더 빠르고 싸게 나온다고 말한다.</p>
+        <p>데모는 빨리 끝나도록 비교적 싼 모델로 돌렸다. 결과물은 SOFR 커브의 모델 문서였다. 공개된 모델이라 은행 내부 데이터는 쓰지 않았다. <span class="ts">36:40</span></p>
+        <p class="note">자막에는 "sofa curve"로 들린다. 미국 단기 금리 지표 SOFR의 커브로 바로잡았다.</p>
+
+        <h3>발표자가 인용한 규모 <span class="ts">37:10</span></h3>
+        <figure class="chart" aria-label="대형 은행 한 곳에서 퀀트 모델 문서화 문제의 연간 가치: 하한 1천만 달러, 상한 5천만 달러">
+          <span class="chart-title">대형 은행 한 곳의 퀀트 모델 문서화, 연간 가치 (백만 달러)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>하한</span><span class="val">10</span></div>
+              <div class="track"><div class="fill" style="width:20%" title="하한: 1천만 달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>상한</span><span class="val">50</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="상한: 5천만 달러"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>25</span><span>50</span></div>
+          <span class="caption">Dan Barrett이 인용한 범위. 모델 약 4,000개로 나누면 모델 하나당 연 2,500~12,500달러다(직접 계산).</span>
+        </figure>
+        <p>Dan에 따르면 큰 은행에는 모델이 4,000개쯤 있다. 이 모델들을 해마다 다시 문서화해야 한다. 큰 은행에서 이 문제의 값어치는 연 1천만~5천만 달러라고 했다.</p>
+        <p class="note">33:20에서는 문서 갱신 주기를 1년 또는 3년이라 했고, 37:10에서는 매년이라고 했다.</p>
+        <p>컴플라이언스와 규제 기관을 통과시키는 일은 따로 남은 싸움이라고 Dan도 인정했다. 품질은 과거 결과, 팀이 들이던 시간, 현장 퀀트의 평가와 비교한다. Dan은 결과가 "놀랄 만큼 좋다"고, 기존 수작업보다 훨씬 싸다고 했다.</p>
+        <p class="note">이 대목의 비용과 품질 주장은 OpenProse 팀이 자기 고객 사례로 말한 것이다. 발표에 독립적인 검증 자료는 나오지 않았다. 감안해 읽자.</p>
+        <p>청중 한 명은 이렇게 정리했다. 퀀트는 모델 만들기처럼 잘하는 일을 하고, 재미없는 규제 서류는 맡기면 된다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="when">
+        <header><span class="num">11</span><h2>언제 쓰고 언제 안 쓰나 <span class="ts">38:20</span></h2></header>
+        <p>계약을 사람이 처음부터 다 써야 하느냐는 질문이 나왔다. Dan은 커널 안의 가이드를 소개했다. 결과를 선언할 때의 모범 사례와 피해야 할 패턴이 커널 속 특정 경로에 들어 있다.</p>
+        <p>Raymond가 보여 준 앱 속 에이전트도 그 가이드를 따라 사용자와 함께 계약을 다듬는다. 그래도 Dan은 사람 머리에서 의도를 꺼내는 게 가장 어려운 부분이라고 인정했다. OpenProse는 그 일의 일부일 뿐이다.</p>
+
+        <h3>채팅이 빨리 퍼진 이유 <span class="ts">39:10</span></h3>
+        <p>Raymond는 채팅이 빨리 퍼진 이유를 이렇게 본다. 무엇을 원하는지 몰라도 일단 시작할 수 있다.</p>
+        <p>원하는 것의 모양조차 모르는 단계라면 OpenProse가 최선은 아니다. Raymond는 오래된 DSPy 사용자로서 농담을 했다. DSPy를 보고 감탄한 다음, 막상 앉으면 "이런, 이제 내가 뭘 원하는지 알아야 하네" 하고 깨닫는다는 것이다.</p>
+        <p>OpenProse는 DSPy보다 덜 엄격하다. 앱 속 에이전트에게 음성으로 "뭘 할 수 있어?"라고 물으며 시작해도 된다.</p>
+        <p>Raymond는 채팅이 사람 대화가 없는 워크플로에 좋은 인터페이스가 아니라고 본다. 그럴듯한 대화 상대가 되도록 RLHF로 학습된 에이전트가 그런 일에 최선은 아니라는 것이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">채팅이 나은 일 <span class="ts">41:20</span></span>
+            <ul>
+              <li>한 번 하고 끝나는 일</li>
+              <li>탐색 중인 일</li>
+              <li>원하는 것을 아직 모를 때</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">OpenProse가 나은 일</span>
+            <ul>
+              <li>자주 해야 하는 일</li>
+              <li>믿을 수 있고 반복 가능해야 하는 일</li>
+              <li>감사할 수 있어야 하는 일</li>
+            </ul>
+            <p class="verdict">원하는 것을 <b>이미 안다</b>는 전제가 깔려 있다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="compose">
+        <header><span class="num">12</span><h2>계약을 조합한다 <span class="ts">41:50</span></h2></header>
+        <p>청중 중 실제 퀀트가 상속 같은 구조를 물었다. Dan은 상속보다 조합이라고 답했다.</p>
+        <ul class="plain">
+          <li>한 실행에 계약 여러 개를 넣어 에이전트가 모두 만족시키게 한다. 이것이 핵심 기능이다.</li>
+          <li>이벤트 쪽은 React의 메모이제이션 <span class="en">memoization</span>과 비슷하다. 위쪽 의존성의 데이터가 바뀌면 그 아래로 흘러내린다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">결정 모델이 들어갈 또 한 자리 <span class="ts">42:50</span></span>
+          <span>위쪽 상태가 바뀌었는지, 아래쪽을 다시 돌릴지 에이전트가 판단하게 했더니 비쌌다. 싼 의미 분류기가 "이건 낡았다"를 판단하는 캐시 역할을 맡으면 좋다. 이 부분은 아직 만드는 중이다.</span>
+        </div>
+        <p>Dan은 "마법은 없다. 전부 그냥 영어다"라고 말했다.</p>
+
+        <h3>템플릿이 아니라 워크플로 전체 <span class="ts">43:40</span></h3>
+        <p>틀에 빈칸을 채우는 일은 LLM 이전에도 됐다. 여기서는 다중 에이전트 워크플로 전체를 틀로 만든다. 아래는 Raymond가 든 예를 표로 옮긴 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>부분</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>출력</td><td>기사. 종류, 길이 같은 제약이 붙는다</td></tr>
+              <tr><td>입력</td><td>주제</td></tr>
+              <tr><td>끝내는 조건</td><td>부모 에이전트가 "좋다"고 판단할 때까지. 언제 끝낼지 부모가 정하므로 강한 모델일수록 결과가 좋다</td></tr>
+              <tr><td>조사 서브 에이전트</td><td>Exa CLI와 그 사용법 스킬을 갖는다. 아무 웹 검색이나 쓰지 않게 한다</td></tr>
+              <tr><td>작성 서브 에이전트</td><td>잘 쓴 지난 기사 10개를 보고 그 문체로 쓴다</td></tr>
+              <tr><td>교정 서브 에이전트</td><td>원고를 다듬는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 전체가 마크다운 100줄쯤이다. 실행은 10시간이 걸릴 수도 있다고 했다.</p>
+
+        <h3>계약의 DAG <span class="ts">45:00</span></h3>
+        <p>Dan은 끌어다 놓는 방식의 워크플로 빌더와 다르다고 강조한다. 계약들을 DAG, 곧 방향이 있고 되돌아오는 길이 없는 그래프로 잇는다.</p>
+        <p>중간 계약은 체크포인트다. 하나를 채우면 다음 계약이 움직인다. 그래서 중간 계약을 이어 붙이는 것만으로 "어떻게"를 어느 정도 정할 수 있다. 각 중간 단계를 어떻게 채울지는 여전히 에이전트에게 맡긴다.</p>
+
+        <h3>표현할 수 있는 모양 <span class="ts">45:50</span></h3>
+        <p>Raymond는 Anthropic이 동적 워크플로를 내놓으며 쓴 블로그 글을 예로 든다. 그 글은 여섯 가지 유형을 소개했다고 한다. 발표에서 언급된 것은 세 가지다.</p>
+        <ul class="plain">
+          <li>팬아웃·팬인 <span class="en">fan-out / fan-in</span>: 서브 에이전트로 하는 맵리듀스</li>
+          <li>적대적 리뷰</li>
+          <li>조건을 만족할 때까지 반복하는 루프</li>
+        </ul>
+        <p>이 모양들을 코드 없이 Prose 프로그램으로 쓰고, 어떤 에이전트에서든 돌릴 수 있다.</p>
+        <p>조건은 하나다. <strong>하네스에 서브 에이전트가 있어야 한다.</strong> 서브 에이전트가 없는 Pi(추정) 같은 하네스로는 복잡한 흐름이 어렵다. bash는 필수가 아니다. 코드 모드의 VM 격리 환경에서도 돈다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="origin">
+        <header><span class="num">13</span><h2>커널의 출처와 스펙 주도 개발 <span class="ts">47:00</span></h2></header>
+        <p>커널의 모범 사례가 어디서 왔는지 묻는 질문으로 보인다. 질문 자체는 자막에 없다. Dan은 오랜 엔지니어링 경험을 근거로 들었다. 요구사항을 잘 말하는 사람과 못 말하는 사람을 오래 겪었다는 것이다.</p>
+        <p>내부 벤치마크도 돌린다. 진화 알고리즘으로 커널을 줄여 가며, 줄인 커널로도 계약을 지키는지 본다. 경험과 실험 결과에 기반한다는 설명이다.</p>
+
+        <h3>스펙 주도 개발과 합치기 <span class="ts">47:30</span></h3>
+        <p>Raymond는 Matt Pocock의 작업 방식을 Prose 프로그램 하나로 만든 적이 있다. 이름은 "auto Pocock"이다. 스킬을 연결하는 자기 방식이 통한다는 것을 보여 주려고 만들었다.</p>
+        <p>그 흐름은 "grill me"로 시작한다. 질문을 퍼부어 요구사항을 캐는 단계다. 그다음 TDD 등으로 이어진다. 프로그램의 단계마다 서브 에이전트는 순서상 다음 스킬을 반드시 불러와야 한다.</p>
+        <p>Dan은 OpenProse가 본질적으로 스펙 주도 개발 <span class="en">spec-driven development</span>이라고 했다. 다만 기존 스펙 주도 개발 계약과 섞었을 때 서로 덮어쓰는지, 부딪히는지는 아직 시험해 보지 않았다.</p>
+        <p class="note">자막의 "spectrum driven development"는 앞뒤 맥락상 spec-driven development로 바로잡았다.</p>
+        <p>끝으로 발표팀은 사용자 구성을 밝혔다. 소프트웨어 개발에 쓰는 사람도 있다. 하지만 운영, 제품 관리, 퀀트 문서화처럼 개발 밖의 일에 쓰는 사람이 더 많다. 마크다운 문서라는 형태가 비개발자에게 더 끌리는 것 같다고 했다. <span class="ts">48:50</span></p>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>프롬프트, 컨텍스트, 하네스가 차례로 풀렸다. 남은 일은 원하는 것을 정확히 이름 붙이는 것이다.</li>
+          <li><strong>방법 말고 결과를 선언한다.</strong> 계약은 끝난 상태를 적은 글이다.</li>
+          <li>OpenProse는 <strong>전부 마크다운</strong>이다. 컴파일러와 런타임까지 프롬프트다.</li>
+          <li><strong>채팅이 아니라 이벤트</strong>로 돈다. 잡은 계약과 트리거(크론, 웹훅)를 묶은 것이다.</li>
+          <li>필요한 서브 에이전트, 스킬, 도구, 입출력을 선언한다. 의존성이 없으면 실행하지 않는다.</li>
+          <li>처음엔 느슨하게 선언하고, 잘 된 트레이스는 <strong>방법으로 고정</strong>해 비용을 낮춘다.</li>
+          <li>매번 <strong>새 세션이 계약을 기준으로 검사</strong>한다. PR 리뷰가 개발 에이전트의 브레이크가 된다.</li>
+          <li>약점은 에이전트가 스스로 끝났다고 말하는 것이다. 싸고 빠른 결정 모델을 검증기로 붙일 수 있다.</li>
+          <li>계약은 <strong>조합</strong>한다. 중간 계약을 체크포인트로 이어 DAG를 만든다. 하네스에 서브 에이전트만 있으면 된다.</li>
+          <li><strong>반복·신뢰·감사가 필요한 일</strong>에 쓴다. 한 번 하고 끝나는 탐색에는 채팅이 낫다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표팀이 말하는 "계약"은 무엇을 적은 글인가?</span></summary><div class="answer">결과, 목표, 끝난 상태. 어떻게 할지는 적지 않는다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>방법까지 적어 주면 왜 손해라고 하나?</span></summary><div class="answer">똑똑한 모델은 방법을 스스로 찾는다. 방법을 정해 주면 그 능력과 비용을 그냥 버리는 셈이다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Raymond가 기억하라고 한 두 가지는?</span></summary><div class="answer">전부 마크다운이라는 것(하나의 거대한 프롬프트), 그리고 채팅이 아니라 이벤트 기반이라는 것.</div></details>
+          <details><summary><span class="qn">Q4</span><span>run.prose.md의 잡은 무엇과 무엇을 묶은 것인가? 지금 있는 트리거는?</span></summary><div class="answer">계약과 트리거. 트리거는 웹훅과 크론 두 가지다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>프로그램에 선언한 도구를 찾을 수 없으면 어떻게 되나?</span></summary><div class="answer">실행하지 않는다. 다른 도구로 대신하지 않는다. Raymond는 이것을 "컴파일하지 않는다"에 빗댔다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>방법을 고정(pin)하는 흐름과 그 이점은?</span></summary><div class="answer">느슨하게 선언한다. 비싼 모델이 길을 찾는다. 성공한 트레이스를 방법으로 굳힌다. 이후 더 결정적으로, 더 싸게 돈다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>PR 리뷰를 새 세션으로 띄우는 이유는?</span></summary><div class="answer">자기 일을 자기가 검사하면 잘했다고 믿는 쪽으로 기운다. 새 세션이 계약을 기준으로 재면 그 고리를 피한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>OpenProse의 약점과, 결정 모델이 들어갈 자리는?</span></summary><div class="answer">약점은 에이전트가 계약을 채웠다고 스스로 말한다는 점, 모델마다 결과가 다르다는 점이다. 결정 모델은 잡 끝의 검증기, 이벤트 라우터, 조합에서 "낡았는지" 판단하는 캐시에 들어갈 수 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>DSPy와 OpenProse는 무엇이 같고 무엇이 반대인가?</span></summary><div class="answer">목표는 같다. 복잡한 워크플로의 추상화 층이다. DSPy는 LLM 호출을 블랙박스로 가두고 나머지를 타입 있는 결정적 코드로 짠다. OpenProse는 전부 모호한 영역에 두고 AI를 컴파일러로 쓴다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>퀀트 문서화 데모에서 하네스에 넣은 두 가지는?</span></summary><div class="answer">공개된 커널, 그리고 규제 요구사항을 이상적인 상태로 적은 프로그램.</div></details>
+          <details><summary><span class="qn">Q11</span><span>OpenProse 대신 채팅을 쓰라고 한 경우는?</span></summary><div class="answer">한 번 하고 끝나는 일, 탐색 중인 일, 원하는 것을 아직 모를 때.</div></details>
+          <details><summary><span class="qn">Q12</span><span>중간 계약을 이어 붙이면 무엇을 얻나? 하네스에 꼭 필요한 것은?</span></summary><div class="answer">체크포인트를 얻는다. 방법을 어느 정도 정하면서도 각 단계를 어떻게 채울지는 에이전트에게 맡긴다. 하네스에는 서브 에이전트가 있어야 한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>자주 반복하는 업무 하나를 골라 "끝난 상태"를 글로 쓴다<span class="how">절차 대신 결과, 만족할 조건, 입력, 출력을 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>기존 프롬프트에서 "어떻게"를 지운 버전을 만들어 비교한다<span class="how">확인: 더 강한 모델에서 결과가 나아지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>필요한 도구와 스킬을 명시하고, 없으면 실행하지 않게 한다<span class="how">예: 검색은 지정한 도구만 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>사람 대화가 필요 없는 일은 트리거로 돌린다<span class="how">크론, GitHub 이슈·PR 웹훅</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>결과 검사는 새 세션이 계약을 기준으로 하게 한다<span class="how">확인: 만든 세션이 스스로 검사하고 끝내는 곳이 없는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>돈이 드는 동작에는 사람 확인 단계를 둔다<span class="how">잡 배포, 유료 실행</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>잘 된 실행 하나를 골라 방법으로 고정하고 더 싼 모델로 돌려 본다<span class="how">확인: 비용과 결과 품질을 함께 비교했는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>큰 계약을 중간 계약으로 쪼개 체크포인트를 둔다<span class="how">확인: 각 중간 계약이 따로 검사 가능한가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>한 번 하고 끝나는 탐색은 채팅으로 남겨 둔다<span class="how">계약으로 만드는 건 반복·신뢰·감사가 필요한 일만</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>선언형 / 명령형</td><td>Declarative / imperative. 원하는 결과를 적는 방식과, 할 일을 순서대로 지시하는 방식</td></tr>
+              <tr><td>계약</td><td>Contract. 일이 끝났을 때 만족해야 할 상태, 입력, 출력을 적은 글</td></tr>
+              <tr><td>조합 / 상속</td><td>Composition / inheritance. 작은 부품을 이어 붙이는 방식과, 큰 틀을 물려받아 고치는 방식</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙, 서브 에이전트를 다루는 실행 틀. Claude Code, Codex 등</td></tr>
+              <tr><td>메타 하네스</td><td>하네스 위에서 하네스가 컴파일하는 대상이 되는 층. 발표팀이 반쯤 농담으로 쓴 말</td></tr>
+              <tr><td>컨텍스트 엔지니어링</td><td>모델 입력 창에 넣을 자료를 고르고 채우는 일</td></tr>
+              <tr><td>커널</td><td>Kernel. OpenProse 프로그램을 해석하는 공개 마크다운 지침. 부트로더이자 문서 색인 역할</td></tr>
+              <tr><td>잡</td><td>Job. run.prose.md에서 계약 하나와 트리거 하나를 묶은 단위</td></tr>
+              <tr><td>트리거</td><td>Trigger. 워크플로를 시작시키는 사건</td></tr>
+              <tr><td>크론</td><td>Cron. 정해진 시간마다 작업을 실행하는 일정</td></tr>
+              <tr><td>웹훅</td><td>Webhook. 어떤 서비스에서 사건이 생기면 다른 서비스에 HTTP로 알려 주는 방식</td></tr>
+              <tr><td>서브 에이전트</td><td>Sub-agent. 부모 에이전트가 일을 나눠 맡기는 하위 에이전트</td></tr>
+              <tr><td>적대적 리뷰</td><td>Adversarial review. 일부러 깐깐하게, 결함을 찾는 쪽으로 하는 리뷰</td></tr>
+              <tr><td>백프레셔</td><td>Backpressure. 뒤 단계가 기준을 넘을 때까지 앞 단계를 붙잡는 제동</td></tr>
+              <tr><td>트레이스</td><td>Trace. 에이전트가 실행하며 한 단계씩 무엇을 했는지 남긴 기록</td></tr>
+              <tr><td>고정 (pin)</td><td>잘 된 실행의 방법을 굳혀 다음부터 그대로 따르게 하는 것</td></tr>
+              <tr><td>골든 세션</td><td>Golden session. 가장 잘 된 대화 세션. 재사용 워크플로의 재료로 쓴다</td></tr>
+              <tr><td>결정 모델</td><td>Decision model. 통과/불통과처럼 판단만 빠르고 싸게 내리는 모델</td></tr>
+              <tr><td>DSPy</td><td>LLM 호출을 타입 있는 모듈로 감싸 코드로 워크플로를 짜는 프레임워크</td></tr>
+              <tr><td>메모이제이션</td><td>Memoization. 입력이 그대로면 이전 결과를 다시 쓰고, 바뀌었을 때만 다시 계산하는 기법</td></tr>
+              <tr><td>DAG</td><td>Directed acyclic graph. 방향이 있고 되돌아오는 길이 없는 그래프</td></tr>
+              <tr><td>팬아웃·팬인</td><td>Fan-out / fan-in. 일을 여러 갈래로 나눠 돌린 뒤 결과를 다시 모으는 모양</td></tr>
+              <tr><td>프런트매터</td><td>Front matter. 마크다운 파일 맨 위에 두는 설정 정보 영역</td></tr>
+              <tr><td>RLHF</td><td>사람의 선호 평가로 모델을 강화학습시키는 방법</td></tr>
+              <tr><td>온프레미스</td><td>On-prem. 외부 클라우드 대신 회사 자체 환경에서 돌리는 것</td></tr>
+              <tr><td>오픈 코어</td><td>Open core. 핵심은 오픈소스로 공개하고 부가 기능이나 호스팅으로 사업하는 방식</td></tr>
+              <tr><td>SOP</td><td>Standard operating procedure. 조직의 표준 운영 절차</td></tr>
+              <tr><td>퀀트 모델</td><td>금융 기관이 가격 결정, 위험 측정 등에 쓰는 수리·통계 모델</td></tr>
+              <tr><td>SOFR</td><td>Secured Overnight Financing Rate. 미국의 대표적인 단기 금리 지표</td></tr>
+              <tr><td>스펙 주도 개발</td><td>Spec-driven development. 명세를 먼저 쓰고 그 명세를 기준으로 구현하는 개발 방식</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>Dan Barrett 소개, 2021년 "최고의 프롬프터"</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>변하지 않는 문제: 의도 전달</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>프롬프팅, 컨텍스트 엔지니어링, 하네스</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>다음 단계: 원하는 것에 이름 붙이기</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>조합과 선언형, 방법 말고 결과</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>Raymond Weitekamp: 마크다운, 이벤트 기반</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>세 부류의 청중에게 주는 이점</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>프로그램에 선언하는 것</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>"너는 컴파일러다"</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>이벤트 기반, 잡 = 계약 + 트리거</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>이슈 → 커밋, PR → 적대적 리뷰</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>질문: 방법을 고정하기, 골든 세션</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>7만~8만 토큰 커널, 메타 하네스</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>run.prose.md 데모 시작</td></tr>
+              <tr><td><span class="ts">20:40</span></td><td>음성으로 리뷰 잡 만들기</td></tr>
+              <tr><td><span class="ts">21:50</span></td><td>잡 탭에서 손으로 만들기</td></tr>
+              <tr><td><span class="ts">22:40</span></td><td>PR 리뷰 백프레셔, 1~14 라운드</td></tr>
+              <tr><td><span class="ts">24:40</span></td><td>새 세션이 계약을 기준으로 검사</td></tr>
+              <tr><td><span class="ts">25:10</span></td><td>질문: 결정 모델, 검증기, 라우터</td></tr>
+              <tr><td><span class="ts">26:40</span></td><td>DSPy와의 비교</td></tr>
+              <tr><td><span class="ts">28:10</span></td><td>질문: 강화학습</td></tr>
+              <tr><td><span class="ts">31:10</span></td><td>Dan Barrett: 사내 구축과 퀀트 문서화</td></tr>
+              <tr><td><span class="ts">34:20</span></td><td>Codex에서 커널 부팅, prose run</td></tr>
+              <tr><td><span class="ts">36:40</span></td><td>SOFR 커브 문서, 연 1천만~5천만 달러</td></tr>
+              <tr><td><span class="ts">38:20</span></td><td>계약은 누가 쓰나, 채팅과 비교</td></tr>
+              <tr><td><span class="ts">41:20</span></td><td>쓸 곳과 안 쓸 곳</td></tr>
+              <tr><td><span class="ts">41:50</span></td><td>계약 조합, 메모이제이션</td></tr>
+              <tr><td><span class="ts">43:40</span></td><td>기사 쓰기 예, 계약의 DAG</td></tr>
+              <tr><td><span class="ts">45:50</span></td><td>동적 워크플로 유형, 서브 에이전트 조건</td></tr>
+              <tr><td><span class="ts">47:00</span></td><td>커널의 출처, 진화 알고리즘</td></tr>
+              <tr><td><span class="ts">47:30</span></td><td>auto Pocock, 스펙 주도 개발</td></tr>
+              <tr><td><span class="ts">48:50</span></td><td>사용자 대부분은 개발 밖의 일</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '7T-gldvgfpo:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

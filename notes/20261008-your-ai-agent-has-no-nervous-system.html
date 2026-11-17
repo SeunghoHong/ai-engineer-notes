@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>신경계 없는 에이전트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#questions">역할마다 다른 고민</a></li>
+      <li><a href="#sight">빠르지만 앞을 못 본다</a></li>
+      <li><a href="#context">맥락이 신경계다</a></li>
+      <li><a href="#bluebox">Bluebox가 하려는 일</a></li>
+      <li><a href="#merge">로컬에선 되는데 머지하면 깨진다</a></li>
+      <li><a href="#detect">문제가 커지기 전에 찾는다</a></li>
+      <li><a href="#fix">고칠 때도 맥락이 필요하다</a></li>
+      <li><a href="#brief">만들기 전에 브리핑한다</a></li>
+      <li><a href="#human">마지막 결정은 사람이 한다</a></li>
+      <li><a href="#wrap">마무리와 읽는 법</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-08 · 15분 · 영어 발표 한글 정리</span>
+      <h1>에이전트의 신경계는 맥락이다</h1>
+      <p class="lead">AI 에이전트는 빠르지만 자기가 일하는 환경을 보지 못한다. 발표자는 서비스 사이의 의존 관계, 실제 사용 방식, 변경 이력 같은 맥락이 에이전트의 신경계라고 말한다. 후반부에서는 이 맥락을 개발 과정 곳곳에 넣는 자사 제품을 소개한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=YNT7Plf9KIg" target="_blank" rel="noopener">Your AI Agent Has No Nervous System</a></span>
+        <span>발표: Matt Gibiec (Dynatrace, AI 네이티브 솔루션 엔지니어링 지역 디렉터)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 청중 반응과 제품 기능 설명은 모두 발표자가 말한 것이고 따로 확인하지 않았다. 제품 이름은 자막에 Blue Box와 Bluebox로 섞여 나와 Bluebox로 적었다(추정). <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트는 사람이 하던 일을 맡는다. 그러려면 <strong>추론할 재료</strong>가 필요하다.</li>
+        <li>역할마다 고민이 다르다. 개발자는 같은 자리를 맴도는 에이전트, 팀 리드는 운영과 보안, 엔지니어링 책임자는 <strong>에이전트의 가치를 어떻게 잴지</strong>를 고민한다.</li>
+        <li>에이전트는 <strong>빠르지만 앞을 못 본다.</strong> 받은 데이터만큼만 판단한다. 맥락, 세부 정보, 데이터 접근 권한이 빠지면 환각과 쓸모없는 자동화가 생긴다.</li>
+        <li>필요한 것은 우리 환경의 맥락이다. 발표자는 이것을 에이전트의 <strong>신경계</strong>라고 부른다. "Context is king."</li>
+        <li>Bluebox는 이 맥락을 개발 단계마다 넣겠다고 한다. <strong>로컬 테스트에 프로덕션 맥락</strong>을 주고, 평소와 다른 움직임을 일찍 잡고, 환경 전체를 고려한 수정을 제안하고, 만들기 전에 브리핑한다.</li>
+        <li>자동화를 늘려도 <strong>배포 결정은 사람이 한다.</strong></li>
+        <li>후반은 자사 제품 소개이고 수치나 데모는 없다. 제품을 빼고 남는 교훈은 <strong>에이전트가 볼 수 있는 맥락을 점검하고, 가치를 잴 기준부터 정하라</strong>는 것이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="questions">
+        <header><span class="num">01</span><h2>역할마다 다른 고민 <span class="ts">01:40</span></h2></header>
+        <p>발표자는 먼저 에이전트가 왜 중요한지 짚는다. 에이전트는 사람이 하던 일을 대신한다. 그러려면 추론이 필요하다. 사람처럼 행동할 필요는 없지만, 무엇을 해야 하는지 알 만큼의 입력은 받아야 한다. 그렇지 않으면 원래 잘 안 되던 일을 그대로 자동화할 뿐이다.</p>
+        <p>이어서 청중에게 역할별로 손을 들게 하고, 각 역할이 던질 법한 질문을 보여 줬다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">개발자 <span class="ts">02:10</span></span>
+            <p><strong>"에이전트가 왜 같은 자리를 맴돌까?"</strong></p>
+            <p>Claude 같은 에이전트가 같은 일을 되풀이한다. 토큰은 계속 쓰는데 원하는 결과는 안 나온다.</p>
+            <p class="verdict">사람은 조사 결과가 마음에 안 들면 다른 각도로 다시 접근한다. 발표자는 지금의 에이전트가 아직 그만큼 똑똑하지 않다고 본다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">팀 리드 <span class="ts">02:50</span></span>
+            <p><strong>"운영 문제를 어떻게 다루지?"</strong></p>
+            <p>많은 팀이 아직 "일단 배포하고 나머지는 나중에" 단계에 있다.</p>
+            <p class="verdict">보안 걱정이 있느냐고 묻자 청중 거의 모두가 손을 들었다고 발표자는 전한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">엔지니어링 책임자 <span class="ts">03:20</span></span>
+            <p><strong>"에이전트가 사용자에게 가치를 주고 있나?"</strong></p>
+            <p>모두가 AI 에이전트 열풍 속에 있다. 하지만 그 가치를 재는 방법을 정해 둔 곳은 드물다고 발표자는 본다.</p>
+            <p class="verdict">엔지니어링 시간, 노력, 돈을 쓰는 만큼 <b>성공을 잴 기준</b>이 있어야 한다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">발표자의 제안 <span class="ts">04:00</span></span>
+          <span>빨리 가고 싶어도 잠깐 멈춘다. 무엇을 이루려는지, 에이전트의 성공을 어떻게 잴지 먼저 정한다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="sight">
+        <header><span class="num">02</span><h2>빠르지만 앞을 못 본다 <span class="ts">04:30</span></h2></header>
+        <p>발표자는 Dynatrace CTO인 Bernd의 말을 슬라이드에 띄우고, 그중 한 구절을 강조했다.</p>
+        <blockquote>에이전트는 빠르게 움직이지만, 앞을 보지 못한다.<cite>Dynatrace CTO Bernd의 말 중 발표자가 강조한 구절. 원문 "operate at speed, but without sight"</cite></blockquote>
+        <p>빠르다는 데는 모두 동의한다. 문제는 앞을 못 본다는 쪽이다. 에이전트는 판단에 쓸 수 있는 데이터만큼만 좋다. 에이전트에게 주는 데이터에서 다음이 빠지면 문제가 생긴다.</p>
+        <ul class="plain">
+          <li>환경의 맥락</li>
+          <li>세부 정보</li>
+          <li>환경 속 도구에서 데이터를 가져올 권한</li>
+        </ul>
+        <p>그러면 두 가지 일이 생긴다고 발표자는 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>생기는 일</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>환각 <span class="en">hallucination</span></td><td>AI가 근거 없이 그럴듯한 답을 지어낸다</td></tr>
+              <tr><td>가치 없는 자동화</td><td>환경을 모른 채 프로세스를 자동화한다. 돌아가기는 하지만 정작 도움이 안 된다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="context">
+        <header><span class="num">03</span><h2>맥락이 신경계다 <span class="ts">05:30</span></h2></header>
+        <p>발표 제목에는 반전이 있다. 에이전트에게 진짜 신경계나 눈이 있어야 하는 건 아니다. 필요한 건 <strong>우리 환경의 맥락</strong> <span class="en">context</span>이다.</p>
+
+        <h3>예: 개발 과정에 Claude를 넣을 때 <span class="ts">05:50</span></h3>
+        <p>개발 수명 주기 <span class="en">SDLC</span> 안에서 Claude로 일을 자동화한다고 하자. 개발 수명 주기는 기획부터 개발, 테스트, 배포, 운영까지의 전체 과정이다. Claude가 다음을 모르면 문제가 생긴다.</p>
+        <ul class="plain">
+          <li>서비스끼리 어떻게 서로 기대고 있는지</li>
+          <li>사용자가 애플리케이션을 실제로 어떻게 쓰는지</li>
+        </ul>
+        <div class="shift" aria-label="맥락이 없는 에이전트와 맥락을 받은 에이전트의 차이">
+          <div><span class="tag">맥락 없는 에이전트</span><b>지금 보기엔 맞는 결정</b><span class="muted">환경을 모르니 길게 보면 틀린 결정이 된다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">맥락을 받은 에이전트</span><b>환경을 알고 내리는 결정</b><span class="muted">의존 관계와 실제 사용 방식을 보고 판단한다</span></div>
+        </div>
+        <blockquote>Context is king. (맥락이 왕이다.)<cite>발표자 <span class="ts">06:30</span></cite></blockquote>
+        <p>발표자는 이 맥락을 우리가 에이전트에게 줄 수 있는 신경계라고 부른다. 에이전트끼리 주고받고, 무언가를 자동화하고, 새 프로세스를 만들 때 그 모두를 이어 주는 <strong>결합 조직</strong> <span class="en">connective tissue</span>이라는 것이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="bluebox">
+        <header><span class="num">04</span><h2>Bluebox가 하려는 일 <span class="ts">07:00</span></h2></header>
+        <p>여기서부터 발표자는 자기 회사 제품을 소개한다. Dynatrace의 Bluebox(추정)는 개발 과정 한가운데 들어가는 에이전트다. AI 코딩 에이전트나 회사가 직접 만든 에이전트에게 맥락을 공급한다.</p>
+        <p>발표자는 슬라이드의 장면을 다 다루지 않고 중요하다고 본 장면만 골라 설명했다. 다음 다섯 섹션이 그 장면들이다.</p>
+        <p class="note">발표자는 관측 플랫폼 회사 Dynatrace 소속이다. 발표 후반은 발표자 스스로 "짧은 홍보(pitch)"라고 부른 자사 제품 소개다. 기능 설명은 발표자의 주장이고, 효과를 보여 주는 수치나 데모는 없었다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="merge">
+        <header><span class="num">05</span><h2>로컬에선 되는데 머지하면 깨진다 <span class="ts">07:30</span></h2></header>
+        <p>개발자에게 익숙한 장면이다.</p>
+        <ol class="plain">
+          <li>기능을 만든다. 에이전트에 넣을 기능이나 스킬일 수도 있다.</li>
+          <li>로컬에서 테스트하니 잘 된다.</li>
+          <li>메인 브랜치에 머지해 내보낸다.</li>
+          <li>다른 서비스 세 개가 깨진다.</li>
+        </ol>
+        <p>혼자 돌릴 때는 멀쩡했다. 그런데 다른 에이전트, 다른 애플리케이션과 합쳐지자 환경 속 프로세스가 망가졌다.</p>
+
+        <h3>발표자가 말한 해법 <span class="ts">08:00</span></h3>
+        <ul class="plain">
+          <li>모든 에이전트와 AI 워크로드 <span class="en">workload</span>의 <strong>서비스 의존 관계 지도</strong> <span class="en">dependency mapping</span>를 만든다. 워크로드는 시스템에서 돌아가는 작업 단위다.</li>
+          <li><strong>프로덕션의 맥락을 로컬 테스트로 가져온다.</strong> 프로덕션 <span class="en">production</span>은 실제 사용자가 쓰는 운영 환경이다.</li>
+        </ul>
+        <div class="shift" aria-label="로컬 테스트 방식의 변화">
+          <div><span class="tag">지금</span><b>로컬 테스트만 보고 머지</b><span class="muted">"내 기능이 돌아가나"만 확인한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자가 말하는 방식</span><b>프로덕션 맥락으로 테스트</b><span class="muted">"내 기능이 연결된 다른 것을 깨뜨리지 않나"까지 확인한다</span></div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="detect">
+        <header><span class="num">06</span><h2>문제가 커지기 전에 찾는다 <span class="ts">08:50</span></h2></header>
+        <p>발표자는 이 장면을 가장 좋아한다고 했다. 관측 일을 8년 해 왔는데, 고객에게 목표를 물으면 모두 같은 답을 한다고 한다. 문제가 진짜 문제가 되기 전에, 조직과 사용자에게 피해가 가기 전에 찾고 싶다는 것이다.</p>
+        <p>발표자가 설명한 방법은 네 단계다.</p>
+        <ol class="plain">
+          <li><strong>상호작용을 처음부터 끝까지 본다.</strong> 에이전트가 애플리케이션, 주변 시스템, 조직 안에서 무엇과 주고받는지 파악한다.</li>
+          <li><strong>평소 모습을 익힌다.</strong> 과거 데이터와 과거 부하를 보고 정상이 어떤 모습인지 정한다. <span class="ts">09:30</span></li>
+          <li><strong>벗어나면 바로 알린다.</strong> 개발자의 IDE 안 에이전트에게 알려 준다. 예를 들면 "담당 서비스가 느려졌다", "전에 없던 오류를 낸다" 같은 알림이다. <span class="ts">09:50</span></li>
+          <li><strong>변경 이력과 겹쳐 본다.</strong> 코드 저장소에도 연결해 무엇이 바뀌었는지 안다. 문제 데이터와 겹치면, 누군가 내보낸 변경이나 잘못된 머지가 원인이라고 짚을 수 있다. <span class="ts">10:00</span></li>
+        </ol>
+        <div class="callout">
+          <span class="title">중간 정리 <span class="ts">10:40</span></span>
+          <span>먼저 환경의 맥락을 만든다. 그 맥락을 개발자의 로컬 테스트와 IDE로 보낸다. AI 코딩 에이전트에도 넣는다. 그러면 문제를 일찍 찾고 먼저 움직일 수 있다. 다음은 고치는 일이다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="fix">
+        <header><span class="num">07</span><h2>고칠 때도 맥락이 필요하다 <span class="ts">11:00</span></h2></header>
+        <p>문제를 찾았으면 고쳐야 한다. Bluebox는 개발 과정 안에 들어가 있으니 저장소 정보를 안다. 누가 올렸는지, 무엇이 바뀌었는지 안다.</p>
+        <p>그래서 문제가 생긴 서비스, 에이전트, 워크로드를 어떤 단계로 고치면 되는지 개발자에게 알려 줄 수 있다고 발표자는 말한다. 이런 조치를 복구 조치 <span class="en">remediation</span>라고 한다.</p>
+        <div class="callout">
+          <span class="title">한 줄 수정의 파급 <span class="ts">11:30</span></span>
+          <span>버그를 고치는 데는 코드 한 줄이면 될 수도 있다. 그런데 그 한 줄을 바꾼 뒤 나머지 환경은 어떻게 될까. 수정은 눈앞의 문제를 없애는 데서 끝나지 않는다. 다른 문제를 만들지 않는 것까지가 수정이다. 그래서 다른 서비스와의 의존 관계를 알아야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="brief">
+        <header><span class="num">08</span><h2>만들기 전에 브리핑한다 <span class="ts">12:10</span></h2></header>
+        <p>발표자가 개발자에게 특히 하고 싶은 이야기라고 한 장면이다.</p>
+        <p>누군가 기능 아이디어를 낸다. 개발자는 바로 만들기 시작한다. 그런데 그 기능이 사용자에게 무엇을 줘야 하는지 미리 조사했을까. 그 기능으로 무엇을 이루려는지 정했을까. 발표자는 이런 조사 없이 바로 만드는 경우가 너무 많다고 본다.</p>
+        <blockquote>Plan before you prompt. (프롬프트를 쓰기 전에 계획하라.)<cite>발표자 <span class="ts">12:40</span></cite></blockquote>
+        <p>발표자가 말한 방법은 이렇다. 지금의 애플리케이션과 이미 돌아가는 에이전트들에서 맥락을 모은다. 새 릴리스나 새 기능을 계획할 때 그 맥락을 보고, 기능에 무엇이 들어가야 하는지 정한다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="human">
+        <header><span class="num">09</span><h2>마지막 결정은 사람이 한다 <span class="ts">13:10</span></h2></header>
+        <p>에이전트에게 맥락을 주면 자동화를 더 넓힐 수 있다. 그렇다고 모든 걸 에이전트에게 맡기면 꽤 지저분해질 거라고 발표자는 말한다. 어느 지점에서는 사람이 통제해야 한다. 이런 방식을 사람 개입 <span class="en">human in the loop</span>이라고 한다.</p>
+        <p>발표자는 슬라이드의 그림으로 흐름을 설명했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th><th>주체</th></tr></thead>
+            <tbody>
+              <tr><td>관찰 <span class="ts">13:50</span></td><td>환경을 지켜보며 맥락과 의존 관계 지도를 만든다. 개발자가 테스트할 때 프로덕션 데이터와 세부 정보를 준다</td><td>Bluebox</td></tr>
+              <tr><td>감지</td><td>문제를 찾는다</td><td>Bluebox</td></tr>
+              <tr><td>수정 제안 <span class="ts">14:00</span></td><td>고장 난 에이전트만 보지 않는다. 모니터링 중인 애플리케이션과 에이전트의 맥락까지 보고, 환경 전체에 맞는 수정을 제안한다</td><td>Bluebox</td></tr>
+              <tr><td>결정 <span class="ts">14:20</span></td><td>수정을 개발 과정에 태워 올린다. 그 기능이나 수정을 배포할지 말지는 마지막에 사람이 정한다</td><td>사람</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="wrap">
+        <header><span class="num">10</span><h2>마무리와 읽는 법 <span class="ts">14:40</span></h2></header>
+        <blockquote>에이전트가 믿을 수 있는 코드를 프로덕션에 내보내도록 돕고 싶다.<cite>발표자의 마무리 문장을 옮김. 원문 "help agents ship code you trust to production"</cite></blockquote>
+        <p>발표자는 bluebox.ai(자막에 들린 주소, 추정)에서 프리뷰를 신청할 수 있다고 안내했다. 남은 5분은 질문을 받으려 했지만 질문은 나오지 않았다.</p>
+        <div class="callout">
+          <span class="title">제품을 빼고 남는 것</span>
+          <ul class="plain">
+            <li>에이전트가 무엇을 볼 수 있는지 점검한다. 의존 관계, 실제 사용 방식, 변경 이력, 데이터 접근 권한이 대상이다.</li>
+            <li>로컬 테스트 통과에서 멈추지 않는다. 변경이 닿는 다른 서비스까지 본다.</li>
+            <li>평소 모습을 정해 두면 이상한 움직임을 일찍 잡을 수 있다.</li>
+            <li>에이전트를 만들기 전에 그 가치를 잴 기준부터 정한다.</li>
+            <li>자동화를 넓혀도 배포 결정은 사람이 쥔다.</li>
+          </ul>
+        </div>
+        <div class="callout">
+          <span class="title">발표가 답하지 않은 질문</span>
+          <span>초반에 던진 질문 가운데 같은 자리를 맴도는 에이전트, 보안, 가치 측정 방법은 뒤에서 구체적인 답이 나오지 않았다. 후반 설명은 주로 운영 문제를 맥락으로 푸는 이야기다.</span>
+        </div>
+        <p class="note">"맥락이 핵심"이라는 주장은 관측 데이터를 다루는 발표자 회사의 사업과 맞닿아 있다. 주장 자체는 일반적인 교훈으로 읽을 수 있지만, 해법이 특정 제품이어야 한다는 근거는 발표에 없다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트는 사람이 하던 일을 대신한다. 그러려면 추론할 재료가 필요하다.</li>
+          <li>개발자는 반복 루프, 팀 리드는 운영과 보안, 엔지니어링 책임자는 <strong>가치 측정</strong>을 고민한다.</li>
+          <li>에이전트는 <strong>빠르지만 앞을 못 본다.</strong> 받은 데이터만큼만 판단한다.</li>
+          <li>맥락, 세부 정보, 데이터 접근 권한이 빠지면 <strong>환각</strong>과 <strong>가치 없는 자동화</strong>가 생긴다.</li>
+          <li>맥락이 에이전트의 신경계다. <strong>"Context is king."</strong></li>
+          <li>로컬 테스트 통과로는 부족하다. <strong>의존 관계 지도와 프로덕션 맥락</strong>으로 영향을 봐야 한다.</li>
+          <li>과거 데이터로 <strong>평소 모습</strong>을 알아야 벗어난 움직임을 일찍 잡는다. 변경 이력과 겹치면 원인을 찾는다.</li>
+          <li>한 줄 수정도 환경 전체에 영향을 준다. <strong>수정에도 맥락이 필요하다.</strong></li>
+          <li>만들기 전에 기획한다. <strong>"Plan before you prompt."</strong></li>
+          <li>자동화를 늘려도 <strong>배포 결정은 사람</strong>이 한다. 발표 후반은 자사 제품 소개라 감안해 읽는다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표 제목의 "신경계"는 결국 무엇을 가리키나?</span></summary><div class="answer">우리 환경의 맥락이다. 서비스 의존 관계, 실제 사용 방식, 변경 이력처럼 에이전트를 환경과 이어 주는 정보를 말한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>개발자가 겪는 "루프" 문제는 무엇이고, 사람과 무엇이 다른가?</span></summary><div class="answer">에이전트가 같은 일을 되풀이하며 토큰만 쓰고 원하는 결과를 못 낸다. 사람은 결과가 마음에 안 들면 접근을 바꾼다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>엔지니어링 책임자에게 던진 질문과 발표자의 제안은?</span></summary><div class="answer">에이전트가 사용자에게 가치를 주는지, 그 가치를 어떻게 재는지다. 발표자는 잠깐 멈추고 목표와 성공 기준부터 정하라고 제안한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>"빠르지만 앞을 못 본다"는 무슨 뜻인가?</span></summary><div class="answer">에이전트는 빠르게 움직이지만, 판단에 쓸 수 있는 데이터만큼만 좋다. 환경을 보여 주는 데이터가 없으면 제대로 판단하지 못한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>에이전트에게 주는 데이터에서 빠지면 안 되는 세 가지와, 빠졌을 때 생기는 일은?</span></summary><div class="answer">맥락, 세부 정보, 도구에서 데이터를 가져올 권한. 빠지면 환각이 생기고, 도움이 안 되는 자동화가 생긴다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>맥락 없이 개발 과정에 넣은 Claude의 결정은 어떤 문제가 있나?</span></summary><div class="answer">지금 보기엔 맞아 보이지만, 의존 관계와 사용 방식을 모르니 길게 보면 틀린 결정이 된다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>"로컬에선 되는데 머지하면 깨지는" 문제에 발표자가 제시한 방법은?</span></summary><div class="answer">에이전트와 AI 워크로드의 서비스 의존 관계 지도를 만들고, 프로덕션 맥락을 로컬 테스트로 가져온다. 내 기능이 연결된 다른 것을 깨뜨리지 않는지까지 확인한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>문제를 일찍 찾으려면 무엇을 먼저 알아야 하나?</span></summary><div class="answer">평소 모습이다. 과거 데이터와 부하로 정상 범위를 정해 두고, 벗어나면 개발자의 IDE 안 에이전트에게 알린다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>코드 저장소와 연결하면 무엇을 더 할 수 있나?</span></summary><div class="answer">무엇이 바뀌었고 누가 올렸는지 안다. 문제 데이터와 겹쳐 보면 어떤 변경이나 머지가 원인인지 짚을 수 있다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>한 줄짜리 버그 수정에도 맥락이 필요한 이유는?</span></summary><div class="answer">그 한 줄이 나머지 환경에 영향을 줄 수 있다. 수정은 눈앞의 문제를 없애는 것뿐 아니라 다른 문제를 만들지 않는 것까지 포함한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>"Plan before you prompt"는 무엇을 하라는 말인가?</span></summary><div class="answer">기능을 만들기 전에 그 기능이 사용자에게 무엇을 줘야 하는지 먼저 정한다. 기존 애플리케이션과 에이전트에서 얻은 맥락을 근거로 계획한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 그린 자동화 흐름의 네 단계와, 사람이 들어가는 자리는?</span></summary><div class="answer">관찰, 감지, 수정 제안, 결정. 마지막 결정 단계에서 기능이나 수정을 배포할지 사람이 정한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트가 읽을 수 있는 맥락을 목록으로 적는다<span class="how">의존 관계, 실제 사용 방식, 최근 변경 이력, 데이터 접근 권한 중 빠진 것을 표시한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트의 가치를 잴 기준을 하나 정한다<span class="how">확인: "이 에이전트가 잘하고 있다"를 숫자로 말할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>머지 전에 변경이 닿는 다른 서비스를 확인한다<span class="how">의존 관계 지도가 없으면 주요 서비스의 호출 관계부터 그린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>서비스마다 평소 모습을 정한다<span class="how">응답 시간과 오류율의 평상시 범위를 과거 데이터로 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>이상 알림에 최근 변경 이력을 함께 붙인다<span class="how">확인: 알림만 보고 어떤 배포나 머지가 원인인지 따라갈 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>버그 수정 PR에 영향 범위를 적는다<span class="how">이 수정이 닿는 다른 서비스와 에이전트를 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>기능 개발 전에 에이전트에게 브리핑 문서를 준다<span class="how">이 기능이 사용자에게 줘야 할 것, 기존 앱과 에이전트에서 얻은 맥락을 담는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>배포 결정 지점에 사람을 둔다<span class="how">에이전트가 수정을 제안해도 배포 승인은 사람이 한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>관측 <span class="en">observability</span></td><td>시스템이 내보내는 로그, 지표, 추적 기록으로 안쪽 상태를 파악하는 일. Dynatrace가 하는 분야</td></tr>
+              <tr><td>맥락 <span class="en">context</span></td><td>에이전트가 판단할 때 참고하는 주변 정보. 이 발표에서는 의존 관계, 사용 방식, 변경 이력</td></tr>
+              <tr><td>환각 <span class="en">hallucination</span></td><td>AI가 근거 없이 그럴듯한 내용을 지어내는 것</td></tr>
+              <tr><td>토큰 <span class="en">token</span></td><td>모델이 읽고 쓰는 글자 조각 단위. 쓰는 만큼 비용이 든다</td></tr>
+              <tr><td>개발 수명 주기 <span class="en">SDLC</span></td><td>기획, 개발, 테스트, 배포, 운영까지 소프트웨어를 만드는 전체 과정</td></tr>
+              <tr><td>결합 조직 <span class="en">connective tissue</span></td><td>몸의 여러 부분을 이어 주는 조직. 발표에서는 프로세스들을 이어 주는 맥락을 비유한 말</td></tr>
+              <tr><td>의존 관계 지도 <span class="en">dependency mapping</span></td><td>서비스들이 서로 누구를 부르고 무엇에 기대는지 그린 지도</td></tr>
+              <tr><td>워크로드 <span class="en">workload</span></td><td>시스템에서 돌아가는 작업 단위. 여기서는 에이전트와 AI 작업</td></tr>
+              <tr><td>프로덕션 <span class="en">production</span></td><td>실제 사용자가 쓰는 운영 환경</td></tr>
+              <tr><td>머지 <span class="en">merge</span></td><td>각자 작업한 코드를 공용 코드(메인 브랜치)에 합치는 것</td></tr>
+              <tr><td>IDE</td><td>개발자가 코드를 쓰고 실행하는 편집 도구</td></tr>
+              <tr><td>평소 모습 <span class="en">normal</span></td><td>과거 데이터로 정한 정상 범위. 이 범위를 벗어나면 문제 신호로 본다</td></tr>
+              <tr><td>복구 조치 <span class="en">remediation</span></td><td>생긴 문제를 바로잡는 구체적인 단계</td></tr>
+              <tr><td>사람 개입 <span class="en">human in the loop</span></td><td>자동화 흐름에서 중요한 결정에 사람이 끼어 승인하는 방식</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:30</span></td><td>발표자와 Dynatrace 소개</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>제목: 에이전트에게는 신경계가 없다</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>에이전트는 사람의 일을 대신하고, 추론이 필요하다</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>역할별 질문 시작</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>개발자: 같은 자리를 맴도는 에이전트</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>팀 리드: 운영 문제와 보안</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>엔지니어링 책임자: 가치를 어떻게 재나</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>CTO의 말: 빠르지만 앞을 못 본다</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>맥락이 빠지면 환각과 쓸모없는 자동화</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>제목의 반전: 필요한 건 맥락</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>개발 과정 안의 Claude 예</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>Context is king</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>Bluebox 소개</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>로컬에선 되는데 머지하면 깨진다</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>로컬 테스트에 프로덕션 맥락</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>문제가 커지기 전에 찾기</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>과거 데이터로 평소 모습 익히기</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>코드 저장소 연결과 변경 추적</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>중간 정리</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>맥락을 담은 수정</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>한 줄 수정의 파급</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>만들기 전에 브리핑</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>Plan before you prompt</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>자동화와 사람 개입</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>관찰, 감지, 수정 제안, 사람의 결정</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>마무리 문장과 프리뷰 안내</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>질의응답 (질문 없음)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'YNT7Plf9KIg:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

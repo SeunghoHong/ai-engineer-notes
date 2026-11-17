@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>재귀 결정 모델 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#system1">System 1 모델이란</a></li>
+      <li><a href="#ingredients">RDM의 두 재료</a></li>
+      <li><a href="#tree">언어 모델 트리를 결정 트리로</a></li>
+      <li><a href="#doom">결정만으로 Doom 하기</a></li>
+      <li><a href="#rules">RDM의 세 가지 규칙</a></li>
+      <li><a href="#alldown">결정만으로 끝까지 내려가기</a></li>
+      <li><a href="#factorio">추론 없이 Factorio 하기</a></li>
+      <li><a href="#limits">결정만으로의 한계</a></li>
+      <li><a href="#smarthome">생성 모델과 엮기: 스마트 홈</a></li>
+      <li><a href="#map">맵: 두 모델이 함께 쓰는 판</a></li>
+      <li><a href="#arbiter">중재자: 병렬 결정의 관문</a></li>
+      <li><a href="#tryit">직접 써 보기</a></li>
+      <li><a href="#os1">Operating System One</a></li>
+      <li><a href="#orchestra">노트북이 악기였던 시절</a></li>
+      <li><a href="#earshot">Earshot: 작은 모델을 언제 믿나</a></li>
+      <li><a href="#oso">OSO: 만지지 않고 쓰는 컴퓨터</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 에이전트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 온라인 발표 · 2026-11-10 · 52분 · 영어 발표 한글 정리</span>
+      <h1>모든 결정에 LLM이 필요하지는 않다</h1>
+      <p class="lead">텍스트를 만들지 못하고 고르기만 하는 결정 모델을 트리로 엮으면, 추론이 필요해 보이던 일도 작고 빠른 결정으로 풀 수 있다. 발표자는 이 구조로 손대지 않고 음성으로 쓰는 컴퓨터를 만들고 있다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=hFNbPmzzcEs" target="_blank" rel="noopener">Your Agent Doesn't Need an LLM for Every Decision</a></span>
+        <span>발표: Raymond Weitekamp (OpenProse)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 알려진 이름으로 바로잡았다(Daniel Kahneman, Alex Zhang, DSPy, Wekinator 등). 확실하지 않은 이름은 들린 대로 쓰고 (추정)을 붙였다. 모델 이름 Jev와 회사 이름 Typesafe도 들린 대로 적은 것이다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>결정 모델</strong>(System 1 모델)은 텍스트를 만들지 못한다. 주어진 선택지에서 고르기만 한다. 생성은 퍼지고, 결정은 모인다.</li>
+        <li><strong>재귀 결정 모델(RDM)</strong>은 재귀 언어 모델(RLM)의 트리 구조를 결정 모델에 옮긴 것이다. 결정이 다음 결정을 부르며 내려간다.</li>
+        <li>규칙은 셋이다. <strong>컨텍스트는 모델 밖에 둔다. 결정이 결정을 부른다. 생성 없이도 돌고, 생성과도 엮인다.</strong></li>
+        <li>결정만으로 Doom을 하고, 상품 카테고리 12,000개에서 답을 찾고, Factorio 공장을 고친다. <strong>추론처럼 보이는 일도 작은 결정의 묶음일 수 있다.</strong></li>
+        <li>약점은 선택지를 누군가 미리 만들어야 한다는 것이다. 그래서 <strong>맵</strong>을 둔다. LLM이 맵에 선택지를 더하고, 결정 모델은 맵에서 고른다.</li>
+        <li>결정 모델은 싸서 여러 개를 동시에 돌린다. <strong>중재자</strong>가 확신이 선 결정만 상태를 바꾸게 한다.</li>
+        <li>발표자는 이 구조로 <strong>만지지 않고 음성으로 쓰는 컴퓨터 OSO</strong>를 만든다. 전신인 Earshot의 작은 모델은 학습 뒤 약 45밀리초에 반응했다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="system1">
+        <header><span class="num">01</span><h2>System 1 모델이란 <span class="ts">00:00</span></h2></header>
+        <p>발표를 낼 때 붙인 제목은 "재귀 결정 모델"이었다. 발표자는 준비하면서 진짜 주제가 따로 있다는 걸 깨달았다고 한다. 바로 <strong>Operating System One</strong>이다. 이 이름의 뜻은 13장에서 풀린다.</p>
+        <p>출발점은 Typesafe(추정)라는 회사가 발표 두 달 전쯤 공개한 모델 Jev(추정)다. Typesafe는 이 모델을 "System 1 모델"이라고 불렀다. 이 이름은 Daniel Kahneman이 『생각에 관한 생각』<span class="en">Thinking, Fast and Slow</span>에서 널리 알린 개념에서 왔다. <span class="ts">00:40</span></p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">System 1 · 빠르다</span>
+            <ul>
+              <li>직관적인 판단, 즉각적인 반응, 직감</li>
+              <li>우리가 내리는 많은 결정이 순수하게 이성적이지 않다는 생각에서 나왔다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">System 2 · 느리다</span>
+            <ul>
+              <li>신중한 논리적 추론</li>
+              <li>차근차근 문제 풀기</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>이름은 아직 정해지지 않았다 <span class="ts">01:20</span></h3>
+        <ul class="plain">
+          <li>Typesafe가 "System 1"을 자기 모델 이름으로 쓴 건지, 이런 모델 전체를 부르는 이름으로 쓴 건지 분명하지 않았다.</li>
+          <li>대부분은 <strong>결정 모델</strong><span class="en">decision model</span>이라고 부른다.</li>
+          <li>Ally(추정)는 "Jev는 판단을 할 뿐이고, 결정은 코드가 한다"고 지적했다. 발표자도 이 말이 맞다고 본다.</li>
+          <li>끝까지 <strong>제로샷 분류기</strong><span class="en">zero-shot classifier</span>라고만 부르는 사람들도 있다. 그 과제의 예시를 따로 배우지 않고 바로 분류하는 모델이라는 뜻이다.</li>
+        </ul>
+        <p>발표자는 이름 싸움에 관심이 없다. 이 노트도 "결정 모델"로 통일한다.</p>
+
+        <blockquote>추론이 사실은 아주 작은 결정을 많이 모은 것이라면?<cite>발표 전체를 꿰는 발표자의 질문 <span class="ts">02:50</span></cite></blockquote>
+        <p>깊이 생각해야 풀릴 것 같은 일도, 아주 작고 빠른 결정을 잘 엮으면 풀릴 수 있다는 가설이다. 발표는 이 질문으로 계속 돌아온다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="ingredients">
+        <header><span class="num">02</span><h2>RDM의 두 재료 <span class="ts">03:30</span></h2></header>
+        <p><strong>재귀 결정 모델</strong><span class="en">Recursive Decision Model, RDM</span>은 발표자가 다듬어 온 개념이다. 가장 단순하게 말하면 두 가지를 합친 것이다.</p>
+        <ol class="plain">
+          <li><strong>재귀 언어 모델</strong><span class="en">Recursive Language Model, RLM</span>: MIT의 Alex Zhang과 Omar Khattab이 1년 조금 더 전에 블로그 글로 낸 아이디어다. 언어 모델이 하위 언어 모델을 불러 일을 나눈다.</li>
+          <li><strong>Jev</strong>: 앞에서 말한 결정 모델이다. 발표자도 대기자 명단에서 빨리 빠져나오기를 기다렸다.</li>
+        </ol>
+
+        <h3>생성은 퍼지고, 결정은 모인다 <span class="ts">04:30</span></h3>
+        <p>발표자는 Jev가 엔지니어들의 눈길을 끈 이유를 <strong>수렴</strong>에서 찾는다.</p>
+        <p>그동안 돈과 관심은 대부분 생성에 몰렸다. 발표자는 생성형 AI가 역사상 가장 빨리 큰 시장일 수도 있다고 말한다. 생성으로 할 수 있는 일은 놀랍다. 하지만 토큰이 무한하면 갈래도 무한해진다. 그래서 질 낮은 결과물(slop)이 쌓인다. 무엇을 프로덕션에 넣을지는 결국 누군가 정해야 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">생성 모델 (LLM)</span>
+            <ul>
+              <li>열린 텍스트를 자유롭게 쏟아낸다</li>
+              <li>결과가 여러 갈래로 퍼진다 (발산)</li>
+              <li>초기에는 출력 형식을 맞추게 하기도 어려웠다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">결정 모델</span>
+            <ul>
+              <li>텍스트를 만들지 못한다</li>
+              <li>주어진 선택지에 순위를 매기고 고른다</li>
+              <li>결과가 하나로 모인다 (수렴)</li>
+            </ul>
+          </div>
+        </div>
+        <p>발표자는 둘을 <strong>음과 양</strong><span class="en">yin and yang</span>으로 본다. 한쪽이 퍼뜨리면 다른 쪽이 모은다. 서로 균형을 잡는 힘이다. <span class="ts">05:50</span></p>
+      </section>
+
+      <!-- 3 -->
+      <section id="tree">
+        <header><span class="num">03</span><h2>언어 모델 트리를 결정 트리로 <span class="ts">07:00</span></h2></header>
+        <p>RLM 자체는 깊이 다루지 않는다. 발표자는 올여름 AI Engineer World's Fair에서 한 발표 "Recursive Coding Agents"를 보라고 권한다(recursivecodingagents.com). 그 발표에서 발표자는 RLM이 새로운 추론 모델이라고 주장했다. <span class="ts">06:30</span></p>
+        <p>RLM은 트리 모양으로 움직인다. 맨 위의 <strong>루트</strong> RLM이 하위 RLM을 부른다. 하위 RLM은 또 하위 RLM을 부른다. 끝없이 내려가지 않도록 깊이 상한을 둔다. 예를 들어 깊이 2에 닿으면 더 나누지 않고 LLM을 한 번 부른다. 이 마지막 호출이 트리의 <strong>잎</strong>이다.</p>
+        <p>RDM은 이 그림을 결정 모델에 그대로 옮긴다. 루트 RDM이 하위 RDM을 부를지 정한다. 최대 깊이에 닿으면 결정 모델을 한 번 부른다.</p>
+
+        <h3>세 가지 조합 방식 <span class="ts">08:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>맨 위(루트)</th><th>아래에서 불리는 것</th><th>예</th></tr></thead>
+            <tbody>
+              <tr><td>결정만으로 끝까지</td><td>결정 모델</td><td>결정 모델</td><td>Doom, 상품 카테고리 검색, Factorio</td></tr>
+              <tr><td>도구로서의 결정</td><td>LLM 또는 에이전트</td><td>결정 모델</td><td>컴팩션, 도구 호출 허용 판단, 모델 라우터</td></tr>
+              <tr><td>결정이 생성을 부른다</td><td>결정 모델</td><td>결정 모델, 필요할 때 LLM·에이전트</td><td>스마트 홈, OSO</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>"도구로서의 결정"은 Jev 공개 24시간 만에 사례가 쏟아졌다. 길어진 대화를 줄이는 <strong>컴팩션</strong><span class="en">compaction</span>, 도구 호출을 실행해도 되는지 판단하기, 요청을 어느 모델에 보낼지 고르는 <strong>라우터</strong><span class="en">router</span>가 그 예다. 발표자는 이 쓰임새가 흥미롭지만 뻔하다고 본다.</p>
+        <p>발표자가 파고드는 쪽은 <strong>루트가 결정 모델인 구성</strong>이다. 어떻게 짜야 할지 덜 뻔하기 때문이다. 여기서 LLM이나 에이전트를 부르는 일은 여러 선택지 중 하나일 뿐이다. 발표에 나오는 RDM은 거의 다 이 구성이다. <span class="ts">09:10</span></p>
+        <div class="shift" aria-label="조합 방식의 차이">
+          <div><span class="tag">흔한 구성</span><b>LLM이 위에서 지휘한다</b><span class="muted">결정 모델은 LLM이 쓰는 도구 하나</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">RDM의 구성</span><b>결정 모델이 위에서 고른다</b><span class="muted">LLM 호출은 고를 수 있는 선택지 중 하나</span></div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="doom">
+        <header><span class="num">04</span><h2>결정만으로 Doom 하기 <span class="ts">09:50</span></h2></header>
+        <p>Jev 공개 때 많은 사람이 본 데모가 있다. Jev가 고전 슈팅 게임 Doom을 하는 영상이다. 발표자는 이 데모가 가장 저평가된 예라고 본다.</p>
+        <p>데모는 결정 묶음 두 개를 엮었다. 데모 영상은 이를 "AI 기본 단위의 조합"<span class="en">composition of AI primitives</span>이라고 부른다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">조합 1 · 1인칭 시점</span>
+            <p>매 순간의 전투를 맡는다. 버틸지, 계속 갈지, 걸을지, 피할지 같은 다음 행동을 고른다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">조합 2 · 지도 시점 <span class="ts">11:00</span></span>
+            <p>위에서 내려다보며 지도 전체를 안다. 다음에 어디를 탐험할지 고른다.</p>
+          </div>
+        </div>
+        <p>두 조합이 맞물려 레벨을 통과한다. 생성 모델 없이 Jev 호출만으로 Doom을 하는 에이전트가 생긴 것이다.</p>
+        <p>발표자는 이 영상을 수백만에서 수천만 명이 봤을 거라고 짐작한다. 그런데 이 아이디어를 이어서 발전시킨 사례는 거의 못 봤다고 말한다.</p>
+        <p>다시 처음 질문이다. 추론이 필요하다고 여긴 일 가운데, 실은 작고 빠른 결정을 잘 설계하면 되는 일은 무엇일까.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="rules">
+        <header><span class="num">05</span><h2>RDM의 세 가지 규칙 <span class="ts">12:30</span></h2></header>
+        <p>짧게 말하면 RDM은 <strong>다른 결정을 내릴지 결정할 수 있는 결정</strong>이다. 발표자는 개념을 다듬으며 스스로 규칙 세 개를 정했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>규칙</th><th>뜻</th><th>어디서 왔나</th></tr></thead>
+            <tbody>
+              <tr><td>1. 컨텍스트는 모델 밖에 둔다</td><td>전체 정보는 코드가 들고 있다. 코드는 결정마다 필요한 조각만 잘라 넘긴다. Doom에서 게임 전체 상태는 밖에 있고, 전투 쪽과 지도 쪽은 각자 다른 조각을 본다.</td><td>RLM</td></tr>
+              <tr><td>2. 결정은 다른 결정을 부를 수 있다</td><td>최대 깊이까지 트리로 내려간다. Doom 데모와 달라지는 지점이다.</td><td>RLM</td></tr>
+              <tr><td>3. 생성 없이도 돌고, 생성과도 엮인다</td><td>생성 모델이 전혀 없어도 동작해야 한다. 동시에 LLM이나 에이전트와 함께 쓸 수 있어야 한다.</td><td>발표자가 더한 규칙</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">왜 "생성 없이"를 고집하나 <span class="ts">14:20</span></span>
+          <span>발표자는 LLM 에이전트에 결정 모델을 도구로 붙이는 건 뻔하다고 본다. 새로운 능력은 생성 모델이 아예 없을 때 나올 수 있다고 생각한다. 결정만으로 돌아간다는 사실은 RDM 구조가 맞다는 증거도 된다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="alldown">
+        <header><span class="num">06</span><h2>결정만으로 끝까지 내려가기 <span class="ts">15:00</span></h2></header>
+        <h3>판단하는 핀이 있는 갈톤 판</h3>
+        <p><strong>갈톤 판</strong><span class="en">Galton board</span>은 핀이 촘촘히 박힌 판이다. 공은 핀마다 반반 확률로 왼쪽이나 오른쪽으로 떨어진다. 공이 많이 쌓이면 가운데가 볼록한 정규분포<span class="en">normal distribution</span> 모양이 된다.</p>
+        <p>발표자는 여기서 질문을 바꾼다. 핀이 판단을 할 수 있다면?</p>
+        <ul class="plain">
+          <li>공마다 번호가 있다. 핀은 이 공이 큰 쪽 절반인지 작은 쪽 절반인지 정한다.</li>
+          <li>다음 핀은 그 절반을 다시 반으로 나눈다. 이진 탐색<span class="en">binary search</span>과 같은 원리다.</li>
+          <li>핀이 정확하면 모든 공이 자기 칸에 정확히 들어간다.</li>
+          <li>결정 모델은 한 번에 여러 질문을 할 수 있다. 한 축은 색, 다른 축은 번호로 나누면 3차원으로 분류된다. <span class="ts">16:30</span></li>
+        </ul>
+        <p class="note">발표자도 인정하듯 이 예는 분류 한 번으로 끝낼 수 있다. 재귀가 필요 없다. 그래도 이 그림을 기억해 두라고 한다. 뒤의 예들이 똑같이 움직이기 때문이다.</p>
+
+        <h3>빔 없는 빔 서치 <span class="ts">17:30</span></h3>
+        <p>Typesafe가 공개 첫날 낸 쿡북(예제 모음) 중 하나다. Shopify의 상품 카테고리 12,000개 가운데 사용자 질의가 가리키는 카테고리를 찾는다. Typesafe는 Jev를 계층적으로 불러 <strong>빔 서치</strong><span class="en">beam search</span>로 풀었다. 빔 서치는 매 단계 가장 유망한 후보 몇 개만 남기며 내려가는 탐색이다.</p>
+        <p>RDM으로 하면 빔이 필요 없다. 한 층씩 내려가며 "바로 아래 하위 카테고리 중 어디를 볼까"만 묻는다.</p>
+        <ul class="plain">
+          <li>12,000개를 한 번에 넣지 않는다. 그러면 모델이 한 번에 읽을 수 있는 양인 컨텍스트 창<span class="en">context window</span>이 넘친다.</li>
+          <li>사용자가 "laptop backpack"이라고 하면, 상위 카테고리에서 시작해 다음에 볼 카테고리를 고르며 내려간다.</li>
+          <li>몇 갈래를 따라갈지는 코드가 정한다. 1위만 따라가도 되고(탐욕적 선택<span class="en">greedy</span>), 확률 상위 3개를 함께 봐도 된다.</li>
+          <li>이진 탐색과 닮았지만, 나누는 단위가 결정 모델 호출 하나다.</li>
+        </ul>
+
+        <h3>이미지를 잘라 가며 찾기 <span class="ts">19:20</span></h3>
+        <p>Jev는 공개 약 한 달 뒤 이미지도 다루게 됐다(멀티모달<span class="en">multimodal</span>). 곧 같은 방식을 이미지에 쓴 사례가 나왔다.</p>
+        <ul class="plain">
+          <li><strong>Lily(추정)</strong>: 찾는 대상(딱정벌레)이 걸린 곳이 나오면, 그 칸을 더 작은 상자로 잘라 다시 묻는다.</li>
+          <li><strong>Nathan</strong>(Typesafe 팀): 이미지를 재귀적으로 반씩 자르고, 각 칸에 무엇이 있는지 묻는다. 이진 탐색에 더 가깝다.</li>
+        </ul>
+        <p class="note">좋은 비전 모델이면 한 번에 답할 수 있다는 지적이 있었고, 발표자도 맞다고 한다. 이 예들은 재귀가 어떤 모양인지 보여 주려는 것이다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="factorio">
+        <header><span class="num">07</span><h2>추론 없이 Factorio 하기 <span class="ts">21:10</span></h2></header>
+        <p>발표자가 만든 RDM이 공장 건설 게임 Factorio를 하는 데모다. 화면에는 강철 같은 물건을 만드는 생산 라인이 여러 줄 있다.</p>
+        <ol class="plain">
+          <li>라인 묶음 중 문제가 있는 묶음을 고른다.</li>
+          <li>그 안에서 문제가 있는 라인을 고른다.</li>
+          <li>그 라인에서 고장 난 부품을 고른다. 이번에는 물건을 집어 옮기는 장치인 <strong>인서터</strong><span class="en">inserter</span>였다.</li>
+          <li>그곳으로 달려가 부품을 바꾼다. 그리고 다음 문제로 넘어간다.</li>
+        </ol>
+        <p>여기에는 추론도, 대형 언어 모델도, 생성도 없다. 발표자는 모르고 보면 추론 모델이 필요하다고 생각할 장면이라고 말한다. "Claude plays Pokemon" 수준의 일로 보인다는 것이다. <span class="ts">23:00</span></p>
+        <p>발표자가 밝힌 한계도 있다.</p>
+        <ul class="plain">
+          <li>똑같은 라인이 격자처럼 반복되는 쉬운 장면이다.</li>
+          <li>다음 목표로 갈 때 먼 길로 돌아갔다. 길찾기 조합을 하나 더 넣었어야 했다고 한다.</li>
+        </ul>
+        <p>발표자의 목표는 이 RDM이 게임을 거의 해 본 적 없는 발표자에게 Factorio를 가르치게 하는 것이다. Factorio는 아주 열린 게임이라 이런 시스템을 평가하는 벤치마크로도 좋다고 본다.</p>
+        <p class="note">이 데모는 영상으로만 보여 줬다. 성공률이나 속도 같은 수치는 나오지 않았다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="limits">
+        <header><span class="num">08</span><h2>결정만으로의 한계 <span class="ts">23:30</span></h2></header>
+        <p>결정만 쓰면 약점이 하나 있다. <strong>고를 선택지를 누군가 미리 만들어 둬야 한다.</strong></p>
+        <div class="callout">
+          <span class="title">Typesafe API 키 퀴즈</span>
+          <span>Typesafe에서 API 키를 받으려면 퀴즈를 통과해야 한다. 문제는 "Jev는 텍스트를 생성할 수 있나?"다. 정답은 "아니오"다. "예"라고 답하면 키를 주지 않는다.</span>
+        </div>
+        <p>그래서 스크립트든, 다른 에이전트든, 앱 자체든 선택지를 미리 나열해야 한다. 그런데 발표자는 많은 분야에서 이것만으로 충분할 수 있다고 본다. <span class="ts">24:20</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>분야</th><th>선택지를 나열할 수 있는 이유</th></tr></thead>
+            <tbody>
+              <tr><td>게임</td><td>가능한 행동과 게임 상태를 프로그램으로 나열할 수 있다. 이를 재귀적으로 좁혀 가며 다음 수를 고른다</td></tr>
+              <tr><td>브라우저</td><td>발표 슬라이드 웹사이트에서 할 수 있는 일은 위로, 아래로, 영상 재생 세 가지뿐이다</td></tr>
+              <tr><td>컴퓨터 사용</td><td>지금 화면과 단축키로 할 수 있는 행동은 많다. 그래도 나열할 수는 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>컴퓨터 사용<span class="en">computer use</span>은 그동안 가장 똑똑한 최신 추론 모델만 할 수 있는 일로 여겨졌다. 발표자는 선택지를 모두 나열해 주면 결정만으로 아주 빠르게 다닐 수 있을지 모른다고 말한다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="smarthome">
+        <header><span class="num">09</span><h2>생성 모델과 엮기: 스마트 홈 <span class="ts">26:10</span></h2></header>
+        <p>결정만 쓰면 트리 모양이 미리 정해진다. 앞의 예들이 그랬다.</p>
+        <ul class="plain">
+          <li><strong>반씩 자르기</strong>: 완전히 대칭인 트리다.</li>
+          <li><strong>개요 따라가기</strong><span class="en">outline walk</span>: 제목 → H1 제목 → 소제목 → 문단 → 문장 → 단어 순으로 내려간다. 대칭은 아니지만 길은 미리 정해져 있다.</li>
+        </ul>
+        <p>생성 모델이 끼면 달라진다. 발표 화면에는 스마트 홈 데모의 실제 호출 트리들이 나온다. 결정만 쓸 때보다 훨씬 유기적인 모양이다. 그래프가 스스로 자라난다.</p>
+        <p>발표자는 결정 모델과 생성 모델의 짝을 시스템을 한 칸씩 밀고 나가는 자동 장치에 빗댄다. 둘이 짝을 이루면 복잡한 행동이 저절로 생겨난다는 것이다. <span class="ts">27:40</span></p>
+
+        <h3>스마트 홈 데모 <span class="ts">28:10</span></h3>
+        <p>원래 Typesafe가 쿡북으로 낸 데모다. 핵심은 <strong>결정만으로 풀 수 없는 문제는 LLM으로 넘긴다</strong>는 것이다. 발표자는 방과 가전을 크게 늘려 RDM으로 다시 만들었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>요청</th><th>일어나는 일</th></tr></thead>
+            <tbody>
+              <tr><td>"We're off to bed" (이제 자러 간다)</td><td>높은 수준의 말 한마디로 하위 단계를 아주 빠르게 처리한다. 문을 잠그고, 램프 하나를 켜고, 나머지는 끈다</td></tr>
+              <tr><td>"Let's watch a film" (영화 보자)</td><td>돌려 말하는 요청이다. 무엇을 해야 하는지 시간이 지나며 배운다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="map">
+        <header><span class="num">10</span><h2>맵: 두 모델이 함께 쓰는 판 <span class="ts">29:20</span></h2></header>
+        <p>결정 모델과 LLM이 함께 일하려면 둘 다 알아듣는 형식이 필요하다. 결정 모델은 받은 것 중에서 가리키기만 한다. LLM의 가장 날것의 출력은 구조 없는 토큰 흐름이다. 발표자는 둘 사이의 공용 인터페이스를 <strong>맵</strong><span class="en">map</span>이라고 부른다.</p>
+        <p>맵은 포인터 묶음이다. 항목마다 세 가지가 있다.</p>
+        <ul class="plain">
+          <li><strong>이름</strong>: 예를 들어 "TV on"</li>
+          <li><strong>짧은 설명</strong>: 이 항목이 무엇을 하는지</li>
+          <li><strong>함수</strong>: 실제로 실행할 코드. 참/거짓 값 하나를 바꾸는 단순한 것일 수도, 반복문이 도는 복잡한 것일 수도 있다</li>
+        </ul>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>누가</th><th>맵으로 하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>결정 모델</td><td>맵에서 지금 맞는 항목을 고른다. 예: "lights on"</td></tr>
+              <tr><td>코드</td><td>고른 항목 아래의 함수를 실행한다</td></tr>
+              <tr><td>LLM</td><td>맵에 항목을 더하고 고친다. 새 사용 습관을 보고 "movie time = TV 켜기 + 조명 끄기"를 만든다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>결정 모델은 맵에서 고르고, LLM은 맵을 넓힌다. 발표 흐름으로 보면, 8장의 "선택지를 누군가 미리 만들어야 한다"는 빈자리를 LLM이 채우는 구조다.</p>
+
+        <h3>여러 차원의 맵 <span class="ts">31:30</span></h3>
+        <p>맵은 여러 차원일 수 있다. 의미를 숫자 좌표로 나타낸 <strong>임베딩</strong><span class="en">embedding</span>도 담을 수 있다. Every의 Kieran Klaassen은 Jev로 차원은 낮지만 의미가 풍부한 임베딩을 만들자는 아이디어를 냈다. 발표자의 RDM 코드에 있는 맵도 이걸 다룰 수 있다. 발표에서는 더 자세히 다루지 않았다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="arbiter">
+        <header><span class="num">11</span><h2>중재자: 병렬 결정의 관문 <span class="ts">32:00</span></h2></header>
+        <p>RDM의 마지막 구성 요소는 <strong>중재자</strong><span class="en">arbiter</span>다.</p>
+        <p>결정 모델은 빠르고 싸다. 발표자는 휴대폰이나 10년 된 낡은 노트북에서도 도는 결정 모델이 있다고 말한다. 계산으로도 돈으로도 싸니 여러 개를 동시에 돌릴 수 있다. 확신이 없을 때는 여러 결정을 미리 병렬로 돌려 볼 수도 있다. 이렇게 필요할지 모르는 일을 미리 돌려 두는 것을 투기적 실행<span class="en">speculative</span>이라고 한다.</p>
+        <p>문제는 이 결정들이 모두 상태를 바꾸게 두면 충돌한다는 것이다.</p>
+        <div class="callout warn">
+          <span class="title">충돌의 예</span>
+          <span>같은 종류의 결정을 하는 모델 둘이 있다. 빠른 쪽이 먼저 상태를 바꾼다. 조금 뒤 느린 쪽이 반대로 바꾸는 결정을 내린다. 이런 엇갈림이 곳곳에서 생길 수 있다.</span>
+        </div>
+        <p>발표자는 CPU에 빗댄다. 읽기는 여럿이 동시에 해도 된다. 쓰기는 <strong>잠금</strong><span class="en">lock</span>을 걸어 한 번에 하나만 한다. RLM을 만든 Alex Zhang의 아이디어, 즉 에이전트가 도구 호출을 투기적으로 미리 돌리는 방식도 영향을 줬다. <span class="ts">33:20</span></p>
+
+        <h3>오디오에 적용하면 <span class="ts">33:40</span></h3>
+        <ul class="plain">
+          <li>사람이 문장을 다 말하기도 전에 결정을 내리기 시작한다.</li>
+          <li>여러 채널이 각자 어떤 행동에 표를 던진다.</li>
+          <li>중재자는 그 시점까지 모인 정보를 본다. 확신이 서는 행동만 상태를 바꾸게 통과시킨다.</li>
+        </ul>
+        <div class="shift" aria-label="중재자의 역할">
+          <div><span class="tag">병렬로 도는 결정들</span><b>읽고, 표를 던진다</b><span class="muted">상태를 직접 바꾸지 않는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">중재자를 통과한 결정</span><b>시스템 상태를 바꾼다</b><span class="muted">확신이 선 것만, 한 곳에서</span></div>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="tryit">
+        <header><span class="num">12</span><h2>직접 써 보기 <span class="ts">35:10</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구현</th><th>특징</th></tr></thead>
+            <tbody>
+              <tr><td>DSPy 모듈</td><td>첫 구현이다. 발표자의 DSPy 포크에 있다. DSPy 쪽 사람들(발표자는 Compound AI(추정)라고 부른다)이 System 1 API 호출 지원을 아주 빨리 넣었다. DSPy는 구조가 엄격한 프레임워크라서, RDM 아이디어가 제대로 짜였는지 확인하는 놀이터로 좋았다고 한다.</td></tr>
+              <tr><td>Rust 패키지 RDM</td><td>따로 쓰는 패키지다. 아주 빠르고 가벼운 RDM을 여러 시스템에 넣고 싶을 때 쓴다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">RDM은 발표자가 직접 만든 개념과 패키지다. 앞의 데모들과 장점 설명은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="os1">
+        <header><span class="num">13</span><h2>Operating System One <span class="ts">36:30</span></h2></header>
+        <p>이름에는 두 뜻이 있다.</p>
+        <ul class="plain">
+          <li>System 1 위에 세운 운영체제</li>
+          <li>System 1 모델을 다루는 법을 배운다는 뜻의 "operate System 1"</li>
+        </ul>
+
+        <h3>몸과 기기의 얽힘 <span class="ts">37:00</span></h3>
+        <p>발표자에게 이 일은 개인적인 문제다.</p>
+        <ul class="plain">
+          <li>늘 고개를 숙여 거북목이 왔다.</li>
+          <li>마우스를 계속 써서 어깨가 아프고 뭉친다.</li>
+          <li>마감에 쫓기던 대학원 시절, 같은 동작을 반복해서 생기는 손상<span class="en">repetitive stress</span>을 겪었다.</li>
+          <li>세로 마우스, 트랙볼, 인체공학 키보드를 거의 다 써 봤다.</li>
+        </ul>
+        <p>컴퓨터와 휴대폰으로 일하는 데는 큰 힘과 경제적 이득이 있다. AI 엔지니어라면 컴퓨터 없이는 일할 수 없다. 그런데 발표자는 몸을 QWERTY 키보드, 마우스, 터치스크린 같은 전통적인 인터페이스에 묶어 두는 방식이 불필요한 고통을 만든다고 본다.</p>
+
+        <h3>AI 엔지니어의 진화 그림 <span class="ts">38:30</span></h3>
+        <p>몇 년 전 뉴욕 AI Engineer 행사 티셔츠 뒷면에 있던 그림이다. 발표자는 앞선 발표에서도 이 그림을 썼다.</p>
+        <ol class="plain">
+          <li>구부정한 자세로 노트북에 타이핑한다.</li>
+          <li>AI 기능이 붙어 바이브 코딩을 한다.</li>
+          <li>컴퓨터가 사라지고, 빛나는 구체에게 말을 건다.</li>
+          <li>생각만 해도 일이 이뤄진다.</li>
+        </ol>
+        <p>발표자는 RDM과 Operating System One으로 지금 세 번째 단계, 즉 음성에 가까이 왔다고 말한다.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="orchestra">
+        <header><span class="num">14</span><h2>노트북이 악기였던 시절 <span class="ts">39:50</span></h2></header>
+        <p>발표자는 17~18년 전 영상을 보여 준다. 음악 작업에서 한 실험들이다. 발표자는 이를 <strong>급진적 인간-컴퓨터 인터페이스</strong><span class="en">radical human-computer interfacing</span>라고 부른다.</p>
+        <ul class="plain">
+          <li>노트북의 네 곳을 두드린다. 어느 곳을 쳤는지 분류해 드럼 소리를 낸다. 노트북을 두드려 드럼 롤을 친다.</li>
+          <li>회전식 하드디스크를 쓰던 시절의 노트북에는 가속도계가 들어 있었다. 이 센서를 썼다.</li>
+          <li>노트북을 기울여 음향 효과를 조절한다.</li>
+          <li>두드림을 사이드체인 컴프레서<span class="en">side-chain compressor</span>의 신호로 쓴다. 칠 때마다 다른 소리가 잠깐 작아진다.</li>
+        </ul>
+
+        <h3>Princeton Laptop Orchestra <span class="ts">41:30</span></h3>
+        <p>발표자가 프로그래밍과 머신러닝을 처음 배운 곳이다. 올봄 20주년을 맞았다. 핵심 질문은 "노트북 자체가 악기라면 무엇이 가능한가"였다.</p>
+        <ul class="plain">
+          <li>트랙패드가 악기인 곡, 키보드가 악기인 곡이 있었다.</li>
+          <li>모든 노트북을 Wi-Fi로 묶고, 지연이 아주 적게 시계를 맞춰 서로 메시지를 주고받는 곡도 있었다.</li>
+        </ul>
+        <p>발표자는 Rebecca Fiebrink가 만든 실시간 머신러닝 프레임워크 <strong>Wekinator</strong>로 작업했다. 당시 최신 도구였다. <span class="ts">42:20</span></p>
+        <ul class="plain">
+          <li>모델은 k-최근접 이웃<span class="en">k-nearest neighbors</span>, 단층 신경망처럼 아주 작은 것들이었다.</li>
+          <li>발표자는 트랜스포머보다 주성분 분석<span class="en">PCA</span>에 더 가까웠다고 말한다.</li>
+          <li>이런 모델을 그 자리에서 학습시켜 분류하고, 입력을 출력에 연결하고, 비선형 보간을 했다.</li>
+        </ul>
+        <p>발표자는 지금 RLM, 결정 모델, RDM에 대한 관심을 이 뿌리와 합치고 있다. 목표는 개인적이다. 하루 종일 키보드와 마우스를 만지지 않고, 아프지 않게 컴퓨터로 일하는 것이다. <span class="ts">43:10</span></p>
+      </section>
+
+      <!-- 15 -->
+      <section id="earshot">
+        <header><span class="num">15</span><h2>Earshot: 작은 모델을 언제 믿나 <span class="ts">43:50</span></h2></header>
+        <p>Earshot은 OSO의 전신이다. 영상만 보면 헷갈릴 수 있어서 발표자가 구조를 먼저 설명한다. Earshot도 RDM이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>전사 층</td><td>오디오를 글자로 받아 적고, 그 단어를 보고 행동을 고른다. 데모에서는 작업 공간 1~8을 오간다</td></tr>
+              <tr><td>작은 실시간 모델</td><td>오디오 프로그래밍 언어 ChucK 기반의 ChAI(ChucK AI, Wekinator의 후계)로 만든 아주 작은 모델이다. 40, 80, 100밀리초 길이의 오디오 조각만 본다. 입력은 주파수 대역별 세기 정도의 거친 특징이다</td></tr>
+              <tr><td>가르치는 층</td><td>작은 모델은 처음에 아무것도 모른다. 그래서 처음에는 믿을 수 없다. 교사 모델이 정답을 알려 주며 작은 모델을 가르친다(지도 학습<span class="en">supervised learning</span>)</td></tr>
+              <tr><td>믿음을 정하는 층</td><td>작은 모델을 따라도 될 만큼 믿을 수 있는지 시스템이 따로 판단한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>학습이 진행되면 <span class="ts">45:30</span></h3>
+        <p>데모 음성은 Philip Glass의 오페라 「Einstein on the Beach」 중 "Knee Play 1"이다. 숫자를 세는 소리가 계속 나온다.</p>
+        <ol class="plain">
+          <li>처음에는 숫자를 말한 뒤 화면이 반응하기까지 지연이 크다.</li>
+          <li>앞쪽 숫자(1, 2, 3, 4)는 자주 들려서 먼저 빨라진다. 뒤쪽 숫자는 아직 느리다.</li>
+          <li>끝에는 지연이 약 45밀리초까지 줄어든다. 중간에 작은 실수도 보이지만 계속 배운다. <span class="ts">46:10</span></li>
+        </ol>
+
+        <figure class="chart" aria-label="발표에 나온 시간 규모(밀리초): Earshot 작은 모델이 보는 오디오 조각 40과 100, 학습 후 반응 지연 약 45, Hunch 낙서 분류 약 150">
+          <span class="chart-title">발표에 나온 작은 모델의 시간 규모 (밀리초)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Earshot · 작은 모델이 보는 오디오 조각 (짧은 것)</span><span class="val">40</span></div>
+              <div class="track"><div class="fill" style="width:26.7%" title="오디오 조각 짧은 것: 40ms"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Earshot · 학습이 끝난 뒤 반응 지연</span><span class="val">약 45</span></div>
+              <div class="track"><div class="fill key" style="width:30%" title="학습 후 반응 지연: 약 45ms"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Earshot · 작은 모델이 보는 오디오 조각 (긴 것)</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:66.7%" title="오디오 조각 긴 것: 100ms"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Hunch · 낙서 하나 분류</span><span class="val">약 150</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="Hunch 낙서 분류: 약 150ms"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>75</span><span>150</span></div>
+          <span class="caption">네 값은 재는 대상이 다르다. 작은 모델이 수십~백몇십 밀리초 단위로 움직인다는 규모만 비교한다. 오디오 조각은 40·80·100밀리초 세 가지가 나왔고, 양 끝만 그렸다.</span>
+        </figure>
+
+        <p>발표자의 정리는 이렇다. RDM이 그 자리에서 배우는 작은 지도 학습 모델을 언제 믿을지 정한다. 그 작은 모델은 수십 밀리초 분량의 오디오만 보고 움직인다.</p>
+
+        <h3>같은 방향의 다른 프로젝트: Hunch <span class="ts">47:20</span></h3>
+        <p>Matt Mastrai(추정)가 만든 Hunch는 Embedding Gemma 2(추정)로 그림 맞히기 게임 Pictionary를 한다. 사용자의 낙서를 사용자 컴퓨터의 WebGPU에서 약 150밀리초 만에 분류한다.</p>
+        <p>발표자는 작은 임베딩 모델, 인코더 모델, 분류 모델이 다시 떠오르고 있다고 본다. 오디오만 길이 아니다. 이런 모델을 큰 구조 안에 잘 배치하면 아주 강력한 일을 할 수 있다는 것이다.</p>
+      </section>
+
+      <!-- 16 -->
+      <section id="oso">
+        <header><span class="num">16</span><h2>OSO: 만지지 않고 쓰는 컴퓨터 <span class="ts">48:10</span></h2></header>
+        <p>발표자가 향하는 질문은 셋이다.</p>
+        <ul class="plain">
+          <li>몸과 기기를 떼어 놓을 수 있을까?</li>
+          <li>컴퓨터를 만지지 않고 일할 수 있을까?</li>
+          <li>화면을 보지 않고 일할 수 있을까?</li>
+        </ul>
+        <p>그 답으로 만드는 프로젝트가 <strong>OSO</strong>(oso.computer)다. Operating System 1의 줄임말이다. 아직 준비 중이고 대기자 명단을 받는다. 첫 입력 방식은 음성이다. Earshot처럼 단어 하나만 듣고도, 받아 적는 속도보다 빨리 반응하는 것을 노린다.</p>
+
+        <h3>발표자가 밝힌 OSO의 특징 <span class="ts">49:10</span></h3>
+        <ul class="plain">
+          <li><strong>RDM 위에 만든 컴퓨터 사용 에이전트</strong>다. 결정이 먼저다.</li>
+          <li>일반 에이전트와 RLM 에이전트도 들어 있다. Claude Code나 Codex 같은 코딩 에이전트에 일을 넘길 수도 있다.</li>
+          <li>키보드와 마우스를 만지지 않고 아주 빠른 일을 처리한다.</li>
+          <li>사용자의 취향을 계속 배우며 스스로 나아진다.</li>
+          <li>믿음이 쌓이면 결정을 가장 빠르고 작은 모델에 넘긴다. 어떤 모델이 어디서 잘했는지 보고 얼마나 믿을지 정한다. 11장의 중재자가 하는 일이다.</li>
+        </ul>
+
+        <h3>모두가 터미널로 간 이유 <span class="ts">50:30</span></h3>
+        <p>지난 몇 년 개발자들은 Claude Code를 쓰며 터미널로 몰려갔다. 발표자는 터미널이 특별해서가 아니라고 본다. 터미널은 분명 최선의 인터페이스가 아니다. 앱 화면, 터치스크린, 마우스, 키보드 같은 기본 인터페이스의 한계를 깨달았기 때문이라는 것이 발표자의 해석이다. OSO는 이 인터페이스를 처음부터 다시 생각해 보는 실험이다.</p>
+        <p class="note">OSO는 발표자가 직접 만드는 제품이고, 발표는 대기자 명단 홍보로 끝난다. 이 대목의 장점 설명은 그 점을 감안해 읽자. 발표에는 OSO의 성능 수치가 나오지 않았다.</p>
+      </section>
+
+      <!-- 17 -->
+      <section id="recap">
+        <header><span class="num">17</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>결정 모델(System 1 모델)은 텍스트를 만들지 못한다. 주어진 선택지에서 고르기만 한다.</li>
+          <li>생성은 퍼지고 결정은 모인다. 발표자는 둘을 서로 균형을 잡는 음과 양으로 본다.</li>
+          <li>RDM은 RLM의 트리 구조를 결정 모델에 옮긴 것이다. 결정이 다음 결정을 부르며 내려간다.</li>
+          <li>발표자가 파고드는 구성은 <strong>루트가 결정 모델</strong>이고, LLM 호출은 선택지 중 하나인 구성이다.</li>
+          <li>세 규칙: <strong>컨텍스트는 모델 밖, 결정이 결정을 부른다, 생성 없이도 돌고 생성과도 엮인다.</strong></li>
+          <li>계층으로 나눠 한 층씩 고르면 카테고리 12,000개도 컨텍스트 창을 넘기지 않고 찾는다.</li>
+          <li>Doom과 Factorio 데모는 추론이 필요해 보이는 일도 <strong>작은 결정의 묶음</strong>일 수 있음을 보여 준다.</li>
+          <li>결정만 쓰면 선택지를 누군가 미리 만들어야 한다. <strong>맵</strong>을 통해 LLM이 선택지를 더하고, 결정 모델이 고른다.</li>
+          <li>결정 모델은 싸서 병렬로 돌릴 수 있다. <strong>중재자</strong>가 확신이 선 결정만 상태를 바꾸게 한다.</li>
+          <li>Earshot과 OSO는 작은 모델에 믿음이 쌓이면 일을 넘긴다. 목표는 만지지 않고 음성으로 컴퓨터를 쓰는 것이다.</li>
+        </ol>
+      </section>
+
+      <!-- 18 -->
+      <section id="quiz">
+        <header><span class="num">18</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>결정 모델이 LLM과 가장 크게 다른 점은?</span></summary><div class="answer">텍스트를 생성하지 못한다. 주어진 선택지에 순위를 매기고 고르기만 한다. Typesafe의 API 키 퀴즈 정답도 "생성할 수 없다"다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>"Jev는 판단을 하고, 결정은 코드가 한다"는 말은 무슨 뜻인가?</span></summary><div class="answer">모델은 선택지 중 무엇이 맞는지 판단만 한다. 그 판단으로 실제로 무엇을 할지는 바깥의 코드가 정하고 실행한다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>발표자가 결정 모델에 끌린 이유를 발산과 수렴으로 설명하면?</span></summary><div class="answer">생성은 토큰이 무한하면 갈래도 무한히 퍼진다(발산). 결정은 여러 갈래를 하나로 모은다(수렴). 둘은 서로 균형을 잡는다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>RLM과 RDM의 공통 구조는?</span></summary><div class="answer">루트가 하위 모델을 부르고, 하위가 또 하위를 부르는 트리다. 깊이 상한에 닿으면 모델을 한 번만 부른다. RLM은 그 잎이 LLM 호출이고, RDM은 결정 모델 호출이다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>"도구로서의 결정"과 발표자가 관심 있는 구성은 어떻게 다른가?</span></summary><div class="answer">도구로서의 결정은 LLM이나 에이전트가 위에 있고 결정 모델을 도구로 쓴다(컴팩션, 도구 호출 허용, 라우터). 발표자의 구성은 결정 모델이 루트이고, LLM 호출은 선택지 중 하나다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>RDM의 세 규칙은?</span></summary><div class="answer">컨텍스트는 모델 밖에 두고 코드가 잘라 넘긴다. 결정은 최대 깊이까지 다른 결정을 부를 수 있다. 생성 모델 없이도 돌아야 하고, 동시에 LLM·에이전트와 엮일 수 있어야 한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>"생성 모델 없이도 돌아야 한다"를 고집하는 이유는?</span></summary><div class="answer">새로운 능력은 생성 모델이 없을 때 나올 수 있다고 보기 때문이다. 결정만으로 돌아가면 RDM 구조가 맞다는 증거도 된다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>"빔 없는 빔 서치"는 카테고리 12,000개에서 어떻게 답을 찾나?</span></summary><div class="answer">한 번에 다 넣지 않는다. 한 층씩 내려가며 바로 아래 하위 카테고리 중 하나만 고른다. 몇 갈래를 따라갈지(1위만, 상위 3개)는 코드가 정한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>결정만으로의 한계는? 그 한계가 크게 문제되지 않을 수 있는 분야는?</span></summary><div class="answer">선택지를 누군가 미리 나열해야 한다. 게임, 브라우저, 컴퓨터 사용의 상당 부분은 선택지를 프로그램으로 나열할 수 있어서 충분할 수 있다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>맵에서 결정 모델, 코드, LLM은 각각 무엇을 하나?</span></summary><div class="answer">결정 모델은 항목을 고른다. 코드는 그 항목 아래의 함수를 실행한다. LLM은 항목을 더하거나 고친다. 예: "movie time = TV 켜기 + 조명 끄기".</div></details>
+          <details><summary><span class="qn">Q11</span><span>중재자가 필요한 이유는?</span></summary><div class="answer">싼 결정 모델을 여러 개 병렬로 돌리면, 모두 상태를 바꿀 때 충돌한다. 중재자는 확신이 선 결정만 상태를 바꾸게 한다. CPU에서 읽기는 동시에 하고 쓰기는 잠그는 것과 같은 생각이다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>Earshot에서 반응 지연은 어떻게 줄었나?</span></summary><div class="answer">작은 실시간 모델이 교사 모델에게 배우고, 시스템이 언제 그 모델을 믿을지 따로 판단했다. 자주 들린 앞 숫자부터 빨라졌고, 끝에는 약 45밀리초가 됐다.</div></details>
+        </div>
+      </section>
+
+      <!-- 19 -->
+      <section id="apply">
+        <header><span class="num">19</span><h2>내 에이전트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>LLM 호출 중 "고르기"인 곳을 찾는다<span class="how">라우팅, 도구 호출 허용, 분류처럼 정해진 선택지에서 하나를 고르는 호출</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>그 선택지를 코드로 나열한다<span class="how">확인: 선택지 목록이 프롬프트 문장이 아니라 코드나 데이터에 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>큰 선택지 목록은 계층으로 나눠 한 층씩 고르게 한다<span class="how">카테고리 12,000개를 한 번에 넣지 않은 예처럼</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>전체 컨텍스트는 코드가 들고, 결정마다 필요한 조각만 넘긴다<span class="how">Doom 예: 전투 쪽과 지도 쪽은 각자 다른 조각을 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>생성 모델을 빼고 결정만으로 먼저 돌려 본다<span class="how">확인: 구조가 결정만으로도 동작하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>결정으로 안 풀릴 때만 LLM에 넘기는 출구를 둔다<span class="how">스마트 홈 예: 처음 보는 돌려 말하기 요청</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>결정 모델과 LLM이 함께 쓰는 맵을 정의한다<span class="how">항목마다 이름, 짧은 설명, 실행할 함수</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>결정을 병렬로 돌린다면 상태를 바꾸기 전에 중재자를 둔다<span class="how">읽기는 동시에, 쓰기는 확신이 선 결정 하나만</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>작은 모델에 일을 넘기기 전에 믿음의 기준을 정한다<span class="how">확인: 작은 모델이 어디서 잘했는지 기록하고 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 20 -->
+      <section id="glossary">
+        <header><span class="num">20</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>System 1 / System 2</td><td>Kahneman의 구분. System 1은 빠르고 직관적인 판단, System 2는 느리고 신중한 추론</td></tr>
+              <tr><td>결정 모델</td><td>Decision model. 텍스트를 만들지 않고, 주어진 선택지에 순위를 매기거나 하나를 고르는 모델. System 1 모델이라고도 부른다</td></tr>
+              <tr><td>제로샷 분류기</td><td>Zero-shot classifier. 그 과제의 예시를 따로 배우지 않고 바로 분류하는 모델</td></tr>
+              <tr><td>RLM</td><td>Recursive Language Model. 언어 모델이 하위 언어 모델을 불러 일을 나누고, 컨텍스트를 모델 밖에 두는 방식</td></tr>
+              <tr><td>RDM</td><td>Recursive Decision Model. RLM 구조를 결정 모델에 옮긴 발표자의 개념</td></tr>
+              <tr><td>루트 / 잎</td><td>트리의 맨 위와 맨 아래. 여기서는 처음 부르는 모델과, 마지막에 한 번 부르는 모델</td></tr>
+              <tr><td>깊이 상한</td><td>재귀 호출이 끝없이 내려가지 않게 정한 최대 단계 수</td></tr>
+              <tr><td>컨텍스트 창</td><td>Context window. 모델이 한 번에 읽을 수 있는 입력의 양</td></tr>
+              <tr><td>컴팩션</td><td>Compaction. 길어진 대화나 기록을 줄여 컨텍스트 창에 맞추는 일</td></tr>
+              <tr><td>라우터</td><td>Router. 요청을 어느 모델이나 경로로 보낼지 고르는 장치</td></tr>
+              <tr><td>빔 서치</td><td>Beam search. 매 단계 가장 유망한 후보 몇 개만 남기며 내려가는 탐색</td></tr>
+              <tr><td>이진 탐색</td><td>Binary search. 범위를 반씩 잘라 가며 찾는 방법</td></tr>
+              <tr><td>탐욕적 선택</td><td>Greedy. 매 단계 점수가 가장 높은 하나만 따라가는 방법</td></tr>
+              <tr><td>멀티모달</td><td>Multimodal. 글뿐 아니라 이미지 같은 다른 형태의 입력도 다루는 것</td></tr>
+              <tr><td>갈톤 판</td><td>Galton board. 핀이 박힌 판에 공을 떨어뜨려 정규분포 모양이 생기는 걸 보여 주는 장치</td></tr>
+              <tr><td>맵</td><td>Map. 결정 모델과 LLM이 함께 쓰는 선택지 목록. 항목마다 이름, 설명, 함수가 있다</td></tr>
+              <tr><td>임베딩</td><td>Embedding. 의미를 숫자 좌표로 나타낸 것</td></tr>
+              <tr><td>중재자</td><td>Arbiter. 병렬로 나온 결정 중 무엇이 시스템 상태를 바꿀지 정하는 관문</td></tr>
+              <tr><td>투기적 실행</td><td>Speculative execution. 필요할지 확실하지 않아도 여러 갈래를 미리 돌려 두는 것</td></tr>
+              <tr><td>잠금</td><td>Lock. 여러 작업이 같은 값을 동시에 바꾸지 못하게 막는 장치</td></tr>
+              <tr><td>slop</td><td>AI가 대량으로 만든 엉성하고 질 낮은 결과물</td></tr>
+              <tr><td>DSPy</td><td>LLM 호출을 모듈로 짜고 최적화하는 Python 프레임워크</td></tr>
+              <tr><td>지도 학습</td><td>Supervised learning. 정답이 붙은 예시를 보며 배우는 학습</td></tr>
+              <tr><td>교사 모델</td><td>다른 작은 모델에게 정답을 알려 주며 가르치는 모델</td></tr>
+              <tr><td>Wekinator</td><td>Rebecca Fiebrink가 만든 실시간 머신러닝 도구. 작은 모델을 그 자리에서 학습시킨다</td></tr>
+              <tr><td>ChucK / ChAI</td><td>ChucK은 실시간 오디오 프로그래밍 언어다. ChAI는 그 위의 AI 도구로, 발표자는 Wekinator의 후계라고 소개한다</td></tr>
+              <tr><td>사이드체인 컴프레서</td><td>Side-chain compressor. 다른 신호가 들어올 때 소리를 잠깐 줄이는 음향 효과</td></tr>
+              <tr><td>컴퓨터 사용 에이전트</td><td>Computer use agent. 화면을 보고 클릭이나 입력으로 컴퓨터를 조작하는 에이전트</td></tr>
+              <tr><td>바이브 코딩</td><td>Vibe coding. 코드를 직접 쓰기보다 AI에게 말로 시켜 만드는 방식</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 21 -->
+      <section id="timeline">
+        <header><span class="num">21</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 원래 제목과 진짜 주제</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>System 1이라는 이름의 유래: Kahneman</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>이름 논쟁: 결정 모델, 판단, 제로샷 분류기</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>핵심 질문: 추론은 작은 결정의 묶음인가</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>RDM = RLM + Jev</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>결정은 수렴, 생성은 발산</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>음과 양</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>Recursive Coding Agents 발표 안내</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>RLM 트리와 RDM 트리</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>조합 방식: 도구로서의 결정</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>루트가 결정 모델인 구성</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>Jev plays Doom</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>RDM의 세 가지 규칙</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>갈톤 판: 판단하는 핀</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>계층 검색: 카테고리 12,000개</td></tr>
+              <tr><td><span class="ts">19:20</span></td><td>이미지를 잘라 가며 찾기</td></tr>
+              <tr><td><span class="ts">21:10</span></td><td>Factorio 데모</td></tr>
+              <tr><td><span class="ts">23:30</span></td><td>결정만으로의 한계: API 키 퀴즈</td></tr>
+              <tr><td><span class="ts">24:20</span></td><td>게임, 브라우저, 컴퓨터 사용</td></tr>
+              <tr><td><span class="ts">26:10</span></td><td>생성과 엮기: 개요 따라가기, 호출 트리 모양</td></tr>
+              <tr><td><span class="ts">28:10</span></td><td>스마트 홈 데모</td></tr>
+              <tr><td><span class="ts">29:20</span></td><td>맵: 공용 인터페이스</td></tr>
+              <tr><td><span class="ts">31:30</span></td><td>여러 차원의 맵과 임베딩</td></tr>
+              <tr><td><span class="ts">32:00</span></td><td>중재자</td></tr>
+              <tr><td><span class="ts">33:40</span></td><td>중재자를 오디오에 적용</td></tr>
+              <tr><td><span class="ts">35:10</span></td><td>DSPy 모듈과 Rust 패키지</td></tr>
+              <tr><td><span class="ts">36:30</span></td><td>Operating System One</td></tr>
+              <tr><td><span class="ts">37:00</span></td><td>몸과 기기의 얽힘</td></tr>
+              <tr><td><span class="ts">38:30</span></td><td>AI 엔지니어의 진화 그림</td></tr>
+              <tr><td><span class="ts">39:50</span></td><td>노트북 드럼 킷 영상</td></tr>
+              <tr><td><span class="ts">41:30</span></td><td>Princeton Laptop Orchestra</td></tr>
+              <tr><td><span class="ts">42:20</span></td><td>Wekinator와 작은 실시간 모델</td></tr>
+              <tr><td><span class="ts">43:50</span></td><td>Earshot의 구조</td></tr>
+              <tr><td><span class="ts">45:30</span></td><td>Earshot 데모: 지연이 약 45밀리초로</td></tr>
+              <tr><td><span class="ts">47:20</span></td><td>Hunch</td></tr>
+              <tr><td><span class="ts">48:10</span></td><td>OSO: 만지지 않고 쓰는 컴퓨터</td></tr>
+              <tr><td><span class="ts">49:10</span></td><td>OSO의 특징</td></tr>
+              <tr><td><span class="ts">50:30</span></td><td>모두가 터미널로 간 이유</td></tr>
+              <tr><td><span class="ts">51:00</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'hFNbPmzzcEs:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

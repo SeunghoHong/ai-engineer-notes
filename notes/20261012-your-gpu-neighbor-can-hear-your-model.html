@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GPU 이웃 엿듣기 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#leak">무엇이 새고 무엇이 안 새나</a></li>
+      <li><a href="#mig">MIG 격리의 빈틈</a></li>
+      <li><a href="#probe">자기 메모리만 재는 공격</a></li>
+      <li><a href="#tempo">3µs 속의 토큰 박자</a></li>
+      <li><a href="#layers">속도보다 레이어 수</a></li>
+      <li><a href="#classifier">학습 없는 30줄 분류기</a></li>
+      <li><a href="#workload">지금 어떤 글을 쓰나</a></li>
+      <li><a href="#nvlink">같은 칩이 아니어도: NVLink</a></li>
+      <li><a href="#detect">공격은 어떻게 들키나</a></li>
+      <li><a href="#defense">운영자가 할 일 세 가지</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 환경에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-12 · 13분 · 영어 발표 한글 정리</span>
+      <h1>GPU 이웃은 시간만 재서 내 모델을 알아낸다</h1>
+      <p class="lead">클라우드에서 GPU를 다른 고객과 나눠 쓰면, 이웃은 내 데이터를 건드리지 않고도 어떤 모델이 얼마나 빠르게 무슨 일을 하는지 알아낼 수 있다. 하드웨어 격리가 연산과 메모리는 나눠도 시간까지 나누지는 못하기 때문이다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=SacJfmp33vM" target="_blank" rel="noopener">Your GPU Neighbor Can Hear Your Model</a></span>
+        <span>발표: Branislav Brzak (Stealthium 사이버보안 연구원, GPU 저수준 보안 담당)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 제시한 것이고 실험이나 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름(Qwen3, MIG, NVLink 등)은 확실한 것만 바로잡았고, 확실하지 않은 것에는 (추정)을 붙였다. 발표자는 GPU 보안 제품을 만드는 회사 소속이다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>NVIDIA의 GPU 나누기 기능 <strong>MIG</strong>는 연산, 메모리, 캐시를 나눈다. 하지만 <strong>시간은 나누지 못한다.</strong> 메모리 배리어가 GPU 전체에 걸리기 때문이다.</li>
+        <li>공격자는 <strong>자기 메모리만 읽고 그 시간만 잰다.</strong> 특별 권한도, 버그를 파고드는 공격 코드도 필요 없다.</li>
+        <li>피해자가 쉴 때와 일할 때 읽기 시간 차이는 중앙값 <strong>3µs</strong>다. 발표자는 이 차이로 <strong>토큰 속도(99.3%)</strong>와 <strong>모델 구조·깊이(97%)</strong>를 알아낸다고 말한다.</li>
+        <li>결정적 지문은 <strong>레이어 수</strong>다. 학습 없는 30줄 미만 코드가 깊이를 맞혀 보고, 처음 보는 비공개 모델에도 통한다.</li>
+        <li>추측 디코딩이 켜져 있으면 <strong>지금 쓰는 글의 종류</strong>(산문, 코드, JSON, 검색)도 드러난다.</li>
+        <li><strong>같은 칩이 아니어도 된다.</strong> NVLink로 연결된 옆 GPU에서도 5개 모델을 79.2% 정확도로 구별했다. 우연이면 20%다.</li>
+        <li>프롬프트와 답의 <strong>내용은 새지 않는다.</strong> 대응은 세 가지다. 민감한 모델 옆에 낯선 테넌트를 두지 않는다. MIG와 NVLink의 트레이드오프를 안다. GPU에서 도는 작업을 감시한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="leak">
+        <header><span class="num">01</span><h2>무엇이 새고 무엇이 안 새나 <span class="ts">00:00</span></h2></header>
+        <p>클라우드에서는 GPU 한 장을 여러 고객이 나눠 쓰기도 한다. 하드웨어를 나눠 쓰는 고객 하나를 <strong>테넌트</strong><span class="en">tenant</span>라고 부른다.</p>
+        <p>발표자의 경고는 이렇다. 옆 테넌트는 내 데이터를 건드리지 않고도 내 LLM에 대해 꽤 많은 것을 알아낼 수 있다. 쓰는 수단은 <strong>시간 재기</strong>뿐이다.</p>
+        <p>데이터를 직접 읽지 않고 시간이나 전력 같은 부수 효과로 정보를 빼내는 공격을 <strong>부채널 공격</strong><span class="en">side-channel attack</span>이라고 한다. 이 공격에는 root 같은 특별 권한이 필요 없다. 버그를 파고드는 공격 코드<span class="en">exploit</span>도 필요 없다. <span class="ts">00:50</span></p>
+
+        <h3>데모: 피해자와 공격자의 화면 <span class="ts">01:00</span></h3>
+        <p>왼쪽 화면에서는 피해자가 Qwen3 모델을 돌린다. 오른쪽 화면에서는 공격자가 타이밍 신호만 보고 어떤 모델인지 맞힌다. 지금 어떤 종류의 글을 만드는지도 맞힌다.</p>
+
+        <h3>발표자가 내세운 결과 <span class="ts">01:30</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">알아낼 수 있다</span>
+            <ul>
+              <li>모델의 구조와 깊이: 정확도 <strong>97%</strong></li>
+              <li>디코딩 속도: 정확도 <strong>99.3%</strong></li>
+              <li>언제, 얼마나 바쁜지. 토큰 수와 답 길이</li>
+              <li>작업 종류: 코드, 산문, JSON, 검색</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">알아낼 수 없다</span>
+            <ul>
+              <li>프롬프트</li>
+              <li>답변</li>
+              <li>그 밖의 내용</li>
+            </ul>
+            <p class="verdict">새는 것은 <b>시간 정보뿐</b>이다. 발표자는 모든 결과를 실제 H100에서 실제 LLM을 서빙하며 얻었다고 말한다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="mig">
+        <header><span class="num">02</span><h2>MIG 격리의 빈틈 <span class="ts">02:00</span></h2></header>
+        <p>NVIDIA GPU에서는 <strong>MIG</strong><span class="en">Multi-Instance GPU</span>로 테넌트를 격리한다. GPU 한 장을 독립된 조각(슬라이스) 여러 개로 나누는 기능이다.</p>
+        <p>각 슬라이스는 자기 몫의 연산 유닛을 물리적으로 따로 가진다. 전용 GPU 메모리<span class="en">VRAM</span>도 따로 가진다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>발표의 실험 구성 <span class="ts">02:10</span></th><th>연산 유닛</th><th>GPU 메모리</th></tr></thead>
+            <tbody>
+              <tr><td>피해자 슬라이스 (LLM 서빙)</td><td>3개</td><td>40GB</td></tr>
+              <tr><td>공격자 슬라이스</td><td>1개</td><td>10GB</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>나뉘는 것과 안 나뉘는 것 <span class="ts">02:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>격리 범위</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td>연산 유닛, 메모리 용량</td><td>슬라이스별</td><td>슬라이스마다 물리적으로 따로 있다</td></tr>
+              <tr><td>메모리 대역폭</td><td>슬라이스별</td><td>슬라이스마다 쓸 수 있는 몫이 정해져 있다</td></tr>
+              <tr><td>오류 <span class="en">fault, 추정</span></td><td>슬라이스별</td><td>한 슬라이스의 오류가 다른 슬라이스로 번지지 않는다</td></tr>
+              <tr><td>L2 캐시</td><td>슬라이스별</td><td>인스턴스마다 나뉜다. 다른 인스턴스가 내 캐시 데이터를 밀어내지<span class="en">evict</span> 못한다</td></tr>
+              <tr><td>메모리 배리어</td><td><strong>GPU 전체</strong></td><td>한 인스턴스가 건 배리어가 카드의 모든 L2 조각에 닿는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>메모리 배리어</strong><span class="en">memory barrier, membar</span>는 앞선 메모리 작업이 모두 끝났음을 보장할 때까지 기다리게 하는 명령이다. <span class="ts">02:40</span></p>
+        <div class="callout">
+          <span class="title">이 발표 전체가 기대는 사실 하나</span>
+          <span>메모리 배리어는 GPU 전체의 L2에 걸린다. 그래서 한 테넌트가 바쁘면 다른 테넌트의 작업이 조금 느려진다. 격리되지 않는 단 하나는 <strong>시간</strong>이다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="probe">
+        <header><span class="num">03</span><h2>자기 메모리만 재는 공격 <span class="ts">03:10</span></h2></header>
+        <p>공격자는 자기 메모리만 읽는다. 재는 것도 자기 읽기에 걸린 시간뿐이다. 피해자의 메모리는 한 번도 건드리지 않는다.</p>
+        <ol class="plain">
+          <li>자기 슬라이스 안의 작은 버퍼에서 데이터를 읽는다.</li>
+          <li>그 읽기에 걸린 시간을 잰다.</li>
+          <li>5마이크로초(µs)마다 반복한다.</li>
+        </ol>
+        <p>피해자가 바쁘면 GPU 전체에 걸리는 메모리 배리어 때문에 공격자의 읽기가 조금 느려진다. 공격자는 이 느려짐의 패턴을 모은다.</p>
+        <p class="note">MIG에서 메모리 배리어로 시간이 새는 현상은 발표자 팀이 처음 찾은 것이 아니다. 발표자는 "Behind Bars" 연구진에게 공을 돌렸다. 자막에는 발표 장소가 "using security"로 들려 USENIX Security로 추정된다. 이 발표는 그 기법을 LLM 정보를 알아내는 데 쓴 것이다. <span class="ts">03:20</span></p>
+      </section>
+
+      <!-- 4 -->
+      <section id="tempo">
+        <header><span class="num">04</span><h2>3µs 속의 토큰 박자 <span class="ts">03:30</span></h2></header>
+        <p>피해자가 쉴 때와 LLM을 서빙할 때의 읽기 시간을 나란히 놓아도 맨눈으로는 구별이 안 된다. 중앙값 차이가 <strong>3µs</strong>뿐이다. 공격자에게는 이걸로 충분하다.</p>
+        <p>이후 실험에서는 피해자 슬라이스에서 Qwen3 8B(파라미터 80억 개)가 계속 돈다. 모든 데이터는 실제로 돌아가는 모델에서 모았다. <span class="ts">04:00</span></p>
+
+        <h3>주파수로 보면 토큰 속도가 보인다 <span class="ts">04:10</span></h3>
+        <ul class="plain">
+          <li>시간 축으로 보면 토큰 하나마다 GPU 활동 덩어리가 하나씩 나타난다.</li>
+          <li>공격자의 지연 기록을 <strong>주파수 스펙트럼</strong>으로 바꾼다. 신호 안에 어떤 반복 박자가 얼마나 섞여 있는지 보여 주는 그림이다.</li>
+          <li>기본 박자<span class="en">fundamental</span>는 <strong>81Hz</strong>다. 초당 81토큰이라는 뜻이다.</li>
+          <li>81의 배수 박자들<span class="en">harmonics</span>도 보인다. 토큰 하나 안에 여러 박자가 섞여 있어서다.</li>
+        </ul>
+
+        <h3>토큰 하나를 확대하면 <span class="ts">04:30</span></h3>
+        <p>실제 기록에서 토큰 하나를 시간 축으로 펼치면 작은 봉우리가 <strong>39개</strong> 보인다.</p>
+        <ul class="plain">
+          <li>초록 봉우리: 모델의 레이어가 한 번씩 실행된 자리</li>
+          <li>주황 봉우리: 레이어 사이에 끼어드는 추가 처리</li>
+        </ul>
+        <p>주황 봉우리가 섞여 있어도 레이어 수를 정확히 세는 방법은 아래 05에서 다룬다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="layers">
+        <header><span class="num">05</span><h2>속도보다 레이어 수 <span class="ts">04:50</span></h2></header>
+        <p>타이밍만으로 디코딩 속도<span class="en">decode speed</span>를 <strong>99.3%</strong> 정확도로 알아냈다. 디코딩 속도는 모델이 초당 내놓는 토큰 수다. 속도는 공격자가 정확히 복원할 수 있는 정보다.</p>
+        <p>그런데 속도만으로는 모델을 특정하지 못한다. <strong>Qwen3 8B와 Llama 3 8B는 토큰 속도가 1.6%밖에 차이 나지 않는다.</strong> 속도만 보면 같은 모델로 착각할 수 있다. 후보를 좁힐 뿐 하나로 정하지는 못한다. <span class="ts">05:10</span></p>
+
+        <h3>정수에 딱 붙는 봉우리 수 <span class="ts">05:20</span></h3>
+        <p>더 날카로운 지문이 <strong>레이어 수</strong>다. 레이어<span class="en">layer</span>는 모델을 이루는 같은 모양의 처리 층이다. 토큰 하나를 만들 때 모든 층을 차례로 지난다.</p>
+        <ol class="plain">
+          <li><strong>접어서 평균내기</strong><span class="en">fold and average</span>: 긴 기록을 토큰 하나 길이로 잘라 겹치고 평균을 낸다. 잡음은 줄고 토큰 하나의 모양은 또렷해진다.</li>
+          <li>이번에는 이 작업을 토큰마다가 아니라 <strong>모델마다 한 번</strong> 한다.</li>
+          <li>그러면 토큰 하나 안의 봉우리 수가 나온다. 이 값이 거의 정확히 <strong>정수</strong>에 떨어진다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">정수라는 게 왜 중요한가 <span class="ts">05:40</span></span>
+          <span>기록 22개에서 봉우리 수와 가장 가까운 정수 사이의 평균 거리는 0.028이었다. 이 봉우리가 하드웨어의 고정된 잡음이라면, 서로 다른 토큰 속도로 나눴을 때 소수가 나와야 한다. 정수가 나온다는 건 모델 안의 무언가를 세고 있다는 뜻이다.</span>
+        </div>
+        <p>봉우리 수는 <strong>레이어 수 + 추가 봉우리 1~3개</strong>다. Qwen3 8B는 36층이다. 앞에서 본 봉우리 39개는 36 + 3으로 이 규칙과 맞는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>토큰 속도</th><th>레이어 수</th></tr></thead>
+            <tbody>
+              <tr><td>Qwen3 8B</td><td rowspan="2">1.6% 차이 (거의 같다)</td><td>36</td></tr>
+              <tr><td>Llama 3 8B</td><td>32</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="classifier">
+        <header><span class="num">06</span><h2>학습 없는 30줄 분류기 <span class="ts">06:00</span></h2></header>
+        <p>모델마다 고유한 신호 지문이 있다. 템포(토큰 박자)와 고조파 구조가 섞인 모양이다.</p>
+        <p>이 지문을 읽는 분류기는 <strong>기계학습 모델이 아니다.</strong> 학습 데이터도, 라벨도, 따로 맞춘 설정도 없다. 코드는 30줄이 안 된다.</p>
+        <ol class="plain">
+          <li>모델 깊이 후보를 16층부터 48층까지 하나씩 놓는다.</li>
+          <li>후보마다 "이 깊이라면 나와야 할 신호 모양"이 실제 기록에 얼마나 강하게 보이는지 잰다.</li>
+          <li>가장 잘 맞는 후보를 고른다.</li>
+        </ol>
+        <p>Qwen3 8B 기록에서는 36층이 다음 후보보다 4배 넘게 강하게 맞았다. <span class="muted">(자막에서 소수점 아래 숫자는 들리지 않는다.)</span></p>
+        <div class="callout">
+          <span class="title">처음 보는 모델에도 통한다 <span class="ts">06:30</span></span>
+          <span>미리 만든 표에서 찾는 방식이 아니다. "얼마나 잘 맞나"를 시험하는 방식이라 미리 봐 둬야 할 것이 없다. 그래서 비공개 모델이나 아직 출시되지 않은 모델에도 쓸 수 있다고 발표자는 말한다.</span>
+        </div>
+        <p>분류기는 답과 함께 신뢰도도 낸다. 발표자 팀의 시험에서 틀린 답은 신뢰도가 가장 낮았던 두 개뿐이었다. <span class="ts">06:50</span></p>
+
+        <h3>파인튜닝·증류 모델도 갈린다 <span class="ts">07:00</span></h3>
+        <p>같은 기반 모델에서 나온 파인튜닝<span class="en">fine-tuning</span> 모델과 증류<span class="en">distillation</span> 모델도 잡아낸다. 구조와 레이어 수가 그대로 이어지기 때문이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>만든 곳</th><th>관계</th></tr></thead>
+            <tbody>
+              <tr><td>Llama 3 8B</td><td>Meta</td><td>32층 기반 모델</td></tr>
+              <tr><td>Llama 3.1 8B</td><td>Meta</td><td>같은 32층 뼈대에 작은 개선</td></tr>
+              <tr><td>DeepSeek-R1-Distill-Llama-8B</td><td>DeepSeek</td><td>Llama 8B를 바탕으로 개선한 증류 모델</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>세 모델의 레이어당 타이밍은 중앙값으로 아주 조금씩만 다르다. 나머지 신호는 똑같아 보인다. 그래도 분류기는 셋을 구별했다고 발표자는 말한다.</p>
+        <p class="note">레이어당 타이밍 차이의 정확한 값은 자막에서 뭉개져 옮기지 않았다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="workload">
+        <header><span class="num">07</span><h2>지금 어떤 글을 쓰나 <span class="ts">07:50</span></h2></header>
+        <p>같은 신호로 더 깊은 질문을 던진다. 어떤 모델인지가 아니라 <strong>지금 무슨 일을 하고 있는지</strong>다.</p>
+        <ul class="plain">
+          <li>작업 종류는 넷이다: 산문, 코드, JSON, 검색<span class="en">retrieval</span></li>
+          <li>0.5초마다 최근 5초의 타이밍을 보고 넷 중 하나를 고른다</li>
+        </ul>
+
+        <figure class="chart" aria-label="0.5초 구간 작업 종류 정답률 77.5%(40개 중 31개), 우연히 맞힐 확률 25%">
+          <span class="chart-title">0.5초마다 작업 종류 맞히기 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>분류기 정답률 (40개 중 31개)</span><span class="val">77.5</span></div>
+              <div class="track"><div class="fill key" style="width:77.5%" title="분류기 정답률: 77.5% (31/40)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>우연히 맞힐 확률 (4개 중 1개)</span><span class="val">25</span></div>
+              <div class="track"><div class="fill" style="width:25%" title="우연 수준: 25%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">77.5%는 발표에 나온 "40개 중 31개"를 직접 나눈 값이다.</span>
+        </figure>
+        <p>응답 4개는 구간별 답을 다수결로 모아 맞혔다. 앞의 데모 영상에 나온 그 분류기이고, 틀린 것까지 포함한 숫자다. <span class="ts">08:00</span></p>
+
+        <div class="callout warn">
+          <span class="title">조건: 추측 디코딩이 켜져 있을 때 <span class="ts">08:20</span></span>
+          <span>이 결과는 추측 디코딩<span class="en">speculative decoding</span>을 켜고 잰 것이다. vLLM에서는 기본값이 아니라 직접 켜야 하는 옵션이다.</span>
+        </div>
+
+        <h3>왜 글 종류가 시간에 드러나나</h3>
+        <ol class="plain">
+          <li>추측 디코딩은 다음 토큰 여러 개를 빠르게 미리 짐작(초안)하고, 본 모델이 한 번에 검사해 맞는 것만 받는 가속 기법이다.</li>
+          <li>글이 얼마나 예측하기 쉬운지에 따라 한 번에 받아들여지는 초안 토큰 수가 달라진다.</li>
+          <li>그러면 한 단계에 걸리는 시간이 달라진다. 공격자가 잡는 신호가 바로 이것이다.</li>
+        </ol>
+
+        <h3>11개 설정에서 시험 <span class="ts">08:30</span></h3>
+        <p>밀집 모델<span class="en">dense</span>과 전문가 혼합 모델<span class="en">MoE</span>을 섞었다. 숫자 형식도 16비트<span class="en">BF16</span>와 8비트<span class="en">FP8</span>를 섞었다. 모두 11개 설정이다. 같은 패턴이 매번 나왔지만 세기는 크게 달랐다.</p>
+
+        <figure class="chart" aria-label="작업 종류에 따른 속도 차이: gpt-oss-20b 70.2%, GLM-4 9B 0.9%">
+          <span class="chart-title">작업 종류에 따른 속도 차이 (spread, %)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>gpt-oss-20b</span><span class="val">70.2</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="gpt-oss-20b: 70.2%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>GLM-4 9B (추정)</span><span class="val">0.9</span></div>
+              <div class="track"><div class="fill" style="width:1.28%" title="GLM-4 9B: 0.9%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>35.1</span><span>70.2</span></div>
+          <span class="caption">발표자가 "spread"라고 부른 값이다. 작업 종류 사이의 속도 차이로 보인다. 두 값은 약 78배 차이 난다.</span>
+        </figure>
+
+        <p>11개 중 10개 설정에서 산문이 가장 빨랐다. 넷 중 하나를 우연히 고른다면 4분의 1 확률이다.</p>
+        <p>정리하면 이렇다. 공격자가 앞의 방법으로 모델을 이미 알고, 추측 디코딩까지 켜져 있다면, 지금 나오는 글의 종류도 알 수 있다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="nvlink">
+        <header><span class="num">08</span><h2>같은 칩이 아니어도: NVLink <span class="ts">09:10</span></h2></header>
+        <p>MIG 공격은 공격자가 피해자와 같은 물리 칩 위에 있어야 한다. 이번 공격은 그럴 필요가 없다.</p>
+        <ul class="plain">
+          <li><strong>서버</strong>: H100 8장이 NVSwitch로 연결돼 있다. NVLink는 GPU끼리 직접 잇는 고속 링크이고, NVSwitch는 이 링크를 여러 GPU에 이어 주는 스위치다.</li>
+          <li><strong>피해자</strong>: GPU 0과 1에 모델을 텐서 병렬<span class="en">tensor parallelism</span>로 나눠 돌린다. 모델 하나의 계산을 여러 GPU에 쪼개 동시에 하는 방식이다.</li>
+          <li><strong>공격자</strong>: 같은 서버의 다른 GPU 하나면 된다. 여기서는 GPU 2다.</li>
+        </ul>
+        <p>NVSwitch를 거쳐 다른 GPU의 메모리에 접근하는 기능<span class="en">peer access</span>은 버그가 아니다. 여러 GPU로 일하는 작업은 원래 이렇게 돈다. <span class="ts">09:30</span></p>
+        <p>MIG와 텐서 병렬은 한 장치에서 같이 쓸 수 없다. 그래서 이 공격의 대상은 MIG 공격과 겹치지 않는 다른 배포들이다. 같은 공격을 한 번 더 보여 주는 게 아니다. <span class="ts">09:40</span></p>
+
+        <h3>옆 GPU의 메모리를 따라 읽는다 <span class="ts">09:50</span></h3>
+        <p>GPU 2의 측정 프로그램<span class="en">probe</span>이 GPU 0에 실제로 있는 메모리를 NVLink 너머로 <strong>포인터 추적</strong><span class="en">pointer chasing</span>한다. 읽은 값이 다음에 읽을 주소가 되도록 이어 붙여, 읽기 하나하나의 지연을 재는 방법이다.</p>
+        <ul class="plain">
+          <li>피해자가 쉴 때 한 번 건너가는 데 약 <strong>890나노초</strong>가 걸린다.</li>
+          <li>피해자가 일을 시작하면 이 값이 크게 오른다.</li>
+          <li>0.5초짜리 기록 세 개에서 토큰을 눈으로 셀 수 있을 정도다.</li>
+        </ul>
+        <p class="note">자막에는 바쁠 때 값이 "300마이크로초"로 들린다. 쉴 때의 300배가 넘는 값이라 단위가 뭉개졌을 수 있다. 정확한 값은 영상의 슬라이드로 확인하자.</p>
+
+        <h3>잃는 것과 남는 것 <span class="ts">10:20</span></h3>
+        <p>이 거리에서는 <strong>레이어 신호가 잡음 아래로 묻힌다.</strong> NVLink로 얻는 지문은 주로 템포, 곧 토큰 박자다.</p>
+        <p>똑같은 서빙 환경에서 다섯 모델을 돌리고, 모델만 바꿔 가며 어느 것인지 맞혀 봤다. <span class="ts">10:30</span></p>
+
+        <figure class="chart" aria-label="NVLink 너머 5개 모델 구별 정확도 79.2%, 우연히 맞힐 확률 20%">
+          <span class="chart-title">NVLink 너머에서 5개 모델 구별하기 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>템포만으로 맞힌 정확도</span><span class="val">79.2</span></div>
+              <div class="track"><div class="fill key" style="width:79.2%" title="NVLink 5개 모델 구별: 79.2%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>우연히 맞힐 확률 (5개 중 1개)</span><span class="val">20</span></div>
+              <div class="track"><div class="fill" style="width:20%" title="우연 수준: 20%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+        </figure>
+
+        <p>틀린 곳은 템포가 약한 바로 그 지점이었다. Llama 3.1 8B(추정, 자막에는 "3.5")와 DeepSeek-R1-Distill-Llama-8B는 둘 다 80억 파라미터 모델이다. 디코딩 속도도 3Hz밖에 차이 나지 않는다. 그래서 둘이 섞였다. 발표자는 MIG에서라면 레이어 신호로 쉽게 갈랐을 것이라고 말한다. <span class="ts">10:50</span></p>
+        <p class="note">두 모델은 레이어 수가 32로 같다. 그래서 MIG에서 둘을 가르는 것은 레이어 "개수"가 아니라 06에서 본 레이어당 타이밍의 작은 차이로 읽는 게 맞다. 발표에서는 "레이어 수"라고 말했다.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>MIG 공격</th><th>NVLink 공격</th></tr></thead>
+            <tbody>
+              <tr><td>공격자 위치</td><td>같은 GPU의 다른 MIG 슬라이스</td><td>같은 서버의 다른 GPU</td></tr>
+              <tr><td>새는 통로</td><td>GPU 전체에 걸리는 메모리 배리어</td><td>NVSwitch 너머 다른 GPU 메모리 읽기</td></tr>
+              <tr><td>보이는 신호</td><td>템포 + 레이어</td><td>주로 템포</td></tr>
+              <tr><td>모델 구별</td><td>구조·깊이 97%</td><td>5개 중 79.2%</td></tr>
+              <tr><td>해당하는 배포</td><td>GPU 한 장을 MIG로 나눠 쓰는 곳</td><td>여러 GPU에 텐서 병렬로 나눠 돌리는 곳</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <span class="title">신호가 약하다고 안전한 건 아니다 <span class="ts">11:00</span></span>
+          <span>NVLink 쪽은 레이어 신호를 잃어서 MIG보다 약하다. 하지만 신호 대 잡음비가 낮다는 것과 안전하다는 것은 다르다. 우연 수준 20%에 비해 79%는 잡음이 아니라 진짜 지문이다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="detect">
+        <header><span class="num">09</span><h2>공격은 어떻게 들키나 <span class="ts">11:10</span></h2></header>
+        <p>발표자 회사 Stealthium의 제품이 이 공격을 별도 설정 없이 잡아냈다고 한다. 이 제품은 모든 GPU의 모든 커널 실행을 지켜본다. 수상한 작업은 분석해서 경보로 보낸다. 커널<span class="en">kernel</span>은 GPU에서 한 번에 실행되는 함수 단위다.</p>
+        <p>이 공격이 눈에 띈 흔적은 셋이다. <span class="ts">11:40</span></p>
+        <ul class="plain">
+          <li>같은 커널 하나가 약 <strong>3,000번</strong> 다시 실행됐다.</li>
+          <li>매번 똑같은 <strong>40KB</strong> 메모리만 반복해서 건드렸다. 새 데이터로 넘어가지 않았다.</li>
+          <li>전체 기간 동안 CPU로 돌려보낸 데이터는 <strong>1KB</strong>뿐이었다. 계산 결과가 아니라 걸린 시간 자체가 목적이었기 때문이다.</li>
+        </ul>
+        <p>처음부터 탐지까지 600밀리초가 안 걸렸다. 그때 피해자의 답은 50토큰도 나오지 않았다. 답이 절반도 쓰이기 전에 잡았다는 것이 발표자의 설명이다. <span class="ts">12:00</span></p>
+        <p class="note">앞에서 본 Qwen3 8B의 속도(초당 81토큰)를 넣으면 0.6초에 약 49토큰이다. "50토큰 미만"이라는 말과 앞뒤가 맞는다. 다만 이 데모에 어떤 모델을 썼는지는 발표에 나오지 않는다.</p>
+        <p class="note">이 절은 발표자 회사의 제품 이야기다. "모든 업체가 할 수 있는 일은 아니다"라는 비교도 발표자 쪽 주장이니 감안해서 읽자.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="defense">
+        <header><span class="num">10</span><h2>운영자가 할 일 세 가지 <span class="ts">12:10</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>할 일</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>1. 배치를 정한다</td><td>배치는 운영자가 직접 정할 수 있다. 민감한 모델 바로 옆 MIG 슬라이스에 신뢰할 수 없는 테넌트를 두지 않는다.</td></tr>
+              <tr><td>2. 트레이드오프를 안다</td><td>MIG는 GPU끼리의 직접 통신(P2P)을 막는다. 그래서 MIG에서는 텐서 병렬을 못 쓴다. NVLink로 나눠 돌리면 레이어 수는 숨지만 타이밍(템포)은 샌다.</td></tr>
+              <tr><td>3. GPU 자체를 감시한다</td><td>호스트 인프라가 하드웨어에서 악성 작업이 돌지 않는지 계속 확인해야 한다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">세 번째 항목에서 발표자는 바로 그 일을 자기 회사 제품이 한다고 말한다. 커널 동작에서 이런 측정 프로그램을 잡아낸다는 설명이다. "대부분의 조직은 아직 이런 가시성이 없다"는 말도 같은 맥락이니 감안해서 읽자.</p>
+        <blockquote>GPU를 나눠 쓰면 타이밍만으로 모델, 속도, 작업이 드러난다. NVLink 너머에서도, 익스플로잇 없이.<cite>발표자의 마무리 문장을 옮김 <span class="ts">12:50</span></cite></blockquote>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>MIG는 연산, 메모리, L2 캐시를 나누지만 시간은 못 나눈다. 메모리 배리어가 GPU 전체에 걸리기 때문이다.</li>
+          <li>공격자는 자기 버퍼를 5µs마다 읽고 그 시간만 잰다. <strong>권한도 익스플로잇도 필요 없다.</strong></li>
+          <li>피해자가 쉴 때와 일할 때의 차이는 중앙값 3µs다. 맨눈엔 안 보여도 신호로는 충분하다.</li>
+          <li>스펙트럼의 기본 박자는 초당 토큰 수다(Qwen3 8B는 81Hz). 속도는 99.3% 정확도로 복원된다.</li>
+          <li>속도만으로는 모델을 못 가른다. Qwen3 8B와 Llama 3 8B는 1.6%밖에 차이 나지 않는다.</li>
+          <li>결정적 지문은 <strong>레이어 수</strong>다. 토큰 하나 속 봉우리 수는 레이어 수 + 1~3이고, 정수와의 평균 거리는 0.028이다.</li>
+          <li>분류기는 학습 없이 깊이 16~48을 맞춰 보는 30줄 미만 코드다. <strong>처음 보는 비공개 모델에도 통한다.</strong></li>
+          <li>추측 디코딩이 켜져 있으면 지금 생성하는 글의 종류도 드러난다. 0.5초 구간 40개 중 31개를 맞혔다.</li>
+          <li>같은 칩이 아니어도 된다. NVLink 너머 옆 GPU에서도 5개 모델을 <strong>79.2%</strong>로 구별했다(우연 20%). 레이어 신호는 잃는다.</li>
+          <li>내용은 새지 않는다. 대응은 <strong>배치, 트레이드오프 이해, GPU 감시</strong>다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>이 공격으로 알아낼 수 있는 것과 알아낼 수 없는 것은?</span></summary><div class="answer">모델 구조와 깊이, 디코딩 속도, 바쁜 시점과 토큰 수, 작업 종류는 알아낸다. 프롬프트나 답변 같은 내용은 알아내지 못한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>MIG가 격리하는 것과 격리하지 못하는 것은?</span></summary><div class="answer">연산 유닛, 메모리 용량, 대역폭 몫, 오류, L2 캐시는 슬라이스별로 나뉜다. 메모리 배리어는 GPU 전체 L2에 걸려서 시간이 샌다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>공격자는 피해자 메모리를 건드리지 않는데 어떻게 신호를 얻나?</span></summary><div class="answer">자기 버퍼를 읽는 데 걸린 시간을 5µs마다 잰다. 피해자가 바쁘면 GPU 전체에 걸리는 배리어 때문에 자기 읽기가 조금 느려진다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>스펙트럼에서 81Hz는 무엇을 뜻하나?</span></summary><div class="answer">초당 81토큰이다. 토큰마다 GPU 활동 덩어리가 하나씩 생기므로 기본 박자가 곧 토큰 속도다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>토큰 속도만으로 모델을 특정하기 어려운 이유는?</span></summary><div class="answer">Qwen3 8B와 Llama 3 8B는 토큰 속도가 1.6%밖에 다르지 않다. 속도는 후보를 좁힐 뿐 하나로 정하지 못한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>봉우리 수가 정수에 가깝다는 사실이 왜 중요한가?</span></summary><div class="answer">하드웨어의 고정 잡음이라면 토큰 속도로 나눌 때 소수가 나와야 한다. 정수가 나오므로 모델의 레이어를 세고 있다는 뜻이다. 봉우리 수는 레이어 수 + 1~3이고, Qwen3 8B는 36 + 3 = 39다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>분류기가 처음 보는 비공개 모델에도 통하는 이유는?</span></summary><div class="answer">학습한 표에서 찾는 방식이 아니다. 깊이 후보 16~48 각각이 기록에 얼마나 잘 맞는지 시험하므로 미리 봐 둘 것이 없다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>작업 종류를 알아내는 실험의 전제 조건과 원리는?</span></summary><div class="answer">추측 디코딩이 켜져 있어야 한다. 글이 예측하기 쉬운 정도에 따라 받아들여지는 초안 토큰 수가 달라지고, 그 결과 한 단계의 시간이 달라진다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>NVLink 공격이 MIG 공격과 다른 점은?</span></summary><div class="answer">같은 칩이 아니라 같은 서버의 다른 GPU에서 한다. 레이어 신호를 잃고 템포만 남는다. 5개 모델을 79.2%로 구별했다(우연 20%). 대상도 텐서 병렬로 도는 다른 배포들이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>NVLink 실험에서 헷갈린 두 모델과 그 이유는?</span></summary><div class="answer">Llama 3.1 8B(추정)와 DeepSeek-R1-Distill-Llama-8B다. 디코딩 속도가 3Hz밖에 차이 나지 않아 템포만으로는 갈리지 않았다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>탐지할 때 눈에 띈 공격의 흔적 세 가지는?</span></summary><div class="answer">같은 커널이 약 3,000번 재실행됐다. 매번 같은 40KB 메모리만 건드렸다. CPU로 보낸 데이터가 1KB뿐이었다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 제시한 운영자의 할 일 세 가지는?</span></summary><div class="answer">민감한 모델 옆에 신뢰할 수 없는 테넌트를 두지 않는다. MIG와 NVLink의 트레이드오프를 안다. GPU에서 악성 작업이 도는지 감시한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 환경에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 모델이 도는 GPU를 누구와 함께 쓰는지 확인한다<span class="how">MIG로 나뉜 GPU인가, 같은 서버의 다른 GPU는 누가 쓰는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>민감한 모델 옆 MIG 슬라이스에 신뢰할 수 없는 테넌트를 두지 않는다<span class="how">배치 규칙으로 글로 남긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>텐서 병렬로 여러 GPU에 나눠 돌린다면, 같은 서버의 남은 GPU를 누가 쓰는지 확인한다<span class="how">NVSwitch로 연결된 GPU는 같은 위험 범위로 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>추측 디코딩을 켰다면 "작업 종류가 샐 수 있다"를 위험 목록에 적는다<span class="how">vLLM에서는 기본값이 꺼져 있다. 켠 이유와 위험을 함께 기록한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>위협 모델에 "내용은 안 새도 모델 정체, 속도, 작업 종류는 샐 수 있다"를 적는다<span class="how">비공개 모델도 레이어 수가 드러날 수 있다고 가정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>GPU 커널 실행을 볼 수 있는 관측 수단을 마련한다<span class="how">예: 같은 커널의 수천 번 반복, 같은 작은 메모리 영역만 읽기, CPU로 거의 아무것도 보내지 않는 커널</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>테넌트</td><td>Tenant. 같은 하드웨어를 나눠 쓰는 고객 하나</td></tr>
+              <tr><td>부채널 공격</td><td>Side-channel attack. 데이터를 직접 읽지 않고 시간, 전력 같은 부수 효과로 정보를 알아내는 공격</td></tr>
+              <tr><td>익스플로잇</td><td>Exploit. 소프트웨어 버그를 파고들어 권한을 얻거나 동작을 바꾸는 공격 코드</td></tr>
+              <tr><td>MIG</td><td>Multi-Instance GPU. NVIDIA GPU 한 장을 독립된 여러 조각(슬라이스)으로 나누는 기능</td></tr>
+              <tr><td>VRAM</td><td>GPU 전용 메모리</td></tr>
+              <tr><td>L2 캐시</td><td>GPU 칩 안의 고속 메모리 층. MIG에서는 인스턴스별로 나뉜다</td></tr>
+              <tr><td>메모리 배리어</td><td>Memory barrier, membar. 앞선 메모리 작업이 다 끝날 때까지 기다리게 하는 명령</td></tr>
+              <tr><td>디코딩 속도</td><td>LLM이 답을 만들 때 초당 내놓는 토큰 수</td></tr>
+              <tr><td>주파수 스펙트럼</td><td>신호 안에 어떤 반복 박자가 얼마나 섞여 있는지 보여 주는 그림</td></tr>
+              <tr><td>기본 주파수 / 고조파</td><td>Fundamental / harmonics. 가장 기본이 되는 반복 박자와, 그 정수배 박자들</td></tr>
+              <tr><td>레이어</td><td>Layer. 모델을 이루는 같은 모양의 처리 층. 토큰 하나마다 모든 층을 차례로 지난다</td></tr>
+              <tr><td>접어서 평균내기</td><td>Fold and average. 긴 신호를 한 주기 길이로 잘라 겹치고 평균을 내 잡음을 줄이는 방법</td></tr>
+              <tr><td>파인튜닝 / 증류</td><td>Fine-tuning / distillation. 기존 모델을 추가로 학습시키는 것 / 큰 모델의 출력으로 다른 모델을 학습시키는 것</td></tr>
+              <tr><td>추측 디코딩</td><td>Speculative decoding. 다음 토큰 여러 개를 빠르게 짐작하고, 본 모델이 한 번에 검사해 맞는 것만 받는 가속 기법</td></tr>
+              <tr><td>vLLM</td><td>LLM 서빙에 널리 쓰이는 오픈소스 추론 엔진</td></tr>
+              <tr><td>Dense / MoE</td><td>토큰마다 모든 파라미터를 쓰는 모델 / 토큰마다 일부 전문가(expert)만 골라 쓰는 모델</td></tr>
+              <tr><td>BF16 / FP8</td><td>숫자를 16비트 / 8비트로 저장하는 형식</td></tr>
+              <tr><td>NVLink / NVSwitch</td><td>NVIDIA GPU끼리 직접 잇는 고속 링크 / 그 링크를 여러 GPU에 이어 주는 스위치</td></tr>
+              <tr><td>텐서 병렬</td><td>Tensor parallelism. 모델 하나의 계산을 여러 GPU에 쪼개 동시에 하는 방식</td></tr>
+              <tr><td>P2P / peer access</td><td>GPU가 다른 GPU의 메모리를 직접 읽고 쓰는 것</td></tr>
+              <tr><td>포인터 추적</td><td>Pointer chasing. 읽은 값이 다음에 읽을 주소가 되도록 이어 붙여, 읽기 하나하나의 지연을 재는 방법</td></tr>
+              <tr><td>커널</td><td>Kernel. GPU에서 한 번에 실행되는 함수 단위</td></tr>
+              <tr><td>신호 대 잡음비</td><td>SNR. 원하는 신호가 잡음에 비해 얼마나 큰지</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>주제: 공유 GPU로 새는 LLM 정보</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>권한도 익스플로잇도 필요 없는 공격</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>데모: 피해자와 공격자 화면</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>알아낼 수 있는 것과 없는 것</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>MIG와 실험 구성</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>격리되는 것들</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>메모리 배리어는 GPU 전체에 걸린다</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>공격 방법: 자기 버퍼 읽기 시간 재기</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>Behind Bars 연구에 공 돌리기</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>맨눈엔 안 보이는 3µs 차이</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>주파수 스펙트럼: 81Hz와 고조파</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>토큰 하나 속 봉우리 39개</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>디코딩 속도 99.3%</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>Qwen3 8B와 Llama 3 8B: 속도 차이 1.6%</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>레이어 수: 정수에 붙는 봉우리 수</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>학습 없는 30줄 분류기</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>처음 보는 모델에도 통한다</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>신뢰도와 오답</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>파인튜닝·증류 모델 구별</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>작업 종류 맞히기: 40개 중 31개</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>조건: 추측 디코딩과 그 원리</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>11개 설정: 70.2% 대 0.9%</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>NVLink: 같은 서버의 다른 GPU</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>MIG와 텐서 병렬은 함께 못 쓴다</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>포인터 추적: 쉴 때 890ns</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>레이어 신호 손실, 템포만 남음</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>5개 모델 구별 79.2%</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>헷갈린 두 모델</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>약한 신호도 안전은 아니다</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>탐지: 3,000번 재실행된 커널</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>600ms, 답 50토큰 전에 탐지</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>운영자가 할 일 세 가지</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>마무리와 감사 인사</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'SacJfmp33vM:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

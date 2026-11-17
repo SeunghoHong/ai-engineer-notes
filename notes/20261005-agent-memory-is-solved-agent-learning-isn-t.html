@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 학습 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#memory-vs-learning">메모리와 학습은 다르다</a></li>
+      <li><a href="#four-agents">에이전트 4개, 1년의 실패</a></li>
+      <li><a href="#lost-context">결과물만 넘기고 추론은 버린다</a></li>
+      <li><a href="#misconceptions">다섯 가지 오해</a></li>
+      <li><a href="#requirements">공유 컨텍스트의 세 조건</a></li>
+      <li><a href="#attempts">실패한 시도와 RAG 수치</a></li>
+      <li><a href="#mako">Mako: 데이터 팩과 승격</a></li>
+      <li><a href="#confession">이 슬라이드도 그렇게 만들었다</a></li>
+      <li><a href="#demo-resume">데모 1: 세션 이어가기</a></li>
+      <li><a href="#demo-share">데모 2: 다른 에이전트와 공유</a></li>
+      <li><a href="#signal">비용 추적과 학습 신호</a></li>
+      <li><a href="#in-company">회사 안에서 쓰는 모습</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-05 · 21분 · 영어 발표 한글 정리</span>
+      <h1>에이전트 메모리는 풀렸다, 학습은 아니다</h1>
+      <p class="lead">에이전트 하나가 대화를 기억하는 일은 이미 해결됐다. 문제는 여러 에이전트와 사람이 서로의 맥락을 넘겨받으며 함께 배우는 일이다. 데이터베이스 회사가 에이전트 4개를 1년간 띄우지 못한 끝에 찾은 답은, 검증을 거쳐 승격된 공유 컨텍스트를 인프라로 만드는 것이었다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=9_oy4owGtPI" target="_blank" rel="noopener">Agent Memory Is Solved. Agent Learning Isn't.</a></span>
+        <span>발표: Karthik Ranganathan (Yugabyte 공동 창업자 겸 CEO), 데모: Heather (Yugabyte)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 제품 이름은 자막에서 Mako, Makeo, Miko 등으로 흔들려 "Mako(추정)"로 적었다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>메모리는 에이전트 하나의 문제, 학습은 여럿의 문제다.</strong> 혼자 기억하는 인프라와 여럿이 배우는 인프라는 다르다.</li>
+        <li>Yugabyte는 에이전트 4개를 거의 1년간 띄우지 못했다. 원인은 모델이 아니라 <strong>데이터 문제</strong>였다.</li>
+        <li>진짜 손실은 <strong>결과물만 넘기고 추론, 막다른 길, 실패 기록을 버리는 것</strong>이다. 받는 쪽 에이전트가 토큰을 태우며 다시 도출한다.</li>
+        <li>메모리 늘리기, 파일 공유, 대화 전체 RAG, 파인튜닝, 큰 컨텍스트 창은 <strong>모두 학습이 아니다.</strong> 각각 아키텍처 구멍이다.</li>
+        <li>공유 컨텍스트에는 세 조건이 필요하다. <strong>공유할 수 있고, 검토를 거쳐 승격되며, 출처를 추적할 수 있어야</strong> 한다.</li>
+        <li>RAG 파이프라인을 하나씩 추적해 고치니 충실도가 <strong>14%에서 65%</strong>로 올랐고 청크 수는 7,000개에서 1,000개로 줄었다.</li>
+        <li>Mako(추정)는 <strong>데이터 팩</strong>이라는 단위에 컨텍스트를 담고, 개인 공간에서 공유 공간으로 승격시킨다. 한 번 알아낸 것은 다음부터 MCP 도구 호출 한 번으로 꺼낸다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="memory-vs-learning">
+        <header><span class="num">01</span><h2>메모리와 학습은 다르다 <span class="ts">00:10</span></h2></header>
+        <p>AI의 모든 것은 넣어 주는 데이터에 달려 있다. 나쁜 데이터를 넣으면 나쁜 결과가 나온다. 발표자는 여기서 두 문제를 가른다.</p>
+        <div class="shift" aria-label="메모리와 학습의 차이">
+          <div><span class="tag">풀린 문제</span><b>에이전트 메모리 <span class="en">agent memory</span></b><span class="muted">대화에서 기억할 것을 뽑아 두고 같은 에이전트가 다시 쓴다. 에이전트 하나 단위로 돌아간다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">안 풀린 문제</span><b>에이전트 학습 <span class="en">agent learning</span></b><span class="muted">여러 에이전트가 함께 일하며 서로 배우고 나눈다. 혼자 있을 때는 일어나지 않는다.</span></div>
+        </div>
+        <p>발표자는 자신을 인프라를 만드는 사람이라고 소개한다. 그 관점에서 보면 <strong>에이전트 하나의 메모리를 위해 만든 인프라는 여럿이 배우는 데 필요한 인프라와 다르다.</strong> 이 발표는 그 차이를 왜, 어떻게 메웠는지에 대한 이야기다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="four-agents">
+        <header><span class="num">02</span><h2>에이전트 4개, 1년의 실패 <span class="ts">01:10</span></h2></header>
+        <p>Karthik Ranganathan은 분산 데이터베이스 YugabyteDB를 만드는 회사의 공동 창업자이자 CEO다. 데이터베이스 회사가 왜 에이전트용 데이터 인프라를 만들게 됐는지, 발표자는 "어렵게 배웠다"고 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>에이전트</th><th>대상</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>Hagen (추정)</td><td>사내</td><td>고객 지원</td></tr>
+              <tr><td>Growth Vector</td><td>사내</td><td>영업과 마케팅을 맞춰 움직이는 시장 진입 조율</td></tr>
+              <tr><td>Perf Advisor</td><td>고객</td><td>에이전트형 데이터베이스 관리자. 고객의 데이터베이스를 운영한다</td></tr>
+              <tr><td>Voyager</td><td>고객</td><td>다른 데이터베이스에서 클라우드 네이티브 데이터베이스로 옮기고 현대화한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>네 에이전트 모두 제대로 내놓지 못했다. 거의 1년을 시도한 뒤에야 모델이 아니라 <strong>데이터 문제에서 실패하고 있다</strong>는 것을 깨달았다. 데이터베이스 회사가 데이터 문제로 막혔으니 "개인적인 일이 됐다"는 것이 발표자의 표현이다.</p>
+        <div class="callout">
+          <span class="title">고객의 요구도 같은 곳을 가리켰다 <span class="ts">02:10</span></span>
+          <span>고객들은 더 큰 벡터 저장소, 더 큰 그래프, 더 큰 관계형 저장소를 원했고, 늘 "더 많은 규모, 더 높은 성능, 더 적은 비용"을 요구했다. 발표자는 어느 시점부터 이것이 물리 법칙을 깨라는 요구처럼 들렸다고 말한다. 저장소를 키우는 것으로는 풀리지 않는 다른 문제가 있었다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="lost-context">
+        <header><span class="num">03</span><h2>결과물만 넘기고 추론은 버린다 <span class="ts">02:40</span></h2></header>
+        <p>모든 것을 걷어내고 핵심만 보면 실패는 이렇다. 발표자의 에이전트 A가 일을 마치고 동료 Heather의 에이전트와 함께 일해야 한다. 그런데 넘길 수 있는 것은 <strong>결과물뿐</strong>이다. 마크다운 파일, PDF, 문서 같은 것들이다. 그 결과가 나오기까지의 <strong>추론은 넘길 수 없다.</strong></p>
+        <p>이때 잃는 것은 세 가지다.</p>
+        <ul class="plain">
+          <li><strong>추론</strong>: 왜 이 결론에 이르렀는가</li>
+          <li><strong>막다른 길</strong>: 성공하기 전에 몇 번, 어떻게 실패했는가</li>
+          <li><strong>전체 맥락</strong>: 그 일을 둘러싼 배경</li>
+        </ul>
+        <p>그래서 Heather의 에이전트는 이 모든 것을 <strong>처음부터 다시 도출</strong>한다. 공짜가 아니다. 토큰을 태우고 모델 회사에 돈을 낸다.</p>
+        <div class="callout">
+          <span class="title">사람 팀에 빗대면 <span class="ts">03:30</span></span>
+          <span>새로 온 팀원에게 "우리는 X를 한다"고만 알려 주면, 그 사람은 X 대신 다른 것을 해야 할 이유 50가지를 들고 온다. 그때마다 "그건 2주 전에, 두 달 전에 이미 검토했다"고 답해야 한다. 실제 팀은 그렇게 일하지 않는다. 프로젝트의 역사와 지금까지의 방식을 먼저 알려 주고 "여기서부터 시작하자"고 한다. 에이전트에게는 바로 그 맥락이 없다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="misconceptions">
+        <header><span class="num">04</span><h2>다섯 가지 오해 <span class="ts">03:50</span></h2></header>
+        <p>발표자는 흔히 "이걸 하면 학습이 된다"고 믿는 다섯 가지를 빠르게 지운다. 각각이 아키텍처의 구멍이라는 것이 요지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>오해</th><th>왜 학습이 아닌가</th></tr></thead>
+            <tbody>
+              <tr><td>메모리를 더 늘린다</td><td>에이전트 메모리를 키우는 것은 학습이 아니라 그냥 더 많은 메모리다. 더 비싸질 뿐이다</td></tr>
+              <tr><td>상태를 공유한다</td><td>마크다운 파일을 넘길 수 있다고 지식이 공유된 것은 아니다. 공유 상태 <span class="en">shared state</span>와 공유 지식 <span class="en">shared knowledge</span>은 다르다</td></tr>
+              <tr><td>대화 기록을 전부 RAG에 넣는다</td><td>쓰레기가 잔뜩 쌓이고, 모델은 더 많은 토큰을 태워 더 나쁜 답을 낸다. 품질이 되지 않는다</td></tr>
+              <tr><td>파인튜닝한다</td><td>에이전트가 얻은 교훈을 파인튜닝으로 저장하고 유지하는 것은 규모가 커지면 불가능하다</td></tr>
+              <tr><td>컨텍스트 창을 키운다</td><td>가장 빠르게, 가장 비싸게 실패하는 길이다. 컨텍스트는 썩는다 <span class="en">context rot</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="requirements">
+        <header><span class="num">05</span><h2>공유 컨텍스트의 세 조건 <span class="ts">04:50</span></h2></header>
+        <p>그래서 Yugabyte가 자신들을 위해 메워야 했던 구멍은 다음 셋이다. 발표자는 많은 사용자가 이 관점을 좋아한다고 덧붙인다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 공유할 수 있다</span>
+            <p>에이전트 A의 컨텍스트를 에이전트 B가 그대로 이어받는다. 둘이 같은 컨텍스트 위에서 일하면 앞에서 본 "잃어버린 맥락" 문제가 닫힌다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 검토를 거쳐 승격된다</span>
+            <p>공유 컨텍스트는 아무나 쓰면 망가진다. 코드와 같다. 아무나 커밋할 수 없듯, <strong>감독하에 승격 <span class="en">supervised promotion</span></strong>을 거친 것만 오래 남는 지식이 된다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 출처를 추적할 수 있다</span>
+            <p>"이 정보는 대체 어디서 왔나"를 물을 수 있어야 한다. 데이터 원본, 사람, 대화 중 어디서 뽑았는지로 거슬러 올라간다. 컨텍스트를 개선하는 첫걸음이다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="attempts">
+        <header><span class="num">06</span><h2>실패한 시도와 RAG 수치 <span class="ts">05:40</span></h2></header>
+        <p>"얼마나 어렵겠어"라는 마음으로 시작했고, 세 번 틀렸다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시도</th><th>생각</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>지식 베이스 하나</td><td>전부 던져 넣으면 된다. 분산 RAG 파이프라인을 크고 탄력 있게 만들었다</td><td>훌륭한 파이프라인이었지만 쓸모 있는 결과가 없었다</td></tr>
+              <tr><td>에이전트마다 작은 DB</td><td>공유가 안 되니 각 에이전트에 작은 Postgres를 하나씩 준다</td><td>반복되는 워크플로가 매번 즉석에서 다시 발명됐다</td></tr>
+              <tr><td>UI 없는 백엔드</td><td>에이전트는 UI가 필요 없으니 처리만 하는 백엔드를 둔다</td><td>무슨 일이 벌어지는지 알 수 없었다. 사람이 끼지 않으면 결과가 나쁘다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>RAG 파이프라인도 형편없었다 <span class="ts">06:40</span></h3>
+        <p>학계에서 좋다는 구성 요소를 다 모아 넣었는데 공개 벤치마크 점수가 낮았다. 트레이스를 찍고 변수를 하나씩 바꿔 가며 고치자 수치가 올랐다.</p>
+
+        <figure class="chart" aria-label="RAG 파이프라인 튜닝 전후 비교: 마크다운 충실도 14에서 65, PDF 충실도 20에서 74, 컨텍스트 정밀도 57에서 82">
+          <span class="chart-title">RAG 파이프라인 튜닝 전후 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>충실도 · 마크다운 벤치마크 · 전</span><span class="val">14</span></div>
+              <div class="track"><div class="fill" style="width:14%" title="마크다운 충실도, 튜닝 전: 14%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>충실도 · 마크다운 벤치마크 · 후</span><span class="val">65</span></div>
+              <div class="track"><div class="fill key" style="width:65%" title="마크다운 충실도, 튜닝 후: 65%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>충실도 · PDF · 전</span><span class="val">20</span></div>
+              <div class="track"><div class="fill" style="width:20%" title="PDF 충실도, 튜닝 전: 20%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>충실도 · PDF · 후</span><span class="val">74</span></div>
+              <div class="track"><div class="fill key" style="width:74%" title="PDF 충실도, 튜닝 후: 74%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>컨텍스트 정밀도 · 전</span><span class="val">57</span></div>
+              <div class="track"><div class="fill" style="width:57%" title="컨텍스트 정밀도, 튜닝 전: 57%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>컨텍스트 정밀도 · 후</span><span class="val">82</span></div>
+              <div class="track"><div class="fill key" style="width:82%" title="컨텍스트 정밀도, 튜닝 후: 82%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자는 전 수치를 14, 20, 57 순으로, 후 수치를 65, 74, 82 순으로 말했다. 같은 순서로 짝지었다.</span>
+        </figure>
+
+        <figure class="chart" aria-label="컨텍스트 청크 수 비교: 튜닝 전 7,000개 이상, 튜닝 후 약 1,000개">
+          <span class="chart-title">컨텍스트 청크 수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>튜닝 전</span><span class="val">7,000+</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="튜닝 전: 7,000개 이상"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>튜닝 후</span><span class="val">약 1,000</span></div>
+              <div class="track"><div class="fill key" style="width:14.3%" title="튜닝 후: 약 1,000개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>7,000</span></div>
+          <span class="caption">정밀도는 훨씬 높아지고, 토큰에 쓰는 돈은 훨씬 줄었다.</span>
+        </figure>
+        <p class="note">자막에는 컨텍스트 크기가 "17분의 1"로 줄었다고 적혀 있지만, 7,000개에서 1,000개로 줄었으면 약 7분의 1이다. 발음이 뭉개진 것으로 보고 7분의 1로 적었다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="mako">
+        <header><span class="num">07</span><h2>Mako(추정): 데이터 팩과 승격 <span class="ts">07:30</span></h2></header>
+        <p>이 모든 실패와 성공을 한 상자에 담은 것이 Mako다. 발표자는 이를 <strong>에이전트 네이티브 영속 계층 <span class="en">agent-native persistence layer</span></strong>이라고 부른다.</p>
+        <h3>데이터 팩 <span class="en">data pack</span></h3>
+        <p>Mako가 밖으로 드러내는 단위다. 데이터베이스 회사가 굳이 데이터베이스라고 부르지 않는 이유는, 안에 벡터, 그래프, 관계형, NoSQL 등 여러 종류의 저장소가 들어 있기 때문이다. 데이터 팩에는 컨텍스트의 여러 면이 담긴다.</p>
+        <ul class="plain">
+          <li>지식 베이스</li>
+          <li>메모리</li>
+          <li>대화</li>
+          <li>관측 기록 <span class="en">observability</span></li>
+        </ul>
+        <h3>개인 공간에서 공유 공간으로</h3>
+        <div class="shift" aria-label="컨텍스트 승격 흐름">
+          <div><span class="tag">개인 공간</span><b>에이전트가 자기 컨텍스트 조각을 밀어 넣는다</b><span class="muted">아직 검증되지 않은 것들</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">공유 공간</span><b>승격된 고품질 컨텍스트</b><span class="muted">다른 에이전트와 사람이 여기서 빠르게 꺼내 쓴다. 사람과 에이전트를 계속 더해도 인수인계가 효율적이다</span></div>
+        </div>
+        <p>한 줄로 줄이면 <strong>"오래 가고 반복되는 워크플로를 인프라로 만든다"</strong>는 것이다.</p>
+        <p class="note">발표자는 Mako를 만드는 회사의 CEO다. 이 섹션과 데모의 주장은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="confession">
+        <header><span class="num">08</span><h2>이 슬라이드도 그렇게 만들었다 <span class="ts">08:30</span></h2></header>
+        <p>데모에 앞서 발표자가 고백한다. 이 발표 자료 자체가 Mako를 컨텍스트 저장소로 써서 만들어졌다.</p>
+        <ol class="plain">
+          <li>Heather가 데모 개요와 거기까지 이어지는 발표 흐름을 써서 데이터 팩을 만들고, 발표자에게 <strong>공유 요청</strong>만 보냈다. 어떤 에이전트 도구를 썼는지 발표자는 모른다. 회의도 하지 않았다.</li>
+          <li>발표자는 그 데이터 팩을 Claude Desktop에 연결해 "이 개요를 쪼개 달라"고 했고, 몇 군데 고친 뒤 "이 개요로 슬라이드를 만들어 달라"고 했다.</li>
+          <li>왼쪽 다이어그램은 처음에 형편없었다. 요즘 화제라는 Claude Design(추정)으로 다시 만드니 나았다. 그림은 거기서, 나머지는 Claude Desktop에서 나왔다.</li>
+          <li>Heather가 마지막으로 손봐서 데모와 이어 붙였다.</li>
+        </ol>
+        <blockquote>우리는 거의 대화하지 않았다. 그럴 필요가 없었다. 컨텍스트를 공유했고 에이전트들이 일을 했다.<cite>발표자의 말을 옮김 <span class="ts">09:50</span></cite></blockquote>
+      </section>
+
+      <!-- 9 -->
+      <section id="demo-resume">
+        <header><span class="num">09</span><h2>데모 1: 세션 이어가기 <span class="ts">10:20</span></h2></header>
+        <p>Heather가 보여 주려는 것은 집단 지식이 시간이 갈수록 자라는 모습이다. 첫 번째는 <strong>재개 가능성 <span class="en">resumability</span></strong>이다. 세션을 시작하고, 죽이고, 같은 에이전트로 다시 시작해도 이어진다.</p>
+        <h3>왜 제품의 프로젝트 기능이나 메모리를 안 쓰나 <span class="ts">10:30</span></h3>
+        <ul class="plain">
+          <li>Claude Desktop에는 프로젝트와 메모리 기능이 있다. 그러나 Heather는 두 달 전쯤 모든 IDE의 메모리를 껐다.</li>
+          <li>이동 중에는 모바일 앱이나 ChatGPT처럼 다른 도구를 쓸 수 있다. 같은 계정이니 같은 주제를 이어서 작업하고 싶다.</li>
+          <li>보안을 생각하면 아무 에이전트나 그 기억을 보면 안 된다. 그래서 <strong>어떤 메모리를 다른 에이전트도 꺼낼 수 있게 할지 승격해서 정한다.</strong></li>
+        </ul>
+        <div class="callout">
+          <span class="title">비용이 줄어드는 이유 <span class="ts">11:20</span></span>
+          <span>처음 뭔가를 알아낼 때는 모델과 오래 주고받으며 토큰을 많이 태운다. 다음에 다른 에이전트나 다른 세션에서 꺼낼 때는 그 과정을 반복하지 않는다. Mako 메모리를 부르는 <strong>MCP 도구 호출 한 번</strong>으로 훨씬 적은 토큰에 가져온다. 대안은 마크다운 파일에 두고 에이전트마다 모델로 다시 훑으며 토큰을 또 태우는 것이다.</span>
+        </div>
+        <h3>녹화된 데모 <span class="ts">12:10</span></h3>
+        <ol class="plain">
+          <li>"early access launch"라는 데이터 팩에 대화를 저장한다. 넣는 사실은 <strong>가입 이메일이 실패했다</strong>는 것. 실제로 있었던 일로, Amazon SES의 샌드박스를 운영 환경 대신 쓰다가 한도를 넘겼다. 운영팀에 쓸모 있는 정보다.</li>
+          <li>Claude에 MCP 서버를 연결했고, 언제 무엇을 저장할지 알려 주는 스킬을 만들어 두었다. 에이전트가 데이터 팩 생성을 호출하고, 사고 사실을 검색 가능한 메모리로 추가한다.</li>
+          <li>세션을 죽이고 새 채팅 창을 연다. 프로젝트도 아니고 메모리도 켜져 있지 않다. 같은 질문을 한다.</li>
+          <li>처음에는 새 대화를 만들지 않고 검색부터 하려다 실패했다. MCP 서버가 새 대화를 만들라고 지시한 뒤, Mako를 검색해 "5월에 이런 일이 있었다"는 기록을 찾아낸다.</li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="demo-share">
+        <header><span class="num">10</span><h2>데모 2: 다른 에이전트와 공유 <span class="ts">14:20</span></h2></header>
+        <p>두 번째는 <strong>공유 가능성 <span class="en">sharability</span></strong>이다. 이번에는 완전히 다른 도구인 Codex에서 묻는다. "가입 이메일이 실패하는 알려진 원인이 있나?"</p>
+        <ol class="plain">
+          <li>Codex는 찾고 또 찾지만 아무것도 보지 못한다. 새 데이터 팩이 연결된 것은 보이지만 안은 볼 수 없다.</li>
+          <li>이유는 그 메모리가 아직 Claude Desktop 쪽 <strong>개인 공간에만</strong> 있기 때문이다. 데이터 팩을 연결했지만 승격하지 않았다.</li>
+          <li>다른 계정으로 들어가 그 메모리 한 조각을 공유 지식 공간으로 승격한다.</li>
+          <li>같은 질문을 다시 하면 이제 찾는다.</li>
+        </ol>
+        <p>승격은 <strong>아주 잘게</strong> 할 수 있다. 메모리 조각 하나만 열 수도 있고, 관리자라면 데이터 팩 전체를 열 수도 있다. 모범 사례나 진행 중인 절차처럼 골라서 주고 싶은 정보가 있을 때는 조각 단위가 더 낫다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="signal">
+        <header><span class="num">11</span><h2>비용 추적과 학습 신호 <span class="ts">16:10</span></h2></header>
+        <h3>정말 토큰을 아꼈는지 어떻게 아나</h3>
+        <p>데이터 팩에 들어가면 저장된 대화와 그것이 어떻게 만들어졌는지 볼 수 있다. 트레이스가 기본으로 들어 있다. <strong>결정 과정을 도구 호출 단위까지</strong> 따라가며 실제로 얼마나 호출하고 얼마나 태웠는지 확인한다.</p>
+        <h3>오늘의 승격이 내일의 학습 신호다 <span class="ts">16:40</span></h3>
+        <p>사람이 "이건 남길 가치가 있다"고 승격할 때마다, 그것은 좋은 승격이 무엇인지 보여 주는 <strong>라벨이 붙은 예시</strong>가 된다. 나중에는 이 신호로 내 취향과 기준을 배운 에이전트를 훈련할 수도 있다. 지금은 사람이 루프 안에 있고, 그 판단은 신호로만 쌓인다. 발표자는 이것이 학습이 시작되는 방식이라고 말한다.</p>
+        <div class="callout">
+          <span class="title">가장 크게 체감한 이점 <span class="ts">17:10</span></span>
+          <span>장애가 났을 때를 생각해 보자. 서버 하나가 죽으면 사람들은 계속 그 서버를 두드리고, "이거 죽었나요?"가 반복되고, Slack이 터진다. 에이전트도 같다. 모두가 같은 서버를 호출하며 토큰을 낭비한다. 데이터 팩이 있으면 <strong>첫 에이전트가 한 번 겪고 기록하면 나머지 에이전트는 이미 안다.</strong></span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="in-company">
+        <header><span class="num">12</span><h2>회사 안에서 쓰는 모습 <span class="ts">17:50</span></h2></header>
+        <p>Heather는 Mako의 얼리 액세스 출시를 맡았고, 그 출시를 Mako 데이터 팩으로 운영했다. 발표자는 이를 "재귀적"이라고 표현한다.</p>
+        <ul class="plain">
+          <li><strong>문제 해결 데이터 팩</strong>: 초기 사용자들이 데이터 팩에 접근하지 못하는 문제가 많았다. Heather는 그 문제 해결 기록을 별도 데이터 팩으로 만들어 회사 전체에 공유했다. 엔지니어는 Claude Code나 Codex 같은 코딩 에이전트에 바로 불러온다.</li>
+          <li><strong>사과 이메일</strong>: 접근하지 못한 사용자에게 보낼 이메일을 발표자는 Claude Desktop으로 설계했다.</li>
+          <li><strong>말투 데이터 팩</strong>: 발표자가 말하는 방식을 담은 데이터 팩이 따로 있다. LinkedIn 글을 자기 목소리로 계속 쓰는 일은 지치는데, 이 컨텍스트가 있으면 바로 자동화된다.</li>
+          <li><strong>새 팀원</strong>: 이 컨텍스트를 공유하면 빨리 따라잡고 기여도 한다. 본인이 모르는 사이에 하는 일에서도 패턴을 뽑아 "이걸 정식으로 만들자"고 할 수 있다.</li>
+        </ul>
+        <blockquote>결국 사람이 일하는 방식에 가까워지려는 것이다. 암묵지를 어떻게 붙잡고, 어떻게 나누고, 공유를 어떻게 통제하고, 무슨 일이 벌어지는지 어떻게 보는가.<cite>발표자의 말을 옮김 <span class="ts">19:20</span></cite></blockquote>
+        <p class="note">발표 끝에 무료 티어 가입과 Discord 참여를 권한다. 제품 홍보 구간이다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li><strong>메모리는 풀렸고 학습은 안 풀렸다.</strong> 메모리는 에이전트 하나의 일, 학습은 여럿이 함께 하는 일이다.</li>
+          <li>에이전트 하나의 메모리 인프라는 여럿이 배우는 인프라와 다르다.</li>
+          <li>Yugabyte는 에이전트 4개를 거의 1년간 띄우지 못했고, 원인은 데이터 문제였다.</li>
+          <li>진짜 손실은 결과물만 넘기고 <strong>추론, 막다른 길, 맥락</strong>을 버리는 것이다. 받는 쪽은 토큰을 태워 다시 도출한다.</li>
+          <li>메모리 늘리기, 파일 공유, 대화 전체 RAG, 파인튜닝, 큰 컨텍스트 창은 학습이 아니다.</li>
+          <li>공유 컨텍스트의 세 조건: <strong>공유 가능, 검토를 거친 승격, 출처 추적.</strong></li>
+          <li>지식 베이스 하나, 에이전트별 작은 DB, UI 없는 백엔드는 모두 실패했다. 사람이 안 보이면 결과가 나쁘다.</li>
+          <li>RAG를 변수 하나씩 추적해 고치니 충실도 14%→65%, 20%→74%, 정밀도 57%→82%. 청크는 7,000개에서 1,000개로 줄었다.</li>
+          <li>Mako(추정)의 데이터 팩은 개인 공간에서 공유 공간으로 승격하는 구조다. 조각 단위로 잘게 열 수 있다.</li>
+          <li>한 번 알아낸 것은 다음부터 MCP 도구 호출 한 번으로 꺼낸다. 사람의 승격 하나하나가 미래 학습의 라벨이 된다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 "메모리"와 "학습"의 차이는?</span></summary><div class="answer">메모리는 에이전트 하나가 대화에서 기억을 뽑아 다시 쓰는 것이다. 학습은 여러 에이전트가 함께 일하며 서로 나누고 배우는 것이고, 혼자서는 일어나지 않는다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Yugabyte가 운영하는 에이전트 4개는?</span></summary><div class="answer">사내용 고객 지원 에이전트(Hagen, 추정)와 시장 진입 조율 에이전트(Growth Vector), 고객용 데이터베이스 관리 에이전트(Perf Advisor)와 마이그레이션 에이전트(Voyager).</div></details>
+          <details><summary><span class="qn">Q3</span><span>에이전트 A가 B에게 결과물만 넘길 때 잃는 세 가지는?</span></summary><div class="answer">추론, 막다른 길과 실패 기록, 전체 맥락. 그래서 B는 처음부터 다시 도출하며 토큰을 태운다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>"상태 공유"와 "지식 공유"는 왜 다른가?</span></summary><div class="answer">마크다운 파일을 넘길 수 있다고 상대가 그 지식을 가진 것은 아니다. 파일은 상태일 뿐, 추론과 맥락이 빠져 있다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>컨텍스트 창을 키우는 것이 왜 답이 아닌가?</span></summary><div class="answer">가장 빠르고 비싸게 실패하는 길이다. 컨텍스트가 길어질수록 품질이 썩는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>공유 컨텍스트에 필요한 세 조건은?</span></summary><div class="answer">에이전트끼리 공유할 수 있을 것, 아무나 쓰지 못하고 검토를 거쳐 승격될 것, 어떤 데이터·사람·대화에서 왔는지 추적할 수 있을 것.</div></details>
+          <details><summary><span class="qn">Q7</span><span>"UI 없는 백엔드" 시도에서 배운 것은?</span></summary><div class="answer">무슨 일이 벌어지는지 사람이 볼 수 없었다. 사람이 루프에 없으면 결과가 나쁘다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>RAG 튜닝 전후 수치와 청크 수 변화는?</span></summary><div class="answer">충실도 14%→65%(마크다운), 20%→74%(PDF), 컨텍스트 정밀도 57%→82%. 청크는 7,000개 이상에서 약 1,000개로 줄었다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>데이터 팩을 "데이터베이스"라고 부르지 않는 이유는?</span></summary><div class="answer">안에 벡터, 그래프, 관계형, NoSQL 등 여러 종류의 저장소가 들어 있어서다. 지식 베이스, 메모리, 대화, 관측 기록을 함께 담는다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>Codex가 처음에 가입 이메일 장애 기록을 못 찾은 이유는?</span></summary><div class="answer">그 메모리가 Claude Desktop 쪽 개인 공간에만 있었다. 데이터 팩은 연결됐지만 그 조각을 공유 공간으로 승격하지 않았기 때문이다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>사람의 승격이 왜 "학습 신호"가 되나?</span></summary><div class="answer">"남길 가치가 있다"는 판단 하나하나가 좋은 승격의 라벨 붙은 예시가 된다. 쌓이면 사용자의 기준을 배운 에이전트를 훈련할 수 있다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>장애 상황에서 데이터 팩이 주는 이점은?</span></summary><div class="answer">모든 에이전트가 죽은 서버를 반복 호출하며 토큰을 낭비하는 대신, 첫 에이전트가 한 번 겪고 기록하면 나머지는 이미 안다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트 사이에 결과물만 오가는 지점을 찾는다<span class="how">마크다운, PDF, 문서만 넘기고 추론과 실패 기록은 버려지는 곳</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>"메모리 늘리기"나 "컨텍스트 창 키우기"로 풀려던 문제를 다시 본다<span class="how">확인: 실제로 필요한 것이 공유와 승격은 아닌가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>공유 컨텍스트에 승격 절차를 둔다<span class="how">코드 리뷰처럼, 검토를 거친 것만 공유 공간에 들어간다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>공유된 정보마다 출처를 남긴다<span class="how">어떤 데이터, 사람, 대화에서 왔는지 거슬러 갈 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>RAG를 쓴다면 벤치마크로 충실도와 정밀도를 재고 변수 하나씩 고친다<span class="how">확인: 청크 수가 줄면서 정밀도가 오르는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>에이전트가 무엇을 하는지 사람이 볼 수 있는 화면이나 트레이스를 둔다<span class="how">도구 호출 단위까지 추적되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>장애·사고 기록을 에이전트가 꺼내 쓸 수 있는 곳에 한 번만 저장한다<span class="how">예: 이메일 발송 실패 원인, 서버 장애 이력</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>사람이 "남길 가치가 있다"고 승격한 기록을 모아 둔다<span class="how">나중에 승격 기준을 자동화할 때 라벨 데이터가 된다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트 메모리</td><td>Agent memory. 에이전트가 대화에서 기억할 것을 뽑아 저장하고 다시 쓰는 기능</td></tr>
+              <tr><td>컨텍스트</td><td>Context. 모델이 답을 만들 때 참고하는 모든 정보. 대화, 문서, 기억 등</td></tr>
+              <tr><td>컨텍스트 부패</td><td>Context rot. 컨텍스트가 길어질수록 모델의 답 품질이 떨어지는 현상</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 질문과 관련된 문서를 검색해 모델에 함께 넣어 답하게 하는 방식</td></tr>
+              <tr><td>청크</td><td>Chunk. RAG에서 문서를 검색 단위로 잘라 놓은 조각</td></tr>
+              <tr><td>충실도</td><td>Faithfulness. 모델의 답이 가져온 근거 문서에 얼마나 충실한지 재는 지표</td></tr>
+              <tr><td>컨텍스트 정밀도</td><td>Context precision. 검색해 온 조각 중 실제로 답에 필요한 조각의 비율</td></tr>
+              <tr><td>파인튜닝</td><td>Fine-tuning. 모델 자체를 추가 데이터로 더 훈련시키는 것</td></tr>
+              <tr><td>승격</td><td>Promotion. 개인 공간의 정보를 검토를 거쳐 공유 공간으로 올리는 것</td></tr>
+              <tr><td>데이터 팩</td><td>Data pack. Mako(추정)에서 지식 베이스, 메모리, 대화, 관측 기록을 함께 담는 단위</td></tr>
+              <tr><td>영속 계층</td><td>Persistence layer. 프로그램이 꺼져도 남아 있게 데이터를 저장하는 층</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 에이전트가 외부 도구와 데이터에 표준 방식으로 연결하는 규약</td></tr>
+              <tr><td>스킬</td><td>Skill. 에이전트에게 특정 상황에서 무엇을 어떻게 할지 알려 주는 지시 묶음</td></tr>
+              <tr><td>트레이스</td><td>Trace. 에이전트가 한 단계씩 무엇을 했고 어떤 도구를 불렀는지 남긴 기록</td></tr>
+              <tr><td>Amazon SES</td><td>Amazon의 이메일 발송 서비스. 샌드박스 모드는 발송 한도가 낮다</td></tr>
+              <tr><td>암묵지</td><td>Tribal knowledge. 문서에 없고 팀원 머릿속에만 있는 지식</td></tr>
+              <tr><td>사람이 루프 안에</td><td>Human in the loop. 사람이 과정 중간에 끼어 판단하고 승인하는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>메모리는 풀렸고 학습은 안 풀렸다</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>발표자 소개, Yugabyte의 에이전트 4개</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>1년의 실패, 원인은 데이터 문제</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>진짜 문제: 결과물만 넘기고 추론은 버린다</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>새 팀원 비유</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>다섯 가지 오해</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>공유 컨텍스트의 세 조건</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>실패한 시도 세 가지</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>RAG 수치: 14/20/57에서 65/74/82로</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>Mako(추정)와 데이터 팩, 승격 구조</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>고백: 이 슬라이드도 공유 컨텍스트로 만들었다</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>Heather 데모 시작, 재개 가능성</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>비용이 줄어드는 이유, MCP 호출 한 번</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>녹화 데모: 가입 이메일 장애를 저장하고 새 세션에서 찾기</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>공유 가능성: Codex에서 묻기, 승격 전후</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>조각 단위 승격</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>비용 추적, 도구 호출 단위 트레이스</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>사람의 승격이 학습 신호가 된다</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>장애 상황에서의 이점</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>회사 안에서 쓰는 모습: 문제 해결 팩, 말투 팩, 새 팀원</td></tr>
+              <tr><td><span class="ts">19:20</span></td><td>결론: 암묵지를 붙잡고 나누고 통제하고 본다</td></tr>
+              <tr><td><span class="ts">19:40</span></td><td>무료 티어와 Discord 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '9_oy4owGtPI:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

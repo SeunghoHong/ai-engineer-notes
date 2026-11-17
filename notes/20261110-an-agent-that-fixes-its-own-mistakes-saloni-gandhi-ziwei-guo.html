@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>스스로 고치는 에이전트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#loop">스스로 고치는 루프</a></li>
+      <li><a href="#targets">고칠 곳과 오를 사다리</a></li>
+      <li><a href="#steps">루프의 일곱 단계</a></li>
+      <li><a href="#agent">대상: 사용자 이해 에이전트</a></li>
+      <li><a href="#judge">채점기가 매기는 점수</a></li>
+      <li><a href="#reflection">원인 찾기 네 단계</a></li>
+      <li><a href="#proposal">수정안 만들고 반영하기</a></li>
+      <li><a href="#focus">세 가지 집중 영역</a></li>
+      <li><a href="#evaluator">채점기부터 검증했다</a></li>
+      <li><a href="#mismatch">채점기가 어긋난 이유</a></li>
+      <li><a href="#rubric">루브릭을 고치자 생긴 변화</a></li>
+      <li><a href="#diagnosis">원인 진단기의 함정</a></li>
+      <li><a href="#impact">효과를 재는 두 층</a></li>
+      <li><a href="#scale">다른 팀으로 넓히기</a></li>
+      <li><a href="#closing">좋아지는 속도를 높인다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-10 · 39분 · 영어 발표 한글 정리</span>
+      <h1>스스로 고치는 에이전트는 채점기부터 고친다</h1>
+      <p class="lead">LinkedIn은 운영 기록을 보고 에이전트의 프롬프트를 스스로 고치는 루프를 만들었다. 해 보니 루프 자체보다 채점기와 원인 진단기를 믿을 수 있게 만드는 일이 더 어렵고 더 중요했다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=yH7_SIIgI-Y" target="_blank" rel="noopener">An Agent That Fixes Its Own Mistakes</a></span>
+        <span>발표: Ziwei Guo, Saloni Gandhi (LinkedIn)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 LinkedIn 내부 결과이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고(linking → LinkedIn), 확실하지 않은 것에는 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>재귀적 자기 개선(RSI)</strong>은 운영 기록을 채점하고, 원인을 찾고, 수정안을 검증해 반영하는 루프다. LinkedIn은 지금 <strong>프롬프트만</strong> 고친다.</li>
+        <li>루프는 일곱 단계다. 실행 → 채점 → 원인 진단 → 수정안 → 검증 → 반영 → 따로 떼어 둔 데이터로 재확인.</li>
+        <li>원인 진단은 네 단계로 쪼갠다. 묶기와 순위 매기기에는 LLM을 쓰지 않는다.</li>
+        <li>첫 성과로, 루프가 최적화한 프롬프트 변경이 사람 리뷰를 거쳐 <strong>프로덕션에 들어갔다.</strong></li>
+        <li>진짜 일은 채점기 검증이었다. 사람 리뷰와 비교하니 좋은 결과는 <strong>약 80%</strong> 맞혔지만, 나쁜 결과는 <strong>55~57%</strong>만 맞혔다.</li>
+        <li>채점 기준표(루브릭)를 고치자 사람과의 일치율이 <strong>57%에서 64%로</strong> 올랐다. 어긋남의 상당수는 모델이 아니라 기준이 모호해서 생겼다.</li>
+        <li>원인 진단기는 <strong>그럴듯하지만 틀린 원인</strong>을 낼 수 있다. 그 진단으로 프롬프트를 고치면 엉뚱한 곳을 고친다.</li>
+        <li>목표는 수정 건수가 아니다. <strong>에이전트가 좋아지는 속도</strong>를 높이고, 그 변경을 믿을 수 있게 하는 것이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="loop">
+        <header><span class="num">01</span><h2>스스로 고치는 루프 <span class="ts">00:30</span></h2></header>
+        <p>재귀적 자기 개선 <span class="en">Recursive Self-Improvement, RSI</span>은 AI 시스템이 운영 중 생긴 문제에서 배워 스스로 나아지게 하는 구조다. LinkedIn에서 그 AI 시스템은 에이전트다. 회원의 커리어 목표를 돕는 커리어 에이전트가 한 예다.</p>
+        <ol class="plain">
+          <li>개발 중에 발견한 문제와 운영 트레이스 <span class="en">production trace</span>를 모은다. 트레이스는 에이전트가 요청 하나를 처리하며 한 일을 단계별로 남긴 기록이다.</li>
+          <li>평가 엔진이 트레이스를 채점한다. 대표적인 평가 엔진은 LLM 채점기 <span class="en">LLM judge</span>다. LLM에게 기준을 주고 결과를 채점하게 하는 방식이다.</li>
+          <li>채점 결과를 피드백으로 삼아 시스템을 고친다.</li>
+          <li>이 과정을 계속 반복한다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">루프의 전제 <span class="ts">01:40</span></span>
+          <span>평가는 객관적이어야 하고 사용자 피드백과 맞아야 한다. 평가가 병목을 찾아 주고 다음 개선 방향을 정하기 때문이다. 발표 후반부는 거의 다 이 전제를 지키는 이야기다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="targets">
+        <header><span class="num">02</span><h2>고칠 곳과 오를 사다리 <span class="ts">02:10</span></h2></header>
+        <p>Ziwei Guo는 하네스 <span class="en">harness</span>를 예로 든다. 하네스는 모델을 감싸고 순서, 도구, 기억, 저장을 맡는 실행 틀이다. RSI로 고칠 수 있는 부분은 넷이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성 요소</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>계획과 로직</td><td>실행 순서를 짜고 결정을 내린다</td></tr>
+              <tr><td>맥락과 메모리</td><td>세션 상태를 보존하고 관리한다</td></tr>
+              <tr><td>도구 인터페이스</td><td>내부·외부 API와 데이터셋에 접근한다</td></tr>
+              <tr><td>산출물 저장소</td><td>출력과 생성 로그를 저장한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 넷 위에 평가 로직이 있어 각 부분을 채점한다. 하네스 아래의 기반 모델을 학습시키는 일은 지금 범위 밖이다. <strong>하네스부터 고친다.</strong> <span class="ts">03:10</span></p>
+
+        <h3>고치는 범위의 사다리 <span class="ts">03:40</span></h3>
+        <p>고치는 대상은 쉬운 것에서 어려운 것으로 한 칸씩 넓힌다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>칸</th><th>고치는 대상</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>프롬프트</td><td>가장 쉽고 직접적이다. <strong>LinkedIn이 지금 하는 칸</strong></td></tr>
+              <tr><td>2</td><td>구조화된 맥락</td><td>에이전트에게 넘기는 맥락의 구조를 고친다</td></tr>
+              <tr><td>3</td><td>워크플로 설계</td><td>작업 흐름 전체를 자동으로 설계한다</td></tr>
+              <tr><td>4</td><td>하네스 코드</td><td>하네스 코드 자체를 고친다</td></tr>
+              <tr><td>5</td><td>최적화기 코드</td><td>개선 루프를 돌리는 코드 자체를 고친다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표에서는 이 사다리의 칸에도 L1, L2라는 이름을 붙였다. 뒤에 나오는 L1 채점기, L2 진단기와 헷갈리므로 이 노트에서는 번호만 쓴다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="steps">
+        <header><span class="num">03</span><h2>루프의 일곱 단계 <span class="ts">05:10</span></h2></header>
+        <p>루프 한 바퀴는 일곱 단계다. 3~6단계가 RSI의 안쪽 루프다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th><th>짚을 점</th></tr></thead>
+            <tbody>
+              <tr><td>1 실행</td><td>에이전트를 돌려 출력과 트레이스를 만든다</td><td>개선의 재료가 된다</td></tr>
+              <tr><td>2 채점</td><td>채점기가 트레이스를 채점한다</td><td>잘하는 곳과 못하는 곳을 알려 준다</td></tr>
+              <tr><td>3 원인 진단</td><td>점수가 낮은 원인을 찾는다. 에이전트, 모델, 프롬프트, 도구 문제일 수 있다. 채점기나 루브릭 문제일 수도 있다</td><td>에이전트 성찰 <span class="en">agent reflection</span>이라고도 부른다</td></tr>
+              <tr><td>4 수정안 생성</td><td>원인을 바탕으로 수정안을 만든다</td><td>지금은 프롬프트만. 나중에는 워크플로, 하네스 코드, 최적화기 코드까지</td></tr>
+              <tr><td>5 수정안 검증</td><td>같은 채점기, 같은 루브릭으로 수정안을 채점한다</td><td>좋은 수정안과 나쁜 수정안을 가른다</td></tr>
+              <tr><td>6 반영</td><td>좋은 후보로 프롬프트를 갱신한다</td><td></td></tr>
+              <tr><td>7 재확인</td><td>따로 떼어 둔 홀드아웃 세트 <span class="en">held-out set</span>로 다시 평가한다</td><td>새 시스템이 기존보다 나으면 새 기준선이 된다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>새 기준선에서 같은 루프를 정해진 주기로 다시 돌린다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="agent">
+        <header><span class="num">04</span><h2>대상: 사용자 이해 에이전트 <span class="ts">09:30</span></h2></header>
+        <p>최적화 대상은 LinkedIn의 사용자 이해 에이전트 <span class="en">user understanding agent</span>다. 회원 한 명을 보고 그 회원이 어떤 사람인지 정리한다.</p>
+        <div class="shift" aria-label="사용자 이해 에이전트의 입력과 출력">
+          <div><span class="tag">입력</span><b>회원 ID 하나</b><span class="muted">에이전트가 이 ID로 검색 기록, 프로필, 위치, 선호 데이터를 가져온다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">출력</span><b>회원 이해 결과</b><span class="muted">회원을 설명하는 여러 필드. 필드마다 값, 확신도, 근거, 추론이 붙는다</span></div>
+        </div>
+        <p>발표 슬라이드는 "선호 직함" 필드 하나를 예로 보여 준다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>뜻</th><th>발표의 예</th></tr></thead>
+            <tbody>
+              <tr><td>값</td><td>에이전트가 추론한 답</td><td>네트워크 매니저, 어카운트 매니저</td></tr>
+              <tr><td>확신도</td><td>이 답을 얼마나 믿는가</td><td>발표에서 구체적인 값은 말하지 않았다</td></tr>
+              <tr><td>근거 <span class="en">citation</span></td><td>판단을 뒷받침하는 데이터</td><td>저장한 검색 기록에 이 직함이 자주 나온다</td></tr>
+              <tr><td>추론 <span class="en">reasoning</span></td><td>판단 과정 설명</td><td>회원이 직접 밝힌 선호가 주 직함을 정하고, 저장한 검색이 인접 직함을 더한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">추론 칸의 예는 자막이 뭉개져 있어 뜻을 풀어 옮겼다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="judge">
+        <header><span class="num">05</span><h2>채점기가 매기는 점수 <span class="ts">12:10</span></h2></header>
+        <p>2단계에서는 채점기가 출력의 품질을 잰다. 이 에이전트는 제품팀이 정한 루브릭 <span class="en">rubric</span>으로 15개 차원 <span class="en">dimension</span>에서 채점받는다. 루브릭은 무엇을 몇 점으로 볼지 적은 채점 기준표다. 차원은 채점하는 항목 하나다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>점수</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>품질이 나쁘다</td></tr>
+              <tr><td>2</td><td>보통이다</td></tr>
+              <tr><td>3</td><td>아주 좋다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표의 예에서 회원 한 명의 종합 점수는 2.31이다. 차원마다 점수와 메모가 따로 붙는다. 차원의 예로는 목표 요약(추정)과 선호 직함이 나온다. 메모는 왜 그 점수를 줬는지 적은 설명이다. <span class="ts">13:30</span></p>
+      </section>
+
+      <!-- 6 -->
+      <section id="reflection">
+        <header><span class="num">06</span><h2>원인 찾기 네 단계 <span class="ts">14:00</span></h2></header>
+        <p>3단계 원인 진단은 다시 작은 단계 네 개로 나뉜다. 낮은 점수가 무엇 때문에 나왔는지 찾는 과정이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>작은 단계</th><th>하는 일</th><th>LLM</th></tr></thead>
+            <tbody>
+              <tr><td>① 묶기</td><td>실패한 행을 실패한 차원별로 묶는다. 행 하나는 회원 한 명의 트레이스다</td><td>안 쓴다</td></tr>
+              <tr><td>② L2 진단</td><td>묶음 안에서 행마다 원인을 진단하고, 원인 설명과 태그를 단다. 태그는 프롬프트, 에이전트, 하네스, 코드, 채점기, 루브릭 문제 같은 분류다</td><td>쓴다</td></tr>
+              <tr><td>③ 합치기</td><td>표현만 다르고 뜻이 같은 원인을 합쳐 대표 원인 <span class="en">canonical issue</span>으로 만든다</td><td>발표에서 밝히지 않음</td></tr>
+              <tr><td>④ 순위</td><td>대표 원인을 빈도순으로 정렬해 사람이 볼 스코어카드를 만든다</td><td>안 쓴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>②의 원인 설명은 자유 텍스트다. 그래서 같은 문제도 행마다 다른 말로 적힌다. ③이 필요한 이유다. <span class="ts">16:20</span></p>
+        <div class="callout">
+          <span class="title">합치기의 예 (발표에서 든 것)</span>
+          <span>행 A: "회원의 프로필 데이터가 비어 있다."</span>
+          <span>행 B: "프로필 데이터가 회원의 탐색 기록 전체를 보여 주지 못한다."</span>
+          <span>대표 원인: <strong>프로필 데이터가 에이전트 출력을 뒷받침하지 못한다.</strong></span>
+        </div>
+        <p>스코어카드는 시스템의 주요 병목을 보여 준다. 사람은 이걸 보고 다음 조치를 정한다. <span class="ts">17:20</span></p>
+        <p>진단 결과는 저장해 둔다. 다음 회차에 L2 진단기에게 "이전 진단"으로 넘긴다. 이미 알려진 문제를 다음 실행에서 더 쉽게 알아보게 하려는 것이다. <span class="ts">18:00</span></p>
+      </section>
+
+      <!-- 7 -->
+      <section id="proposal">
+        <header><span class="num">07</span><h2>수정안 만들고 반영하기 <span class="ts">18:30</span></h2></header>
+        <p>원인을 알았으니 다음은 무엇을 바꿀지 정할 차례다. 수정안은 이런 순서를 거친다.</p>
+        <ol class="plain">
+          <li>채점 근거와 원인 진단 결과를 입력으로 받는다.</li>
+          <li>프롬프트 최적화 기법으로 프롬프트 수정안을 만든다. 트레이스 표본은 미니배치 <span class="en">mini-batch</span>로 나눠 처리한다.</li>
+          <li>이긴 프롬프트를 골라 검증 세트 <span class="en">validation set</span>로 확인한다.</li>
+          <li>통과한 프롬프트를 운영에 반영한다. 이 프롬프트가 새 기준선 <span class="en">baseline</span>이 된다.</li>
+          <li>다음 RSI 회차를 이 기준선에서 시작한다.</li>
+        </ol>
+        <p class="note">자막에는 기법 이름이 "JPA", "Japa"로 들린다. 실행 기록을 보고 LLM이 프롬프트를 고쳐 나가는 공개 최적화 기법 GEPA로 보인다(추정).</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="focus">
+        <header><span class="num">08</span><h2>세 가지 집중 영역 <span class="ts">20:20</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">품질</span>
+            <ul>
+              <li>사람 주석 <span class="en">human annotation</span>을 많이 달아 L1 채점기와 L2 진단기의 품질을 올렸다</li>
+              <li>채점기의 분산 <span class="en">variance</span>을 분석했다. 같은 입력에도 결과가 달라지는 LLM의 성질 때문이다</li>
+              <li>그 분석으로 채점기와 진단기를 갱신했다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">자동화</span>
+            <ul>
+              <li>일곱 단계를 하나의 워크플로로 묶었다</li>
+              <li>매주, 격주, 매달처럼 필요한 주기로 저절로 돈다</li>
+              <li>돌 때마다 프롬프트 수정안을 내놓는다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">운영 반영</span>
+            <ul>
+              <li>지금은 사람이 루프에 들어가 운영 품질을 지킨다 <span class="en">human in the loop</span></li>
+              <li>품질이 충분해지면 사람의 몫을 점점 줄인다</li>
+              <li>목표는 더 높은 수준의 자동화다</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="evaluator">
+        <header><span class="num">09</span><h2>채점기부터 검증했다 <span class="ts">23:30</span></h2></header>
+        <p>후반부는 Saloni Gandhi가 맡았다. 후반부의 교훈은 하나로 모인다. <strong>평가자의 품질은 최적화 시스템의 품질만큼 중요하다.</strong></p>
+
+        <h3>두 가지 성과 <span class="ts">24:00</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">첫 운영 반영</span>
+            <p>루프로 최적화한 프롬프트 변경이 첫 PR로 프로덕션에 들어갔다. 배포 전에 사람 리뷰와 정량 측정을 거쳤다.</p>
+            <p class="verdict">RSI가 <b>실험 단계를 벗어났다</b>는 이정표다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">평가 품질</span>
+            <p>L1 채점기에 사람 주석을 많이 달았다. 채점기가 사람과 어긋난 곳을 분석했다.</p>
+            <p class="verdict">루브릭과 진단 시스템의 <b>반복되는 약점</b>이 드러났다. 이를 고쳐 신뢰도를 높이고 평가 분산을 줄였다.</p>
+          </div>
+        </div>
+        <p class="note">발표자 두 명은 LinkedIn 소속이고, 성과 수치는 모두 자기 팀의 내부 결과다. 외부 검증을 거친 숫자가 아니라는 점을 감안해 읽자.</p>
+
+        <h3>채점기는 사람과 얼마나 맞나 <span class="ts">25:10</span></h3>
+        <p>에이전트를 자동으로 고치려면 그 피드백부터 믿을 수 있어야 한다. 팀은 사람 리뷰 약 180~200건을 L1 채점기 결과와 맞춰 봤다. 점수 구간별, 차원별로 나눠 봤다.</p>
+        <div class="pair">
+          <figure class="chart" aria-label="채점기가 준 점수별 사람과의 일치율: 1점 약 55%, 2점 약 57%, 3점 약 80%">
+            <span class="chart-title">채점기가 준 점수별, 사람과 일치한 비율 (%)</span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>1점</span><span class="val">55</span></div>
+                <div class="track"><div class="fill key" style="width:55%" title="1점: 약 55%"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>2점</span><span class="val">57</span></div>
+                <div class="track"><div class="fill key" style="width:57%" title="2점: 약 57%"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>3점</span><span class="val">80</span></div>
+                <div class="track"><div class="fill" style="width:80%" title="3점: 약 80%"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+            <span class="caption">세 값 모두 "약"으로 인용됐다. <span class="ts">25:20</span></span>
+          </figure>
+          <figure class="chart" aria-label="차원별 사람과의 일치율: 분야 약 47%, 업무 형태 약 50%">
+            <span class="chart-title">차원별, 사람과 일치한 비율 (%)</span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>분야 (전문성, 일하는 영역)</span><span class="val">47</span></div>
+                <div class="track"><div class="fill key" style="width:47%" title="분야: 약 47%"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>업무 형태</span><span class="val">50</span></div>
+                <div class="track"><div class="fill key" style="width:50%" title="업무 형태: 약 50%"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+            <span class="caption">선호 직함 차원도 가장 낮은 쪽이었다고 했지만, 그 숫자는 자막에서 들리지 않는다. <span class="ts">26:00</span></span>
+          </figure>
+        </div>
+        <p>채점기는 좋은 결과를 알아보는 데 강했다. 나쁜 결과끼리 구별하는 데는 약했다. 가장 낮은 점수 상당수는 지나치게 가혹했다.</p>
+        <p>차원마다 일치율도 크게 달랐다. 평가 품질이 과제마다 고르지 않다는 뜻이다. 일부 차원에는 더 분명한 정의, 근거를 다루는 규칙, 명시적인 채점 안내가 필요했다.</p>
+        <p class="note">자막에는 "평가 품질이 고르다(uniform)"로 나온다. 앞뒤 맥락으로 보면 "고르지 않다"는 뜻이고, 부정어가 자막에서 빠진 것으로 보인다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="mismatch">
+        <header><span class="num">10</span><h2>채점기가 어긋난 이유 <span class="ts">26:40</span></h2></header>
+        <p>사람 주석을 자세히 보니 어긋남이 반복되는 패턴이 있었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>패턴</th><th>무슨 일이 있었나</th></tr></thead>
+            <tbody>
+              <tr><td>직함</td><td>그럴듯한 직함이면 통과시켰다. 에이전트가 중요한 의도 신호를 빠뜨린 건 놓쳤다. <strong>완전성 대신 그럴듯함을 채점한 셈이다</strong></td></tr>
+              <tr><td>전문 분야</td><td>분야, 직무, 기술의 경계가 흐렸다. 예: 분야는 소프트웨어 엔지니어링, 직무는 머신러닝 엔지니어, 기술은 머신러닝. 맞는 정보와 틀린 정보가 섞인 출력에 부분 점수를 주는 규칙도 없었다</td></tr>
+              <tr><td>형식과 추론</td><td>해가 없는 형식 차이에 감점했다. 회원의 현재 재직 정보에서 무엇을 추론해도 되는지에 대한 가정이 일관되지 않았다</td></tr>
+              <tr><td>추론한 선호</td><td>근거가 명시되지 않은 선호를 맞는 것으로 볼지 판단이 갈렸다 <span class="ts">28:10</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <figure class="chart" aria-label="지나치게 가혹하다고 본 판정 37건 중 1점 31건, 그 밖의 점수 6건">
+          <span class="chart-title">지나치게 가혹하다고 본 판정 37건의 점수 (건) <span class="ts">27:40</span></span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>1점</span><span class="val">31</span></div>
+              <div class="track"><div class="fill key" style="width:83.8%" title="1점: 31건"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>그 밖의 점수</span><span class="val">6</span></div>
+              <div class="track"><div class="fill" style="width:16.2%" title="그 밖의 점수: 6건"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>37</span></div>
+          <span class="caption">37건 중 31건, 약 84%가 1점이었다. 점수 사이의 경계를 다시 맞춰야 한다는 신호였다.</span>
+        </figure>
+
+        <div class="callout">
+          <span class="title">Saloni Gandhi가 뽑은 교훈</span>
+          <span>많은 어긋남은 모델의 단순한 실수가 아니었다. <strong>루브릭과 평가 정책 자체의 모호함</strong>이 드러난 것이었다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="rubric">
+        <header><span class="num">11</span><h2>루브릭을 고치자 생긴 변화 <span class="ts">28:30</span></h2></header>
+        <p>이 발견을 바탕으로 루브릭을 고쳤다.</p>
+        <ul class="plain">
+          <li>해가 없는 형식 차이는 의미 오류로 보지 않는다. 예전에는 "full-time" 같은 값이 대소문자나 표기 때문에 틀렸다고 채점되기도 했다.</li>
+          <li>직함 표기를 맞추는 정규화 <span class="en">normalization</span> 안내를 넣었다.</li>
+          <li>동시 재직을 어떻게 다룰지 정했다.</li>
+          <li>경력 수준과 지역을 추론해도 되는 범위를 정했다.</li>
+          <li>낮은 점수와 부분적으로 맞는 출력을 가르는 기준을 다시 맞췄다.</li>
+        </ul>
+        <div class="pair">
+          <figure class="chart" aria-label="루브릭 수정 전후 사람과의 일치율: 57%에서 64%">
+            <span class="chart-title">사람과의 일치율 (%) <span class="ts">29:10</span></span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>수정 전</span><span class="val">57</span></div>
+                <div class="track"><div class="fill" style="width:57%" title="수정 전: 57%"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>수정 후</span><span class="val">64</span></div>
+                <div class="track"><div class="fill key" style="width:64%" title="수정 후: 64%"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+            <span class="caption">높을수록 좋다.</span>
+          </figure>
+          <figure class="chart" aria-label="루브릭 수정 전후 평균 오차: 96에서 74">
+            <span class="chart-title">평균 오차 (단위 미공개)</span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>수정 전</span><span class="val">96</span></div>
+                <div class="track"><div class="fill" style="width:96%" title="수정 전: 96"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>수정 후</span><span class="val">74</span></div>
+                <div class="track"><div class="fill key" style="width:74%" title="수정 후: 74"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+            <span class="caption">낮을수록 좋다. 발표에서 단위를 밝히지 않아 숫자 그대로 그렸다.</span>
+          </figure>
+        </div>
+        <p>일치율은 7%포인트 올랐다. 평균 오차는 이 노트에서 계산하면 약 23% 줄었다. 팀의 목표는 채점기를 사람 판단에 최대한 가깝게 맞추는 것이다.</p>
+        <div class="callout">
+          <span class="title">모델만 손본 결과가 아니다</span>
+          <span>이 개선은 "올바른 평가가 무엇인가"를 적은 명세를 고쳐서도 얻었다. 그 명세가 루브릭 설계이고, 채점기가 내놓아야 할 근거의 기준이다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="diagnosis">
+        <header><span class="num">12</span><h2>원인 진단기의 함정 <span class="ts">29:50</span></h2></header>
+        <p>팀은 L2 진단기에도 같은 사람 리뷰 분석을 했다. L2는 평가에서 실패한 결과를 받아 근본 원인을 찾는다. 에이전트 탓인지, 루브릭 탓인지, 쓸 수 있는 맥락이 부족했는지를 가린다.</p>
+        <p><strong>원인을 맞히는 일은 실패를 찾는 일보다 훨씬 어려웠다.</strong></p>
+        <ul class="plain">
+          <li>L2가 기반 모델을 원인으로 짚었을 때는 사람과 자주 맞았다.</li>
+          <li>다른 원인, 특히 루브릭을 짚었을 때는 일치율이 훨씬 낮았다.</li>
+          <li>원래 원인 분류표 <span class="en">taxonomy</span>에는 "L1 채점기가 틀렸다"는 선택지가 없었다. 그래서 실제로는 L1이 틀렸는데 루브릭 탓으로 돌리곤 했다.</li>
+          <li>L2는 L1의 채점 근거를 에이전트 출력과 따로 대조하지 않고 그대로 받아 쓰기도 했다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">드러난 위험 <span class="ts">31:00</span></span>
+          <span>진단기는 설득력 있는 설명을 내놓으면서도 원인을 잘못 짚을 수 있다. 그 설명으로 프롬프트를 고치면 시스템의 엉뚱한 부분을 바꾸게 된다. 그래서 L2 개선이 다음 우선순위가 됐다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="impact">
+        <header><span class="num">13</span><h2>효과를 재는 두 층 <span class="ts">31:20</span></h2></header>
+        <p>L1의 목표는 점수를 더 정확하고 사람 판단에 가깝게 만드는 것이다. L2의 목표는 원인 진단을 더 믿을 수 있게 만드는 것이다.</p>
+        <p>LLM 판정 하나하나의 흔들림을 줄이려고 두 가지를 함께 썼다. 같은 판정을 여러 번 돌려 다수결 <span class="en">majority voting</span>로 정하고, 홀드아웃 평가로 확인했다. <span class="ts">32:30</span></p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">층 1 · 과정의 신뢰도</span>
+            <ul>
+              <li>L1 개선: 점수가 안정되고 사람 기대에 가까워진다</li>
+              <li>L2 개선: 원인 진단이 정확해진다</li>
+            </ul>
+            <p class="verdict">Saloni Gandhi는 수정안을 채택하는 기준선과 신뢰 구간 쪽에서도 개선이 보였다고 했다. 구체적인 숫자는 말하지 않았다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">층 2 · 채택 규모 <span class="ts">33:00</span></span>
+            <ul>
+              <li>RSI로 만들고 검증할 수 있는 프롬프트 변경의 비율</li>
+              <li>최종 응답 품질의 변화</li>
+              <li>이 시스템을 유지보수하는 엔지니어의 생산성</li>
+            </ul>
+          </div>
+        </div>
+        <blockquote>최종 목표는 자동 프롬프트 수정의 건수를 늘리는 것이 아니다. 그 변경이 정말 이롭다는 확신을 지키면서 에이전트 품질을 측정 가능하게 올리는 것이다.<cite>Saloni Gandhi의 말을 옮김</cite></blockquote>
+      </section>
+
+      <!-- 14 -->
+      <section id="scale">
+        <header><span class="num">14</span><h2>다른 팀으로 넓히기 <span class="ts">33:40</span></h2></header>
+        <p>지금까지는 사용자 이해 에이전트 하나에 RSI를 적용했다. 평가, 진단, 최적화를 표준화하면 같은 루프를 다른 에이전트 팀도 쓸 수 있다.</p>
+
+        <h3>쌓아야 하는 네 층 <span class="ts">34:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층 (아래부터)</th><th>하는 일</th><th>발표자가 본 현재 상태</th></tr></thead>
+            <tbody>
+              <tr><td>1 기반 에이전트</td><td>질문 답변, 요약, 채팅, 워크플로 처리</td><td>대부분의 팀이 이미 갖고 있다</td></tr>
+              <tr><td>2 에이전트 평가</td><td>결과 품질을 잰다</td><td>여기서 격차가 생긴다. 팀마다 맞춤형 평가, 일회성 분석, 손으로 출력 확인을 쓴다. 표준화되고 계속 재사용하는 곳은 소수다</td></tr>
+              <tr><td>3 에이전트 성찰</td><td>근본 원인을 체계적으로 진단한다</td><td></td></tr>
+              <tr><td>4 RSI 루프</td><td>평가와 진단을 최적화와 검증에 잇는다</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>각 층은 아래 층에 기댄다. <strong>믿을 만한 진단 없이는 믿을 만한 루프를 만들 수 없다.</strong> 그래서 발표자는 평가 인프라를 끌어올리는 일을 RSI 확장의 전제 조건으로 본다. 팀마다 따로 만들게 하는 대신 공용 인프라로 내놓을 기회가 있다.</p>
+
+        <h3>회사 전체로 넓히는 다섯 영역 <span class="ts">35:40</span></h3>
+        <ol class="plain">
+          <li><strong>평가 인프라 표준화</strong>: 재사용할 수 있는 평가 틀과 지표. 사람 피드백으로 보정한 채점기.</li>
+          <li><strong>피드백 루프 자동화</strong>: 실행 트레이스를 계속 모으고, 반복되는 실패를 찾고, 근본 원인을 분석한다.</li>
+          <li><strong>자동 최적화 확장</strong>: 프롬프트 최적화와 에이전트 성찰. 그때그때 고치는 대신 후보를 반복 가능한 방식으로 만들고 시험한다.</li>
+          <li><strong>검증과 신뢰</strong>: 자동 개선이 실제로 효과가 있다는 증거. 탄탄한 홀드아웃 평가와 회귀 테스트가 필요하다.</li>
+          <li><strong>팀 간 확산</strong>: 재사용 부품과 셀프서비스 인프라. 팀이 RSI 파이프라인 전체를 직접 만들지 않아도 쓸 수 있게 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="closing">
+        <header><span class="num">15</span><h2>좋아지는 속도를 높인다 <span class="ts">36:50</span></h2></header>
+        <p>RSI는 두 부분으로 이뤄진다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">대상 에이전트 <span class="en">target agent</span></span>
+            <p>더 좋게 만들려는 시스템이다.</p>
+            <p class="verdict">여기서는 <b>사용자 이해 에이전트</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">개선 엔진 <span class="en">improvement engine</span></span>
+            <p>성능을 평가하고, 실패와 근본 원인을 찾고, 개선안을 낸다.</p>
+            <p class="verdict">여기서는 평가, 진단, 프롬프트 최적화를 묶은 <b>RSI 파이프라인</b></p>
+          </div>
+        </div>
+        <p>RSI의 목표는 어느 한 시점의 성능을 올리는 데서 끝나지 않는다. 에이전트가 좋아지는 속도를 올리는 것이다. <span class="ts">37:20</span></p>
+        <p>성능을 시간에 대한 함수로 놓으면, 그 함수의 1차 도함수 <span class="en">first derivative</span>를 키우는 일이다. 1차 도함수는 그래프의 기울기다. 개선 곡선을 더 가파르게 만든다는 뜻이다.</p>
+        <div class="callout">
+          <span class="title">마지막 메시지 <span class="ts">38:20</span></span>
+          <span>개선 과정에서 가장 중요한 것은 <strong>시스템을 낫게 하려는 변경을 믿을 수 있는 것</strong>이다.</span>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="recap">
+        <header><span class="num">16</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>RSI는 운영 트레이스를 채점하고, 원인을 찾고, 수정안을 검증해 반영하는 루프다. LinkedIn은 지금 프롬프트만 고친다.</li>
+          <li>고칠 대상은 프롬프트 → 구조화된 맥락 → 워크플로 → 하네스 코드 → 최적화기 코드 순으로 넓힌다. 기반 모델은 범위 밖이다.</li>
+          <li>루프는 일곱 단계다. 수정안은 <strong>같은 채점기, 같은 루브릭</strong>으로 검증하고, 마지막에 홀드아웃 세트로 다시 확인한다.</li>
+          <li>원인 진단은 묶기 → 행별 LLM 진단 → 중복 합치기 → 빈도 순위로 나눈다. 묶기와 순위에는 LLM을 쓰지 않는다.</li>
+          <li>진단 결과는 저장해 두고, 다음 회차 진단기에 이전 진단으로 넘긴다.</li>
+          <li><strong>평가자의 품질은 최적화 시스템만큼 중요하다.</strong> 팀은 채점기를 사람 리뷰 약 180~200건과 대조했다.</li>
+          <li>채점기는 3점 결과에서 약 80% 사람과 맞았고, 1·2점 결과에서는 55~57%만 맞았다. 가혹한 판정 37건 중 31건이 1점이었다.</li>
+          <li>루브릭을 고치자 일치율이 57%에서 64%로 올랐다. 어긋남의 상당수는 <strong>모델이 아니라 기준의 모호함</strong>에서 나왔다.</li>
+          <li>진단기는 그럴듯하지만 틀린 원인을 낼 수 있다. 분류표에 "채점기가 틀렸다"를 넣고, 채점 근거를 그대로 받아쓰지 않게 해야 한다.</li>
+          <li>목표는 수정 건수가 아니라 <strong>좋아지는 속도</strong>와 <strong>그 변경에 대한 신뢰</strong>다.</li>
+        </ol>
+      </section>
+
+      <!-- 17 -->
+      <section id="quiz">
+        <header><span class="num">17</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>RSI 루프에서 평가가 객관적이고 사용자 피드백과 맞아야 하는 이유는?</span></summary><div class="answer">평가가 병목을 찾아 주고 다음 개선 방향을 정하기 때문이다. 평가가 틀리면 루프 전체가 엉뚱한 방향으로 간다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>하네스에서 RSI로 고칠 수 있는 네 부분은? 범위 밖인 것은?</span></summary><div class="answer">계획과 로직, 맥락과 메모리, 도구 인터페이스, 산출물 저장소. 기반 모델을 학습시키는 일은 범위 밖이다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>LinkedIn은 고치는 범위의 사다리에서 지금 어느 칸에 있나?</span></summary><div class="answer">첫 칸인 프롬프트 최적화. 그 위로 구조화된 맥락, 워크플로 설계, 하네스 코드, 최적화기 코드가 있다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>5단계 검증과 7단계 재확인은 어떻게 다른가?</span></summary><div class="answer">5단계는 같은 채점기와 루브릭으로 수정안 후보를 걸러 낸다. 7단계는 따로 떼어 둔 홀드아웃 세트로 새 시스템이 기존보다 나은지 최종 확인한다. 통과하면 새 기준선이 된다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>사용자 이해 에이전트의 출력 필드 하나에는 무엇이 담기나?</span></summary><div class="answer">값, 확신도, 근거, 추론. 예를 들어 선호 직함 필드라면 직함 목록, 그 직함을 얼마나 믿는지, 저장한 검색 기록 같은 근거, 판단 과정 설명이 담긴다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>원인 진단 네 단계 중 LLM을 쓰지 않는 단계는?</span></summary><div class="answer">①묶기와 ④순위. 실패한 차원별로 묶고 빈도를 세는 일이라 LLM 비용이 들지 않는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>③합치기 단계가 필요한 이유는?</span></summary><div class="answer">L2 진단의 원인 설명은 자유 텍스트라 같은 문제가 행마다 다른 말로 적힌다. 대표 원인으로 합쳐야 빈도를 세고 순위를 매길 수 있다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>채점기와 사람의 일치율은 점수 구간별로 어떻게 달랐나?</span></summary><div class="answer">1점 약 55%, 2점 약 57%, 3점 약 80%. 좋은 결과는 잘 알아봤지만 나쁜 결과끼리는 잘 구별하지 못했다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>"직함" 차원에서 채점기가 저지른 실수는?</span></summary><div class="answer">그럴듯한 직함이면 통과시키고, 에이전트가 빠뜨린 중요한 의도 신호는 놓쳤다. 완전성 대신 그럴듯함을 채점했다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>루브릭을 고친 뒤 무엇이 바뀌었고, 무엇을 고쳐서 얻었나?</span></summary><div class="answer">사람과의 일치율이 57%에서 64%로 오르고 평균 오차가 96에서 74로 줄었다. 모델만이 아니라 올바른 평가의 명세, 곧 루브릭과 근거 기준을 고쳐서 얻었다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>L2 진단기가 루브릭 탓을 잘못 하게 된 이유 두 가지는?</span></summary><div class="answer">원인 분류표에 "L1 채점기가 틀렸다"는 선택지가 없었다. 그리고 L1의 채점 근거를 에이전트 출력과 대조하지 않고 그대로 받아 썼다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>"1차 도함수를 키운다"는 비유는 무슨 뜻인가?</span></summary><div class="answer">지금 성능 값이 아니라 성능이 좋아지는 속도를 키운다는 뜻이다. 개선 곡선의 기울기를 가파르게 만드는 것이 RSI의 목표다.</div></details>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="apply">
+        <header><span class="num">18</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>LLM 채점기 결과를 사람 리뷰 표본과 대조한다<span class="how">발표의 팀은 약 180~200건을 썼다. 점수 구간별, 차원별로 나눠 일치율을 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>낮은 점수 판정이 지나치게 가혹하지 않은지 따로 본다<span class="how">확인: 가혹한 판정이 특정 점수에 몰려 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>루브릭에 형식 차이, 부분 점수, 추론 허용 범위 규칙을 적는다<span class="how">대소문자·표기 차이는 감점하지 않기, 맞는 정보와 틀린 정보가 섞였을 때의 점수, 근거 없이 추론한 값의 처리</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>원인 분류표에 "채점기가 틀렸다" 항목을 넣는다<span class="how">확인: 진단기가 루브릭 탓으로 돌린 건 중 실제로 채점기가 틀린 경우가 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>진단기가 채점 근거를 그대로 받아쓰지 않게 한다<span class="how">채점기의 설명을 원래 에이전트 출력과 따로 대조하라고 지시한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>원인 진단을 단계로 쪼개고, LLM이 필요 없는 단계는 코드로 처리한다<span class="how">묶기와 빈도 순위는 LLM 없이. 행별 진단에만 LLM을 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>자유 텍스트 원인을 대표 원인으로 합친 뒤 빈도순으로 본다<span class="how">확인: 가장 큰 병목 세 가지를 바로 말할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>수정안은 같은 채점기로 검증하고, 마지막에 홀드아웃 세트로 다시 확인한다<span class="how">채점은 여러 번 돌려 다수결로 정해 흔들림을 줄인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>자동으로 만든 변경도 운영 반영 전에 사람이 리뷰한다<span class="how">품질이 쌓이면 사람의 몫을 단계적으로 줄인다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 19 -->
+      <section id="glossary">
+        <header><span class="num">19</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>RSI</td><td>Recursive Self-Improvement, 재귀적 자기 개선. 시스템이 자기 실패를 평가하고 고치는 일을 반복하는 구조</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 실행 순서, 도구, 기억, 저장을 맡는 실행 틀</td></tr>
+              <tr><td>트레이스</td><td>Trace. 에이전트가 요청 하나를 처리하며 한 일을 단계별로 남긴 기록</td></tr>
+              <tr><td>LLM 채점기</td><td>LLM judge. LLM에게 기준을 주고 결과를 채점하게 하는 평가 방식</td></tr>
+              <tr><td>L1 채점기</td><td>에이전트 출력의 품질을 차원별로 채점하는 1차 채점기</td></tr>
+              <tr><td>L2 진단기</td><td>L1에서 실패한 결과를 받아 근본 원인을 찾는 진단기. 발표에서는 L2 judge라 불렀다</td></tr>
+              <tr><td>루브릭</td><td>Rubric. 무엇을 몇 점으로 볼지 적은 채점 기준표</td></tr>
+              <tr><td>차원</td><td>Dimension. 채점하는 항목 하나. 예: 선호 직함, 분야, 업무 형태</td></tr>
+              <tr><td>에이전트 성찰</td><td>Agent reflection. 낮은 점수의 근본 원인을 찾는 과정</td></tr>
+              <tr><td>대표 원인</td><td>Canonical issue. 표현이 다른 같은 원인을 하나로 합친 이름</td></tr>
+              <tr><td>스코어카드</td><td>Scorecard. 대표 원인을 빈도순으로 정리해 사람이 보고 조치하게 만든 표</td></tr>
+              <tr><td>GEPA (추정)</td><td>실행 기록을 바탕으로 LLM이 프롬프트 수정안을 만들고 좋은 후보를 고르는 프롬프트 최적화 기법. 자막의 "JPA", "Japa"를 이것으로 추정했다</td></tr>
+              <tr><td>미니배치</td><td>Mini-batch. 전체 표본을 작은 묶음으로 나눠 한 묶음씩 처리하는 방식</td></tr>
+              <tr><td>검증 세트</td><td>Validation set. 수정안 후보 중 무엇이 나은지 고를 때 쓰는 데이터</td></tr>
+              <tr><td>홀드아웃 세트</td><td>Held-out set. 최적화에 쓰지 않고 따로 떼어 둔 데이터. 최종 확인용</td></tr>
+              <tr><td>기준선</td><td>Baseline. 다음 개선과 비교할 기준이 되는 현재 버전</td></tr>
+              <tr><td>분산</td><td>Variance. 같은 입력을 넣어도 결과가 매번 달라지는 정도</td></tr>
+              <tr><td>다수결 투표</td><td>Majority voting. 같은 판정을 여러 번 돌려 가장 많이 나온 답을 고르는 방법</td></tr>
+              <tr><td>정규화</td><td>Normalization. 표기가 다른 같은 값을 한 형태로 맞추는 일</td></tr>
+              <tr><td>사람 주석</td><td>Human annotation. 사람이 결과에 직접 단 점수나 판단</td></tr>
+              <tr><td>human in the loop</td><td>자동 과정의 중간에 사람이 들어가 확인하고 승인하는 방식</td></tr>
+              <tr><td>1차 도함수</td><td>First derivative. 어떤 값이 시간에 따라 변하는 속도. 그래프의 기울기</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 20 -->
+      <section id="timeline">
+        <header><span class="num">20</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>Ziwei Guo 소개와 주제</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>RSI란 무엇인가</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>평가가 객관적이어야 하는 이유</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>하네스의 네 구성 요소</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>기반 모델은 범위 밖</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>고치는 범위의 사다리</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>지금은 프롬프트 최적화</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>RSI 일곱 단계</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>사용자 이해 에이전트의 입력과 출력</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>2단계: 채점기 출력과 15개 차원</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>1~3점 척도</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>3단계: 원인 진단 네 단계</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>중복 원인 합치기의 예</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>빈도 순위와 스코어카드</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>진단 결과 저장과 다음 회차</td></tr>
+              <tr><td><span class="ts">18:30</span></td><td>4~7단계: 수정안 생성, 검증, 반영</td></tr>
+              <tr><td><span class="ts">20:20</span></td><td>세 가지 집중 영역</td></tr>
+              <tr><td><span class="ts">23:00</span></td><td>Saloni Gandhi로 교대</td></tr>
+              <tr><td><span class="ts">23:30</span></td><td>평가자의 품질이 중요하다</td></tr>
+              <tr><td><span class="ts">24:00</span></td><td>두 가지 성과</td></tr>
+              <tr><td><span class="ts">25:10</span></td><td>사람 리뷰 약 180~200건과 대조</td></tr>
+              <tr><td><span class="ts">25:20</span></td><td>점수별 일치율: 55%, 57%, 80%</td></tr>
+              <tr><td><span class="ts">26:00</span></td><td>차원별 일치율</td></tr>
+              <tr><td><span class="ts">26:40</span></td><td>어긋남의 패턴: 직함, 전문 분야, 형식</td></tr>
+              <tr><td><span class="ts">27:40</span></td><td>가혹한 판정 37건 중 31건이 1점</td></tr>
+              <tr><td><span class="ts">28:10</span></td><td>추론한 선호와 루브릭의 모호함</td></tr>
+              <tr><td><span class="ts">28:30</span></td><td>루브릭 수정</td></tr>
+              <tr><td><span class="ts">29:10</span></td><td>일치율 57% → 64%, 평균 오차 96 → 74</td></tr>
+              <tr><td><span class="ts">29:50</span></td><td>L2 진단기 분석</td></tr>
+              <tr><td><span class="ts">31:00</span></td><td>그럴듯하지만 틀린 진단의 위험</td></tr>
+              <tr><td><span class="ts">31:20</span></td><td>L1·L2 품질 개선</td></tr>
+              <tr><td><span class="ts">32:30</span></td><td>다수결 투표와 홀드아웃 평가</td></tr>
+              <tr><td><span class="ts">33:00</span></td><td>채택 규모를 재는 지표</td></tr>
+              <tr><td><span class="ts">33:40</span></td><td>확장 계획</td></tr>
+              <tr><td><span class="ts">34:10</span></td><td>쌓아야 하는 네 층</td></tr>
+              <tr><td><span class="ts">35:40</span></td><td>회사 전체로 넓히는 다섯 영역</td></tr>
+              <tr><td><span class="ts">36:50</span></td><td>개선 엔진과 대상 에이전트</td></tr>
+              <tr><td><span class="ts">37:20</span></td><td>1차 도함수 비유</td></tr>
+              <tr><td><span class="ts">37:50</span></td><td>감사 인사</td></tr>
+              <tr><td><span class="ts">38:20</span></td><td>결론: 변경을 믿을 수 있어야 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'yH7_SIIgI-Y:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

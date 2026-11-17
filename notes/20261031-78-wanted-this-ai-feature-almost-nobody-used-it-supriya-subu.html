@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 기능 실험의 함정</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#start">이긴 테스트는 출발점이다</a></li>
+      <li><a href="#ignore">원한다고 말하고 안 쓴다</a></li>
+      <li><a href="#tail">평균이 꼬리를 가렸다</a></li>
+      <li><a href="#bill">초록 대시보드, 빨간 청구서</a></li>
+      <li><a href="#model">이긴 건 개념이 아니라 모델이었다</a></li>
+      <li><a href="#rollout">전 세계 출시가 안 될 수 있다</a></li>
+      <li><a href="#questions">출시 전 다섯 가지 질문</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-31 · 15분 · 영어 발표 한글 정리</span>
+      <h1>A/B 테스트에서 이긴 AI 기능이 출시되지 못하는 이유</h1>
+      <p class="lead">AI 기능은 A/B 테스트에서 이겨도 끝난 게 아니다. Bumble의 AI 사진 피드백 기능을 예로, 테스트 결과 뒤에 숨은 다섯 가지 문제를 살핀다. 실제 사용률, 이상한 출력, 비용, 모델 의존, 국가별 규제다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=CvmZtAPmAW4" target="_blank" rel="noopener">78% Wanted This AI Feature. Almost Nobody Used It</a></span>
+        <span>발표: Supriya Subudhi (Bumble 프로덕트 매니저)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 확실하지 않은 곳은 들린 대로 쓰고 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI 기능은 <strong>A/B 테스트에서 이겨도 바로 출시하면 안 된다.</strong> 이긴 결과는 끝이 아니라 출발점이다.</li>
+        <li>인터뷰에서는 <strong>78%가 원한다</strong>고 했다. 실제로 기능을 받은 사람 중 쓴 사람은 <strong>10~15%</strong>였다. 사람들이 이미 쓰는 흐름 안에 기능을 넣자 사용이 늘었다.</li>
+        <li>평균 지표는 좋았지만, 이미 웃고 있는 사진에 "더 웃으라"는 조언이 섞여 있었다. <strong>가드레일을 세우고, 실제 출력을 읽고, 사용자 집단별로 따로 본다.</strong></li>
+        <li>생성형 AI는 <strong>많이 쓸수록 비용이 는다.</strong> 처음 고른 최고 모델은 단순한 방식보다 약 10배 비쌌다. 왜 AI를 쓰는지가 예산을 정한다.</li>
+        <li>싼 모델로 바꾸자 효과도 같이 떨어졌다. <strong>테스트에서 이긴 건 "피드백"이라는 개념이 아니라 그 모델이었다.</strong> 평가 도구로 모델·프롬프트·비용 조합을 빠르게 시험해 해결했다.</li>
+        <li>미국에서 출시한 뒤 <strong>규제 때문에 다른 나라로 그대로 내보내지 못했다.</strong> 법과 규제는 처음부터 생각해야 한다.</li>
+        <li>정리: 이제 질문은 "A/B 테스트에서 이겼나"만이 아니다. <strong>실제로 쓰나, 출력을 읽었나, 비용을 감당하나, 그 모델을 계속 쓸 수 있나, 어느 나라에 낼 수 있나</strong>까지 묻는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="start">
+        <header><span class="num">01</span><h2>이긴 테스트는 출발점이다 <span class="ts">00:10</span></h2></header>
+        <p><strong>A/B 테스트</strong><span class="en">A/B testing</span>는 두 가지 버전을 나눠 보여 주고 어느 쪽이 나은지 비교하는 방법이다. 이메일 두 버전 중 어느 쪽이 클릭을 더 받는지 볼 수 있다. 새 기능과 지금 있는 화면을 비교할 수도 있다.</p>
+        <p>보통은 테스트 결과가 좋으면 출시한다. 발표자는 생성형 AI와 LLM을 쓴 소비자 기능에서는 다르다고 말한다. <strong>좋은 결과는 여정의 시작일 뿐이다.</strong> 발표자는 직접 부딪힌 문제 다섯 가지를 소개한다.</p>
+
+        <h3>발표자와 사례 <span class="ts">01:30</span></h3>
+        <ul class="plain">
+          <li>발표자는 데이트 앱 <strong>Bumble</strong>의 프로덕트 매니저다. 발표자가 소개한 바로는 월간 활성 사용자가 2천만 명이 넘는다.</li>
+          <li>프로덕트 매니저는 사용자를 대변한다. 사용자의 문제를 알고 해결책을 낸다. 동시에 회사의 <strong>손익</strong><span class="en">P&amp;L</span>도 책임진다. 자원이 무한하지 않기 때문이다.</li>
+          <li>사례는 <strong>AI 사진 피드백</strong> 기능이다 <span class="ts">02:10</span>. 사람들은 프로필에 사진을 올리지만 어떤 사진이 좋은지 모른다. Bumble이 가진 "잘 되는 프로필" 지식을 바탕으로, AI가 사진을 어떻게 고치면 좋을지 제안한다.</li>
+        </ul>
+        <p class="note">발표자는 Bumble 소속이고, 다섯 가지 사례는 모두 자사 기능의 경험담이다. 효과 크기, 사용한 모델 이름, 실제 비용은 공개하지 않았다. 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="ignore">
+        <header><span class="num">02</span><h2>원한다고 말하고 안 쓴다 <span class="ts">02:40</span></h2></header>
+        <p>프로덕트 매니저는 <strong>사용자 조사</strong><span class="en">discovery</span>로 문제를 찾는다. 설문과 인터뷰가 대표적인 도구다.</p>
+        <p>Bumble의 조사에서 거의 모든 사람이 같은 문제를 말했다. 내 프로필이 괜찮은지 모르겠고, 앱이 그걸 알려 주지 않는다는 것이다. LLM이 나오자 팀은 이 문제를 풀 수 있다고 봤다. 원칙은 하나였다. AI가 데이트를 대신하지는 않고, 데이트 과정을 돕기만 한다.</p>
+
+        <figure class="chart" aria-label="AI 피드백을 원한다고 답한 비율 78%, A/B 테스트에서 실제로 기능을 쓴 비율 10~15%">
+          <span class="chart-title">말과 행동의 차이 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>인터뷰: "피드백을 받고 싶다"</span><span class="val">78</span></div>
+              <div class="track"><div class="fill" style="width:78%" title="원한다고 답함: 약 78%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>A/B 테스트: 실제로 기능을 씀</span><span class="val">10~15</span></div>
+              <div class="track"><div class="fill key" style="width:15%" title="실제 사용: 10~15%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">10~15%는 범위라서 위쪽 끝인 15에 맞춰 그렸다. 두 숫자는 기준이 다르다. 78%는 인터뷰에 응한 사람 중 비율이고, 10~15%는 테스트에서 기능을 받은 절반의 사용자 중 비율이다.</span>
+        </figure>
+
+        <p>테스트는 사용자 절반에게만 기능을 주는 방식이었다. 기능을 받은 사람 중 실제로 쓴 사람은 10~15%였다 <span class="ts">03:50</span>. 여기서 얻은 교훈은 이렇다. <strong>AI에 열려 있다는 답은 실제로 쓸지를 알려 주지 않는다.</strong></p>
+
+        <h3>기존 흐름 안에 넣었다 <span class="ts">04:20</span></h3>
+        <p>해결책은 프로덕트 관리의 기본으로 돌아가는 것이었다. AI를 쓰는 과정 전체를 사람들이 이미 하는 일 안에 넣는다. 사용자에게 기능이 있다는 걸 알리고 쓰는 법을 알려 주는 일이 아주 중요하다.</p>
+        <div class="shift" aria-label="기능 배치의 변화">
+          <div><span class="tag">처음</span><b>따로 떨어진 기능</b><span class="muted">사용자가 앱 어딘가에서 알아서 찾아야 한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">바꾼 뒤</span><b>이미 쓰는 흐름 안의 제안</b><span class="muted">사진을 올릴 때 "피드백 받아 볼래요?"라고 묻는다. 매칭이 안 될 때 "프로필 피드백을 확인해 보셨나요?"라고 안내한다</span></div>
+        </div>
+        <p>이렇게 바꾸자 사용률이 올라갔다. 발표자는 측정도 강조한다. 설문 결과만 믿고 출시한 뒤 실제 사용을 보지 않으면, 사용률을 개선할 기회조차 없다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="tail">
+        <header><span class="num">03</span><h2>평균이 꼬리를 가렸다 <span class="ts">05:10</span></h2></header>
+        <p>전체 지표는 좋았다. 피드백을 받은 쪽이 사진을 더 많이 올렸다. 프로필을 고친 횟수도 더 많았다.</p>
+        <p>세부를 보니 이상한 일이 있었다. AI가 <strong>이미 웃고 있는 사진에 "더 웃으라"고 조언</strong>하고 있었다 <span class="ts">05:40</span>. 평균이 좋다는 것만으로는 성공을 판단할 수 없다는 뜻이다. 세부를 들여다봐야 한다.</p>
+        <p class="note">자막에는 "the average win hit the tail"로 들린다. 문맥상 "hid the tail(평균의 승리가 꼬리를 가렸다)"로 보인다(추정).</p>
+
+        <h3>틀려도 되는 정도는 기능마다 다르다 <span class="ts">06:00</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">음악 · Spotify AI DJ</span>
+            <p>AI가 플레이리스트를 만든다. 노래 네 곡 중 두 곡이 별로여도 괜찮다.</p>
+            <p class="verdict">틀렸을 때 피해가 <b>작다.</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">금융 · 가계부 앱 (가정)</span>
+            <p>AI가 한 달 예산을 짜 준다. 쓸 수 없는 돈인데 2,000달러를 쓰라고 하면 안 된다.</p>
+            <p class="verdict">틀렸을 때 피해가 <b>크다.</b></p>
+          </div>
+        </div>
+
+        <h3>Bumble이 한 일 <span class="ts">06:30</span></h3>
+        <ol class="plain">
+          <li><strong>가드레일 세우기.</strong> 가드레일<span class="en">guardrail</span>은 AI가 해도 되는 것과 하면 안 되는 것의 경계다. 사용자가 바꿀 수 없는 것은 건드리지 않게 했다. 피부색, 키 같은 것이다.</li>
+          <li><strong>실제 출력 읽기</strong> <span class="ts">06:50</span>. 평가 도구<span class="en">eval</span>를 갖춰, 실제 사용자가 받은 피드백을 직접 들여다봤다. 그래야 프롬프트가 제 역할을 하는지 알 수 있다.</li>
+          <li><strong>성공 기준 바꾸기</strong> <span class="ts">07:20</span>. "초록인가 빨강인가"가 아니라, 결과 분포의 끝부분<span class="en">long tail</span>에 무엇이 있는지 본다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">사용자 집단별로 따로 묻기</span>
+          <span>여성과 남성이 피드백에 같은 반응을 보이는가? 나라와 언어가 달라도 같은가? 프랑스어로 만든 문장은 영어로 만든 문장과 다를 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="bill">
+        <header><span class="num">04</span><h2>초록 대시보드, 빨간 청구서 <span class="ts">07:50</span></h2></header>
+        <p>생성형 AI는 성공할수록 돈이 든다. 팀은 사용자에게 아주 큰 문제라고 봤기 때문에 최고 품질을 원했다. 그래서 <strong>가장 좋은 LLM</strong>을 골랐다.</p>
+
+        <figure class="chart" aria-label="상대 비용: 단순한 방식 1, 최고 성능 LLM 약 10">
+          <span class="chart-title">상대 비용 (단순한 방식 = 1)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>최고 성능 LLM</span><span class="val">약 10</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="최고 성능 LLM: 약 10배"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>더 단순한 방식</span><span class="val">1</span></div>
+              <div class="track"><div class="fill" style="width:10%" title="단순한 방식: 1"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>5</span><span>10</span></div>
+          <span class="caption">발표자가 말한 "약 10배"를 막대로 옮겼다. 여기에 평가 도구를 돌리는 비용이 더해졌지만, 그 크기는 발표에 나오지 않았다.</span>
+        </figure>
+        <p>모델 비용에 평가 비용까지 더하니 감당하기 어려웠다 <span class="ts">08:10</span>.</p>
+
+        <h3>기존 ML과 생성형 AI는 비용 구조가 다르다 <span class="ts">08:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구분</th><th>처음 드는 비용</th><th>사용이 늘 때</th></tr></thead>
+            <tbody>
+              <tr><td>기존 ML (예: Bumble의 매칭 알고리즘)</td><td>연산과 학습에 큰 비용이 든다</td><td>한번 돌아가면 사용자 한 명당 추가 비용은 작다</td></tr>
+              <tr><td>생성형 AI</td><td>상대적으로 작다</td><td>사용자가 늘고 자주 쓸수록 청구서가 커진다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">"처음 드는 비용이 상대적으로 작다"는 표 정리를 위해 반대편을 채운 것이다. 발표자는 생성형 AI의 초기 비용을 따로 말하지 않았다.</p>
+
+        <h3>처음부터 최고 모델로 가지 마라 <span class="ts">09:00</span></h3>
+        <p>발표자의 첫 조언은 처음부터 최고 모델로 뛰어들지 말라는 것이다. 두 번째는 <strong>AI를 왜 쓰는지</strong> 분명히 하라는 것이다. 발표자 주변에는 회사에서 "기능에 AI를 넣으라"는 지시만 받은 동료가 많다고 한다. 이유가 장기적 이득인지 단기적 이득인지 알아야 한다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Amazon 쇼핑 AI 비서 · 단기 관점 <span class="ts">09:30</span></span>
+            <p>추천이 좋으면 구매가 늘고, 매출이 바로 오른다.</p>
+            <p class="verdict">추천이 별로면 출시할 이유가 약해진다. <b>투자 대비 수익(ROI)</b>으로 빨리 판단할 수 있다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Amazon 쇼핑 AI 비서 · 장기 관점 <span class="ts">10:00</span></span>
+            <p>믿을 만한 비서가 있으면 사람들이 다른 쇼핑몰 대신 Amazon을 고른다.</p>
+            <p class="verdict">당장 추천이 완벽하지 않아도 낼 수 있다. 목적은 <b>브랜드 가치와 사용자 유지</b>다.</p>
+          </div>
+        </div>
+        <p>목적이 예산을 정한다 <span class="ts">10:20</span>. 단기 이득이 목적이면 ROI로 빨리 판단하면 된다. 장기 전략이면 예산을 더 확보할 가치가 있을 수 있다.</p>
+        <p class="note">Amazon 사례는 발표자가 이유를 설명하려고 든 가정이다. Amazon이 실제로 어떤 이유로 출시했는지를 말한 것은 아니다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="model">
+        <header><span class="num">05</span><h2>이긴 건 개념이 아니라 모델이었다 <span class="ts">10:30</span></h2></header>
+        <p>최고 모델은 비용이 너무 커서 규모를 키울 수 없었다. 팀은 더 싼 모델로 바꿨다.</p>
+        <p>비용이 내려가자 효과도 같이 내려갔다. 정확도가 떨어졌기 때문이다.</p>
+        <div class="callout warn">
+          <span class="title">A/B 테스트가 실제로 잰 것</span>
+          <span>테스트에서 본 좋은 결과는 "AI가 사진 피드백을 준다"는 개념 덕분이 아니었다. 그때 테스트한 <strong>그 모델</strong> 덕분이었다. 모델을 바꾸면 테스트 결과도 그대로 따라오지 않는다.</span>
+        </div>
+
+        <h3>많이, 빨리 시험한다 <span class="ts">11:10</span></h3>
+        <p>팀은 여기서 데이터로 판단하는 게 핵심이라는 걸 배웠다. 평가 도구가 그걸 가능하게 했다.</p>
+        <ul class="plain">
+          <li>여러 모델이 여러 데이터셋에서 결과를 얼마나 바꾸는지 시험한다</li>
+          <li>모델별 비용 차이를 같이 비교한다</li>
+          <li>프롬프트와 피드백 문구를 바꿔 가며 빠르게 다시 시험한다</li>
+        </ul>
+        <p>결국 팀은 <strong>좋은 결과를 내면서 가장 싼 선택지</strong>를 찾았다 <span class="ts">11:30</span>.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="rollout">
+        <header><span class="num">06</span><h2>전 세계 출시가 안 될 수 있다 <span class="ts">11:40</span></h2></header>
+        <p>발표자는 Meta가 최근 낸 Muse AI(추정)를 예로 든다. 이 서비스는 미국과 캐나다에서만 쓸 수 있다. 런던에 사는 발표자는 아직 써 보지 못했다고 한다.</p>
+        <p>이유는 AI 규제다. 규제는 나라마다 다르고 계속 바뀐다. 규제를 지키지 못하면 회사는 재정적·법적 위험을 진다.</p>
+        <p>Bumble도 같은 일을 겪었다 <span class="ts">12:10</span>. 미국에서 시작해 미국에서 출시했다. 그리고 거기서 멈췄다. 미국 버전을 그대로 다른 나라에 낼 수 없었다.</p>
+
+        <h3>규제는 처음부터 생각한다 <span class="ts">12:30</span></h3>
+        <p>발표자는 직무와 관계없이 모두 넓게 봐야 한다고 말한다. 프로덕트 매니저든, 프로덕트 엔지니어든, 고객 현장에 붙어 일하는 엔지니어<span class="en">forward deployed engineer</span>든 마찬가지다. <strong>규제 준수</strong><span class="en">compliance</span>와 법적 영향은 나중이 아니라 초기에 따져야 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>접근</th><th>방식</th><th>대가</th></tr></thead>
+            <tbody>
+              <tr><td>처음부터 전 세계</td><td>모든 나라의 제약을 먼저 파악하고 그 안에서 만든다</td><td>가장 엄격한 조건에 맞춰야 한다</td></tr>
+              <tr><td>한 나라에 집중</td><td>효과가 가장 큰 미국에서 최고 버전을 내고, 다른 곳에는 안 낼 수도 있다</td><td>다른 시장을 포기한다</td></tr>
+              <tr><td>나라별 버전</td><td>나라마다 다르게 동작하는 앱을 만든다</td><td>추가 개발·운영 비용이 든다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">"대가" 열은 발표 내용을 표로 정리하며 덧붙인 해석이다(예시).</p>
+        <p>이제 만드는 것만이 일이 아니다. <strong>최고의 기능을 만들어도 사용자 손에 닿지 못하면 의미가 없다.</strong></p>
+      </section>
+
+      <!-- 7 -->
+      <section id="questions">
+        <header><span class="num">07</span><h2>출시 전 다섯 가지 질문 <span class="ts">13:50</span></h2></header>
+        <p>발표자는 AI 기능을 만들 때 스스로 물어볼 질문 다섯 가지로 정리한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>문제</th><th>물어볼 질문</th></tr></thead>
+            <tbody>
+              <tr><td>원한다고 하고 안 쓴다</td><td>사람들이 실제로 쓰는가, 아니면 쓰겠다고 말만 하는가?</td></tr>
+              <tr><td>평균이 꼬리를 가린다</td><td>실제 출력을 읽는가, 아니면 평균만 보는가?</td></tr>
+              <tr><td>초록 대시보드, 빨간 청구서</td><td>들어간 비용을 모두 계산해도 남는 게 있는가?</td></tr>
+              <tr><td>모델이 이긴 것</td><td>최고 모델로 얻은 승리를 계속 감당할 수 있는가?</td></tr>
+              <tr><td>전 세계 출시 불가</td><td>어느 시장에 낼 수 있는지 법적으로 분명한가?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>"Because the question is not just did the feature win the AB test anymore."<cite>발표자, 14:30 — 이제 질문은 "기능이 A/B 테스트에서 이겼나"만이 아니다.</cite></blockquote>
+      </section>
+
+      <!-- 8 -->
+      <section id="recap">
+        <header><span class="num">08</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>AI 기능에서 A/B 테스트 승리는 <strong>끝이 아니라 출발점</strong>이다.</li>
+          <li>인터뷰에서 78%가 원했지만 실제 사용은 10~15%였다. <strong>"원한다"는 답은 사용을 예측하지 못한다.</strong></li>
+          <li>따로 떨어진 기능 대신 <strong>사용자가 이미 하는 흐름</strong>(사진 올리기, 매칭 실패) 안에서 제안하자 사용이 늘었다.</li>
+          <li>평균 지표가 좋아도 <strong>이상한 출력</strong>이 숨어 있다. 이미 웃는 사람에게 "더 웃으라"고 했다.</li>
+          <li>틀려도 되는 정도는 기능마다 다르다. 음악 추천과 예산 조언은 다르다. 그래서 <strong>가드레일</strong>이 먼저다.</li>
+          <li>평가 도구로 <strong>실제 출력을 읽고</strong>, 성별·언어·나라별로 결과를 따로 본다.</li>
+          <li>생성형 AI는 <strong>쓸수록 비용이 는다.</strong> 기존 ML은 초기 비용이 크고 추가 비용이 작다.</li>
+          <li><strong>왜 AI를 쓰는지</strong>(단기 매출인가, 장기 브랜드인가)가 예산을 정한다.</li>
+          <li>싼 모델로 바꾸자 효과가 떨어졌다. 테스트가 잰 건 <strong>개념이 아니라 그 모델</strong>이었다. 모델·프롬프트·비용 조합을 빠르게 시험해 풀었다.</li>
+          <li>AI 규제는 나라마다 다르다. <strong>출시할 시장과 규제를 처음부터</strong> 정해야 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 9 -->
+      <section id="quiz">
+        <header><span class="num">09</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 "AI 기능의 A/B 테스트 승리는 출발점"이라고 하는 이유는?</span></summary><div class="answer">이겨도 실제 사용률, 숨은 이상 출력, 비용, 모델 의존, 국가별 규제 같은 문제가 남기 때문이다. 발표자는 이 다섯 가지를 직접 겪었다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>78%와 10~15%는 각각 무엇을 잰 숫자인가?</span></summary><div class="answer">78%는 인터뷰에서 AI 피드백을 받고 싶다고 답한 비율이다. 10~15%는 A/B 테스트에서 기능을 받은 사용자 중 실제로 쓴 비율이다. 기준이 다른 두 숫자지만, 말과 행동의 차이를 보여 준다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>사용률을 올리기 위해 Bumble이 바꾼 것은?</span></summary><div class="answer">따로 떨어진 기능을 기존 흐름 안으로 옮겼다. 사진을 올릴 때 피드백을 받을지 묻고, 매칭이 안 될 때 프로필 피드백을 확인해 보라고 안내했다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>평균 지표가 좋았는데도 문제가 된 출력의 예는?</span></summary><div class="answer">이미 웃고 있는 사진에 "더 웃으라"고 조언한 것이다. 평균만으로는 이런 출력이 보이지 않는다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>Spotify AI DJ와 가계부 앱 예시가 보여 주는 것은?</span></summary><div class="answer">틀렸을 때 피해의 크기가 기능마다 다르다는 것이다. 노래 몇 곡이 별로인 건 괜찮지만, 쓸 수 없는 돈을 쓰라는 조언은 안 된다. 그래서 기능에 맞는 가드레일이 필요하다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Bumble이 AI가 절대 건드리지 못하게 한 것은?</span></summary><div class="answer">사용자가 바꿀 수 없는 것이다. 발표자는 피부색과 키를 예로 들었다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>집단별로 결과를 따로 볼 때 발표자가 든 두 가지 기준은?</span></summary><div class="answer">성별(여성과 남성의 반응이 같은가)과 언어·나라(프랑스어 문장과 영어 문장이 다르게 나오는가)다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>기존 ML과 생성형 AI의 비용 구조는 어떻게 다른가?</span></summary><div class="answer">기존 ML은 연산과 학습에 초기 비용이 크고, 돌아가기 시작하면 사용자당 추가 비용이 작다. 생성형 AI는 사용자가 많고 자주 쓸수록 청구서가 커진다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Amazon 쇼핑 비서 예시에서 단기와 장기 목적은 각각 무엇인가?</span></summary><div class="answer">단기는 좋은 추천으로 구매와 매출을 늘리는 것이다. 장기는 믿을 만한 비서로 사람들이 다른 쇼핑몰 대신 Amazon을 고르게 하는 것, 즉 브랜드 가치와 사용자 유지다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>싼 모델로 바꾼 뒤 팀이 깨달은 것은?</span></summary><div class="answer">A/B 테스트의 좋은 결과는 피드백이라는 개념이 아니라 그때 쓴 모델 덕분이었다. 그래서 평가 도구로 모델·데이터셋·비용·프롬프트를 빠르게 시험해, 좋은 결과를 내는 가장 싼 선택지를 찾았다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>국가별 규제에 대응하는 세 가지 접근은?</span></summary><div class="answer">처음부터 모든 나라의 제약 안에서 만들기, 효과가 큰 한 나라(미국)에 집중하기, 나라마다 다르게 동작하는 버전을 추가 비용을 들여 만들기.</div></details>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="apply">
+        <header><span class="num">10</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>설문 응답률이 아니라 실제 사용률을 성공 지표에 넣는다<span class="how">확인: 기능을 받은 사람 중 실제로 쓴 비율을 대시보드에서 볼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>AI 기능을 사용자가 이미 거치는 화면 안에서 제안한다<span class="how">사용자가 막히는 순간(예: 매칭 실패)을 찾아 그때 안내한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>AI가 하면 안 되는 일을 가드레일로 글로 쓴다<span class="how">사용자가 바꿀 수 없는 것, 틀리면 피해가 큰 조언부터</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>실제 사용자가 받은 출력을 정기적으로 읽는다<span class="how">확인: 평균 지표 밖의 이상한 출력을 찾는 절차가 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>결과를 성별·언어·나라 등 집단별로 나눠 본다<span class="how">확인: 언어마다 생성 문장의 품질이 다르지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>모델 비용과 평가 비용을 합쳐 사용자당 비용을 계산한다<span class="how">사용자가 늘고 자주 쓸 때 청구서가 어떻게 커지는지 같이 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>이 기능에 AI를 쓰는 이유를 단기·장기로 적는다<span class="how">그 이유에 맞춰 감당할 수 있는 예산을 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>A/B 테스트 결과가 특정 모델에 묶여 있는지 확인한다<span class="how">모델을 바꿀 계획이 있으면 바꾼 모델로 다시 시험한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>출시할 나라와 그 나라의 AI 규제를 기획 초기에 정리한다<span class="how">전 세계, 한 나라 집중, 나라별 버전 중 어느 쪽인지 정한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section id="glossary">
+        <header><span class="num">11</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>A/B 테스트</td><td>A/B testing. 사용자를 나눠 두 버전을 보여 주고 어느 쪽이 나은지 비교하는 실험</td></tr>
+              <tr><td>사용률</td><td>Adoption. 기능을 받은 사람 중 실제로 쓴 사람의 비율</td></tr>
+              <tr><td>사용자 조사</td><td>Discovery. 설문, 인터뷰 등으로 사용자의 문제를 찾는 단계</td></tr>
+              <tr><td>손익</td><td>P&amp;L (Profit and Loss). 회사가 번 돈과 쓴 돈의 계산</td></tr>
+              <tr><td>월간 활성 사용자</td><td>MAU. 한 달 동안 서비스를 한 번 이상 쓴 사람 수</td></tr>
+              <tr><td>생성형 AI</td><td>GenAI. 글, 이미지 등 새 결과물을 만들어 내는 AI</td></tr>
+              <tr><td>LLM</td><td>Large Language Model. 대량의 글로 학습한 거대 언어 모델</td></tr>
+              <tr><td>가드레일</td><td>Guardrail. AI가 해도 되는 것과 하면 안 되는 것의 경계를 정한 규칙</td></tr>
+              <tr><td>평가 (eval)</td><td>모델이나 프롬프트의 결과 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>롱테일</td><td>Long tail. 평균에서 먼 드문 경우들. 평균 지표에는 잘 드러나지 않는다</td></tr>
+              <tr><td>세그먼트</td><td>Segment. 성별, 언어, 나라처럼 기준을 정해 나눈 사용자 집단</td></tr>
+              <tr><td>ROI</td><td>Return on Investment. 투자한 만큼 얼마나 돌아오는가</td></tr>
+              <tr><td>브랜드 가치</td><td>Brand equity. 사람들이 다른 곳 대신 이 브랜드를 고르게 만드는 힘</td></tr>
+              <tr><td>규제 준수</td><td>Compliance. 나라별 법과 규정을 지키는 것</td></tr>
+              <tr><td>Forward deployed engineer</td><td>고객 현장에 가까이 붙어 제품을 맞춰 만드는 엔지니어</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="timeline">
+        <header><span class="num">12</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>A/B 테스트란 무엇인가</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>청중 질문: 이긴 테스트면 출시해야 하나</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>이긴 결과는 출발점, 다섯 가지 이유 예고</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>발표자 소개: Bumble 프로덕트 매니저</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>사례: AI 사진 피드백 기능</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>1. 원한다고 하고 안 쓴다: 사용자 조사</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>78%가 피드백을 원함</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>A/B 테스트에서 실제 사용 10~15%</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>기존 흐름 안에 넣어 사용률을 올림</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>2. 평균이 꼬리를 가렸다</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>이미 웃는 사람에게 "더 웃으라"</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>Spotify AI DJ와 가계부 앱 비교</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>가드레일: 피부색, 키</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>평가 도구로 실제 출력 읽기</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>집단별 결과: 성별, 언어</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>3. 초록 대시보드, 빨간 청구서</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>최고 LLM은 약 10배 비쌈, 평가 비용 추가</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>기존 ML과 생성형 AI의 비용 구조</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>최고 모델로 시작하지 말 것, AI를 쓰는 이유</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>Amazon 쇼핑 비서: 단기와 장기</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>목적이 예산을 정한다</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>4. 싼 모델로 바꾸자 효과도 떨어짐</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>이긴 건 개념이 아니라 모델</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>평가 도구로 모델·비용·프롬프트를 빠르게 시험</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>5. 전 세계 출시가 안 될 수 있다: Muse AI(추정)</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>미국에서 출시하고 멈춤</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>모두가 규제를 초기에 생각해야 한다</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>전 세계, 한 나라, 나라별 버전</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>정리: 다섯 가지 질문</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'CvmZtAPmAW4:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

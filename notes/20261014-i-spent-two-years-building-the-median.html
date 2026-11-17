@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>중간값의 함정 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#deterministic">세상을 돌리는 소프트웨어</a></li>
+      <li><a href="#rented">바뀐 카드 한 장</a></li>
+      <li><a href="#leaderboard">0.01초와 모델 순위표</a></li>
+      <li><a href="#harness">모델이 아니라 하네스 비교</a></li>
+      <li><a href="#median">중간값: 누구에게나 같은 답</a></li>
+      <li><a href="#slop">slop이 아니라 중간값</a></li>
+      <li><a href="#reflex">일단 만들기 반사</a></li>
+      <li><a href="#two-years">2년 동안 만든 중간값</a></li>
+      <li><a href="#budget">새로움 예산</a></li>
+      <li><a href="#rules">네 가지 규칙</a></li>
+      <li><a href="#leaders">리더를 위한 세 질문</a></li>
+      <li><a href="#calculator">계산기를 다시 만들다</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-14 · 36분 · 영어 발표 한글 정리</span>
+      <h1>2년 동안 중간값을 만들었다</h1>
+      <p class="lead">AI 코딩 도구는 같은 문제를 받으면 누구에게나 비슷한 답을 준다. 발표자는 그 답을 중간값이라 부르고, 자신이 2년 동안 중간값만 만들었다고 털어놓는다. 남과 다른 제품을 만들려면 만들기 전에 새로운 점 하나를 정하고 거기에 힘을 모아야 한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=0JZy5AuuQzc" target="_blank" rel="noopener">I Spent Two Years Building the Median</a></span>
+        <span>발표: Hariprasad Sudharshan (약 20년 동안 소프트웨어를 만든 프로덕트 매니저)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 경우만 바로잡았다(예: Lama index → LlamaIndex, rack system → RAG 시스템). <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>세상은 여전히 매번 같은 결과를 내는 <strong>결정적 소프트웨어</strong>로 돈다. AI의 역할은 그걸 더 싸고 빠르게 만드는 것이다.</li>
+        <li>모델은 이제 누구나 <strong>빌려 쓴다</strong>. 최상위 모델끼리의 차이는 순위표에서 수십 점이고, 새 모델이 나올 때마다 순위가 바뀐다.</li>
+        <li>같은 모델과 하네스에 같은 문제를 주면 누구에게나 비슷한 답이 나온다. 발표자는 이걸 <strong>중간값</strong>이라 부른다.</li>
+        <li>중간값은 출시할 만큼 좋지만 남의 것과 구별되지 않는다. 그래서 <strong>제품이 아니라 유통이 해자</strong>가 된다.</li>
+        <li>발표자는 2년 동안 <strong>일단 만들고 보는 습관</strong>으로 앱을 만들었고, 매번 이미 붐비는 시장에 도착했다.</li>
+        <li>답은 <strong>새로움 예산</strong>이다. 만들기 전에 새로운 점 하나에 이름을 붙인다. 없으면 있는 것을 쓰거나 학습용이라고 인정한다.</li>
+        <li>리더는 세 가지를 묻는다. <strong>누가 이미 했나, 우리에게만 있는 건 뭔가, 이 앱은 어디서 쓰이나.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="deterministic">
+        <header><span class="num">01</span><h2>세상을 돌리는 건 결정적 소프트웨어 <span class="ts">00:00</span></h2></header>
+        <p>오늘 밤 뉴욕이 갑자기 멈췄다고 하자. JFK 공항에서 비행기가 뜨지 않는다. 지하철은 다음 역에 선 채로 움직이지 않는다. 카드 결제도, 엘리베이터도, 전화도 안 된다. 월가와 세계가 함께 멈춘다.</p>
+        <p>이걸 한꺼번에 멈출 수 있는 원인은 하나다. <strong>소프트웨어</strong>다.</p>
+        <p>여기서 말하는 소프트웨어는 요즘 많이 이야기하는 AI가 아니다. 정해진 규칙대로 움직이고, 같은 입력이면 매번 같은 결과를 내는 <strong>결정적 소프트웨어</strong> <span class="en">deterministic software</span>다. 사람이 70년 넘게 손으로 만들어 왔다. 심박조율기와 747 여객기에 믿고 맡기는 것도 이런 소프트웨어다.</p>
+        <div class="callout">
+          <span class="title">발표자의 이론 <span class="ts">01:10</span></span>
+          <span>인류 역사에서 정말 새로운 산업은 소프트웨어 하나다. 항해, 농업, 건설, 천문학은 모양만 달랐을 뿐 예전에도 있었다. 출근길부터 원자로와 우주정거장까지, 125조 달러 규모의 세계 경제를 움직이는 공통 요소가 소프트웨어다. Y2K 때처럼 소프트웨어가 멈추면 재앙이 된다.</span>
+        </div>
+        <p class="note">발표 끝(35:10)에서는 같은 경제 규모를 100조 달러라고 말한다. 발표 안에서 숫자가 서로 다르다.</p>
+
+        <h3>제품이 만들어지는 구조 <span class="ts">02:20</span></h3>
+        <ul class="plain">
+          <li><strong>엔지니어</strong>: 모든 제품의 판단이 여기서 나온다. 엔지니어마다 취향이 있고, 그 사람의 믿음과 가치가 출시한 소프트웨어에 묻어난다.</li>
+          <li><strong>도구 사슬</strong> <span class="en">toolchain</span>: 처음부터 끝까지 결정적 규칙으로 된 도구들이다. 어셈블러로 C를 만들었고, C로 Unix를 만들었다. 그 위로 Kafka, ZooKeeper, 오늘날 세상을 돌리는 Kubernetes까지 쌓였다.</li>
+          <li><strong>되먹임 고리</strong>: 소프트웨어가 도구를 만들고, 그 도구가 더 큰 소프트웨어를 만든다. 벽돌 하나하나가 다음 높이로 올라가는 발판이 된다.</li>
+        </ul>
+        <p>이 그림에서 판단을 내리는 건 <strong>사람뿐</strong>이다. 사람은 저마다 다르다. 발표자는 그 차이에서 모든 제품의 강점이 나왔다고 본다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="rented">
+        <header><span class="num">02</span><h2>바뀐 카드 한 장: 빌려 쓰는 모델 <span class="ts">04:00</span></h2></header>
+        <p>앞의 그림에서 카드 한 장만 바뀌었다. 엔지니어 자리에 AI 모델이 들어왔다. 엔지니어를 돕기도 하고 이끌기도 한다. 완전히 혼자 한다고 주장하는 경우도 있다. 발표자는 이 모델을 <strong>빌린 모델</strong>이라고 부른다.</p>
+        <p>좋은 점이 있다. 누구나 최첨단 모델과 하네스 <span class="en">harness</span>를 똑같이 쓸 수 있다. 하네스는 모델을 감싸 도구, 맥락, 지시, 작업 순서를 정해 주는 실행 틀이다. Google이나 Meta 수준의 인재를 뽑을 수 없던 팀도 이제 API로 지능을 산다.</p>
+        <p>하지만 속을 들여다보면 다르다. 모델 주변의 하네스, 에이전트, 도구, MCP <span class="en">Model Context Protocol</span>는 모두 <strong>예전과 같은 결정적 소프트웨어</strong>다. MCP는 모델이 외부 도구에 연결하는 표준 방식이다. 이걸 만드는 사람들은 안다. 이건 AI 제품이 아니라, 어쩌면 모델의 도움을 받아 만든 결정적 소프트웨어다.</p>
+        <div class="shift" aria-label="소프트웨어를 만드는 구조의 변화">
+          <div><span class="tag">예전</span><b>사람 엔지니어의 판단 + 결정적 도구</b><span class="muted">결과물: 매번 같은 일을 하는 소프트웨어</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">지금</span><b>빌린 모델 + 결정적 하네스</b><span class="muted">결과물: 여전히 매번 같은 일을 하는 소프트웨어</span></div>
+        </div>
+        <p>바뀌지 않은 것은 결과물이다. 세상은 여전히 <strong>매번 같은 일을 믿을 만하게 하는 소프트웨어</strong>를 원한다.</p>
+
+        <h3>AI가 맡을 두 가지 일 <span class="ts">05:40</span></h3>
+        <ol class="plain">
+          <li>결정적 소프트웨어를 <strong>가장 싼 비용으로 빠르게</strong> 만든다.</li>
+          <li>지금까지 없던 결정적 소프트웨어를 만든다. 예산이 없어서, 흥미롭지 않아서, 너무 어려워서 아무도 손대지 않던 것들이다.</li>
+        </ol>
+        <p>발표자는 앞으로 5~10년 동안 이 두 가지가 펼쳐진다고 본다. 정리하면 <strong>확률적인 도구로 믿을 만한 결정적 소프트웨어를 찍어 내는 일</strong>이다. 확률적 <span class="en">probabilistic</span>이란 같은 입력에도 결과가 달라질 수 있다는 뜻이다. 이 과정에서 AI는 사람의 판단을 보강한다. 대체한다고까지 말하는 사람도 있다. 그게 정말 되는지, 지금 어디까지 왔는지가 이 발표의 질문이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="leaderboard">
+        <header><span class="num">03</span><h2>0.01초 차이와 모델 순위표 <span class="ts">06:40</span></h2></header>
+        <p>발표자는 Usain Bolt의 열성 팬이다. Bolt는 100m를 10초 안에 뛰는 선수들, 이른바 sub-10 클럽에 속한다.</p>
+        <p>2015년 한 결승에서 9명이 뛰었다. 1위와 9위의 차이는 0.27초였다. Justin Gatlin은 0.01초 차이로 금메달을 놓쳤다. 그날 밤은 Bolt가 이겼다. 다른 날이었다면 순서가 완전히 달랐을 수 있다.</p>
+
+        <figure class="chart" aria-label="100m 시간 차이 비교: 1위와 2위 0.01초, 결승 9명의 1위와 9위 0.27초, 발표자와 sub-10 선수 약 3초">
+          <span class="chart-title">100m에서 벌어진 시간 차이 (초)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>1위와 2위 (Bolt와 Gatlin)</span><span class="val">0.01</span></div>
+              <div class="track"><div class="fill key" style="width:0.33%" title="1위와 2위: 0.01초"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>결승 9명의 1위와 9위</span><span class="val">0.27</span></div>
+              <div class="track"><div class="fill key" style="width:9%" title="결승 1위와 9위: 0.27초"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>발표자(13초)와 sub-10 선수(10초)</span><span class="val">약 3</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="발표자와 sub-10 선수: 약 3초"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>1.5</span><span>3</span></div>
+          <span class="caption">엘리트끼리의 차이는 막대로 거의 보이지 않는다. 마지막 막대는 발표자가 말한 자기 기록 13초와 sub-10 기준 10초의 차이로 계산했다.</span>
+        </figure>
+
+        <p>진짜 큰 차이는 엘리트끼리가 아니라 <strong>엘리트와 보통 사람 사이</strong>에 있다. 발표자가 만난 육상 전문가들도 같은 의견이었다. 차이가 너무 작아서, 누가 세계 기록을 가졌는지는 경기장에 들어서면 상관없다. 그날그날 누구든 이길 수 있다.</p>
+
+        <h3>모델 순위표에 같은 잣대를 대면 <span class="ts">08:20</span></h3>
+        <p>발표자는 스탠퍼드에서 나온 최근 연구를 인용한다. 6개 연구소의 최상위 모델이 Elo 점수로 수십 점 안에 몰려 있다. Elo 점수 <span class="en">Elo rating</span>는 모델끼리 맞붙인 결과로 매긴 상대 순위다. 순위표는 새 모델이 나올 때마다 바뀐다.</p>
+
+        <figure class="chart" aria-label="발표자가 인용한 Elo 점수: Anthropic 1503, Mistral 1460">
+          <span class="chart-title">발표자가 인용한 연구소별 Elo 점수 <span class="ts">09:20</span></span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Anthropic</span><span class="val">1503</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="Anthropic: 1503"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Mistral</span><span class="val">1460</span></div>
+              <div class="track"><div class="fill key" style="width:97.1%" title="Mistral: 1460"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>막대는 0점부터</span><span>1503</span></div>
+          <span class="caption">막대를 0점부터 그리면 두 점수의 차이는 전체 길이의 약 3%다.</span>
+        </figure>
+        <p class="note">발표에서는 두 점수의 차이를 87점이라고 했다. 하지만 1503에서 1460을 빼면 43점이다. 자막이 숫자를 잘못 받아 적었을 가능성도 있다.</p>
+
+        <p>이 숫자를 "Anthropic이 Mistral보다 그만큼 더 똑똑하다"로 읽으면 안 된다. Elo 점수는 <strong>그 평가 환경 안에서 서로 비교한 상대 순위</strong>일 뿐이다. 절대적인 지능 점수가 아니다.</p>
+        <div class="callout">
+          <span class="title">식탁 논쟁과 회의실 논쟁</span>
+          <span>"요즘 어떤 모델 써?"는 저녁 식탁에서 하기 좋은 논쟁이다. 회의실에서 할 논쟁은 아니다. 팬심은 회의실에도 쉽게 스며든다. 모델을 비교하지 말라는 말이 아니다. <strong>작고 계속 움직이는 차이를 제품 로드맵의 강점으로 삼지 말라</strong>는 말이다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="harness">
+        <header><span class="num">04</span><h2>모델 비교가 아니라 하네스 비교 <span class="ts">10:00</span></h2></header>
+        <p>발표자는 여러 조직에서 같은 장면을 봤다. 모델을 비교한다고 생각하지만, 실제로는 <strong>하네스나 제품을 비교</strong>하고 있었다.</p>
+        <p>Claude Code, Cursor, Codex를 비교하는 건 모델 비교가 아니다. 자메이카 대표팀과 미국 대표팀을 비교하는 것에 가깝다. 선수 한 명이 아니라, 선수와 그 선수를 둘러싼 훈련 시스템을 함께 비교하는 셈이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>발표자의 비유</th><th>정하는 것</th></tr></thead>
+            <tbody>
+              <tr><td>모델</td><td>선수, 엔진</td><td>바탕이 되는 능력</td></tr>
+              <tr><td>하네스</td><td>선수를 둘러싼 훈련 시스템</td><td>엔진을 어떻게 쓸지. 도구, 맥락, 지시, 작업 조율, 메모리, 워크플로, MCP 도구 호출</td></tr>
+              <tr><td>제품</td><td>—</td><td>왜 누군가 이걸 신경 써야 하는지. 사용자가 실제로 만나는 결과물</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>지금은 엔진도, 엔진에 딸린 하네스도 거의 다 빌릴 수 있다. 엔진과 단단히 묶인 하네스도 있고 느슨하게 묶인 것도 있다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="median">
+        <header><span class="num">05</span><h2>중간값: 누구에게나 같은 답 <span class="ts">11:10</span></h2></header>
+        <p>모두가 같은 원천을 쓰면 차별화는 어디서 올까. 예전에는 답이 분명했다. 회사마다 엔지니어들의 생각이 달랐고, 그 차이에서 제품의 강점이 나왔다.</p>
+        <p>모델과 하네스는 누가 어디서 타이핑하는지 신경 쓰지 않는다. E1 신입이든 E7 시니어든 같다. 같은 문제와 같은 도구를 주면, 당신에게 준 답을 다음 사람에게도 준다. 발표자는 이 답을 <strong>중간값</strong> <span class="en">median</span>이라고 부른다.</p>
+        <ul class="plain">
+          <li><strong>좋은 점</strong>: 중간값은 새 모델이 나올 때마다 올라간다. 이미 풀린 문제가 모델 안으로 들어가기 때문이다.</li>
+          <li><strong>함정</strong>: 출시할 만큼 좋다. 하지만 다음 사람이 내놓을 것과 구별되지 않는다. 경쟁자도 비슷하거나 똑같은 걸 내놓을 수 있다.</li>
+        </ul>
+
+        <h3>2023년 전과 후 <span class="ts">12:50</span></h3>
+        <div class="shift" aria-label="중간 수준 제품의 비용 변화">
+          <div><span class="tag">2023년 이전</span><b>중간 수준 제품도 비쌌다</b><span class="muted">팀, 시간, 기술 스택이 있어야 만들 수 있었다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">지금</span><b>이미 풀린 문제는 누구에게나 공짜다</b><span class="muted">모두가 비슷한 제품을 들고 같은 방식으로 고객을 찾는다</span></div>
+        </div>
+        <p>비슷한 제품이 시장에 넘치면 <strong>해자</strong> <span class="en">moat</span>는 제품이 아니라 <strong>유통</strong> <span class="en">distribution</span>이 된다. 해자는 경쟁자가 쉽게 따라오지 못하게 막는 장벽이다. 그렇다면 이 새 환경에서 만들 수 있는 해자는 무엇일까. 발표의 나머지가 그 답이다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="slop">
+        <header><span class="num">06</span><h2>slop이 아니라 중간값 <span class="ts">13:30</span></h2></header>
+        <p>발표자는 GitHub의 자체 통계를 근거로, 모델과 하네스가 엄청난 양의 새 소프트웨어를 만들고 있다고 말한다. 자막에는 구체적인 숫자가 나오지 않는다. 발표자가 보기에 이 소프트웨어는 대체로 좋다.</p>
+        <p>그런데 결과물이 서로 비슷하다. 남의 것을 베낀 무리가 아니다. <strong>같은 쿠키 틀을 썼기 때문에 같은 답에 도착한 무리</strong>다. 업계는 이걸 AI slop이라고 부른다. AI가 대량으로 만든 질 낮은 결과물이라는 뜻이다. 발표자는 이 말에 다른 뜻을 주자고 한다.</p>
+
+        <h3>성공은 만든 사람이 정한다 <span class="ts">14:30</span></h3>
+        <ul class="plain">
+          <li>발표자는 2주 전에 iOS 앱을 출시했다. 오래 개발자였지만 앱은 꿈도 꾸지 않았다. 임베디드 개발자, 앱 개발자처럼 영역이 나뉘어 있었기 때문이다.</li>
+          <li>AI는 모두를 개발자로 만든다. 발표자는 이걸 진심으로 좋은 일로 본다.</li>
+          <li>slop은 부정적인 말이다. 그리고 분석 없이 쓰인다.</li>
+          <li>처음 개발하는 사람의 제품을 전문가의 잣대로 재면 안 된다. 성공의 기준은 만든 사람이 정한다. 누군가에게는 매출이다. 누군가에게는 동료에게 "내가 이 웹사이트를 만들었어"라고 보여 주는 것이다.</li>
+          <li>Lovable이나 Replit으로 수백만 명이 그렇게 했다. 발표자는 그게 slop이 아니라고 말한다.</li>
+        </ul>
+
+        <h3>쓸모 있지만 차별점은 아니다 <span class="ts">16:00</span></h3>
+        <p>좋은 문제를 코딩 에이전트에 주면 대개 쓸모 있는 결과가 나온다. 하지만 완성품은 비슷하다. 같은 틀로 같은 반죽을 찍었기 때문이다. 이렇게 만든 소프트웨어 대부분이 중간값에 머문다.</p>
+        <p>만들지 말라는 뜻이 아니다. 내부에서 쓰기에는 충분하다. 단서는 하나다. <strong>이걸 차별점으로 세지 마라.</strong></p>
+        <div class="callout">
+          <span class="title">새로운 문제가 아니다 <span class="ts">16:50</span></span>
+          <span>1990년대에는 모두가 검색 문제를 풀려고 했다. 대부분 기본적인 크롤러와 색인을 갖고 있었다. 그 문제를 정말 잘 푼 쪽, 새로운 요소를 가진 쪽이 올라섰다. 오늘날 떠올릴 수 있는 소프트웨어는 대부분 중간값이 공짜다. 열린 시장에서 경쟁하려면 <strong>새로움</strong> <span class="en">novelty</span>이 있어야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="reflex">
+        <header><span class="num">07</span><h2>일단 만들기 반사 <span class="ts">18:10</span></h2></header>
+        <p>만들기가 비싸고 어렵던 시절, 발표자는 만들기보다 검색을 더 많이 했다. 지금은 뒤집혔다. 검색해서 장황한 결과를 읽고 결정하는 것보다, 코딩 에이전트에 문제를 던지는 게 더 쉽다. 발표자의 표현으로는 "우리는 더 이상 결정을 내리고 싶어 하지 않는다."</p>
+        <p>문제가 보이면 에이전트부터 연다. 발표자는 이걸 <strong>일단 만들기 반사</strong> <span class="en">build-first reflex</span>라고 부른다. 예로 RAG 시스템을 만들어 달라고 하는 경우를 든다. RAG <span class="en">retrieval-augmented generation</span>는 문서에서 관련 부분을 찾아 모델에 함께 넣고 답하게 하는 방식이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시점</th><th>일어나는 일</th></tr></thead>
+            <tbody>
+              <tr><td>2분</td><td>기본 뼈대 코드(스캐폴딩)가 나온다</td></tr>
+              <tr><td>2시간</td><td>거칠지만 남에게 보여 줄 수 있는 데모가 돌아간다</td></tr>
+              <tr><td>4주</td><td>지원까지 갖춘 그럴듯한 제품을 출시할 수 있다</td></tr>
+              <tr><td>그다음</td><td>알고 보니 400번째, 아니 4,000번째 RAG 시스템이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 에이전트에게 물었다. 별을 수천 개 받은 성숙한 오픈소스가 있는데 왜 n번째 RAG를 만들었나. 3년 전이었다면 만들지 않았을 것이다. 에이전트는 잘못을 인정했다. 만들 수 있냐고 물어서 만들었고, 그렇게 말해 줬다면 다르게 했을 거라고 답했다.</p>
+        <div class="callout">
+          <span class="title">에이전트는 먼저 묻지 않는다</span>
+          <span>"만들 수 있어?"라고 물으면 에이전트는 만든다. 이미 있는 걸 찾아볼지는 묻는 사람이 정해야 한다.</span>
+        </div>
+        <p>처음 만드는 사람에게는 신나는 일이다. PDF를 넣고, 뒤에 LLM을 연결하고, 질문을 한다. 청킹이나 벡터 DB를 잘 몰라도 알아서 해결된다. 작은 성공은 도파민을 많이 준다. 발표자도 똑같이 빠졌다고 말한다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="two-years">
+        <header><span class="num">08</span><h2>2년 동안 만든 것이 중간값이었다 <span class="ts">20:40</span></h2></header>
+        <p>발표자는 모델이 좋아진 뒤에야 만들기 시작한 사람이 아니다. 공개적으로 앱을 수십 개 만들었고, LlamaIndex 같은 오픈소스 저장소에 기여했다. 그래서 이 이야기가 취미로 처음 해 본 사람의 실패담은 아니라고 강조한다. <span class="ts">17:30</span></p>
+        <p>처음 2년을 대표하는 프로젝트는 계산기 앱 하나다. 이 용어를 만들 만큼 일단 만들기 반사가 자주 작동했다.</p>
+        <ul class="plain">
+          <li>밖에서 노는 시간, 모임, 영화 보는 밤을 포기하고 만들었다. 체스에 중독된 것 같았다.</li>
+          <li>상상할 수 있는 AI 플랫폼은 다 썼다. Max 요금제를 쓸 때도, 무료로 쓸 때도 있었다.</li>
+          <li>소프트 런칭까지 했다. 프로덕트 매니저로 일할 때라면 큰 팀과 아키텍트가 있어야 했을 일을 혼자 금세 해냈다. 그래서 한껏 들떠 있었다.</li>
+        </ul>
+        <p>그런데 현실에 맞춰 보지 않았다. <span class="ts">22:00</span> 주변 사람들이 비슷한 계산기를 다른 데서 봤다고 했다. 누가 누구를 베낀 게 아니었다. 발표자가 공개·비공개 계산기를 분석해 보니, 비슷한 정도가 아니라 <strong>똑같을 때도 있었다.</strong></p>
+        <p>LLM 라우팅 <span class="en">LLM routing</span>도 마찬가지다. 요청마다 어느 모델로 보낼지 정하는 기능인데, 어디서 만들든 같은 모양으로 수렴한다. 모델끼리 비슷해지듯 해법도 비슷해지고, 모두 좁은 자리를 두고 다툰다. 우리 팀과 경쟁사 팀에 같은 개발자가 앉아 있는 것과 같다.</p>
+
+        <h3>붐비는 레인 <span class="ts">23:20</span></h3>
+        <p>2년 동안 흥미로운 아이디어가 떠오르면 전부 일단 만들었다. 거의 매번 붐비는 레인에 도착했다.</p>
+        <ul class="plain">
+          <li>이미 두세 명이 같은 걸 하고 있었다.</li>
+          <li>아니면 처음이었는데, 한 달 쉬고 돌아오니 비슷한 제품이 60개 생겨 있었다.</li>
+        </ul>
+        <p>그러면 <strong>유통이 더 좋은 쪽이 이긴다.</strong> 발표자는 이런 감각은 직접 만들어 봐야 생긴다고 말한다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="budget">
+        <header><span class="num">09</span><h2>새로움 예산 <span class="ts">23:50</span></h2></header>
+        <p>발표자가 내놓는 두 번째 용어는 <strong>새로움 예산</strong> <span class="en">novelty budget</span>이다. AI로 소프트웨어를 만드는 과정에서, 새로움에 쓸 몫을 예산처럼 따로 잡아 두자는 것이다.</p>
+        <p>진짜 새로움이 하나만 있어도 꽤 오랫동안 중간값을 넘어설 수 있다. Google의 PageRank가 그런 예다. 한 문제를 골라 그 문제의 세계 최고 해법이 되겠다고 하면, 무리를 이길 가능성이 커진다.</p>
+        <div class="shift" aria-label="발표자가 시간을 쓰는 곳의 변화">
+          <div><span class="tag">처음 2년</span><b>도구 다루는 기술에 시간을 썼다</b><span class="muted">아키텍처, 에이전트 설계, 프롬프트 체인, 스킬, 남이 공유한 Claude Code 워크플로. 결과는 남과 같거나 비슷했다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">계산기를 다시 만들 때</span><b>차별화에 거의 모든 시간을 썼다</b><span class="muted">Claude Code 실력을 뽐내는 데는 거의 쓰지 않았다</span></div>
+        </div>
+        <blockquote>모델이 주는 중간값에는 의견이 없다. 수렴한 모범 사례일 뿐이다.<cite>발표자의 말을 옮김 · 25:00</cite></blockquote>
+        <p>여러 Max 요금제로 토큰 수백만 개를 태운 2년 뒤, 발표자의 결론은 이렇다. 나머지는 이제 다 공짜다. 투자 대비 효과가 가장 큰 곳은 새로움 예산이다.</p>
+
+        <h3>새로움 예산을 쓰는 법 <span class="ts">25:20</span></h3>
+        <ol class="plain">
+          <li>시작하기 전에 <strong>새로운 점 하나</strong>에 이름을 붙인다.</li>
+          <li>없으면 중간값을 택한다. 같은 문제를 푼 사람이 이미 많을 것이다. 발표자는 해법이 없는 문제를 말해 주면 찾아 주겠다고 장담했다.</li>
+          <li>새로움 계획을 로드맵과 프로젝트 계획에 넣는다.</li>
+          <li>프로젝트 지출을 검토하듯 정기적으로 검토한다.</li>
+          <li>새로움을 말할 수 없으면 <strong>학습용 연습</strong>이라고 인정한다. 그것도 괜찮다.</li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="rules">
+        <header><span class="num">10</span><h2>네 가지 규칙 <span class="ts">26:10</span></h2></header>
+        <p>2년 동안의 실패와 배움에서 나온 규칙이다. 발표자는 사이드 프로젝트용이 아니라 <strong>다음 분기 로드맵</strong>으로 쓰라고 한다.</p>
+        <p>전제가 하나 있다. 당신의 제품에는 반드시 쌍둥이가 있다. 그 쌍둥이가 오픈소스일 때도 있다. 그렇다면 애써 만들지 말고 가져다 쓰거나 포크하라.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">규칙 1 <span class="ts">26:40</span></span>
+            <p><strong>강한 의견을 가져라</strong></p>
+            <p>AI 도우미는 대개 가장 그럴듯한 답을 준다. 그 답은 거의 모두에게 같다. 이미 풀린 범위 안에 있다.</p>
+            <p class="verdict">"중간값의 세상에서 <b>의견은 가질 수 있는 가장 싼 새로움</b>이다." 모델은 의견을 대신 줄 수 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">규칙 2 <span class="ts">27:10</span></span>
+            <p><strong>프롬프트에서 바로 출시까지는 중간값 경로다</strong></p>
+            <p>잘못된 길은 아니다. 팀이 내부에서 쓸 도구라면 그렇게 하라. 발표자도 찬성한다.</p>
+            <p class="verdict">다만 그 길 끝에는 <b>중간값</b>이 있다는 걸 알고 간다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">규칙 3 <span class="ts">27:30</span></span>
+            <p><strong>AI가 "완료"라고 하면 거기서 시작이다</strong></p>
+            <p>코딩 에이전트가 끝났다고 말하면, 중간값 제품을 내놓았다는 신호다.</p>
+            <p class="verdict"><b>당신의 일은 거기서 시작된다.</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">규칙 4 <span class="ts">27:50</span></span>
+            <p><strong>마지막 위대한 설계는 이미 공짜로 받았다</strong></p>
+            <p>코딩 에이전트는 이미 있는 위대한 설계를 공짜로 준다. 뼈대도 잘 만든다. 하지만 다음 Kubernetes, ZooKeeper, Kafka를 발명하지는 않는다.</p>
+            <p class="verdict">살아남으려면 <b>다음 것을 찾는 게 당신의 일</b>이다.</p>
+          </div>
+        </div>
+        <p class="note">자막에서 번호가 붙은 규칙은 세 개다. 네 번째 카드는 이어지는 "이걸 기억하라"는 대목을 규칙으로 읽은 것이다(추정).</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="leaders">
+        <header><span class="num">11</span><h2>리더를 위한 세 질문 <span class="ts">28:20</span></h2></header>
+        <p>AI로 직접 만들어 보지 않는 리더를 위한 방법이다. 발표자는 여러 조직의 리더와 이 방법을 나눴고 반응이 좋았다고 한다.</p>
+        <p>리더는 매주 데모를 쏟아지듯 본다. 다 대단해 보인다. 리더의 감이 예전 기준에 맞춰져 있기 때문이다. 리더가 감을 쌓던 시절에는 그런 결과물에 팀 하나와 한 분기 이상이 들었다. 지금은 신입 엔지니어가 나타나 같은 걸 만들었다고 한다.</p>
+        <p>그래서 어디에 걸지 정하기가 가장 어려운 때다. 글을 읽거나 YouTube, LinkedIn을 봐서는 감이 다시 맞춰지지 않는다. <strong>직접 만들어 봐야 맞춰진다.</strong></p>
+
+        <h3>세 가지 질문 <span class="ts">29:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>이 질문이 하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1. 누가 이미 이걸 했나?</td><td>검색을 하게 만든다. AI 때문에 더 강해진 일단 만들기 반사를 길들인다</td></tr>
+              <tr><td>2. 우리에게 있고, 다음 팀이나 경쟁자나 옆자리 동료에게 없는 것은?</td><td>새로움을 팀원들 머릿속의 일급 항목으로 올린다. 프롬프트를 더 잘 쓰는 건 답이 아니다. 중간값 해법이 나올 뿐이다</td></tr>
+              <tr><td>3. 이 앱은 어디서 쓰이게 되나?</td><td>모두가 만들기에 들떠 있을 때 결과 중심으로 생각하게 한다. 데모부터 만드는 건 유통 해자가 없다는 사실을 가장 비싸게 알아내는 방법이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>문제를 대신 풀어 주는 질문은 아니다. 늘 들고 다니며 물어보기 좋은 질문이다. 발표자는 지난 1년 동안 이 질문들을 엄격하게 적용했다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="calculator">
+        <header><span class="num">12</span><h2>계산기를 다시 만들다 <span class="ts">30:50</span></h2></header>
+        <p>발표자는 앞의 계산기에 세 질문을 던졌다. 중간값보다 나은 가치를 주려면 무엇을 다뤄야 할까. 발표자가 찾은 질문은 이것이다. 오픈 모델과 실제로 토큰을 만들어 내는 시스템 사이에는 무엇이 있나. 기업은 그 비용을 얼마나 내야 하나.</p>
+        <blockquote>오픈 가중치가 대유행이지만, 오픈 가중치가 곧 오픈 추론은 아니다.<cite>발표자의 말을 옮김 · 31:20</cite></blockquote>
+        <p>오픈 가중치 <span class="en">open weights</span>는 학습된 모델의 파라미터를 공개한 것이다. 추론 <span class="en">inference</span>은 그 모델을 실제로 돌려 답을 만들어 내는 일이다. 가중치는 공짜로 받을 수 있다. 돌리는 일은 공짜가 아니다.</p>
+        <p>발표자는 직접 부딪혀서 알게 됐다. 오픈 가중치와 토큰을 만드는 시스템 사이에는 <strong>10개 층</strong>이 있다. <span class="ts">31:30</span> 우리는 모델 연구소들이 이걸 해 주는 걸 당연하게 여긴다. 그 뒤에는 MLOps가 있고, 세상이 본 적 없는 규모의 SRE가 있다.</p>
+        <ul class="plain">
+          <li>발표자가 이름을 말한 층은 정밀도, KV 캐시, 배칭, 실행 병렬화다. 이것들을 여러 방식으로 나누고 조합하는 일도 있다.</li>
+          <li>어떤 층은 전문가를 뽑아야 한다. 업계에 원래 있던 기술이 아니라서 어디서 구해야 할지도 모른다.</li>
+          <li>9번째 층인 <strong>활용률</strong> <span class="en">utilization</span>은 구조적인 문제다. <strong>돈으로 살 수 없다.</strong></li>
+        </ul>
+        <p>그래서 결론은 다시 같다. 한 문제를 골라 그 문제를 가장 잘 풀려고 하지 않으면, AI 도구를 쓰는 것만으로는 중간값을 넘지 못한다.</p>
+        <div class="shift" aria-label="계산기의 변화">
+          <div><span class="tag">처음 계산기 <span class="ts">32:30</span></span><b>비슷한 계산기 244개 중 하나</b><span class="muted">찾아보니 244개 중 어느 것도 이 비용을 다루지 않았다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">다시 만든 계산기</span><b>같은 가중치, 두 가지 비용</b><span class="muted">회사 안에서 직접 돌리는 비용과, 네오클라우드에서 토큰으로 사서 쓰는 비용을 비교한다</span></div>
+        </div>
+        <p>네오클라우드 <span class="en">neocloud</span>는 GPU 임대에 특화된 신생 클라우드 업체를 말한다. 발표자는 오픈 모델을 직접 운영하려는 여러 기업에서 좋은 반응을 얻었다고 한다. 가중치는 공짜지만, 내 작업량을 넣어 보고 어느 쪽이 나은지 확인하라는 것이다. 발표자는 이 계산기가 오픈소스이고 무료라고 했다.</p>
+        <p class="note">발표자 본인이 만든 계산기를 소개하는 대목이다. 무료 오픈소스라고 했지만, 자기 프로젝트에 대한 평가라는 점을 감안해 읽자. 기업들의 좋은 반응도 발표자의 말이다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="conclusion">
+        <header><span class="num">13</span><h2>결론: 새로움은 귀하고 중간값은 공짜다 <span class="ts">33:40</span></h2></header>
+        <ul class="plain">
+          <li>LLM과 하네스 덕분에 지난 3년 사이 만들기는 훨씬 쉬워졌다. 하지만 소프트웨어 개발의 역학은 바뀌지 않았다.</li>
+          <li>프롬프트로 만든 중간값 제품은 쓸모 있다. 발표자도 만든다. slop이 아니다.</li>
+          <li>다만 열린 경쟁에 나가면 오래 버티지 못한다. 유통 해자가 아주 크다면 살아남을 수도 있다.</li>
+          <li>필요한 태도는 하나다. 문제 하나를 골라 <strong>세계 최고가 되겠다는 의도</strong>로 파고든다. 못 풀 수도 있다. 하지만 그 의도만으로 중간값 위에 선다.</li>
+        </ul>
+        <p>발표자는 2년 동안 중간값을 만들었지만 그건 교육이었다고 말한다. 태운 토큰 하나하나가 값어치 있었다고 한다. <span class="ts">34:50</span></p>
+        <div class="callout">
+          <span class="title">처음 질문의 답: 소프트웨어는 어떻게 되나 <span class="ts">35:00</span></span>
+          <span>세계 경제를 돌리는 소프트웨어에는 아무 일도 일어나지 않는다. 세상은 적어도 내다볼 수 있는 미래까지 결정적 소프트웨어로 돈다. AI 덕분에 그걸 더 빨리 쓸 수 있을 뿐, 결정적 소프트웨어를 몰아내지는 않는다.</span>
+        </div>
+        <blockquote>새로움은 귀하고, 중간값은 공짜다. 선택은 당신 몫이다.<cite>발표자의 마지막 말을 옮김 · 35:50</cite></blockquote>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>세상은 매번 같은 결과를 내는 결정적 소프트웨어로 돈다. AI는 그걸 대체하지 않고 더 싸고 빠르게 만든다.</li>
+          <li>모델 주변의 하네스, 에이전트, 도구, MCP도 결국 결정적 소프트웨어다.</li>
+          <li>최상위 모델끼리의 차이는 Elo 수십 점이고 새 모델마다 바뀐다. <strong>이 차이를 로드맵의 강점으로 삼지 않는다.</strong></li>
+          <li>Claude Code, Cursor, Codex 비교는 모델 비교가 아니라 하네스와 제품 비교다.</li>
+          <li>같은 모델, 같은 하네스, 같은 문제면 누구나 같은 답을 얻는다. 이것이 <strong>중간값</strong>이다.</li>
+          <li>2023년 이후 중간값은 공짜가 됐다. 비슷한 제품이 넘치면 <strong>유통이 해자</strong>가 된다.</li>
+          <li>중간값 제품은 slop이 아니고 내부용으로 충분하다. 다만 차별점으로 세지 않는다.</li>
+          <li><strong>일단 만들기 반사</strong>를 멈추고, 먼저 "누가 이미 했나"를 검색한다.</li>
+          <li>만들기 전에 새로운 점 하나에 이름을 붙인다. 없으면 있는 것을 쓰거나 학습용이라고 인정한다. 이것이 <strong>새로움 예산</strong>이다.</li>
+          <li>AI가 "완료"라고 할 때 내 일이 시작된다. 강한 의견과 한 문제에 대한 집중이 중간값을 넘게 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 AI 시대에도 "소프트웨어에는 아무 일도 없다"고 보는 이유는?</span></summary><div class="answer">세상이 원하는 최종 결과물은 여전히 매번 같은 일을 하는 결정적 소프트웨어다. 하네스와 에이전트도 결정적 소프트웨어다. AI는 그걸 더 싸고 빠르게 만들고, 예전엔 아무도 안 만들던 것까지 만들게 해 줄 뿐이다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Usain Bolt 이야기로 발표자가 말하려는 것은?</span></summary><div class="answer">최상위끼리의 차이는 너무 작아서 날마다 순위가 바뀐다. 모델도 같다. 작고 계속 움직이는 차이를 제품 로드맵의 강점으로 삼으면 안 된다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Elo 1503과 1460은 어떻게 읽어야 하나?</span></summary><div class="answer">같은 평가 환경에서 서로 비교한 상대 순위다. 절대적인 지능 점수가 아니다. 두 숫자의 차이는 43점이다. 발표에서는 87점이라고 말했다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Claude Code, Cursor, Codex 비교가 모델 비교가 아닌 이유는?</span></summary><div class="answer">모델(선수)만이 아니라 하네스(훈련 시스템)와 제품까지 함께 비교하기 때문이다. 자메이카 대표팀과 미국 대표팀을 비교하는 것과 같다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>"중간값"이란 무엇이고, 왜 좋은 동시에 함정인가?</span></summary><div class="answer">같은 모델, 같은 도구, 같은 문제면 누구에게나 나오는 비슷한 답이다. 새 모델마다 수준이 올라가서 좋다. 하지만 출시할 만큼 좋으면서도 남의 것과 구별되지 않아서 함정이다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>2023년 전후로 무엇이 바뀌었고, 그 결과 무엇이 해자가 되나?</span></summary><div class="answer">예전엔 중간 수준 제품도 팀, 시간, 기술 스택이 있어야 해서 비쌌다. 지금은 이미 풀린 문제가 누구에게나 공짜다. 비슷한 제품이 넘치니 제품이 아니라 유통이 해자가 된다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>발표자가 AI slop이라는 말에 반대하는 이유는?</span></summary><div class="answer">분석 없이 쓰는 부정적인 말이기 때문이다. 새로 개발을 시작한 사람의 제품은 만든 사람의 성공 기준으로 봐야 한다. 다만 그런 제품을 차별점으로 세지는 말라고 한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>RAG 예시에서 에이전트는 왜 이미 있는 오픈소스를 쓰지 않았나?</span></summary><div class="answer">"만들 수 있냐"는 질문을 받았기 때문이다. 에이전트는 시킨 대로 만든다. 이미 있는 걸 찾아볼지는 묻는 사람이 정해야 한다. 찾기 전에 에이전트부터 여는 습관이 일단 만들기 반사다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>새로움 예산은 어떻게 쓰나?</span></summary><div class="answer">시작 전에 새로운 점 하나에 이름을 붙인다. 있으면 로드맵에 넣고 지출처럼 정기적으로 검토한다. 없으면 중간값을 택하거나, 학습용 연습이라고 인정한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>코딩 에이전트가 "완료"라고 하면 어떻게 받아들여야 하나?</span></summary><div class="answer">중간값 제품이 나왔다는 신호로 받아들인다. 내 일은 거기서 시작된다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>리더를 위한 세 질문과 각각이 하는 일은?</span></summary><div class="answer">누가 이미 했나: 검색을 하게 해 일단 만들기 반사를 길들인다. 우리에게만 있는 건 뭔가: 새로움을 일급 항목으로 올린다. 이 앱은 어디서 쓰이나: 결과 중심으로 생각하게 해, 유통 없이 데모부터 만드는 일을 막는다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>"오픈 가중치가 곧 오픈 추론은 아니다"는 무슨 뜻인가?</span></summary><div class="answer">가중치는 공짜로 받아도, 돌리려면 10개 층을 거쳐야 한다. 정밀도, KV 캐시, 배칭, 실행 병렬화 같은 층은 전문가가 필요하다. 9번째 층인 활용률은 돈으로 살 수 없다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>새 프로젝트 전에 "누가 이미 했나"를 검색한다<span class="how">오픈소스, 상용 제품, 사내 다른 팀. 있으면 가져다 쓰거나 포크한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>프로젝트 계획서에 새로운 점 하나를 이름 붙여 적는다<span class="how">한 줄로 못 쓰면 "학습용" 또는 "내부용"이라고 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>새로움 예산을 지출처럼 정기적으로 검토한다<span class="how">확인: 이번 분기 시간 중 새로움에 쓴 몫이 얼마인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>"우리에게만 있는 것"을 팀 회의 안건으로 올린다<span class="how">데이터, 고객 접점, 도메인 지식, 강한 의견 중 무엇인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>AI가 "완료"라고 한 결과물에 내가 더할 것을 적는다<span class="how">확인: 중간값과 무엇이 다른지 한 문장으로 말할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>데모를 만들기 전에 "이 앱은 어디서 쓰이나"에 답한다<span class="how">첫 사용자, 그 사용자에게 닿는 경로, 이미 있는 대안</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>모델 순위를 로드맵의 차별점으로 적지 않는다<span class="how">순위는 새 모델이 나올 때마다 바뀐다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>내부용 도구는 중간값 그대로 빨리 만든다<span class="how">차별화가 필요 없는 곳에는 새로움 예산을 쓰지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>오픈 모델을 들이기 전에 직접 운영 비용과 토큰 구매 비용을 비교한다<span class="how">정밀도, 배칭, 활용률까지 넣어 계산한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>결정적 소프트웨어</td><td>Deterministic software. 같은 입력이면 매번 같은 결과를 내는 소프트웨어</td></tr>
+              <tr><td>확률적</td><td>Probabilistic. 같은 입력에도 결과가 달라질 수 있는 성질. LLM이 그렇다</td></tr>
+              <tr><td>중간값</td><td>Median. 발표자의 용어. 같은 모델과 도구에 같은 문제를 주면 누구에게나 나오는 비슷한 답</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 맥락, 지시, 작업 순서를 정해 주는 실행 틀</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 모델이 외부 도구와 데이터에 연결하는 표준 방식</td></tr>
+              <tr><td>도구 사슬</td><td>Toolchain. 소프트웨어를 만드는 데 쓰는 도구 묶음. 컴파일러, 운영체제, 빌드 도구 등</td></tr>
+              <tr><td>Elo 점수</td><td>맞대결 결과로 매기는 상대 순위 점수. 체스에서 시작됐다</td></tr>
+              <tr><td>E1 · E7</td><td>빅테크에서 쓰는 엔지니어 직급 표기. 숫자가 클수록 시니어다</td></tr>
+              <tr><td>해자</td><td>Moat. 경쟁자가 쉽게 따라오지 못하게 막는 장벽</td></tr>
+              <tr><td>유통</td><td>Distribution. 제품을 사용자에게 닿게 하는 경로와 힘</td></tr>
+              <tr><td>AI slop</td><td>AI가 대량으로 만든 질 낮은 결과물을 가리키는 업계 표현</td></tr>
+              <tr><td>일단 만들기 반사</td><td>Build-first reflex. 문제가 보이면 찾아보기 전에 코딩 에이전트부터 여는 습관</td></tr>
+              <tr><td>새로움 예산</td><td>Novelty budget. 새로움에 쓸 시간과 노력을 예산처럼 따로 잡고 검토하는 것</td></tr>
+              <tr><td>스캐폴딩</td><td>Scaffolding. 프로젝트의 기본 뼈대 코드</td></tr>
+              <tr><td>RAG</td><td>Retrieval-augmented generation. 문서에서 관련 부분을 찾아 모델에 함께 넣고 답하게 하는 방식</td></tr>
+              <tr><td>청킹</td><td>Chunking. 문서를 검색하기 좋은 조각으로 자르는 일</td></tr>
+              <tr><td>벡터 DB</td><td>문장을 숫자 벡터로 바꿔 저장하고, 뜻이 가까운 것을 찾아 주는 데이터베이스</td></tr>
+              <tr><td>LLM 라우팅</td><td>LLM routing. 요청마다 어느 모델로 보낼지 정하는 기능</td></tr>
+              <tr><td>PageRank</td><td>웹페이지 사이의 링크 구조로 중요도를 매기는 Google의 초기 검색 방법</td></tr>
+              <tr><td>포크</td><td>Fork. 남의 오픈소스 저장소를 복사해 내 것으로 이어서 개발하는 것</td></tr>
+              <tr><td>오픈 가중치</td><td>Open weights. 학습된 모델 파라미터를 공개한 모델</td></tr>
+              <tr><td>추론</td><td>Inference. 학습된 모델을 실제로 돌려 토큰을 만들어 내는 일</td></tr>
+              <tr><td>MLOps</td><td>모델을 배포하고 운영하는 일과 그 체계</td></tr>
+              <tr><td>SRE</td><td>Site Reliability Engineering. 서비스가 안정적으로 돌아가게 운영하는 일</td></tr>
+              <tr><td>정밀도</td><td>Precision. 모델의 숫자를 몇 비트로 저장하고 계산할지. 낮추면 빠르고 싸지만 품질이 떨어질 수 있다</td></tr>
+              <tr><td>KV 캐시</td><td>앞에서 계산한 값을 저장해 두고, 다음 토큰을 만들 때 다시 쓰는 메모리</td></tr>
+              <tr><td>배칭</td><td>Batching. 여러 요청을 묶어 한 번에 처리하는 것</td></tr>
+              <tr><td>실행 병렬화</td><td>Execution parallelism. 모델 계산을 여러 GPU에 나눠 동시에 돌리는 것</td></tr>
+              <tr><td>활용률</td><td>Utilization. 확보한 GPU가 실제로 일하는 시간의 비율</td></tr>
+              <tr><td>네오클라우드</td><td>Neocloud. GPU 임대에 특화된 신생 클라우드 업체</td></tr>
+              <tr><td>Y2K</td><td>2000년이 되면서, 연도를 두 자리로 저장한 프로그램들이 오작동할 수 있었던 문제</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>뉴욕이 멈춘다면: 원인은 소프트웨어</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>발표자 소개, 소프트웨어는 유일한 새 산업</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>엔지니어의 판단과 도구 사슬</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>바뀐 카드 한 장: 빌려 쓰는 모델</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>하네스와 에이전트도 결정적 소프트웨어</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>AI가 맡을 두 가지 일</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>Usain Bolt와 sub-10 클럽</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>2015년 결승: 0.27초와 0.01초</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>모델 순위표: Elo 수십 점 차이</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>1503 대 1460, Elo 읽는 법</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>모델 비교가 아니라 하네스 비교</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>차별화는 어디서 오나</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>중간값의 정의</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>2023년 전과 후, 유통이 해자가 된다</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>GitHub 통계와 AI slop</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>iOS 앱 이야기, 성공의 기준</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>중간값은 내부용으로 충분하다</td></tr>
+              <tr><td><span class="ts">16:50</span></td><td>1990년대 검색 엔진과 새로움</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>발표자 이력</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>일단 만들기 반사, RAG 예시</td></tr>
+              <tr><td><span class="ts">20:40</span></td><td>2년 동안 만든 계산기</td></tr>
+              <tr><td><span class="ts">22:00</span></td><td>비슷한 계산기들, 수렴하는 해법</td></tr>
+              <tr><td><span class="ts">23:20</span></td><td>붐비는 레인과 유통</td></tr>
+              <tr><td><span class="ts">23:50</span></td><td>새로움 예산</td></tr>
+              <tr><td><span class="ts">25:20</span></td><td>새로움 예산을 쓰는 법</td></tr>
+              <tr><td><span class="ts">26:10</span></td><td>네 가지 규칙</td></tr>
+              <tr><td><span class="ts">28:20</span></td><td>리더의 감을 다시 맞추기</td></tr>
+              <tr><td><span class="ts">29:40</span></td><td>세 가지 질문</td></tr>
+              <tr><td><span class="ts">30:50</span></td><td>계산기 재설계: 오픈 가중치와 추론</td></tr>
+              <tr><td><span class="ts">31:30</span></td><td>10개 층과 활용률</td></tr>
+              <tr><td><span class="ts">32:30</span></td><td>계산기 244개와 새 계산기</td></tr>
+              <tr><td><span class="ts">33:40</span></td><td>결론</td></tr>
+              <tr><td><span class="ts">35:00</span></td><td>소프트웨어는 어떻게 되나</td></tr>
+              <tr><td><span class="ts">35:40</span></td><td>새로움은 귀하고 중간값은 공짜다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '0JZy5AuuQzc:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>개발 조직 재설계 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#adoption">도입은 했지만 성과는 3분의 1</a></li>
+      <li><a href="#horizon">성숙도: Horizon 2와 3</a></li>
+      <li><a href="#factors">성과를 가르는 세 가지</a></li>
+      <li><a href="#tariq">Tariq: 목표와 측정부터</a></li>
+      <li><a href="#ali">Ali: 플랫폼 팀에서 시작</a></li>
+      <li><a href="#future">자동화 뒤에도 사람이 할 일</a></li>
+      <li><a href="#trust">신뢰는 한 칸씩 쌓인다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 패널 토론 · 2026-10-07 · 19분 · 영어 발표 한글 정리</span>
+      <h1>에이전트를 들였는데 왜 성과가 안 날까</h1>
+      <p class="lead">거의 모든 회사가 AI 에이전트를 도입했지만 성과를 본 곳은 3분의 1이 안 된다. 이 패널은 그 차이가 도구보다 업무 흐름, 사람의 역할, 그리고 한 칸씩 쌓아 가는 신뢰에서 생긴다고 본다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=XqF-IFHBCkM" target="_blank" rel="noopener">Redesigning How Software Gets Built With AI Agents — Sonar &amp; McKinsey Panel</a></span>
+        <span>발표: Prakhar (McKinsey, 사회), Tariq (Sonar CEO), Ali (Gitar 전 CEO, 지금은 Sonar 소속)</span>
+      </div>
+      <p class="note">영어 패널 토론의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름(Gitar, Anthropic)은 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>회사의 80~90%가 AI나 에이전트를 도입했다고 답한다. 하지만 <strong>규모를 키웠거나 사업 성과를 본 곳은 3분의 1이 안 된다.</strong></li>
+        <li>성과를 낸 조직의 공통점은 세 가지다. <strong>업무 흐름을 다시 짜고, 좋은 도구를 갖추고, 사람의 역할을 다시 정했다.</strong> 가장 자주 놓치는 것은 사람이다.</li>
+        <li>Tariq(Sonar): 목표는 토큰을 많이 쓰는 게 아니라 실제 가치다. <strong>시범 팀을 세워도 다른 팀은 저절로 따라오지 않는다.</strong> 왜 쓰는지 이해시키는 일이 빠진 고리다.</li>
+        <li>Ali(전 Gitar): 큰 회사에는 플랫폼 팀이라는 이점이 있다. <strong>기준 지표를 먼저 재고, 생명주기 전체를 보고, 개발자의 시간을 지킨다.</strong></li>
+        <li>사람에게 필요한 기술은 세 가지다. <strong>머릿속 규칙을 글로 꺼내기</strong>, <strong>AI의 자신만만한 답을 의심하기</strong>, 여러 영역을 넘나드는 <strong>제너럴리스트</strong>가 되기.</li>
+        <li>자동화는 신뢰만큼 열린다. 리뷰, 차단, 자동 수정, 일부 자동 승인, 자동 머지 순서로 <strong>정확도를 확인할 때마다 한 칸씩</strong> 넘어간다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="adoption">
+        <header><span class="num">01</span><h2>도입은 했지만 성과는 3분의 1 <span class="ts">00:20</span></h2></header>
+        <p>지난 6개월에서 1년 사이 거의 모든 회사가 AI나 에이전트를 업무에 넣으려 했다. 사회자 Prakhar가 소개한 McKinsey 조사 결과는 이렇다.</p>
+
+        <figure class="chart" aria-label="AI나 에이전트를 도입했다고 답한 회사 80~90%, 규모를 키웠거나 사업 성과를 본 회사 3분의 1 미만">
+          <span class="chart-title">AI·에이전트 도입과 실제 성과 (회사 비율, %)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>도입했다고 답한 회사</span><span class="val">80~90</span></div>
+              <div class="track"><div class="fill" style="width:90%" title="도입했다고 답한 회사: 80~90%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>규모를 키웠거나 사업 성과를 본 회사</span><span class="val">&lt; 33</span></div>
+              <div class="track"><div class="fill key" style="width:33%" title="규모를 키웠거나 사업 성과를 본 회사: 3분의 1 미만"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">80~90은 범위로 말한 값이라 위쪽 끝인 90에 맞춰 그렸다. "3분의 1 미만"은 33에 맞춰 그렸다.</span>
+        </figure>
+
+        <p>많은 회사가 개념 검증<span class="en">POC, proof of concept</span>이나 작은 팀 안에서만 써 봤다. 조직 전체의 흐름에 넣은 곳은 드물다.</p>
+        <p>반대로 규모를 키운 조직은 좋은 결과를 보고 있다. 사회자는 PR 처리량, PR 처리 시간<span class="en">cycle time</span>, 개발자가 스스로 느끼는 생산성이 모두 좋아졌다고 했다. 구체적인 수치는 말하지 않았다.</p>
+        <p class="note">이 조사는 McKinsey가 Sonar와 함께 한 것이다. 조사 대상과 방법은 발표에서 밝히지 않았다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="horizon">
+        <header><span class="num">02</span><h2>성숙도: Horizon 2와 3 <span class="ts">01:20</span></h2></header>
+        <p>조사팀은 조직을 성숙도 단계로 나눴다. 기준은 소프트웨어 개발 생애주기<span class="en">SDLC</span>에 에이전트를 얼마나 깊이 넣었느냐다.</p>
+        <div class="shift" aria-label="성숙도 단계의 이동">
+          <div><span class="tag">Horizon 2 · 대부분 여기</span><b>사람이 이끌고 확인하는 에이전트</b><span class="muted">에이전트가 SDLC 곳곳에서 작업을 한다. 사람이 방향을 정하고 결과를 검증한다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Horizon 3 · 아주 적음</span><b>끝에서 끝까지 자동화된 흐름</b><span class="muted">워크플로 전체가 자동으로 돈다. 사람은 감독만 한다.</span></div>
+        </div>
+        <p class="note">Horizon 1이 무엇인지는 발표에서 설명하지 않았다. 화면의 그림을 보며 말한 대목이라 자막만으로는 단계 전체를 알 수 없다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="factors">
+        <header><span class="num">03</span><h2>성과를 가르는 세 가지 <span class="ts">01:50</span></h2></header>
+        <p>규모를 키운 조직을 살펴보니 세 가지가 성과를 갈랐다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 프로세스</span>
+            <p>기존 SDLC 순서를 그대로 두지 않는다. 에이전트가 들어온 상황에 맞춰 업무 흐름 전체를 처음부터 다시 짠다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 도구</span>
+            <p>좋은 에이전트를 갖춘다. 에이전트를 감싸는 실행 틀인 하네스<span class="en">harness</span>와, 맥락을 넘겨주는 컨텍스트 층<span class="en">context layer</span>도 갖춘다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 사람</span>
+            <p>가장 자주 놓치는 부분이다. 엔지니어, PM, 디자이너의 경계가 흐려지고 있다.</p>
+            <p class="verdict"><b>사회자의 강조점</b>: 이 변화를 인정하고 조직 전체를 다시 짠 곳이 성과를 낸다.</p>
+          </div>
+        </div>
+        <p>사회자는 운영 모델<span class="en">operating model</span>까지 바꾼 조직이 AI에서 약속된 "10배 생산성"을 보고 있다고 했다. 운영 모델은 누가 어떤 역할로 어떻게 일하는지를 정한 조직의 짜임이다.</p>
+        <p>처음에는 "에이전트가 일만 하면 되지, 나머지는 건드릴 필요 없다"며 회의적이던 사람들도 있었다. 이들도 점차 조직을 어떻게 짤지 다시 생각해야 한다는 쪽으로 돌아섰다고 한다.</p>
+        <p class="note">사회자는 조직 재설계를 컨설팅하는 McKinsey 쪽 사람이다. "사람과 운영 모델이 핵심"이라는 주장은 그 점을 감안해 읽자. "10배"도 근거 수치 없이 나온 말이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="tariq">
+        <header><span class="num">04</span><h2>Tariq: 목표와 측정부터 정한다 <span class="ts">03:50</span></h2></header>
+        <p>사회자의 첫 질문은 이것이다. Horizon 2를 넘어 끝에서 끝까지 이어지는 에이전트 파이프라인으로 갈 때 무엇을 조심해야 하나.</p>
+        <p>Tariq은 Sonar의 CEO다. Sonar는 18년 전 오픈소스 프로젝트로 시작했다. AI 제품을 내고 있지만, 회사 안의 엔지니어링 팀이 새 도구에 익숙해지는 데는 시간이 걸렸다고 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Tariq의 교훈</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>목표를 분명히</td><td>목표는 토큰을 최대한 많이 쓰는 것<span class="en">token maxing</span>이 아니다. 실제 가치를 만드는 것이다. 그래서 무엇을 잴지부터 분명히 정했다.</td></tr>
+              <tr><td>프로세스를 의도해서 설계</td><td>회사 안의 일을 "guide, verify, solve" 모델에 맞춰 짰다. 안내하고, 검증하고, 해결하는 순서다. 고객에게 권하는 방식을 자기 회사에도 그대로 쓴다.</td></tr>
+              <tr><td>도구와 시스템</td><td>이 흐름을 받쳐 줄 도구와 시스템을 어떻게 만드느냐가 매우 중요하다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">guide, verify, solve 모델의 자세한 내용은 Tariq이 바로 전에 한 별도 강연에서 다뤘다고 한다. 이 패널에서는 이름만 나온다.</p>
+
+        <h3>에이전트를 믿게 만들기 <span class="ts">05:10</span></h3>
+        <p>다음 과제는 팀이 에이전트를 믿게 만드는 일이었다. 팀은 이미 에이전트를 여럿 직접 만들어 쓰고 있었다.</p>
+        <p>그래도 어떤 방식은 팀에게 낯설었다. PRD 에이전트가 그 예다.</p>
+        <ol class="plain">
+          <li>제품 요구사항 문서<span class="en">PRD</span>의 내용을 에이전트가 정리한다.</li>
+          <li>그 내용으로 평가<span class="en">eval</span>를 만든다.</li>
+          <li>그 평가로 AI가 만든 결과물을 검증한다.</li>
+        </ol>
+        <p>이런 방식을 퍼뜨리려고 등대 팀<span class="en">lighthouse team</span>을 세웠다. 모범 사례를 먼저 보여 주는 시범 팀이다.</p>
+
+        <h3>시범 팀만으로는 퍼지지 않는다 <span class="ts">05:40</span></h3>
+        <div class="callout">
+          <span class="title">Tariq이 가장 놀랐던 점</span>
+          <span>시범 팀이 일하는 모습을 보면 다른 팀도 금방 따라올 줄 알았다. 실제로는 그렇지 않았다.</span>
+        </div>
+        <p>본보기를 보여 주면 일부는 따라온다. 도구를 깔아 줄 수도 있다. 하지만 그것만으로 팀이 다르게 생각하지는 않는다. <strong>왜 이 에이전트를 쓰는지 이해시키는 일</strong>이 빠진 고리였다.</p>
+        <p class="note">Sonar는 코드 품질 검사와 검증 도구를 파는 회사다. 검증을 강조하는 대목은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="ali">
+        <header><span class="num">05</span><h2>Ali: 큰 조직은 플랫폼 팀에서 시작한다 <span class="ts">06:10</span></h2></header>
+        <p>사회자의 질문은 이것이다. 작은 팀은 의존 관계와 넘어야 할 장애물이 적어서 에이전트를 키우기 쉽다. 큰 조직은 작은 팀에서 무엇을 배울 수 있나.</p>
+        <p>Ali는 큰 회사와 스타트업을 다 겪었다.</p>
+        <ul class="plain">
+          <li><strong>Uber</strong>: 개발자 플랫폼 조직 전체를 맡았다. 개발자가 빠르고 품질 높게 일하도록 돕는 조직이다. 그전에 Google과 Facebook에서도 플랫폼 조직 일을 했다.</li>
+          <li><strong>Gitar</strong>: 5~6명짜리 스타트업의 CEO였다. PR 검증 워크플로 전체를 에이전트로 처리하는 제품을 만들었다. 지금은 Sonar에 합류했다.</li>
+        </ul>
+        <p>Gitar는 처음에 AI 중심 회사가 아니었다. 곧 AI 중심으로 바꿨고, 안에서 AI를 쓰며 AI 제품도 만들었다. 그 뒤로 수요가 빨리 늘었고, 작은 팀으로 훨씬 많은 일을 해냈다고 한다.</p>
+
+        <h3>큰 회사의 이점: 플랫폼 팀 <span class="ts">08:00</span></h3>
+        <p>Ali는 오히려 큰 회사에 구조적 이점이 있다고 본다. 엔지니어링 조직이 커지면 보통 플랫폼 팀<span class="en">platform team</span>이 생긴다. 표준을 정하고 개발자의 생산성을 책임지는 조직이다. 에이전트 도입을 이끌 주인이 이미 있는 셈이다.</p>
+
+        <h3>플랫폼 팀이 지킬 세 원칙 <span class="ts">08:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>원칙</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>1. 기준 지표를 먼저</td><td>AI를 넣기 전에 지금 상태를 잰다. 그래야 넣은 뒤에 재고, 고치고, 조정할 수 있다. 큰 조직은 팀마다 표준이 달라서 도구 사용 기록<span class="en">telemetry</span>을 모으기부터 어렵다.</td></tr>
+              <tr><td>2. 생명주기 전체를 본다</td><td>한 단계에 도구 하나를 넣는 식으로 접근하지 않는다. 워크플로 하나를 통째로 에이전트에게 맡기고, 에이전트가 그 결과물을 직접 내놓게 한다.</td></tr>
+              <tr><td>3. 개발자의 시간을 지킨다</td><td>개발자가 몰입<span class="en">flow</span>을 유지하게 한다. 잡일<span class="en">grunt work</span>은 최대한 자동화한다. 잡일은 에이전트에게 딱 맞는 일이다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Ali가 꼽은 기준 지표</th><th>묻는 질문</th></tr></thead>
+            <tbody>
+              <tr><td>배포 속도</td><td>코드를 프로덕션까지 얼마나 빨리 내보내나</td></tr>
+              <tr><td>처리량</td><td>엔지니어가 얼마나 많은 일을 끝내나</td></tr>
+              <tr><td>품질</td><td>결과물의 품질은 어떤가</td></tr>
+              <tr><td>재작업</td><td>잘못돼서 워크플로 처음으로 돌아가는 일이 얼마나 잦나</td></tr>
+              <tr><td>개발자 체감</td><td>빨라졌다는 걸 엔지니어가 실제로 느끼나</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Ali는 마지막 항목인 개발자 체감<span class="en">sentiment</span>을 생산성만큼, 어쩌면 그보다 더 중요하다고 했다. 잡일을 에이전트가 가져가면 생산성과 속도가 오른다. 그리고 개발자도 그 변화를 직접 느낀다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="future">
+        <header><span class="num">06</span><h2>자동화 뒤에도 사람이 할 일 <span class="ts">10:50</span></h2></header>
+        <p>사회자의 질문은 이것이다. 에이전트가 워크플로에 깊이 들어가고 모델도 좋아진다. 언젠가 SDLC 전체가 자동으로 조율되는 날이 오면 사람과 조직은 어떻게 바뀌나.</p>
+        <p>Tariq은 모델이 분명히 좋아지고 있다고 봤다. Anthropic이 소개한 Fable 모델도 직접 써 보고 싶다고 했다. 소프트웨어를 공장처럼 만들어 내는 소프트웨어 팩토리<span class="en">software factory</span>가 현실이 될 수 있다고 본다.</p>
+        <p>그래도 Tariq이 꼽은 핵심 단어는 "조율된<span class="en">orchestrated</span>"이다. 사람이 완전히 손을 떼는 세상은 오지 않는다는 뜻이다. 질문은 얼마나 기계에 맡기고, 얼마나 처음에 직접 정하느냐다. 사람이 정할 것은 이런 것들이다.</p>
+        <ul class="plain">
+          <li>명세<span class="en">specification</span>: 무엇을 만드나</li>
+          <li>우선순위: 무엇이 중요한가</li>
+          <li>성공 기준: 성공은 어떤 모습인가</li>
+        </ul>
+        <p>개발자가 설계자, 조율자, 에이전트 관리자로 바뀌어야 한다는 말이 많다. Tariq은 맞는 말이 많다고 하면서 두 가지 기술과 한 가지 조직 변화를 더 꼽았다.</p>
+
+        <h3>1. 머릿속 규칙을 글로 꺼낸다 <span class="ts">12:10</span></h3>
+        <p>소프트웨어를 만들 때 PRD에 적힌 것도 있지만, 그냥 아는 것도 많다.</p>
+        <ul class="plain">
+          <li>"우리 회사는 이렇게 한다"</li>
+          <li>"우리는 이런 코드를 좋아한다"</li>
+          <li>"우리는 이 의존성을 쓴다"</li>
+        </ul>
+        <p>에이전트에게 맡기려면 이런 <strong>암묵적인 지식을 명시적으로 바꿔야 한다.</strong> 이것도 따로 익혀야 하는 기술이다.</p>
+
+        <h3>2. 비판적으로 생각한다 <span class="ts">12:50</span></h3>
+        <p>Tariq의 큰아들은 곧 대학에 간다. Tariq이 늘 하는 조언은 비판적 사고를 잘해야 한다는 것이다.</p>
+        <blockquote>AI는 늘 확신에 찬, 그럴듯한 답을 내놓는다.<cite>Tariq. 트위터에서 본 말을 빌려 왔다며 인용</cite></blockquote>
+        <p>AI는 "답은 이것 같다"고 말하지 않는다. 언제나 "답은 이것이다"라고 말하고, 의심을 드러내지 않는다. 그래서 사람의 일은 <strong>어디를 의심하고 어디를 찔러 볼지</strong> 아는 것이다.</p>
+        <p>새 팀원이나 인턴이 들어왔을 때와 같다. 경험 있는 사람은 어디를 살펴보고 무엇을 물어볼지 안다.</p>
+
+        <h3>3. 제너럴리스트의 시대 <span class="ts">13:50</span></h3>
+        <p>Tariq이 고객사에서 자주 보는 저항이 있다. 팀을 더 작은 단위로 나누자고 하면 반대가 나온다.</p>
+        <p>파고들면 이유는 거의 같다. "저는 프론트엔드 담당이지 백엔드 담당이 아닌데요." 업계는 오랫동안 역할을 잘게 나누고 사람을 칸막이 안에 두었다.</p>
+        <div class="shift" aria-label="엔지니어 역할의 이동">
+          <div><span class="tag">지금까지</span><b>한 분야의 깊은 전문가</b><span class="muted">프론트엔드나 서버 쪽처럼 한 영역만 맡는 사람</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">앞으로</span><b>소프트웨어 제너럴리스트</b><span class="muted">작은 팀에서 여러 영역을 넘나드는 엔지니어</span></div>
+        </div>
+        <p>Tariq이 말하는 제너럴리스트는 아무것도 모르는 사람이 아니다. <strong>소프트웨어 엔지니어링 전반을 아는 사람</strong>이다. 사회자가 처음에 말한 "역할 경계가 흐려진다"는 이야기와 이어진다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="trust">
+        <header><span class="num">07</span><h2>신뢰는 한 칸씩 쌓인다 <span class="ts">14:40</span></h2></header>
+        <p>사회자는 SDLC에서 코딩은 사실상 "해결됐다"는 말이 나온다고 했다. 관심은 요구사항 작성, 검증, 테스트로 옮겨 가고 있다. 하지만 검증과 통합 테스트까지 자동화하는 데는 다들 회의적이다. 3~6개월 안에 이 신뢰가 올라갈까.</p>
+        <p>Ali의 답은 이렇다. 핵심 단어는 신뢰이고, 신뢰는 시간이 걸린다. 사용자는 도구를 쓰면서 AI의 정밀도<span class="en">precision</span>를 직접 확인한다. 그 정밀도가 신뢰를 만들고, 신뢰가 쌓일 때마다 자동화 단계가 하나씩 열린다.</p>
+
+        <h3>Gitar 사용자가 밟는 단계 <span class="ts">15:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>에이전트가 하는 일</th><th>이 단계를 여는 근거</th></tr></thead>
+            <tbody>
+              <tr><td>1. 리뷰</td><td>리뷰와 CI 실패 분석을 내놓는다. 사람은 읽기만 한다</td><td>처음 시작</td></tr>
+              <tr><td>2. 차단</td><td>심각한 문제를 찾으면 PR을 막는다</td><td>리뷰가 진짜 버그를 정확히 짚는 걸 확인했다</td></tr>
+              <tr><td>3. 수정 시험</td><td>지적 사항과 CI 실패를 고치는 PR을 만들어 본다</td><td>차단을 맡길 만큼 지적이 믿을 만하다</td></tr>
+              <tr><td>4. 자동 수정</td><td>빌드가 초록불이 될 때까지 알아서 고친다. 사람에게는 승인만 남은 PR이 간다</td><td>수정이 새 문제를 만들지 않고 빌드를 통과했다</td></tr>
+              <tr><td>5. 일부 자동 승인</td><td>중요하지 않은 코드 영역이나 정해 둔 종류의 변경은 직접 승인한다</td><td>사람이 "이 부분은 맡겨도 된다"는 규칙을 정했다</td></tr>
+              <tr><td>6. 자동 머지</td><td>머지 충돌을 고치고 머지까지 한다</td><td>지금 막 생기기 시작한 단계</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>6단계까지 오면 PR 생성부터 머지까지 완전히 자동이 된다. Ali는 5단계부터가 "큰 변화"라고 했다.</p>
+
+        <div class="callout">
+          <span class="title">완전 자동으로 가려면 확인할 것 <span class="ts">18:10</span></span>
+          <span>바로 되지 않는다. 시스템을 쓰면서 세 가지를 확인해야 한다. 에이전트가 정확한가. 맥락이 충분히 들어가는가. 규칙과 안전장치<span class="en">guardrail</span>를 충분히 걸었는가.</span>
+        </div>
+        <p>Ali의 전망은 이렇다. 빠르게 다가오고 있고, 1년 안에 이 길을 가는 팀이 더 많아진다. 이미 큰 회사 안에도 이런 팀이 있다고 했다.</p>
+        <p class="note">이 단계는 Ali가 만든 제품 Gitar(지금은 Sonar 소속) 사용자의 패턴이다. 자기 제품 이야기라는 점, 그리고 "1년 안에"는 전망이라는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="recap">
+        <header><span class="num">08</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>회사의 80~90%가 AI를 도입했다고 하지만 규모를 키우거나 성과를 본 곳은 3분의 1이 안 된다.</li>
+          <li>대부분은 사람이 이끌고 확인하는 Horizon 2에 있다. 사람의 감독 아래 전 과정이 자동인 Horizon 3는 드물다.</li>
+          <li>성과를 가르는 것은 <strong>프로세스 재설계, 도구, 사람</strong>이다. 가장 자주 놓치는 것은 사람이다.</li>
+          <li>목표는 토큰 소비량이 아니라 <strong>실제 가치</strong>다. 무엇을 잴지부터 정한다.</li>
+          <li><strong>시범 팀만으로는 퍼지지 않는다.</strong> 왜 쓰는지 이해시키는 일이 빠진 고리다.</li>
+          <li>큰 회사에는 플랫폼 팀이 있다. 이 팀이 기준 지표, 생명주기 전체, 개발자의 시간을 챙긴다.</li>
+          <li>사람은 완전히 손을 떼지 않는다. 명세, 우선순위, 성공 기준은 사람이 정한다.</li>
+          <li><strong>머릿속 규칙을 글로 꺼내는 기술</strong>과 <strong>AI의 자신만만한 답을 의심하는 기술</strong>이 중요해진다.</li>
+          <li>역할을 잘게 나누던 시대에서 <strong>소프트웨어 제너럴리스트</strong>의 시대로 간다.</li>
+          <li>자동화는 신뢰만큼 열린다. 리뷰, 차단, 수정 시험, 자동 수정, 일부 자동 승인, 자동 머지 순서다.</li>
+        </ol>
+      </section>
+
+      <!-- 9 -->
+      <section id="quiz">
+        <header><span class="num">09</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>사회자가 소개한 조사에서 AI를 도입한 회사와 성과를 본 회사의 비율은?</span></summary><div class="answer">80~90%가 도입했다고 답했다. 규모를 키웠거나 사업 성과를 본 곳은 3분의 1이 안 된다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Horizon 2와 Horizon 3의 차이는?</span></summary><div class="answer">Horizon 2는 사람이 이끌고 확인하는 에이전트가 SDLC 곳곳의 작업을 한다. Horizon 3는 사람의 감독 아래 워크플로 전체가 끝에서 끝까지 자동으로 돈다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>성과를 가르는 세 요소 중 가장 자주 놓치는 것은? 왜 중요한가?</span></summary><div class="answer">사람이다. 엔지니어, PM, 디자이너의 경계가 흐려지는데, 이를 인정하고 운영 모델을 다시 짠 조직이 성과를 낸다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Sonar의 PRD 에이전트는 어떤 순서로 일하나?</span></summary><div class="answer">PRD 내용을 정리하고, 그걸로 평가(eval)를 만들고, 그 평가로 AI 결과물을 검증한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>Tariq이 가장 놀랐다는 점은?</span></summary><div class="answer">시범 팀을 보면 다른 팀도 금방 따라올 줄 알았지만 그렇지 않았다. 도구와 본보기만으로는 부족했고, 왜 쓰는지 이해시키는 일이 필요했다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Ali가 큰 회사에 구조적 이점이 있다고 한 이유는?</span></summary><div class="answer">플랫폼 팀이 이미 있다. 표준을 정하고 개발자 생산성을 책임지는 조직이 에이전트 도입을 이끌 수 있다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>Ali가 꼽은 기준 지표 다섯 가지는?</span></summary><div class="answer">배포 속도, 처리량, 품질, 처음으로 되돌아가는 재작업 빈도, 개발자 체감.</div></details>
+          <details><summary><span class="qn">Q8</span><span>"암묵적인 것을 명시적으로"는 무슨 뜻인가?</span></summary><div class="answer">PRD에 없는 회사의 관행, 좋아하는 코드 스타일, 쓰는 의존성처럼 머릿속에만 있는 지식을 글로 써서 에이전트가 쓸 수 있게 하는 것이다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Tariq이 비판적 사고를 가장 중요한 기술로 꼽은 이유는?</span></summary><div class="answer">AI는 늘 확신에 찬 그럴듯한 답을 내고 의심을 드러내지 않는다. 그래서 어디를 찔러 볼지 사람이 알아야 한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>작은 팀으로 바꾸자고 할 때 나오는 저항의 뿌리는?</span></summary><div class="answer">"나는 프론트엔드지 백엔드가 아니다" 같은 역할 칸막이다. Tariq은 소프트웨어 제너럴리스트의 시대라고 봤다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>Gitar 사용자가 자동화를 넓혀 가는 순서와, 다음 단계를 여는 것은?</span></summary><div class="answer">리뷰, 차단, 수정 시험, 자동 수정, 일부 자동 승인, 자동 머지 순서다. 에이전트의 정밀도를 직접 확인하며 쌓은 신뢰가 다음 단계를 연다.</div></details>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="apply">
+        <header><span class="num">10</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트 도입의 목표를 한 문장으로 쓴다<span class="how">토큰 사용량이나 도입률이 아니라, 무엇이 좋아지면 성공인지</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>AI를 더 넣기 전에 기준 지표를 잰다<span class="how">배포 속도, 처리량, 품질, 재작업 빈도, 개발자 체감</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>도구 하나 대신 워크플로 하나를 통째로 맡길 후보를 고른다<span class="how">개발자가 가장 싫어하는 잡일부터</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>시범 팀의 방식을 퍼뜨릴 때 "왜"를 설명하는 시간을 따로 잡는다<span class="how">도구 배포와 본보기만으로는 퍼지지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>머릿속 규칙을 글로 쓴다<span class="how">좋아하는 코드 스타일, 쓰는 의존성, "우리는 이렇게 한다"</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>PRD에서 평가(eval)를 만들어 AI 결과를 검증한다<span class="how">확인: 요구사항마다 확인할 기준이 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>AI 결과에서 꼭 찔러 볼 곳을 정해 둔다<span class="how">새 팀원의 코드를 볼 때 확인하는 곳과 같은 목록</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>자동화를 한 칸씩 연다<span class="how">리뷰, 차단, 자동 수정, 일부 자동 승인, 자동 머지. 다음 칸은 정확도 기록을 보고 연다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>자동 승인해도 되는 범위를 적어 둔다<span class="how">중요하지 않은 코드 영역과 변경 종류</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section id="glossary">
+        <header><span class="num">11</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>AI 에이전트</td><td>목표를 받아 여러 단계를 스스로 계획하고 도구를 써서 일을 끝내는 AI</td></tr>
+              <tr><td>SDLC</td><td>Software Development Life Cycle. 요구사항, 설계, 개발, 테스트, 배포로 이어지는 소프트웨어 개발 전 과정</td></tr>
+              <tr><td>PDLC</td><td>Product Development Life Cycle. 제품 기획부터 출시까지 포함하는 더 넓은 개발 과정</td></tr>
+              <tr><td>POC</td><td>Proof of Concept. 작게 시험해 보는 개념 검증</td></tr>
+              <tr><td>Horizon 2 / 3</td><td>조사팀이 쓴 성숙도 단계. 2는 사람이 이끌고 확인하는 에이전트, 3은 사람의 감독 아래 끝에서 끝까지 자동화</td></tr>
+              <tr><td>PR</td><td>Pull Request. 코드 변경을 합쳐 달라는 요청</td></tr>
+              <tr><td>PR 처리량 / 처리 시간</td><td>일정 기간 처리한 PR 수 / PR을 연 뒤 머지까지 걸린 시간</td></tr>
+              <tr><td>하네스</td><td>모델을 감싸 도구, 순서, 규칙, 검사를 정해 주는 실행 틀</td></tr>
+              <tr><td>컨텍스트 층</td><td>에이전트에게 코드, 문서, 규칙 같은 맥락을 넘겨주는 층</td></tr>
+              <tr><td>운영 모델</td><td>누가 어떤 역할로 어떻게 일하는지를 정한 조직의 짜임</td></tr>
+              <tr><td>token maxing</td><td>토큰을 최대한 많이 쓰는 것을 성과처럼 여기는 태도</td></tr>
+              <tr><td>PRD</td><td>Product Requirements Document. 제품 요구사항 문서</td></tr>
+              <tr><td>평가 (eval)</td><td>AI 결과물의 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>등대 팀</td><td>Lighthouse team. 새 방식을 먼저 시도해 본보기를 보여 주는 시범 팀</td></tr>
+              <tr><td>플랫폼 팀</td><td>사내 개발 도구와 표준을 맡아 다른 개발자의 생산성을 돕는 팀</td></tr>
+              <tr><td>텔레메트리</td><td>도구 사용 기록을 자동으로 모은 데이터</td></tr>
+              <tr><td>몰입 (flow)</td><td>방해 없이 일에 집중한 상태</td></tr>
+              <tr><td>잡일 (grunt work)</td><td>반복적이고 지루하지만 누군가 해야 하는 일</td></tr>
+              <tr><td>소프트웨어 팩토리</td><td>소프트웨어를 공장처럼 자동으로 만들어 내는 체계</td></tr>
+              <tr><td>오케스트레이션</td><td>여러 에이전트와 단계를 하나의 흐름으로 조율하는 것</td></tr>
+              <tr><td>암묵지 / 명시지</td><td>머릿속에만 있는 지식 / 글로 적힌 지식</td></tr>
+              <tr><td>제너럴리스트</td><td>한 분야만 깊이 파기보다 여러 영역을 두루 다루는 사람</td></tr>
+              <tr><td>정밀도 (precision)</td><td>에이전트가 문제라고 짚은 것 가운데 진짜 문제의 비율</td></tr>
+              <tr><td>CI</td><td>Continuous Integration. 코드를 올릴 때마다 자동으로 빌드하고 테스트하는 장치</td></tr>
+              <tr><td>가드레일</td><td>에이전트가 넘지 말아야 할 선을 정한 규칙</td></tr>
+              <tr><td>머지 충돌</td><td>두 변경이 같은 곳을 고쳐서 자동으로 합칠 수 없는 상태</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="timeline">
+        <header><span class="num">12</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>사회자 Prakhar의 문제 제기</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>도입 80~90%, 성과 3분의 1 미만</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>Sonar와 함께 한 조사, 규모를 키운 조직의 성과</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>성숙도: Horizon 2와 Horizon 3</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>성과를 가르는 세 가지: 프로세스, 도구, 사람</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>역할 경계가 흐려진다, 10배 생산성</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>패널 소개: Tariq, Ali</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>질문: Horizon 2를 넘어갈 때 조심할 점</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>Tariq: Sonar의 전환, 목표와 측정</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>의도한 프로세스: guide, verify, solve</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>에이전트에 대한 신뢰, PRD 에이전트, 등대 팀</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>시범 팀만으로는 퍼지지 않는다</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>질문: 큰 조직이 작은 팀에서 배울 것</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>Ali 소개: Gitar, Uber 개발자 플랫폼</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>큰 회사의 구조적 이점: 플랫폼 팀</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>원칙 1: 기준 지표</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>원칙 2: 생명주기 전체</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>원칙 3: 개발자의 시간과 몰입</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>질문: 완전 자동화된 SDLC가 오면 사람과 조직은</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>모델 발전, 소프트웨어 팩토리, 조율</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>기술 1: 머릿속 규칙을 글로</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>기술 2: 비판적 사고</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>작은 팀에 대한 저항, 제너럴리스트의 시대</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>질문: 검증과 테스트 자동화를 믿게 될까</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>Ali: 신뢰는 정밀도에서 나온다</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>Gitar 사용자의 단계: 리뷰, 차단</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>수정 시험, 자동 수정</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>일부 자동 승인</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>자동 머지, PR 생성부터 머지까지 자동</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>전망: 1년 안에, 큰 회사에서도</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'XqF-IFHBCkM:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

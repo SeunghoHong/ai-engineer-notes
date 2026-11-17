@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>확신을 만드는 소프트웨어 공장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+/* range bars: a span from min to max instead of from zero */
+.chart .fill.range { border-radius: 4px; }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#factory">공 하나로 증명한 품질</a></li>
+      <li><a href="#lean">소프트웨어도 공장에서 배웠다</a></li>
+      <li><a href="#flood">코드는 넘치고 출시는 그대로</a></li>
+      <li><a href="#limit-human">한계 1: 사람 확인은 늘지 않는다</a></li>
+      <li><a href="#limit-codebase">한계 2: 큰 코드베이스에서 길을 잃는다</a></li>
+      <li><a href="#limit-compound">한계 3: 오류는 쌓인다</a></li>
+      <li><a href="#limit-judge">한계 4: LLM 심판은 흔들린다</a></li>
+      <li><a href="#limit-exploit">한계 5: 공격은 곧바로 온다</a></li>
+      <li><a href="#formula">확신 공식</a></li>
+      <li><a href="#intent">의도와 가이드레일의 효과</a></li>
+      <li><a href="#verify">독립 검증</a></li>
+      <li><a href="#evidence">증거</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-29 · 16분 · 영어 발표 한글 정리</span>
+      <h1>코드는 넘치고, 확신은 모자라다</h1>
+      <p class="lead">에이전트 덕분에 코드는 수십 배로 늘었지만 사람이 확인하는 속도는 그대로다. 발표자는 사람 손에 기대는 대신, 의도·가이드레일·검증·증거를 공장 설계에 처음부터 넣어야 결과를 믿을 수 있다고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=LQW_Wvqhp04" target="_blank" rel="noopener">Why Humans Can't Keep Up With AI-Written Code</a></span>
+        <span>발표: Tariq Shaukat (Sonar CEO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름(Shakir → Shaukat, Sona → Sonar, SonarCube → SonarQube, meter → METR)은 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 코드 검증 도구를 파는 Sonar의 CEO다. 후반부의 해법과 성과 수치는 자기 회사 제품 이야기이니, 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>비동기 에이전트를 들인 뒤 <strong>코드 줄 수는 2,450%</strong> 늘었는데 <strong>출시는 30%만</strong> 늘었다. 만드는 것과 내보내는 것 사이가 막혀 있다.</li>
+        <li><strong>사람이 확인하는 방식은 늘릴 수 없다.</strong> 게다가 사람은 AI가 틀렸을 때도 5번 중 4번은 동의한다.</li>
+        <li>에이전트는 <strong>큰 코드베이스</strong>에서 정확도가 무너지고, 같은 일에 드는 토큰이 30배까지 차이 난다.</li>
+        <li>긴 작업에서는 <strong>오류가 쌓인다.</strong> 단계마다 95%가 맞아도 20단계면 36%만 맞는다.</li>
+        <li><strong>LLM에게 판정을 맡겨도 흔들린다.</strong> 같은 질문에 답이 바뀌고, "정말이야?" 한마디에 생각을 바꾼다.</li>
+        <li>해법은 <strong>확신 공식: 의도 × 가이드레일 × 검증 × 증거.</strong> 곱하기라서 하나라도 0이면 전체가 0이다.</li>
+        <li>결론: 이제 <strong>코드는 흔하고 확신은 귀하다.</strong> 미래의 공장은 코드가 아니라 확신을 만들어야 한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="factory">
+        <header><span class="num">01</span><h2>공 하나로 증명한 품질 <span class="ts">00:20</span></h2></header>
+        <p>1980년대 자동차는 성능은 좋았지만 부품이 딱 맞지 않았다. 차체 이음새마다 틈이 컸다.</p>
+        <p>그때 Toyota의 Lexus가 광고 하나를 냈다. 차체 이음새 위로 쇠구슬을 굴리는 장면이었다. 구슬이 걸리지 않고 굴러간다는 건, 차를 빈틈없이 맞춰 만들 수 있다는 증거였다.</p>
+        <div class="shift" aria-label="공장 사고방식의 변화">
+          <div><span class="tag">옛 방식</span><b>많이 만들고 나중에 고친다</b><span class="muted">생산량이 우선이다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">새 방식</span><b>처음부터 제대로 만든다</b><span class="muted">재작업이 없고, 고객이 만족한다</span></div>
+        </div>
+        <p>이건 한 가지 변화가 아니었다. 공장을 <strong>품질이 나오도록 설계하는</strong> 방식으로 생각 자체가 바뀌었다. 발표자는 지금도 통하는 원칙 다섯 가지를 꼽는다.</p>
+        <ol class="plain">
+          <li>생산량보다 품질을 앞에 둔다.</li>
+          <li>눈에 보이는 증상 하나가 아니라 시스템을 고친다.</li>
+          <li>부품을 따로 설계하고 맞기를 바라지 말고, 조립할 수 있게 설계한다.</li>
+          <li>문제는 나중으로 미루지 말고 생긴 자리에서 바로 푼다.</li>
+          <li>상사만이 아니라 누구나 생산 라인을 멈출 수 있다.</li>
+        </ol>
+      </section>
+
+      <!-- 2 -->
+      <section id="lean">
+        <header><span class="num">02</span><h2>소프트웨어도 공장에서 배웠다 <span class="ts">02:20</span></h2></header>
+        <p>지금 소프트웨어 개발의 모범 사례 상당수는 Toyota 생산 방식에서 왔다.</p>
+        <ul class="plain">
+          <li>애자일 <span class="en">Agile</span></li>
+          <li>칸반 <span class="en">Kanban</span></li>
+          <li>에러 버짓 <span class="en">error budget</span>: 서비스가 얼마나 실패해도 되는지 미리 정해 둔 한도</li>
+          <li>지속적 통합 <span class="en">continuous integration</span>: 변경을 자주 합치고 그때마다 자동으로 검사하는 방식</li>
+        </ul>
+        <p>이 방식은 지금까지 잘 통했다. 그런데 에이전트가 판을 바꾸고 있다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="flood">
+        <header><span class="num">03</span><h2>코드는 넘치고 출시는 그대로 <span class="ts">03:00</span></h2></header>
+        <p>발표자가 "지난달 발표된 연구"라고 소개한 자료가 있다. 개발 과정에 비동기 에이전트를 들였을 때의 변화를 쟀다. 연구 이름은 말하지 않았다.</p>
+
+        <figure class="chart" aria-label="에이전트 도입 전을 100으로 놓은 비교: 코드 줄 수 2550, 커밋 340, 출시 130">
+          <span class="chart-title">비동기 에이전트 도입 뒤의 변화 (도입 전 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>작성된 코드 줄 수</span><span class="val">2,550 · +2,450%</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="코드 줄 수: 2,550 (+2,450%)"></div><div class="baseline" style="left:3.9%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>커밋 수</span><span class="val">340 · +240%</span></div>
+              <div class="track"><div class="fill" style="width:13.3%" title="커밋: 340 (+240%)"></div><div class="baseline" style="left:3.9%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>출시 횟수</span><span class="val">130 · +30%</span></div>
+              <div class="track"><div class="fill" style="width:5.1%" title="출시: 130 (+30%)"></div><div class="baseline" style="left:3.9%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 도입 전 (100)</span><span>2,550</span></div>
+          <span class="caption">커밋 240%와 출시 30%는 05:40 대목에서 같은 연구의 수치로 다시 나온다.</span>
+        </figure>
+
+        <p>코드 줄 수는 약 25배가 됐다. 출시는 1.3배에 그쳤다. 코드를 만드는 일은 이제 쉽고 흔하다. <strong>만든 것을 내보내는 일은 아직 따라가지 못한다.</strong></p>
+
+        <h3>사람들은 이미 공장을 짓고 있다 <span class="ts">03:40</span></h3>
+        <p>Sonar의 개발자 설문 <span class="en">State of Code</span> 미리보기다. 발표 시점 기준으로 다음 달 공개 예정이다.</p>
+        <figure class="chart" aria-label="에이전트 소프트웨어 공장 운영 비율: 현재 5%, 1년 뒤 예상 34%, 금융권 1년 뒤 예상 39%">
+          <span class="chart-title">에이전트 소프트웨어 공장을 돌리는 개발자 비율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>지금 돌리고 있다</span><span class="val">5</span></div>
+              <div class="track"><div class="fill" style="width:5%" title="현재: 5%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>1년 안에 돌릴 것이다</span><span class="val">34</span></div>
+              <div class="track"><div class="fill key" style="width:34%" title="1년 뒤 예상: 34%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>1년 안에 돌릴 것이다 · 금융권</span><span class="val">39</span></div>
+              <div class="track"><div class="fill key" style="width:39%" title="금융권 1년 뒤 예상: 39%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+        </figure>
+        <p>에이전트 소프트웨어 공장 <span class="en">agentic software factory</span>은 코드 작성부터 검사까지를 에이전트로 자동화한 개발 체계를 말한다.</p>
+
+        <h3>같은 힘이 공격에도 쓰인다 <span class="ts">04:10</span></h3>
+        <p>에이전트는 무언가를 만들 때만 잘하는 게 아니다. 취약점을 찾고 시스템을 공격할 때도 잘한다.</p>
+        <div class="callout">
+          <span class="title">Satya Nadella의 글 <span class="ts">04:30</span></span>
+          <span>발표 준비 중에 Microsoft CEO Satya Nadella가 X에 글을 올렸다. 회사 안에서 모델이 일으킬 수 있는 내부자 위험을 다뤘다. 발표자가 소개한 요지는 이렇다. 모델을 가두고 통제하려면 공학적 접근이 필요하다. 그 바탕은 탄탄한 결정론적 시스템 설계, 사람의 통제, 믿을 만한 운영 절차다.</span>
+        </div>
+        <p>발표자는 이것을 패러다임 전환으로 본다. 에이전트 공장에 <strong>확신과 품질을 설계로 집어넣는</strong> 시스템이 필요하다. 그러려면 먼저 한계를 알아야 한다. 발표자는 다섯 가지를 꼽는다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="limit-human">
+        <header><span class="num">04</span><h2>한계 1: 사람 확인은 늘지 않는다 <span class="ts">05:30</span></h2></header>
+        <p>회사들에게 AI 거버넌스 전략을 물으면 거의 다 같은 말로 끝난다. "걱정 마세요, 사람이 루프 안에 있습니다." 사람이 루프 안에 있다 <span class="en">human in the loop</span>는 말은 사람이 중간 단계마다 확인하고 승인한다는 뜻이다.</p>
+        <p>문제는 앞의 숫자다. 코드가 25배로 늘어도 출시는 1.3배다. 만드는 데서 내보내는 데로 넘어가는 방법을 아직 못 찾았다. 자동화와 새 도구가 필요하다.</p>
+
+        <h3>인지적 항복 <span class="ts">06:10</span></h3>
+        <p>더 큰 문제가 있다. 발표자는 이것을 인지적 항복 <span class="en">cognitive surrender</span>이라 부른다. 사람이 스스로 판단하지 않고 AI의 답을 그대로 따르는 현상이다. 몇 달 전 연구가 사람이 AI에 얼마나 자주 동의하는지를 쟀다.</p>
+        <figure class="chart" aria-label="사람이 AI에 동의한 비율: AI가 맞을 때 93%, AI가 틀릴 때 80%">
+          <span class="chart-title">사람이 AI의 답에 동의한 비율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>AI가 맞았을 때</span><span class="val">93</span></div>
+              <div class="track"><div class="fill" style="width:93%" title="AI가 맞을 때 동의: 93%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>AI가 틀렸을 때</span><span class="val">80</span></div>
+              <div class="track"><div class="fill key" style="width:80%" title="AI가 틀릴 때 동의: 80%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표에서는 "다섯 번 중 네 번"이라고 말했다. 80%로 그렸다.</span>
+        </figure>
+        <p>AI가 맞든 틀리든 사람의 동의율은 13점밖에 차이 나지 않는다. 사람의 확인이 틀린 답을 거의 걸러 내지 못한다는 뜻이다. 그래서 발표자는 이렇게 정리한다. <strong>사람 확인은 속도를 높이면 되는 문제가 아니다. 에이전트 시대에는 그 방식 자체가 통하지 않는다.</strong></p>
+      </section>
+
+      <!-- 5 -->
+      <section id="limit-codebase">
+        <header><span class="num">05</span><h2>한계 2: 큰 코드베이스에서 길을 잃는다 <span class="ts">06:40</span></h2></header>
+        <p>에이전트는 아주 똑똑하다. 하지만 코드베이스에서 일하려면 그 안에서 무슨 일이 일어나는지 알아야 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">코드 번역 연구</span>
+            <ul>
+              <li>코드 1만 줄일 때 정확도 <strong>91%</strong></li>
+              <li>5만 줄이 되자 정확도가 <strong>무너졌다</strong> (구체적인 숫자는 말하지 않았다)</li>
+            </ul>
+            <p class="verdict">발표자는 청중 대부분이 이보다 훨씬 큰 코드베이스를 다룬다고 짚었다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">토큰 사용량 연구 <span class="ts">07:20</span></span>
+            <ul>
+              <li>크고 복잡한 코드베이스에서 같은 과제를 풀게 했다</li>
+              <li>드는 토큰이 <strong>최대 30배</strong> 차이 났다. 30%가 아니라 30배다</li>
+            </ul>
+            <p class="verdict">이유: 에이전트가 <b>코드베이스 구조를 파악하고 길을 찾는 데</b> 토큰 대부분을 쓴다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">발표자의 비유: 출발점이 비용을 정한다</span>
+          <span>뉴욕에 가야 하는데 출발점을 무작위로 고른다고 하자. White Plains(뉴욕 바로 옆)에서 출발하면 금방 도착한다. Albuquerque(뉴멕시코)에서 출발하면 오래 걸리고 돈도 많이 든다. 에이전트도 코드베이스의 어디에서 시작하느냐에 따라 비용이 크게 달라진다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="limit-compound">
+        <header><span class="num">06</span><h2>한계 3: 오류는 쌓인다 <span class="ts">08:00</span></h2></header>
+        <p>METR은 사람이 하는 일을 에이전트가 얼마나 잘 해내는지 재는 연구 단체다. 기준은 "사람이 X시간 걸리는 일을 끝낼 수 있나"이다. 이것을 시간 지평 <span class="en">time horizon</span>이라 부른다.</p>
+        <p>발표자가 인용한 최신 결과에서 Claude Mythos Preview는 <strong>사람이 16시간 걸리는 일</strong>을 해냈다. 그런데 작은 글씨로 단서가 붙어 있다. <strong>성공률 50% 기준</strong>이다. 기준을 80%로 올리면 곡선이 크게 낮아진다.</p>
+        <p>긴 작업에서는 오류가 쌓이기 때문이다. 단계마다 정확도가 높아도 단계가 많아지면 전체 성공률은 빠르게 떨어진다.</p>
+        <figure class="chart" aria-label="단계마다 95% 정확할 때 전체 성공률: 1단계 95%, 5단계 77%, 10단계 60%, 20단계 36%">
+          <span class="chart-title">단계마다 95% 맞을 때, 모든 단계가 맞을 확률 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>1단계</span><span class="val">95</span></div>
+              <div class="track"><div class="fill" style="width:95%" title="1단계: 95%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>5단계</span><span class="val">77</span></div>
+              <div class="track"><div class="fill" style="width:77.4%" title="5단계: 77.4%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>10단계</span><span class="val">60</span></div>
+              <div class="track"><div class="fill" style="width:59.9%" title="10단계: 59.9%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>20단계</span><span class="val">36</span></div>
+              <div class="track"><div class="fill key" style="width:35.8%" title="20단계: 35.8%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">20단계 36%는 발표자가 말한 값이다. 0.95를 20번 곱하면 약 35.8%라 맞다. 5단계와 10단계는 이해를 돕기 위해 같은 식으로 계산해 넣은 예시다.</span>
+        </figure>
+      </section>
+
+      <!-- 7 -->
+      <section id="limit-judge">
+        <header><span class="num">07</span><h2>한계 4: LLM 심판은 흔들린다 <span class="ts">09:00</span></h2></header>
+        <p>발표자가 가장 세게 붙인 제목이다. <strong>LLM은 믿기 어렵고, 보상을 좇는 심판이다.</strong> 늘 듣는 질문이 "그냥 LLM한테 물어보면 되지 않나요?"라서 꺼낸 이야기다. LLM을 심판으로 쓴다 <span class="en">LLM-as-a-judge</span>는 말은 모델에게 결과가 맞는지 판정하게 한다는 뜻이다.</p>
+        <figure class="chart" aria-label="LLM 판정이 바뀐 비율의 범위: 같은 질문 반복 7~17%, 되묻기 7~34%">
+          <span class="chart-title">LLM의 판정이 바뀐 비율 (모델·상황에 따른 범위, %)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>같은 질문을 똑같이 다시 물었을 때 · PayPal AI 연구소</span><span class="val">7–17</span></div>
+              <div class="track"><div class="fill range" style="left:17.5%;width:25%" title="같은 질문 반복: 7~17%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>"정말이야?"라고 되물었을 때 · Meta 연구</span><span class="val">7–34</span></div>
+              <div class="track"><div class="fill key range" style="left:17.5%;width:67.5%" title="되묻기: 7~34%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>20</span><span>40</span></div>
+          <span class="caption">막대는 0이 아니라 범위의 아래 끝에서 시작한다. 축은 0~40이다.</span>
+        </figure>
+        <p>같은 AI 심판에게 두 번 물으면 다른 답이 나올 수 있다. 아주 단순하게 되묻기만 해도 생각을 바꾼다. 검증을 LLM 하나에 맡기면 그 검증 자체가 흔들린다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="limit-exploit">
+        <header><span class="num">08</span><h2>한계 5: 공격은 곧바로 온다 <span class="ts">10:00</span></h2></header>
+        <p>취약점이 알려진 뒤 실제 공격까지 걸리는 시간이 0에 가까워지고 있다. 발표자는 이 점을 길게 설명하지 않았다. 누구나 아는 이야기라고 봤다.</p>
+        <p>이렇게 되면 문제가 터진 뒤 대응하기가 아주 어렵다. 그래서 <strong>예방을 공장 설계에 처음부터 넣어야</strong> 한다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="formula">
+        <header><span class="num">09</span><h2>확신 공식 <span class="ts">10:20</span></h2></header>
+        <p>Sonar는 이 한계들을 놓고 <strong>코드 확신 공식</strong> <span class="en">code confidence formula</span>을 만들었다. 목표는 믿을 수 있는 결과다. 맹목적으로 믿는 게 아니라, 경영진·고객·주주·이사회 앞에서 "이 공장은 잘 돌아간다"고 말할 수 있는 상태다.</p>
+        <blockquote>확신 = 의도 × 가이드레일 × 검증 × 증거<cite>발표 내용을 식으로 옮김</cite></blockquote>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 의도 <span class="en">intent</span></span>
+            <p>무엇을 만들려는지 아주 분명해야 한다. 내가 모르면 에이전트에게 시킬 수 없고, 원하는 결과도 나오지 않는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 가이드레일 <span class="en">guide rails</span></span>
+            <p>가드레일 <span class="en">guard rails</span>은 길 밖으로 떨어지지 않게 막는다. 가이드레일은 길 위에 머물도록 돕는다. 에이전트에게 필요한 건 작은 넛지(살짝 방향을 틀어 주는 신호)다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 검증 <span class="en">verification</span></span>
+            <p>독립적이고 철저해야 한다. 찾은 문제는 뒤로 미루지 않고 고쳐야 한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">4 · 증거 <span class="en">evidence</span></span>
+            <p>"믿되 검증하라"에서 한 걸음 더 간다. 검증했다는 증명이 일관되고, 감사할 수 있고, 반복 가능해야 한다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">왜 더하기가 아니라 곱하기인가</span>
+          <span>발표자는 넷 중 하나가 빠진 경우를 여러 번 봤다고 한다. 곱셈에서는 하나가 0이면 결과가 0이다. 나머지 셋을 다 잘해도 증거가 없으면 결과를 믿을 수 없다.</span>
+        </div>
+        <p class="note">자막에는 "audible"로 찍혔지만 문맥상 "auditable(감사 가능)"로 읽었다.</p>
+        <p>Sonar는 고객과 파트너의 공장을 설계할 때 이 넷을 하나씩 의도적으로 챙긴다고 한다. 발표 화면의 설계도는 하나하나 설명하지 않았다. <span class="ts">12:10</span></p>
+      </section>
+
+      <!-- 10 -->
+      <section id="intent">
+        <header><span class="num">10</span><h2>의도와 가이드레일의 효과 <span class="ts">12:30</span></h2></header>
+        <p>발표자가 고객 사례라며 보여 준 결과다. Sonar Vortex(들린 대로, 추정)라는 제품이 에이전트에게 의도와 가이드레일을 주고, 에이전트가 일하는 도중에 검증도 한다. 크고 복잡한 코드베이스에서 오래 걸리는 과제에 적용했다.</p>
+        <figure class="chart" aria-label="Sonar 제품 적용 뒤 감소율: 토큰 비용 36%, 커밋 속 문제 92%">
+          <span class="chart-title">적용 뒤 줄어든 비율 (%) · 발표자 회사의 고객 사례</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>토큰 비용</span><span class="val">−36</span></div>
+              <div class="track"><div class="fill" style="width:36%" title="토큰 비용 36% 감소"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>커밋에 들어간 문제</span><span class="val">−92</span></div>
+              <div class="track"><div class="fill key" style="width:92%" title="커밋 속 문제 92% 감소"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+        </figure>
+        <p>토큰이 줄어든 이유는 한계 2의 비유로 설명한다. 에이전트를 White Plains에 세워 주는 것이다. 답 가까이에서 출발하고, 지도를 쥐여 준다. 이미 아는 것을 찾느라 토큰을 태우지 않아도 된다.</p>
+        <p>비용은 줄고, 검증 단계로 넘어가는 코드의 질은 좋아진다. 에이전트가 궤도를 벗어나지 않게 계속 살짝씩 방향을 잡아 주기 때문이라고 발표자는 말한다.</p>
+        <p class="note">자사 제품의 고객 사례다. 비교 대상, 측정 방법, 고객 수는 발표에서 나오지 않았다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="verify">
+        <header><span class="num">11</span><h2>독립 검증 <span class="ts">13:20</span></h2></header>
+        <p>Sonar는 검증 회사로 시작했다. 발표자의 입장은 분명하다. 독립 검증은 모든 종류의 문제를 다뤄야 하고, 정확하면서도 비용이 적당해야 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>쓰는 자원</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td>결정론적 검사</td><td>CPU</td><td>같은 입력에 늘 같은 결과를 내는 규칙 기반 분석. CPU로 되는 일은 CPU로 한다</td></tr>
+              <tr><td>에이전트 검사</td><td>GPU</td><td>모델이 필요한 곳에만 GPU를 쓴다</td></tr>
+              <tr><td>둘을 섞은 것</td><td>—</td><td>발표자가 "검증의 금본위"<span class="en">gold standard</span>라 부르는 조합</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>한계 4와 이어서 읽으면 뜻이 분명해진다. LLM 판정은 흔들리니, 흔들리지 않는 결정론적 검사를 바닥에 깔고 그 위에 에이전트 검사를 더한다는 것이다.</p>
+
+        <h3>SonarQube 사용자 설문 <span class="ts">14:10</span></h3>
+        <p>Sonar가 고객 1,000곳 이상에게 AI 코딩의 영향을 물었다. 숫자는 "SonarQube 사용자가 비사용자보다 '매우 긍정적인 영향'을 봤다고 답할 가능성이 몇 % 더 높은가"이다.</p>
+        <figure class="chart" aria-label="SonarQube 사용자가 비사용자보다 매우 긍정적 영향을 답할 가능성이 더 높은 정도: 코드 보안 81%, 장애 빈도 76%, 출시 속도 34%">
+          <span class="chart-title">"매우 긍정적" 응답 가능성이 비사용자보다 높은 정도 (상대 %)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>코드 보안</span><span class="val">+81</span></div>
+              <div class="track"><div class="fill key" style="width:81%" title="코드 보안: 81% 더 높음"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>장애 빈도</span><span class="val">+76</span></div>
+              <div class="track"><div class="fill key" style="width:76%" title="장애 빈도: 76% 더 높음"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>출시 속도</span><span class="val">+34</span></div>
+              <div class="track"><div class="fill" style="width:34%" title="출시 속도: 34% 더 높음"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">절대 비율이 아니라 상대 비율이다. 예: 비사용자가 10%라면 사용자는 약 18%라는 뜻(예시).</span>
+        </figure>
+        <p class="note">발표자 회사가 자사 제품 사용자와 비사용자를 비교한 자기 보고 설문이다. 원래 품질에 신경 쓰는 팀이 SonarQube를 쓸 가능성도 있어서, 이 숫자만으로 제품이 원인이라고 보기는 어렵다.</p>
+        <p>발표자의 결론은 이렇다. 검증을 공장의 일급 시민(가장 먼저 챙기는 핵심 요소)으로 세우면 확신이 생기고 결과도 좋아진다. 보안이 나아지고, 출시 일정에 더 자신이 생기고, 장애가 줄어든다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="evidence">
+        <header><span class="num">12</span><h2>증거 <span class="ts">15:20</span></h2></header>
+        <p>마지막 요소는 증거다. 발표자가 든 예는 이렇다.</p>
+        <ul class="plain">
+          <li>품질 게이트 <span class="en">quality gate</span>를 통과했다는 기록</li>
+          <li>회사 내부통제의 IT 일반 통제 <span class="en">ITGC</span>를 지켰다는 기록</li>
+          <li>자동차를 만든다면 MISRA 같은 업계 코딩 기준을 지켰다는 기록</li>
+        </ul>
+        <p>어떤 기준이든 내가 통과해야 하는 것을 통과했다는 증거가 있어야 한다. 발표자 표현으로는 증거가 있어야 "밤에 잠을 잘 수 있다". 그래야 다음 단계로 나아갈 확신이 생긴다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="conclusion">
+        <header><span class="num">13</span><h2>결론 <span class="ts">15:50</span></h2></header>
+        <blockquote>코드는 흔하고, 확신은 귀하다.<cite>Tariq Shaukat, 발표의 맺음말을 옮김</cite></blockquote>
+        <ul class="plain">
+          <li>코드를 많이 만드는 것은 이제 어렵지 않다.</li>
+          <li>어려운 것은 그 코드를 내보내도 된다고 믿을 근거다.</li>
+          <li>미래의 소프트웨어 공장은 <strong>확신을 만들어 내야</strong> 한다.</li>
+          <li>사람이 끝에서 하나씩 확인하는 방식으로는 안 된다. Toyota처럼 <strong>품질을 공장 설계에 넣어야</strong> 한다.</li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>Toyota는 많이 만들고 고치는 대신, 처음부터 제대로 만드는 공장을 설계했다. 소프트웨어 모범 사례도 여기서 왔다.</li>
+          <li>에이전트 도입 뒤 코드 줄 수는 +2,450%, 커밋은 +240%인데 출시는 +30%다.</li>
+          <li>사람 확인은 늘릴 수 없다. 사람은 AI가 틀려도 80% 동의한다(<strong>인지적 항복</strong>).</li>
+          <li>에이전트는 1만 줄에서 91% 맞히다가 5만 줄에서 무너졌다. 같은 과제의 토큰 비용은 30배까지 차이 났다.</li>
+          <li>단계마다 95%가 맞아도 20단계면 36%다. <strong>긴 작업일수록 오류가 쌓인다.</strong></li>
+          <li>LLM 심판은 같은 질문에 7~17%, 되물으면 7~34% 판정을 바꾼다.</li>
+          <li>공격까지 걸리는 시간이 0에 가까워져서, 예방을 설계에 넣어야 한다.</li>
+          <li><strong>확신 = 의도 × 가이드레일 × 검증 × 증거.</strong> 하나라도 0이면 전체가 0이다.</li>
+          <li>검증은 결정론적 검사(CPU)와 에이전트 검사(GPU)를 섞는다. 발표자 회사의 사례 수치는 감안해서 본다.</li>
+          <li><strong>코드는 흔하고 확신은 귀하다.</strong> 공장은 확신을 만들어야 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>Lexus 광고의 쇠구슬은 무엇을 보여 주려 했나?</span></summary><div class="answer">차체 이음새에 틈이 없을 만큼 차를 정확하게 맞춰 만들 수 있다는 것. 많이 만들고 나중에 고치는 대신 처음부터 제대로 만드는 사고방식의 상징이다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>2,450%, 240%, 30%는 각각 무엇의 증가율인가?</span></summary><div class="answer">비동기 에이전트 도입 뒤 코드 줄 수(2,450%), 커밋 수(240%), 출시 횟수(30%). 만드는 양은 폭증했지만 내보내는 양은 거의 그대로다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>인지적 항복 연구에서 93%와 80%는 무엇인가? 무슨 뜻인가?</span></summary><div class="answer">AI가 맞을 때 사람이 동의한 비율(93%)과 AI가 틀릴 때 동의한 비율(80%). 차이가 작아서, 사람의 확인이 틀린 답을 거의 걸러 내지 못한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>큰 코드베이스에서 같은 과제의 토큰 비용이 30배까지 차이 나는 이유는?</span></summary><div class="answer">에이전트가 코드베이스의 구조를 파악하고 길을 찾는 데 토큰 대부분을 쓰기 때문이다. 어디서 출발하느냐(White Plains냐 Albuquerque냐)에 따라 비용이 달라진다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>METR 결과의 "사람 16시간짜리 과제"에 붙은 단서는?</span></summary><div class="answer">성공률 50% 기준이다. 기준을 80%로 올리면 해낼 수 있는 과제 길이가 크게 줄어든다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>단계마다 95% 맞을 때 20단계 작업 전체가 맞을 확률은?</span></summary><div class="answer">0.95를 20번 곱한 약 36%. 단계가 많을수록 오류가 쌓인다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>"그냥 LLM에게 판정시키면 되지 않나?"에 발표자가 든 두 연구는?</span></summary><div class="answer">같은 질문을 똑같이 다시 물으면 판정이 7~17% 바뀐다(PayPal AI 연구소). "정말이야?"라고 되물으면 7~34% 바뀐다(Meta 연구).</div></details>
+          <details><summary><span class="qn">Q8</span><span>확신 공식의 네 요소와, 더하기가 아니라 곱하기인 이유는?</span></summary><div class="answer">의도, 가이드레일, 검증, 증거. 하나라도 0이면 결과가 0이 된다. 나머지를 다 잘해도 증거가 없으면 결과를 믿을 수 없다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>가드레일과 가이드레일은 어떻게 다른가?</span></summary><div class="answer">가드레일은 길 밖으로 떨어지지 않게 막는다. 가이드레일은 작은 넛지로 길 위에 머물도록 돕는다. 발표자는 에이전트에게 후자가 필요하다고 본다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>발표자가 말하는 "검증의 금본위"는 어떤 조합인가?</span></summary><div class="answer">CPU로 돌리는 결정론적 검사와, 필요한 곳에만 GPU를 쓰는 에이전트 검사를 섞은 것. 독립적이고 철저하면서 비용도 적당해야 한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>SonarQube 설문의 81%를 읽을 때 주의할 점은?</span></summary><div class="answer">절대 비율이 아니라 "비사용자보다 몇 % 더 그렇게 답할 가능성이 높은가"라는 상대 비율이다. 또 발표자 회사의 자기 보고 설문이라 제품이 원인이라고 단정할 수 없다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>코드 생산량과 출시량을 따로 잰다<span class="how">확인: 줄 수·커밋은 늘었는데 출시가 그대로인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>"사람이 루프 안에 있다"를 안전장치로 내세우지 않는다<span class="how">사람 승인이 실제로 틀린 결과를 걸러 냈는지 기록을 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트에게 작업 전에 의도를 글로 준다<span class="how">무엇을 만들고, 무엇을 건드리지 말아야 하는지</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>코드베이스 지도를 에이전트가 읽을 수 있게 둔다<span class="how">구조, 모듈의 역할, 진입점. 확인: 같은 과제의 토큰 사용량이 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>긴 작업은 중간 검증 지점을 두고 나눈다<span class="how">20단계를 한 번에 돌리지 않는다. 단계마다 검사해 오류가 쌓이지 않게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>LLM 판정만으로 통과시키지 않는다<span class="how">결정론적 검사(정적 분석, 테스트)를 바닥에 깔고 그 위에 LLM 리뷰를 얹는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>찾은 문제를 뒤로 미루지 않는다<span class="how">확인: 검증에서 나온 문제가 머지 전에 고쳐지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>통과 기록을 남긴다<span class="how">품질 게이트 결과, 우리 팀이 지켜야 할 규정의 준수 기록을 반복해서 뽑을 수 있게</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트 소프트웨어 공장</td><td>Agentic software factory. 코드 작성부터 검사까지를 에이전트로 자동화한 개발 체계</td></tr>
+              <tr><td>비동기 에이전트</td><td>사람이 지켜보지 않는 동안 혼자 작업을 이어 가는 코딩 에이전트</td></tr>
+              <tr><td>에러 버짓</td><td>Error budget. 서비스가 실패해도 되는 정도를 미리 정해 둔 한도</td></tr>
+              <tr><td>지속적 통합</td><td>Continuous integration. 변경을 자주 합치고 그때마다 자동으로 검사하는 방식</td></tr>
+              <tr><td>휴먼 인 더 루프</td><td>Human in the loop. 사람이 중간 단계마다 확인하고 승인하는 방식</td></tr>
+              <tr><td>인지적 항복</td><td>Cognitive surrender. 사람이 스스로 판단하지 않고 AI의 답을 그대로 따르는 현상</td></tr>
+              <tr><td>코드베이스</td><td>한 제품을 이루는 코드 전체</td></tr>
+              <tr><td>토큰</td><td>모델이 글을 읽고 쓰는 단위. 많이 쓸수록 비용이 든다</td></tr>
+              <tr><td>METR</td><td>AI 모델이 사람의 일을 얼마나 해내는지 평가하는 연구 단체</td></tr>
+              <tr><td>시간 지평</td><td>Time horizon. 사람 기준 몇 시간짜리 과제를 정해진 성공률로 해내는지</td></tr>
+              <tr><td>LLM 심판</td><td>LLM-as-a-judge. 모델에게 결과가 맞는지 판정을 맡기는 방식</td></tr>
+              <tr><td>가드레일 / 가이드레일</td><td>Guard rails는 벗어나지 못하게 막는 장치. Guide rails는 작은 신호로 길 위에 머물게 돕는 장치</td></tr>
+              <tr><td>결정론적 검사</td><td>Deterministic. 같은 입력에 늘 같은 결과를 내는 규칙 기반 검사. 정적 분석이 대표적이다</td></tr>
+              <tr><td>품질 게이트</td><td>Quality gate. 정해진 품질 기준을 넘어야만 다음 단계로 보내는 관문</td></tr>
+              <tr><td>ITGC</td><td>IT general controls. 회사 내부통제 중 IT 시스템에 관한 일반 통제</td></tr>
+              <tr><td>MISRA</td><td>자동차 등 안전이 중요한 분야에서 쓰는 코딩 기준</td></tr>
+              <tr><td>감사 가능</td><td>Auditable. 제3자가 나중에 기록을 보고 무엇을 했는지 확인할 수 있는 상태</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 1980년대 자동차</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>Lexus 쇠구슬 광고, 품질 중심 사고방식</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>품질 공장의 다섯 원칙</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>소프트웨어가 물려받은 것: 애자일, 칸반, 에러 버짓, CI</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>에이전트 도입 뒤 코드 +2,450%</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>State of Code 설문: 5% → 34%</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>보안 위험, Satya Nadella의 글</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>패러다임 전환: 확신을 설계로 넣는다</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>한계 1: 휴먼 인 더 루프는 늘릴 수 없다</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>인지적 항복: 93% vs 80%</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>한계 2: 큰 코드베이스, 1만 줄 91%</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>토큰 30배 차이, White Plains와 Albuquerque</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>한계 3: METR 시간 지평, 오류 누적</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>한계 4: LLM 심판의 흔들림</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>한계 5: 공격까지의 시간이 0에 가깝다</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>코드 확신 공식</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>가드레일이 아니라 가이드레일</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>곱하기: 하나가 0이면 전체가 0</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>고객 사례: 토큰 −36%, 문제 −92%</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>독립 검증: 결정론적 + 에이전트</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>SonarQube 사용자 설문</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>증거: 품질 게이트, ITGC, MISRA</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>코드는 흔하고 확신은 귀하다</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>마무리 인사</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'LQW_Wvqhp04:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

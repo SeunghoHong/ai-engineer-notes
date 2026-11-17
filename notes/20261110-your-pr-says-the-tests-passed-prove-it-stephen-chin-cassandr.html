@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>증거로 쓰는 PR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#problem">PR이 거절되는 이유</a></li>
+      <li><a href="#factory">토큰 공장과 되풀이되는 PR</a></li>
+      <li><a href="#why-wrong">에이전트의 PR 설명이 틀리는 이유</a></li>
+      <li><a href="#tracetune">TraceTune 첫 버전</a></li>
+      <li><a href="#limits">첫 버전의 한계</a></li>
+      <li><a href="#graph">그래프가 근거를 미리 묶는다</a></li>
+      <li><a href="#brief">이웃 브리프</a></li>
+      <li><a href="#roles">작성자는 비싸게, 리뷰어는 싸게</a></li>
+      <li><a href="#output">완성된 PR 설명</a></li>
+      <li><a href="#results">PR Bench 결과</a></li>
+      <li><a href="#beyond">다른 프로젝트에 쓰려면</a></li>
+      <li><a href="#closing">마무리</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-10 · 23분 · 영어 발표 한글 정리</span>
+      <h1>PR 설명은 증거로 써야 한다</h1>
+      <p class="lead">에이전트가 쓴 PR 설명은 "테스트 통과" 같은 주장을 근거 없이 담기 쉽다. 발표자들은 작업 기록을 그래프 데이터베이스로 미리 묶어 주면, PR 품질은 조금 오르고 토큰은 절반으로 준다고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=gbeuC0ud1p4" target="_blank" rel="noopener">Your PR Says the Tests Passed. Prove It.</a></span>
+        <span>발표: Stephen Chin (Neo4j), Cassandra Chin (TraceTune 제작자)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 인용하거나 주장한 것이고, 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다(예: swyx, PR Bench). 확실하지 않은 이름은 들린 대로 적고 (추정)을 붙였다. 발표는 만화 이야기 형식이다. Alex, Mira, Pip 같은 이름은 만화 속 캐릭터다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI 시대에 PR이 거절되는 건 코드가 나빠서보다 <strong>PR 설명이 틀려서</strong>인 경우가 많다고 Cassandra Chin은 본다.</li>
+        <li>원인은 에이전트가 <strong>압축된 자기 세션 기억과 diff만 보고</strong> PR을 쓰기 때문이다. 그래서 "테스트 통과" 같은 주장이 근거 없이 들어간다.</li>
+        <li>TraceTune은 컴퓨터에 남은 <strong>에이전트 작업 기록</strong>을 읽어 근거를 모으고, 작성자와 리뷰어를 따로 둔다.</li>
+        <li>첫 버전도 고쳐 쓰는 단계에서 틀렸다. <strong>모델만 싼 걸로 바꾸면 품질이 떨어졌다.</strong></li>
+        <li>해법은 그래프 데이터베이스 Relate다. 이유, 코드, 검사 결과를 출처와 함께 미리 묶어 <strong>"이웃 브리프"</strong>로 넘긴다. 이 단계에는 LLM 비용이 들지 않는다.</li>
+        <li>근거가 묶여 있으면 리뷰는 <strong>싼 모델 여러 개</strong>로 충분하다. 반대로 글쓰기에는 <strong>높은 등급 모델</strong>이 필요하다.</li>
+        <li>발표자들이 만든 PR Bench에서 품질은 100점 척도로 <strong>2~4점</strong> 올랐고, 토큰은 <strong>약 절반</strong>으로 줄었다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="problem">
+        <header><span class="num">01</span><h2>PR이 거절되는 이유 <span class="ts">00:10</span></h2></header>
+        <p>풀 리퀘스트<span class="en">pull request, PR</span>는 내 변경을 메인 코드에 합쳐 달라는 요청이다. 리뷰어는 코드와 함께 PR 설명을 읽고 합칠지 정한다.</p>
+        <p>Cassandra Chin은 AI 덕분에 개발 속도가 어느 때보다 빠르다고 말한다. 그런데 PR은 많이 거절된다. Cassandra Chin이 본 이유는 코드가 아니다. <strong>PR 설명에 틀린 정보가 들어 있거나, 설명이 엉성하게 쓰여 있기 때문이다.</strong></p>
+        <p>TraceTune은 이 PR 설명을 고치려고 만든 도구다. PR 내용을 재미있게 풀어 주는 만화를 덧붙이는 기능도 있다.</p>
+        <div class="callout">
+          <span class="title">발표가 다루는 세 가지 <span class="ts">00:50</span></span>
+          <span>PR의 흔한 문제, PR 품질을 올리는 법, 토큰을 아끼는 법. 이 셋을 만화 주인공 Alex의 이야기로 풀어 간다. Alex의 소원은 AI Engineer 후드티를 받는 것이다. 그러려면 회사에서 PR 품질을 높인 사례로 이 행사 무대에 서야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="factory">
+        <header><span class="num">02</span><h2>토큰 공장과 되풀이되는 PR <span class="ts">01:40</span></h2></header>
+        <p>Alex는 "토큰 공장"에서 여러 에이전트와 함께 일한다. 등장인물은 다음과 같다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>등장인물</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td>Alex</td><td>AI 엔지니어. 주인공</td></tr>
+              <tr><td>재무팀 (오소리)</td><td>토큰 지출을 지켜본다</td></tr>
+              <tr><td>Pip</td><td>근거를 나르고, 기록 보관소를 뒤져 실제로 무슨 일이 있었는지 찾는다</td></tr>
+              <tr><td>Mira</td><td>리뷰어. 아주 꼼꼼하다</td></tr>
+              <tr><td>Archie</td><td>나중에 등장하는 그래프 데이터베이스</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Mira의 리뷰 지적 <span class="ts">02:40</span></h3>
+        <p>Alex가 낸 PR은 끝없이 긴 장부 같았다. Mira는 한 줄씩 읽고 문제를 찾았다. 이 장면은 실제 TraceTune PR에서 가져왔다.</p>
+        <ul class="plain">
+          <li>URL마다 정확한 미리보기 링크가 있어야 한다</li>
+          <li>결과마다 어떤 명령에서 나왔는지 출처를 밝혀야 한다</li>
+          <li>앞선 작업도 어디까지 유효한지 단서를 달아야 한다</li>
+          <li>이 모두를 PR 기록에 자세히 설명해야 한다</li>
+        </ul>
+        <p>Cassandra Chin은 TraceTune을 만들면서 그 PR을 TraceTune으로 썼다. PR이 나아질수록 도구도 함께 나아졌다.</p>
+
+        <h3>다시 낼 때마다 토큰이 든다 <span class="ts">03:30</span></h3>
+        <p>Alex는 좋은 결과를 얻으려고 PR을 계속 다시 낸다. 결과는 나아지지 않고 토큰 지출만 는다. 발표에서는 이걸 "토큰 빌리어네어 카드"로 농담한다. 토큰을 아주 많이 쓴 사람에게 주는 실물 카드다.</p>
+        <p>Stephen Chin은 토큰을 쓸 좋은 곳은 많다고 말한다. 다만 같은 PR을 되풀이해 고치는 데 쓸 곳은 아니다. 다시 낼 때마다 <strong>로그를 다시 읽고 근거를 다시 짜 맞추기</strong> 때문이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="why-wrong">
+        <header><span class="num">03</span><h2>에이전트의 PR 설명이 틀리는 이유 <span class="ts">04:40</span></h2></header>
+        <p>보통은 작업하던 세션에서 에이전트에게 "PR 써 줘"라고 한다. 에이전트는 자기 세션 기록을 읽고 무엇을 했는지 되짚는다. Cassandra Chin은 여기서 두 가지 문제를 짚는다.</p>
+        <ol class="plain">
+          <li>에이전트는 잔뜩 부풀어 오른 컨텍스트 창<span class="en">context window</span>으로 기록을 읽는다. 컨텍스트 창은 모델이 한 번에 붙잡고 있는 대화 내용이다.</li>
+          <li>작업이 길어지면 에이전트는 컨텍스트를 압축한다<span class="en">compaction</span>. 압축할수록 세부가 빠지고, PR 설명은 점점 부정확해진다.</li>
+        </ol>
+        <p>TraceTune은 다르게 한다. 컴퓨터에 남아 있는 <strong>여러 세션의 기록</strong>을 읽어, 실제로 무엇을 만들었고 무슨 일이 있었는지 알아낸다.</p>
+
+        <h3>시작은 교육 연구였다 <span class="ts">05:20</span></h3>
+        <p>Cassandra Chin은 이 일을 Show Tell(추정) 프로젝트에서 시작했다. 한 대학 연구를 돕는 프로젝트였다.</p>
+        <p>학생들은 AI로 프로그램을 만들어 제출했다. 제출하는 건 최종 프로그램뿐이었다. 실제 노력의 대부분인 프롬프트와 그 앞의 과정은 남지 않았다. 그래서 학생이 실제로 어떤 작업을 했는지 거슬러 볼 방법이 없었다.</p>
+        <p>이 문제를 풀려고 작업 과정을 추적하는 기술을 만들었다. 그리고 같은 기록으로 PR도 나아지게 할 수 있겠다고 생각했다.</p>
+
+        <h3>좋은 PR 설명에는 무엇이 들어가나 <span class="ts">06:10</span></h3>
+        <p>Stephen Chin은 작업 기록이 있으면 PR에 진짜 근거를 담을 수 있다고 말한다. 발표에 나온 예는 이렇다.</p>
+        <ul class="plain">
+          <li><code>cd</code>가 실행되기 전의 현재 작업 디렉터리<span class="en">CWD</span>를 로그로 남겼다</li>
+          <li>그래서 다른 테스트 데이터가 왜 다른 저장소로 새어 들어갔는지 설명할 수 있다</li>
+          <li>화면 뒤에서 실제로 무슨 일이 있었는지 적는다</li>
+        </ul>
+        <div class="shift" aria-label="PR 설명의 변화">
+          <div><span class="tag">흔한 AI PR</span><b>diff를 줄마다 해설한다</b><span class="muted">에이전트가 diff만 보고 PR을 쓰기 때문이다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">근거 기반 PR</span><b>왜 바꿨고 뒤에서 무슨 일이 있었는지 적는다</b><span class="muted">작업 기록에서 찾은 사실을 출처와 함께 쓴다</span></div>
+        </div>
+        <p>틀린 사실이 하나라도 섞이면 문제가 커진다. 정보가 오염되고, PR끼리 충돌하고, 결국 부정확한 결과가 돌아온다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="tracetune">
+        <header><span class="num">04</span><h2>TraceTune 첫 버전 <span class="ts">07:30</span></h2></header>
+        <p>TraceTune은 오픈소스다. 하는 일은 세 가지다.</p>
+        <ul class="plain">
+          <li>에이전트 작업 기록과 코드 정보를 끌어온다</li>
+          <li>서로 독립된 <strong>작성자</strong>와 <strong>리뷰어</strong>가 PR 설명을 만든다</li>
+          <li>원하면 만화를 붙인다</li>
+        </ul>
+        <p>Cassandra Chin은 반쯤 농담으로 "만화가 먼저였고, PR 품질은 나중에 챙겼다"고 말한다. 초기 만화 중에는 "매 화 새 캐릭터 쓰기"를 다룬 PR의 만화도 있다. <span class="ts">08:00</span></p>
+
+        <h3>원래 흐름 <span class="ts">08:20</span></h3>
+        <ol class="plain">
+          <li>한 브랜치에 해당하는 작업 기록<span class="en">trace</span>을 모두 찾는다</li>
+          <li>기록을 조사한다</li>
+          <li>PR 설명을 리뷰한다</li>
+          <li>맥락을 더 넣는다</li>
+          <li>좋은 PR에 필요한 근거가 다 모일 때까지 2~4를 되풀이한다</li>
+        </ol>
+        <p>발표자들은 이 흐름이 이미 나았다고 말한다. 직접 봐도 나았고, PR Bench로 재도 품질과 조사가 낫고 부정확한 내용이 적었다. PR Bench는 발표자들이 만든 PR 품질 측정 틀이다.</p>
+        <p>그래도 가끔 틀렸다. Cassandra Chin은 마지막에 <strong>맥락을 더 넣어 고쳐 쓰는 단계</strong>에서 실수가 생긴다고 봤다. <span class="ts">08:50</span></p>
+      </section>
+
+      <!-- 5 -->
+      <section id="limits">
+        <header><span class="num">05</span><h2>첫 버전의 한계 <span class="ts">09:20</span></h2></header>
+
+        <h3>"테스트 통과"라는 주장 <span class="ts">09:30</span></h3>
+        <p>Alex는 TraceTune으로 PR을 냈다. PR은 테스트가 통과했고 검사를 다 돌렸다고 주장했다.</p>
+        <p>실제 작업 기록은 달랐다. <code>bun test</code>와 <code>bunx tsc</code>(타입 검사)가 <strong>동시에</strong> 돌았다. Cassandra Chin의 설명으로는 이 둘은 순서대로 돌려야 테스트가 통과한다. 그러니 "통과했다"는 주장은 기록과 맞지 않았다. 코드가 실제로 한 일이 PR 설명과 달랐던 것이다.</p>
+        <div class="callout warn">
+          <span class="title">발표 제목의 뜻</span>
+          <span>"PR이 테스트가 통과했다고 말한다면, 증명하라." PR 설명의 주장 하나하나에 그걸 뒷받침하는 실행 기록이 있어야 한다.</span>
+        </div>
+
+        <h3>모델만 싸게 바꾸기 <span class="ts">10:20</span></h3>
+        <p>Stephen Chin은 재무팀에게 늘 듣는 말이 있다고 한다. "Opus, Sonnet, Haiku 말고 더 싼 걸 써 달라." 그래서 작성 모델을 더 싼 것으로 바꿔 봤다.</p>
+        <p>결과는 <strong>품질 하락</strong>이었다. 품질을 올리려다 오히려 떨어졌다. 비용만 줄인다고 해결되지 않는다.</p>
+        <p>이제 Alex는 막혔다. 고쳐 쓰는 데 토큰을 너무 많이 썼다. 비용을 줄일 방법도 없다. PR 결과도 여전히 나쁘다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="graph">
+        <header><span class="num">06</span><h2>그래프가 근거를 미리 묶는다 <span class="ts">11:00</span></h2></header>
+        <p>Pip에게는 친구가 있다. Stephen Chin의 이전 발표들을 아는 사람이라면 짐작하듯 그 친구는 그래프다. 이번에는 Neo4j 데이터베이스가 아니라 새 친구 <strong>Archie</strong>다.</p>
+        <p>Archie의 정체는 <strong>Relate</strong>(자막 표기, 추정)다. 발표자들이 소개한 특징은 다음과 같다. <span class="ts">11:30</span></p>
+        <ul class="plain">
+          <li>Rust로 쓴 <strong>임베디드</strong><span class="en">embedded</span> 그래프 데이터베이스다. 따로 서버를 띄우지 않고 프로그램 안에 들어가 돈다</li>
+          <li>오픈소스다. 발표 주간에 NODES 컨퍼런스와 이 발표에서 공개했다</li>
+          <li>무거운 구성 없이 정확도, 멀티홉 질의<span class="en">multi-hop query</span>, 설명 가능한 추적을 얻는다고 한다</li>
+          <li>에이전트용, 임베디드 용도에 맞춰 만들었다</li>
+        </ul>
+        <p class="note">Relate는 발표자들이 "우리의 새 데이터베이스"라고 소개한 제품이다. 장점은 발표자의 주장으로 감안해 읽자.</p>
+
+        <div class="shift" aria-label="근거를 모으는 방식의 변화">
+          <div><span class="tag">이전</span><b>에이전트 루프가 매번 조사한다</b><span class="muted">근거를 찾고 다시 찾는 데 LLM 토큰이 든다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이후</span><b>그래프가 근거를 미리 묶어 준다</b><span class="muted">관계를 저장하고, 연결된 것을 찾아 브리프를 만든다. 더 싼 에이전트도 좋은 정보로 초안을 쓴다</span></div>
+        </div>
+
+        <h3>LLM 비용이 0인 단계 <span class="ts">12:40</span></h3>
+        <p>Archie는 LLM을 부르지 않는다. 드는 건 로컬 컴퓨터의 계산과 저장 공간뿐이다. 메모리 안에서 도는<span class="en">in-memory</span> Rust 데이터베이스라 빠르다고 한다.</p>
+        <p>그래서 두 가지를 거의 공짜로 얻는다.</p>
+        <ul class="plain">
+          <li><strong>출처 기록</strong><span class="en">provenance</span>: 제출된 변경 하나하나가 어디서 왔는지</li>
+          <li><strong>근거 그래프</strong><span class="en">evidence graph</span>: 사실과 근거가 서로 어떻게 이어지는지</li>
+        </ul>
+        <p>이제 Alex는 사실과 출처를 다시 찾지 않아도 된다. Relate가 그 일을 하고 <strong>근거 패킷</strong><span class="en">evidence packet</span>을 만들어 TraceTune에 넘긴다. <span class="ts">13:00</span></p>
+      </section>
+
+      <!-- 7 -->
+      <section id="brief">
+        <header><span class="num">07</span><h2>이웃 브리프 <span class="ts">13:20</span></h2></header>
+        <p>근거 패킷을 더 쓸모 있게 만드는 방법이 <strong>이웃 브리프</strong><span class="en">neighborhood brief</span>다. 그래프에서 어떤 사실과 이어진 주변 정보(이웃)를 함께 꺼내 한 묶음으로 만든 요약이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>재료</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>이유 (why)</td><td>이 변경을 왜 했는가</td></tr>
+              <tr><td>코드</td><td>무엇이 바뀌었는가</td></tr>
+              <tr><td>검사 결과</td><td>무엇을 돌렸고 결과가 어땠는가</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>세 재료마다 출처를 달고, 서로의 관계를 잇는다. 그리고 연결된 정보 한 묶음으로 돌려준다.</p>
+        <ul class="plain">
+          <li><strong>작성자</strong>: 연결된 사실과 출처를 한곳에서 본다. 그래서 더 적은 횟수로 더 정확한 초안을 쓴다</li>
+          <li><strong>리뷰어</strong>: 대조할 근거가 이미 모여 있어 일이 훨씬 쉬워진다</li>
+        </ul>
+      </section>
+
+      <!-- 8 -->
+      <section id="roles">
+        <header><span class="num">08</span><h2>작성자는 비싸게, 리뷰어는 싸게 <span class="ts">14:00</span></h2></header>
+        <p>리뷰어 일이 쉬워졌으니 비싼 리뷰어가 필요 없다. 발표자들은 모델을 이렇게 나눴다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>역할</th><th>Claude 쪽</th><th>Codex 쪽</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>리뷰어</td><td>Sonnet 하나 대신 Haiku 여러 개</td><td>Luna(추정)</td><td>지적을 찾고, 초안과 대조하고, 다시 쓰게 한다. 기계적인 일이다</td></tr>
+              <tr><td>작성자</td><td>Sonnet 급 하나</td><td>Terra(추정) 급</td><td>사람의 승인을 통과할 만한 글을 써야 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Cassandra Chin은 만들면서 이 배치가 직관에 반한다고 느꼈다. 작성자가 리뷰어보다 높은 등급이기 때문이다. <span class="ts">14:30</span></p>
+        <p>Stephen Chin의 설명은 이렇다. 보통은 계획자, 리뷰어, 검사자에 가장 좋은 모델을 둔다. 하지만 목표가 좋은 글이라면 사정이 다르다. 낮은 등급 모델은 반복과 피드백을 아무리 줘도 좋은 글을 못 쓴다.</p>
+        <blockquote>낮은 모델은 글을 체크리스트로 바꿔 버린다. 아주 기계적으로.<cite>Stephen Chin의 말을 옮김 · 14:50</cite></blockquote>
+        <p>사람이 쓴 것 같은 글에는 높은 등급 모델이 필요하다. 오히려 <strong>리뷰와 교차 확인이 기계적인 쪽</strong>이다.</p>
+
+        <h3>리뷰 단계가 한 일 <span class="ts">15:20</span></h3>
+        <ol class="plain">
+          <li>모든 주장을 근거와 대조했다</li>
+          <li>싼 리뷰어로 빠진 지적이 없는지 찾았다</li>
+          <li>연결된 정보를 찾아 Mira에게 더 나은 초안과 리뷰를 넘겼다</li>
+        </ol>
+      </section>
+
+      <!-- 9 -->
+      <section id="output">
+        <header><span class="num">09</span><h2>완성된 PR 설명 <span class="ts">15:40</span></h2></header>
+        <p>그래프를 붙인 뒤 나온 PR 설명은 diff 해설이 아니라 아래 네 칸으로 짜여 있었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>칸</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>왜</td><td>셸에서 <code>cd</code>가 실행되기 전의 CWD를 로그로 남긴다</td></tr>
+              <tr><td>예외</td><td><code>cd</code> 대상이 저장소 안이거나, 명령에 루트 경로가 나오는 경우</td></tr>
+              <tr><td>통과한 것</td><td>타입 검사와 테스트 71개. <strong>제출한 내용에서</strong> 돌렸다. 그 전 상태에서 돌린 게 아니다</td></tr>
+              <tr><td>어디부터 볼지</td><td><code>correlate.ts</code>에서 앞쪽 <code>cd</code> 예외 처리부터 (추정)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">자막이 뭉개진 부분이 있어 칸 이름과 세부 문구는 들린 내용을 바탕으로 재구성했다.</p>
+        <p>"통과한 것" 칸을 보자. 어떤 검사를 몇 개 돌렸는지만 쓰지 않았다. <strong>어느 시점의 코드에서 돌렸는지</strong>까지 적었다. 앞의 실패 사례처럼 근거 없는 "통과" 주장이 들어갈 틈을 막는 형식이다.</p>
+        <p>Cassandra Chin은 이 장면이 Mira가 처음으로 진심으로 만족한 장면이라고 말한다. <span class="ts">16:10</span></p>
+      </section>
+
+      <!-- 10 -->
+      <section id="results">
+        <header><span class="num">10</span><h2>PR Bench 결과 <span class="ts">16:20</span></h2></header>
+        <p>PR Bench는 PR 품질을 재는 벤치마크다. 작업 기록과 코드를 함께 보고, LLM 판정자<span class="en">LLM judge</span>가 PR을 채점한다. 정확한지는 사람이 다시 확인했다. 두 방식의 PR을 나란히 놓고 비교했다<span class="en">side-by-side</span>.</p>
+
+        <figure class="chart" aria-label="PR Bench 품질 점수, 100점 척도: 첫 번째 조합 74에서 76, 두 번째 조합 82에서 86">
+          <span class="chart-title">PR 품질 점수 (100점 척도, LLM 판정)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Claude(추정) · 이전</span><span class="val">74</span></div>
+              <div class="track"><div class="fill" style="width:74%" title="Claude(추정), 이전: 74"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Claude(추정) · TraceTune + Relate</span><span class="val">76 · +2</span></div>
+              <div class="track"><div class="fill key" style="width:76%" title="Claude(추정), TraceTune + Relate: 76"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Codex(추정) · 이전</span><span class="val">82</span></div>
+              <div class="track"><div class="fill" style="width:82%" title="Codex(추정), 이전: 82"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Codex(추정) · TraceTune + Relate</span><span class="val">86 · +4</span></div>
+              <div class="track"><div class="fill key" style="width:86%" title="Codex(추정), TraceTune + Relate: 86"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자는 "Claude와 Codex 모두"라고 말한 뒤 "74에서 76, 82에서 86"이라고 했다. 어느 쪽이 어느 모델인지는 말한 순서를 따랐다(추정). "이전"은 이야기 흐름상 그래프를 붙이기 전의 TraceTune으로 읽었다(추정).</span>
+        </figure>
+        <p>판정자들은 거의 한결같이 TraceTune + Relate 쪽을 더 좋게 봤다고 한다.</p>
+        <p class="note">100점 척도에서 2~4점 차이다. 발표자는 "상당한 개선"이라고 불렀지만, 발표에서 표본 수나 통계적 유의성은 다루지 않았다.</p>
+
+        <h3>토큰은 약 절반 <span class="ts">18:10</span></h3>
+        <figure class="chart" aria-label="토큰 사용량 비교: 그래프 이전을 100으로 놓으면 그래프 사용 후 약 50">
+          <span class="chart-title">PR 한 건에 드는 토큰 (그래프 이전 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>그래프 이전</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="그래프 이전: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>TraceTune + Relate</span><span class="val">약 50</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="TraceTune + Relate: 약 50"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자는 정확한 수치 대신 "약 절반"이라고 말했다. 이전을 100으로 놓고 그렸다.</span>
+        </figure>
+        <p>Stephen Chin의 설명으로는 근거 그래프를 미리 계산해 두기 때문이다. 쓰는 일도 리뷰하는 일도 싸지고, 품질은 오히려 오른다. Cassandra Chin도 처음에는 그래프에 반신반의했지만, 비용이 거의 절반으로 떨어지는 걸 보고 마음을 바꿨다고 한다. <span class="ts">18:40</span></p>
+
+        <h3>벤치마크를 돌리는 비용 <span class="ts">17:10</span></h3>
+        <p>PR Bench는 여러 에이전트에게 여러 PR을 맡기고 결과를 비교한다. 처음에는 테스트를 하나씩 순서대로 돌렸다. 나중에 전부 병렬로 바꿨다. Cassandra Chin은 "지출이 아주 빨리 느는 방법"이라고 말한다.</p>
+        <p>Stephen Chin에 따르면 지금 벤치마크 규모로는 고성능 게이밍 PC의 스레드를 리눅스가 감당하는 한계까지 다 쓴다.</p>
+
+        <p class="note">TraceTune은 Cassandra Chin이 만든 도구다. Relate는 발표자들이 자기들의 새 데이터베이스로 소개했다. PR Bench도 발표자들이 직접 만든 벤치마크다. 결과 수치는 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="beyond">
+        <header><span class="num">11</span><h2>다른 프로젝트에 쓰려면 <span class="ts">18:50</span></h2></header>
+        <p>Stephen Chin은 이 방법이 PR에만 해당하지 않는다고 말한다. 다음이 있는 프로젝트라면 어디든 쓸 수 있다.</p>
+        <ul class="plain">
+          <li>데이터</li>
+          <li>데이터 사이의 관계</li>
+          <li>근거</li>
+          <li>서로 비교해야 할 것들</li>
+        </ul>
+        <p>이유는 에이전트의 약점에 있다. 에이전트는 데이터 분석, 평가, 정리<span class="en">curation</span>에 그리 능하지 않다. 그래서 앞단에서 인메모리 데이터베이스로 맞춤 그래프 층을 만들어 주면, 비용은 내려가고 품질은 올라간다고 발표자는 주장한다.</p>
+        <div class="callout">
+          <span class="title">이 발표의 패턴</span>
+          <span>근거를 찾고 잇는 일은 LLM이 아니라 일반 계산으로 미리 끝낸다. 에이전트는 묶인 근거를 받아 쓰고 확인하는 일만 한다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="closing">
+        <header><span class="num">12</span><h2>마무리 <span class="ts">19:40</span></h2></header>
+        <p>만화 속 결말은 이렇다.</p>
+        <ul class="plain">
+          <li>재무팀은 감당할 만한 작성 비용에 만족한다</li>
+          <li>사실을 이웃 단위로 꺼내 더 나은 브리프를 만든다</li>
+          <li>리뷰어들은 모두 같은 압축된 브리프를 받아 리뷰에 집중한다</li>
+          <li>Mira는 필요한 근거를 정확히 받는다</li>
+          <li>Alex는 사례 발표를 하고 AI Engineer 후드티를 받는다</li>
+        </ul>
+        <p>발표자들의 한 줄 결론은 "그래프와 오픈소스 TraceTune으로 더 나은 PR을 더 낮은 작성 비용으로, 덤으로 만화까지"다. <span class="ts">20:10</span></p>
+        <p>TraceTune은 tracetune.com에서 볼 수 있다. Claude, Codex를 비롯한 여러 AI 도구와 함께 쓸 수 있다고 한다. 자기 프로젝트에 같은 방식을 쓰고 싶다면 Relate를 써 보라고 권한다. <span class="ts">21:20</span></p>
+        <p class="note">여담: 발표자들은 행사 주최자 swyx가 AI Engineer 후드티를 만들어야 한다고 농담한다. 발표 끝에는 행사 주간 토요일에 열리는 AI Engineer Kids Day를 알린다. 아이들이 AI 프로그래밍으로 게임을 만들고, 음료 캔 크기 로봇을 AI로 조종하는 워크숍이다. <span class="ts">22:00</span></p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>PR이 거절되는 흔한 이유는 코드가 아니라 <strong>틀리거나 엉성한 PR 설명</strong>이다.</li>
+          <li>에이전트는 부풀고 압축된 자기 세션 기억과 diff로 PR을 쓴다. 그래서 설명이 diff 해설이 되고, 틀린 사실이 섞인다.</li>
+          <li>TraceTune은 여러 세션의 <strong>작업 기록</strong>을 근거로 쓰고, 작성자와 리뷰어를 따로 둔다.</li>
+          <li>"테스트 통과" 주장도 기록과 대조해야 한다. 실패 사례에서는 순서대로 돌려야 할 검사가 동시에 돌았다.</li>
+          <li>모델만 싼 걸로 바꾸면 비용은 줄어도 <strong>품질이 떨어졌다.</strong></li>
+          <li>그래프 데이터베이스 Relate는 LLM 없이 출처 기록과 근거 그래프를 만든다.</li>
+          <li><strong>이웃 브리프</strong>는 이유·코드·검사 결과를 출처·관계와 함께 한 묶음으로 넘긴다.</li>
+          <li>근거가 묶여 있으면 <strong>리뷰는 싼 모델 여러 개</strong>로 충분하다. <strong>글쓰기는 높은 등급 모델</strong>이 해야 한다.</li>
+          <li>좋은 PR 설명은 왜, 예외, 통과한 것(어느 코드에서), 어디부터 볼지를 적는다.</li>
+          <li>발표자들의 PR Bench에서 품질은 <strong>+2, +4점</strong>, 토큰은 <strong>약 절반</strong>이었다. 모두 발표자들이 만든 도구로 잰 결과다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>Cassandra Chin이 본, PR이 거절되는 주된 이유는?</span></summary><div class="answer">코드가 나빠서가 아니다. PR 설명에 틀린 정보가 들어 있거나 설명이 엉성하게 쓰여 있어서다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>작업하던 세션에서 에이전트에게 PR을 쓰게 하면 왜 점점 부정확해지나?</span></summary><div class="answer">에이전트는 부풀어 오른 컨텍스트로 자기 세션 기록을 읽는다. 작업이 길어지면 컨텍스트를 압축하는데, 압축할수록 세부가 빠진다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>TraceTune은 무엇을 근거로 PR을 쓰나?</span></summary><div class="answer">컴퓨터에 남은 여러 에이전트 세션의 작업 기록과 코드 정보. 서로 독립된 작성자와 리뷰어가 PR 설명을 만든다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>TraceTune 아이디어는 어떤 문제에서 시작했나?</span></summary><div class="answer">교육 연구 프로젝트(Show Tell, 추정)에서 시작했다. 학생들이 AI로 만든 프로그램만 제출하고, 실제 노력인 프롬프트와 과정은 남지 않았다. 그 과정을 추적하는 기술을 PR에 옮겨 썼다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>흔한 AI PR 설명은 어떤 모습이고, 왜 그렇게 되나?</span></summary><div class="answer">diff를 줄마다 해설한다. 에이전트가 diff만 보고 PR을 쓰기 때문이다. 왜 바꿨는지, 뒤에서 무슨 일이 있었는지가 빠진다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>"테스트 통과" 주장이 거짓이었던 사례에서 기록에는 무엇이 남아 있었나?</span></summary><div class="answer"><code>bun test</code>와 <code>bunx tsc</code>가 동시에 돌았다. 발표자 설명으로는 둘은 순서대로 돌려야 테스트가 통과한다. 그래서 통과 주장은 근거가 없었다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>재무팀 요청대로 작성 모델을 싼 걸로 바꾸자 어떻게 됐나?</span></summary><div class="answer">품질이 떨어졌다. 품질을 올리려다 오히려 나빠졌다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Relate가 근거를 모으는 비용이 거의 0인 이유는?</span></summary><div class="answer">LLM을 부르지 않는다. 로컬 계산과 저장만 쓰는 인메모리 그래프 데이터베이스다. 그래서 출처 기록과 근거 그래프를 LLM 비용에 비해 거의 공짜로 만든다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>이웃 브리프란 무엇이고, 무엇이 좋아지나?</span></summary><div class="answer">이유, 코드, 검사 결과를 출처와 관계를 달아 한 묶음으로 넘긴 것. 작성자는 더 적은 횟수로 정확한 초안을 쓰고, 리뷰어는 대조하기가 쉬워진다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>작성자를 리뷰어보다 높은 등급 모델로 둔 이유는?</span></summary><div class="answer">낮은 등급 모델은 피드백을 아무리 줘도 체크리스트 같은 기계적인 글을 쓴다. 사람이 쓴 것 같은 글에는 높은 모델이 필요하다. 반대로 근거와 대조하는 리뷰는 기계적인 일이라 싼 모델 여러 개로 된다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>완성된 PR 설명의 "통과한 것" 칸에는 무엇까지 적혀 있었나?</span></summary><div class="answer">타입 검사와 테스트 71개를 돌렸다는 것, 그리고 그 검사를 그 전 상태가 아니라 제출한 내용에서 돌렸다는 것.</div></details>
+          <details><summary><span class="qn">Q12</span><span>PR Bench 결과 수치와, 읽을 때 주의할 점은?</span></summary><div class="answer">품질은 100점 척도로 74→76, 82→86(+2, +4). 토큰은 약 절반. TraceTune, Relate, PR Bench 모두 발표자들이 만든 것이고, 통계적 유의성은 발표에서 다루지 않았다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>PR 설명의 "통과" 주장마다 근거를 붙인다<span class="how">어떤 명령을, 어느 커밋에서 돌렸고, 결과가 어땠는지</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>검사가 제출한 최종 코드에서 돌았는지 확인한다<span class="how">확인: 중간 상태에서 돌린 결과를 최종 결과처럼 쓰지 않았는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>순서대로 돌려야 할 검사가 동시에 돌지 않았는지 기록에서 본다<span class="how">발표 사례: 테스트와 타입 검사를 동시에 돌린 PR</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>PR 템플릿을 diff 해설 대신 근거 중심으로 바꾼다<span class="how">왜 / 예외 / 통과한 것 / 어디부터 볼지</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>PR을 쓸 때 압축된 대화 기억 대신 작업 기록을 근거로 준다<span class="how">확인: 에이전트 세션 기록이 PR 작성 시점에 남아 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>근거를 미리 묶어 에이전트에게 넘긴다<span class="how">이유·코드·검사 결과를 출처와 함께 한 묶음으로. 조사 루프를 줄인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>작성 모델과 리뷰 모델의 등급을 따로 정해 본다<span class="how">작성은 높은 등급 하나, 근거 대조는 싼 모델 여러 개</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>모델을 바꿀 때 토큰 비용과 품질을 함께 잰다<span class="how">발표 사례: 모델만 싸게 바꾸자 품질이 떨어졌다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>PR</td><td>Pull request. 내 변경을 메인 코드에 합쳐 달라는 요청</td></tr>
+              <tr><td>diff</td><td>바뀐 코드 부분만 모은 것</td></tr>
+              <tr><td>작업 기록 (trace)</td><td>에이전트가 세션에서 실제로 무엇을 했는지 남긴 기록. 감사 기록(audit trail)이라고도 부른다</td></tr>
+              <tr><td>컨텍스트 창</td><td>Context window. 모델이 한 번에 붙잡고 있는 대화 내용의 범위</td></tr>
+              <tr><td>컨텍스트 압축</td><td>Compaction. 대화가 길어지면 앞부분을 요약해 줄이는 것. 세부가 빠질 수 있다</td></tr>
+              <tr><td>CWD</td><td>Current working directory. 명령이 실행되는 현재 폴더</td></tr>
+              <tr><td>타입 검사</td><td>코드의 타입이 맞는지 실행 전에 확인하는 것. 발표 사례의 <code>tsc</code>가 이 일을 한다</td></tr>
+              <tr><td>그래프 데이터베이스</td><td>데이터를 점(노드)과 선(관계)으로 저장해, 무엇이 무엇과 이어지는지 찾기 쉬운 데이터베이스</td></tr>
+              <tr><td>임베디드 데이터베이스</td><td>Embedded database. 따로 서버 없이 프로그램 안에 들어가 도는 데이터베이스</td></tr>
+              <tr><td>인메모리</td><td>In-memory. 디스크가 아니라 메모리에 데이터를 두고 처리하는 방식. 빠르다</td></tr>
+              <tr><td>멀티홉 질의</td><td>Multi-hop query. 관계를 여러 단계 건너가며 찾는 질의. 예: 이 검사 → 이 코드 → 이 변경 이유</td></tr>
+              <tr><td>출처 기록</td><td>Provenance. 어떤 사실이나 변경이 어디서 왔는지 남긴 기록</td></tr>
+              <tr><td>근거 그래프 / 근거 패킷</td><td>Evidence graph / packet. 사실과 근거의 연결을 그래프로 만든 것, 그리고 그중 필요한 부분을 묶어 넘긴 것</td></tr>
+              <tr><td>이웃 브리프</td><td>Neighborhood brief. 그래프에서 한 사실과 이어진 주변 정보를 함께 꺼내 만든 요약</td></tr>
+              <tr><td>LLM 판정자</td><td>LLM judge. 결과물의 품질을 LLM이 채점하게 하는 방식</td></tr>
+              <tr><td>벤치마크</td><td>여러 방법이나 모델을 같은 과제로 비교하는 시험 묶음</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">00:10</span></td><td>PR이 거절되는 이유: 틀린 PR 설명</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>발표 주제, 주인공 Alex와 후드티</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>토큰 공장의 등장인물</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>Mira의 리뷰 지적 (실제 TraceTune PR)</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>되풀이되는 PR과 토큰 빌리어네어</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>세션 기억으로 쓴 PR이 틀리는 이유</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>출발점: 교육 연구 프로젝트</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>근거 있는 PR 설명 vs diff 해설</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>TraceTune 소개</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>TraceTune 원래 흐름과 PR Bench</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>실패 사례: 동시에 돌린 테스트와 타입 검사</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>싼 작성 모델로 바꾸기: 품질 하락</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>Pip의 친구: 그래프</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>Archie = Relate, Rust 임베디드 그래프 데이터베이스</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>LLM 비용 0, 출처 기록과 근거 그래프</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>이웃 브리프</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>Haiku 리뷰어 여러 개, Sonnet 급 작성자</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>작성자가 더 높은 등급인 이유</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>리뷰 단계가 한 일</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>완성된 PR 설명</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>PR Bench 결과: 74→76, 82→86</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>벤치마크를 병렬로 돌린 비용</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>토큰 약 절반</td></tr>
+              <tr><td><span class="ts">18:50</span></td><td>다른 프로젝트에 쓰는 법</td></tr>
+              <tr><td><span class="ts">19:40</span></td><td>정리: 만화의 결말</td></tr>
+              <tr><td><span class="ts">21:20</span></td><td>tracetune.com, Relate 안내</td></tr>
+              <tr><td><span class="ts">22:00</span></td><td>AI Engineer Kids Day 공지</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'gbeuC0ud1p4:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

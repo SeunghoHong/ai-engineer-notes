@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>벤치마크 없는 에이전트 테스트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#no-benchmark">벤치마크도, 전문가도 없다</a></li>
+      <li><a href="#rag-2024">2024년: 통신 문서 Q&amp;A</a></li>
+      <li><a href="#complexity">복잡하게 만들수록 깨졌다</a></li>
+      <li><a href="#reverse">문제를 뒤집는다: 정답부터</a></li>
+      <li><a href="#contracts">2026년: 공급사 계약서 검토</a></li>
+      <li><a href="#steps">계약서 에이전트의 네 단계</a></li>
+      <li><a href="#techniques">정답을 심는 테스트 5가지</a></li>
+      <li><a href="#grading">채점은 코드로</a></li>
+      <li><a href="#beyond">다른 에이전트에 옮기기</a></li>
+      <li><a href="#loop">테스트는 출발점이다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-22 · 20분 · 영어 발표 한글 정리</span>
+      <h1>벤치마크가 없으면 정답부터 만든다</h1>
+      <p class="lead">공개 벤치마크도 없고 전문가 시간도 모자랄 때, 정답을 먼저 정해 두고 에이전트가 그 정답을 찾는지 본다. 그러면 채점을 코드로 할 수 있고, 몇 주 걸리던 피드백이 몇 분으로 줄어든다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=c_SPW__jF9w" target="_blank" rel="noopener">How to Test AI Agents When No Benchmark Exists</a></span>
+        <span>발표: Nathanael Weill (Air Canada 데이터 과학 팀)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 경우만 바로잡았고, 나머지는 들린 대로 쓰고 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>회사 업무용 에이전트는 과제가 너무 특수해서 <strong>공개 벤치마크가 없다</strong>. 정답을 아는 도메인 전문가는 늘 바쁘다.</li>
+        <li>2024년 통신 문서 Q&amp;A 프로젝트에서는 <strong>주 1회 전문가 회의</strong>로 채점했다. 전문가끼리 의견이 갈렸고, 한 주에 해법 하나만 시험할 수 있었다.</li>
+        <li>해법은 <strong>문제를 뒤집는 것</strong>이다. 문서 페이지로 질문을 만들고, 에이전트가 그 페이지를 다시 찾는지 코드로 확인한다. 평가가 주 1회에서 하루 수십 번으로 늘었다.</li>
+        <li>2026년 Air Canada의 계약서 검토 에이전트에도 같은 원리를 썼다. <strong>정답을 심고, 찾게 하고, 코드로 채점한다.</strong></li>
+        <li>정답을 심는 방법 다섯 가지를 시도했다. 조항 하나를 지운 테스트에서 <strong>에이전트는 지운 조항을 대부분 놓쳤다</strong>.</li>
+        <li>채점은 <strong>정확 일치와 코드</strong>로 한다. LLM 판사는 잡음이 너무 커서 이 프로젝트에서는 맞는 방식을 찾지 못했다.</li>
+        <li>전문가 피드백은 에이전트가 아니라 <strong>테스트를 고치는 데</strong> 쓴다. 생성한 테스트는 출발점이지 출시 승인이 아니다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="no-benchmark">
+        <header><span class="num">01</span><h2>벤치마크도, 전문가도 없다 <span class="ts">00:10</span></h2></header>
+        <p>발표는 중독 회복 모임을 흉내 낸 농담으로 시작한다. 발표자는 "평가 없이 에이전트를 배포해 온 사람"이라고 소개한다. 이 발표는 그 습관을 끊은 이야기다.</p>
+        <p>Nathanael Weill은 2026년 6월 Air Canada에 합류했다. 발표자의 팀은 운영, 기업, 상업, 로열티 프로그램 부문 모두에 AI 솔루션을 만든다. 부문마다 풀어야 할 문제가 다르다.</p>
+        <h3>평가를 만들기 어려운 두 가지 이유 <span class="ts">01:00</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">과제가 너무 특수하다</span>
+            <p>에이전트 하나가 아주 좁은 업무 하나를 맡는다. 그래서 가져다 쓸 공개 벤치마크<span class="en">benchmark</span>가 없다. 벤치마크는 정답이 달린 문제 모음이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">만드는 사람은 전문가가 아니다 <span class="ts">01:20</span></span>
+            <p>데이터 과학자와 AI 엔지니어는 에이전트를 만들 줄 안다. 하지만 업무 내용은 잘 모른다. 업무를 아는 도메인 전문가<span class="en">domain expert</span>는 다른 부서에 있고, 자기 일로 바쁘다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">두 문제가 겹치면</span>
+          <span>정답을 아는 사람은 시간이 없고, 시간이 있는 사람은 정답을 모른다. 이 상태에서는 평가<span class="en">evaluation</span>를 만들기가 아주 어렵다. 발표 전체가 이 문제를 다룬다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="rag-2024">
+        <header><span class="num">02</span><h2>2024년: 통신 문서 Q&amp;A <span class="ts">01:50</span></h2></header>
+        <p>Air Canada 전에 다닌 회사에서 발표자는 통신 엔지니어용 질의응답 도우미를 만들었다. 문서가 약 1만 개였고, 장비 업체 문서가 그 위에 더 있었다. 질문마다 어느 문서를 봐야 하는지 아는 것 자체가 전문 지식이었다.</p>
+        <p>2024년은 모두가 RAG를 만들던 때다. RAG<span class="en">Retrieval-Augmented Generation</span>는 질문에 맞는 문서를 먼저 찾고, 그 문서를 근거로 답을 쓰는 방식이다. 발표자는 LinkedIn에서는 쉬워 보이지만 실제로는 쉽지 않다고 했다.</p>
+        <p>여기서도 전문가를 만날 시간이 적었다. 팀은 답이 맞는지 스스로 채점할 수도 없었다.</p>
+
+        <h3>경쟁에서 이겼지만 이유는 몰랐다 <span class="ts">02:50</span></h3>
+        <p>같은 과제를 외부 팀 둘과 내부 팀 하나가 차례로 맡았다. 문서도 과제도 같았다. 그중 발표자 팀의 결과물만 실제로 쓰였다. 사용자들이 좋아했고 계속 썼다. 발표자도 다른 팀보다 왜 잘 됐는지는 확실히 모른다고 했다.</p>
+        <p>발표자의 경험으로는 맞는 페이지를 찾으면 90%는 맞는 답이 나온다 <span class="ts">03:40</span>. 그래서 이 과제에서 어려운 부분은 답을 쓰는 일이 아니라 문서를 찾는 일이었다.</p>
+        <p class="note">자막에는 이 숫자가 "19 90%"로 뭉개져 있다. 앞뒤 맥락으로 90%로 읽었다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="complexity">
+        <header><span class="num">03</span><h2>복잡하게 만들수록 깨졌다 <span class="ts">04:00</span></h2></header>
+        <p>팀은 논문에 나온 기법을 하나씩 붙였다. 파이프라인<span class="en">pipeline</span>은 점점 복잡해졌다. 논문에서는 효과가 있었지만 이 과제에서는 별로 나아지지 않았다.</p>
+        <p>더 큰 문제는 하나를 붙이면 다른 곳이 깨진다는 점이었다. 잘 되던 질문이 갑자기 틀렸다. 고칠 아이디어는 계속 나왔지만 그때마다 다른 것이 깨졌다. <strong>복잡도를 더한다고 늘 좋아지지는 않는다.</strong></p>
+
+        <h3>전문가 회의로 채점하기 <span class="ts">04:50</span></h3>
+        <p>에이전트를 고치는 데는 몇 분이면 됐다. 질문을 다시 쓰는 단계나 추론 단계를 하나 넣는 정도는 금방 한다. 문제는 고친 결과를 채점하는 일이었다.</p>
+        <ol class="plain">
+          <li>일주일에 한 번 전문가와 회의를 연다.</li>
+          <li>큰 화면에 챗봇 다섯 개를 띄우고 같은 질문을 던진다.</li>
+          <li>전문가가 어느 답이 더 나은지 고른다.</li>
+          <li>전문가도 답을 모르면 직접 찾아봐야 해서 시간이 오래 걸린다.</li>
+        </ol>
+        <div class="callout warn">
+          <span class="title">한 주에 한 번만 시도할 수 있다 <span class="ts">05:20</span></span>
+          <span>전문가 세 명을 한 방에 두면 의견이 세 개 나온다. 전문가끼리도 자주 엇갈렸다. 결국 일주일에 해법 하나만 시험할 수 있었다. 빠르게 나아지기에는 턱없이 부족했다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="reverse">
+        <header><span class="num">04</span><h2>문제를 뒤집는다: 정답부터 <span class="ts">05:50</span></h2></header>
+        <p>해법은 새로운 것이 아니다. RAG 분야에는 이미 구현이 많고, 발표자도 직접 만든 방법이 아니라고 했다. 다만 이 원리가 다른 과제에도 쓸 수 있겠다는 생각으로 계속 남았다.</p>
+        <div class="shift" aria-label="채점 순서의 변화">
+          <div><span class="tag">원래 순서</span><b>질문 → 답 → 전문가 채점</b><span class="muted">사람이 읽고 판단한다. 의견이 갈리고 느리다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">뒤집은 순서</span><b>정답 페이지 → 질문 → 검색 → 코드 비교</b><span class="muted">정답을 먼저 정한다. 맞았는지는 코드가 판단한다.</span></div>
+        </div>
+        <ol class="plain">
+          <li>문서에서 페이지 하나를 고른다. 이 페이지가 정답이다.</li>
+          <li>LLM에게 이 페이지로 답할 수 있는 질문을 쓰게 한다. LLM에게는 쉬운 일이다.</li>
+          <li>에이전트가 그 질문으로 문서를 검색한다.</li>
+          <li>찾은 페이지가 처음 고른 페이지와 같은지 코드로 비교한다.</li>
+        </ol>
+        <p>이 방식에는 의견이 끼어들 자리가 없다. 사람 없이 자동으로 돌릴 수 있고, 그래서 훨씬 빨리 갈 수 있다.</p>
+
+        <h3>달라진 것 <span class="ts">06:40</span></h3>
+        <ul class="plain">
+          <li>평가가 <strong>주 1회에서 하루 수십 번</strong>으로 늘었다.</li>
+          <li>전문가 회의에서 매기는 정확도도 주마다 올라갔다.</li>
+          <li>붙여 두었던 복잡한 기법을 많이 걷어냈다. 대부분 필요 없었다.</li>
+          <li>대신 기본기에 집중했다. 맞는 임베딩 모델<span class="en">embedding model</span>, 맞는 청킹<span class="en">chunking</span>, BM25 쪽 alpha 값을 고르는 일이다 <span class="ts">07:00</span>.</li>
+        </ul>
+        <p>발표자는 다른 팀들에는 테스트 셋<span class="en">test set</span>이 없었을 거라고 추측한다. 그 팀들은 더 많은 전문가와 함께 긴 피드백 주기로 일했을 것이다. 발표자 팀에는 정답이 달린 테스트 셋이 있었다.</p>
+        <blockquote>에이전트를 채점할 수 없으면, 에이전트를 더 좋게 만들 수 없다.<cite>발표자가 2024년에 얻은 교훈 <span class="ts">07:30</span></cite></blockquote>
+      </section>
+
+      <!-- 5 -->
+      <section id="contracts">
+        <header><span class="num">05</span><h2>2026년: 공급사 계약서 검토 <span class="ts">07:50</span></h2></header>
+        <p>Air Canada에는 공급사가 많고, 그만큼 계약서도 많다. 지금은 전문가가 계약서를 하나씩 읽는다. 조항<span class="en">clause</span>마다 규정에 맞는지 보고, 고쳐 써야 할 곳을 알려 준다. 오래 걸리고 비싼 일이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>무엇이 비싼가</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>검토가 늦으면</td><td>공급사가 당장 납품해야 하는데 계약이 밀리면 공급망 전체가 늦어진다</td></tr>
+              <tr><td>조항을 놓치면</td><td>문제 조항이 그대로 서명되면 나중에 회사에 불리하게 돌아온다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>업무 부서는 이 일을 자동화할 에이전트를 데이터 과학 팀에 요청했다 <span class="ts">08:40</span>.</p>
+
+        <h3>2024년과 같은 문제 <span class="ts">08:50</span></h3>
+        <ul class="plain">
+          <li>따져야 할 문서와 규칙이 많다.</li>
+          <li>전문가는 매우 바쁘다. 변호사의 시간당 비용을 떠올리면 된다.</li>
+          <li>웹에서 가져다 쓸 벤치마크가 없다.</li>
+          <li>그래서 피드백 주기가 아주 느리다.</li>
+        </ul>
+        <p>차이도 하나 있다 <span class="ts">09:30</span>. RAG에서 "문서로 질문 만들기"는 이미 알려진 방법이다. 계약서 검토에는 "이 기법을 쓰라"고 알려 주는 사람이 없다. 그래서 팀은 같은 원리를 새 과제에 맞게 다시 짜야 했다. <strong>정답을 먼저 만들고, 에이전트가 그 정답을 다시 찾게 한다.</strong></p>
+      </section>
+
+      <!-- 6 -->
+      <section id="steps">
+        <header><span class="num">06</span><h2>계약서 에이전트의 네 단계 <span class="ts">10:10</span></h2></header>
+        <p>발표자가 실제보다 단순하게 줄여 보여 준 구조다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th><th>평가 방법</th></tr></thead>
+            <tbody>
+              <tr><td>1. 문제 찾기</td><td>계약서의 각 부분을 분야별로 나누고, 결함이나 고칠 곳이 있는지 찾는다</td><td>새 방법이 필요했다</td></tr>
+              <tr><td>2. 근거 찾기</td><td>수정을 뒷받침할 관련 문서를 찾는다</td><td>RAG 때의 방법을 그대로 쓴다</td></tr>
+              <tr><td>3. 수정안 쓰기</td><td>조항을 어떻게 바꿀지 수정안<span class="en">amendment</span>을 쓴다</td><td>새 방법이 필요했다</td></tr>
+              <tr><td>4. 걸러내기</td><td>이 수정안을 남길지 버릴지 분류한다</td><td>새 방법이 필요했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>두 번째 단계만 이미 풀려 있었다. 나머지 단계에는 쓸 방법이 없었다. 다음 절의 다섯 기법은 모두 에이전트가 문제를 제대로 표시<span class="en">flag</span>하는지 보는 방법이다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="techniques">
+        <header><span class="num">07</span><h2>정답을 심는 테스트 5가지 <span class="ts">11:00</span></h2></header>
+        <p>다섯 기법은 원리가 같다. 정답을 먼저 정하고, 그 정답이 담긴 계약서를 준비하고, 에이전트가 찾는지 본다. 발표자는 자랑하려는 게 아니라 각자 과제에 응용할 아이디어를 주려는 것이라고 했다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">기법 1 · 과거 계약서 비교 <span class="ts">12:00</span></span>
+            <p>전문가가 고치기 전의 원본과 고친 뒤 서명한 계약서를 받는다. 두 버전을 코드처럼 diff로 비교하면 바뀐 곳이 보인다. 바뀐 곳이 곧 전문가의 판단이고 정답이다. 에이전트는 같은 곳에 플래그를 달아야 한다.</p>
+            <p class="verdict"><b>결과: 쓰지 못했다.</b> 팀은 계약서 최종본만 보관했다. 협상을 거치며 버전이 여러 번 바뀌었고, 원본과 최종본 쌍을 구할 수 없었다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">기법 2 · 규칙을 어긴 조항 심기 <span class="ts">12:40</span></span>
+            <p>이번에는 계약서가 아니라 규칙에서 출발한다. 분야마다 모든 계약서가 지켜야 하는 규칙이 있다. 발표자가 든 예는 100만 달러 한도에 관한 규칙이다.</p>
+            <ul>
+              <li>규칙을 어기는 조항을 만든다</li>
+              <li>그 조항을 둘러싼 계약서를 생성한다</li>
+              <li>에이전트가 그 위반을 플래그로 찾아야 한다</li>
+            </ul>
+            <p class="verdict"><b>결과: 정답을 아는 테스트 275개.</b> 만들기 쉽고 많이 만들 수 있다. 한계는 규칙을 알아야 한다는 점이다. 전문가와 내부 문서에서 일부를 얻고 팀이 직접 보탰지만, 모든 규칙을 덮는다는 보장은 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">기법 3 · 좋은 계약서에서 조항 지우기 <span class="ts">13:50</span></span>
+            <p>서명까지 끝난 좋은 계약서에서 조항 하나를 지운다. 에이전트는 "여기 빠진 게 있다"고 말해야 한다.</p>
+            <p>어려운 과제다. 공급사마다 템플릿과 내용이 다르다. 어떤 계약서에 무엇이 있어야 하는지 알려면 꽤 따져 봐야 한다. 여기에 손대지 않은 계약서를 섞는다. 손대지 않은 계약서에는 플래그가 하나도 없어야 한다.</p>
+            <p class="verdict"><b>결과: 에이전트가 지운 조항을 대부분 놓쳤다.</b> 에이전트의 약점을 정확히 드러낸 강한 벤치마크다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">기법 4 · 바뀌면 안 되는 것 바꾸기 <span class="ts">14:50</span></span>
+            <p>결과에 영향을 주면 안 되는 부분만 바꾼다.</p>
+            <ul>
+              <li>공급사 이름과 주소를 바꾼다</li>
+              <li>조항 순서를 섞는다</li>
+              <li>같은 계약서를 여러 번 돌린다</li>
+            </ul>
+            <p>어느 경우든 플래그 수가 같아야 한다. 출력이 일정한지 보는 테스트다.</p>
+            <p class="verdict"><b>채점: 전부 코드로 한다.</b> LLM 판사가 필요 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">기법 5 · 템플릿 빈칸 조합 <span class="ts">15:40</span></span>
+            <p>전문가는 빈칸이 있는 계약서 템플릿을 쓴다. 원래는 전문가가 빈칸을 채운다. 팀은 빈칸마다 넣을 값 목록을 만들었다. 값을 조합하면 계약서를 아주 많이 만들 수 있다.</p>
+            <p>어떤 조합은 규칙을 어기고, 어떤 조합은 지킨다. 어느 쪽인지 미리 알기 때문에 무엇이 위반으로 표시돼야 하는지도 안다.</p>
+            <p class="verdict"><b>장점: 전문가가 이미 쓰는 템플릿을 그대로 쓴다.</b> 채점도 코드로 한다.</p>
+          </div>
+        </div>
+        <p class="note">발표자는 기법을 처음 소개할 때 다섯째(템플릿)를 "가장 강력하다"고 했다. 셋째(조항 지우기)를 설명할 때도 "지금까지 가장 강력한 방법"이라고 했다. 자막만으로는 어느 쪽을 가리킨 말인지 가릴 수 없어 둘 다 적었다.</p>
+
+        <h3>예시: 템플릿 빈칸을 조합하면</h3>
+        <p class="note">아래는 발표에 없는 예시다. 이해를 돕기 위해 문장, 규칙, 값을 지어냈다.</p>
+        <p>템플릿 문장이 "대금은 송장을 받은 뒤 <code>[지급 기한]</code> 안에 지급한다. 계약 기간은 <code>[기간]</code>으로 한다."라고 하자. 지켜야 할 규칙은 "지급 기한은 60일을 넘으면 안 된다" 하나라고 하자.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>빈칸</th><th>넣을 값 목록</th></tr></thead>
+            <tbody>
+              <tr><td>지급 기한</td><td>30일, 60일, 90일</td></tr>
+              <tr><td>기간</td><td>1년, 2년, 3년</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>조합</th><th>계약서 수</th><th>정답</th></tr></thead>
+            <tbody>
+              <tr><td>지급 기한 90일 + 아무 기간</td><td>3</td><td>위반 플래그가 나와야 한다</td></tr>
+              <tr><td>지급 기한 30일·60일 + 아무 기간</td><td>6</td><td>플래그가 없어야 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>빈칸 두 개에 값 세 개씩이면 계약서 9개가 나온다. 에이전트가 단 플래그와 이 정답을 코드로 비교하면 채점이 끝난다. 빈칸과 값이 늘어날수록 테스트 수는 곱으로 늘어난다.</p>
+
+        <h3>피드백 주기: 4주에서 5분으로 <span class="ts">16:20</span></h3>
+        <p>계약서 과제는 2024년보다 전문가 피드백이 더 느렸다. 한 번 받는 데 4주가 걸렸다. 이런 테스트를 만든 뒤에는 스크립트를 돌리면 5분 안에 평가가 나온다.</p>
+        <figure class="chart" aria-label="평가 결과를 한 번 받는 데 걸린 시간: 2026년 계약서 전문가 피드백 4주, 2024년 RAG 전문가 회의 1주, 2026년 테스트 스크립트 5분">
+          <span class="chart-title">평가 결과를 한 번 받는 데 걸린 시간</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>2026 계약서 · 전문가 피드백</span><span class="val">4주</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="2026 계약서 전문가 피드백: 4주 (40,320분)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>2024 통신 RAG · 전문가 주간 회의</span><span class="val">1주</span></div>
+              <div class="track"><div class="fill" style="width:25%" title="2024 RAG 전문가 회의: 1주 (10,080분)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>2026 계약서 · 테스트 스크립트</span><span class="val">5분</span></div>
+              <div class="track"><div class="fill key" style="width:0.0124%" title="테스트 스크립트: 5분"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>2주</span><span>4주</span></div>
+          <span class="caption">달력 시간 기준으로 비율 그대로 그렸다. 5분은 4주(40,320분)의 약 8,000분의 1이라 막대가 거의 보이지 않는다. 2024년의 1주는 한 주에 해법 하나를 시험하던 간격이다.</span>
+        </figure>
+      </section>
+
+      <!-- 8 -->
+      <section id="grading">
+        <header><span class="num">08</span><h2>채점은 코드로, LLM 판사는 피한다 <span class="ts">16:40</span></h2></header>
+        <p>발표자는 채점 방식을 빠른 것부터 늘어놓았다. 이 프로젝트에서 그 방식을 모두 거쳐 봤다고 했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>채점 방식</th><th>어떻게</th><th>발표자 평가</th></tr></thead>
+            <tbody>
+              <tr><td>정확 일치<br><span class="en">exact match</span></td><td>출력이 정답과 똑같은지 본다</td><td>매우 빠르다</td></tr>
+              <tr><td>코드 검사</td><td>찾은 페이지, 플래그 수 같은 것을 코드로 비교한다</td><td>매우 빠르다</td></tr>
+              <tr><td>LLM 판사<br><span class="en">LLM-as-a-judge</span></td><td>다른 LLM이 출력을 읽고 점수를 매긴다</td><td>그럴듯하고 쓸모도 있지만 아주 어렵다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          <span class="title">판사를 맞추는 일이 원래 문제만큼 어렵다</span>
+          <span>LLM 판사가 내는 잡음이 만들고 있는 에이전트의 잡음에 비해 너무 컸다. 판사에 맞는 프롬프트와 하네스를 찾는 것도 큰 일이다. 사실 확인 같은 보완책을 붙일 수 있지만 품이 많이 든다. 이 프로젝트에서는 맞는 방식을 끝내 찾지 못했다.</span>
+        </div>
+        <p>그래서 팀은 가능한 한 LLM 판사를 쓰지 않는다 <span class="ts">15:30</span>. 발표자는 앞 순서 발표자도 이 어려움을 보여 줬다고 덧붙였다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="beyond">
+        <header><span class="num">09</span><h2>다른 에이전트에 옮기기 <span class="ts">17:20</span></h2></header>
+        <p>이 밖에도 기법은 많다. 발표자는 두 가지를 짧게 언급했다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">궤적 검사 · trajectory <span class="ts">17:30</span></span>
+            <p>다른 프로젝트의 에이전트는 API 엔드포인트<span class="en">endpoint</span> 몇 개를 정해진 순서로 불러야 한다. 순서를 미리 알고 있으니, 그 순서가 나오는 사용자 이야기를 만든다. LLM이 그 이야기대로 에이전트를 쓰게 한다. 그다음 실행 기록<span class="en">trace</span>을 보고 호출 순서가 맞는지 확인한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Text-to-SQL <span class="ts">17:50</span></span>
+            <p>자연어 질문을 데이터베이스 질의문으로 바꾸는 과제다. 발표자는 이미 많이 알려진 예라고만 짚고 넘어갔다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">공통 원리</span>
+          <span>에이전트가 무엇이든 상관없다. 무엇을 찾아야 하는지 알면, 그것이 담긴 입력을 먼저 만들고 에이전트가 찾게 하면 된다. 다만 모든 과제에 들어맞지는 않는다.</span>
+        </div>
+
+        <h3>평가할 수 있게 설계를 바꾼다 <span class="ts">18:00</span></h3>
+        <p>팀은 때로 이 방식에 맞추려고 솔루션 설계를 다시 짰다. 원래 설계로는 평가할 방법이 없었기 때문이다. 처음 구상에서 조금 벗어나더라도 <strong>평가할 수 있는 구조</strong>를 골랐다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="loop">
+        <header><span class="num">10</span><h2>테스트는 출발점이다 <span class="ts">18:20</span></h2></header>
+        <p>테스트를 만들고 끝나는 게 아니다. 테스트로 에이전트가 좋아지면, 전문가에게 실제 결과를 보여 주고 진짜 피드백을 받을 수 있다.</p>
+        <ol class="plain">
+          <li>정답이 있는 테스트를 만든다.</li>
+          <li>테스트 점수를 보며 에이전트를 고친다.</li>
+          <li>전문가가 실제 결과에 피드백을 준다.</li>
+          <li>그 피드백으로 테스트를 고친다. 더 나은 질문, 더 나은 프롬프트, 조항을 지우는 더 나은 방법을 만든다. 그리고 1로 돌아간다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">피드백은 테스트로 간다</span>
+          <span>전문가 피드백으로 에이전트를 바로 고치지 않는다. 그 피드백으로 더 나은 테스트를 만든다. 한 바퀴씩 돌린다.</span>
+        </div>
+        <p>발표자는 이 반복을 돕는 도구가 많다며 "Rise"를 언급했다. 행사 주최 측인 Arize로 보인다(추정).</p>
+
+        <h3>결론 <span class="ts">19:00</span></h3>
+        <ul class="plain">
+          <li>생성한 테스트만으로는 출시해도 되는지 알 수 없다.</li>
+          <li>테스트는 출발점이고, 개발자를 돕는 도구다.</li>
+          <li>출시 여부<span class="en">go / no-go</span>를 정하는 기준이 아니다.</li>
+        </ul>
+        <p>끝으로 발표자는 "첫 24시간 칩이 가장 어렵다"고 농담했다 <span class="ts">19:20</span>. 금주 모임에서 끊은 지 하루 된 사람에게 주는 기념 칩을 빗댄 말이다. 평가 없이 에이전트를 내보내는 습관을 끊고 싶다면 돕겠다고 했다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>회사 업무용 에이전트에는 공개 벤치마크가 없고, 정답을 아는 전문가는 바쁘다.</li>
+          <li>전문가 회의로 채점하면 의견이 갈리고 한 주에 한 번밖에 시도하지 못한다.</li>
+          <li>기법을 덧붙이면 다른 곳이 깨진다. 채점할 수 없으면 무엇이 나아졌는지도 모른다.</li>
+          <li>핵심은 <strong>정답을 먼저 만들고 에이전트가 찾게 하는 것</strong>이다. RAG라면 페이지로 질문을 만들고 그 페이지를 다시 찾는지 본다.</li>
+          <li>그 결과 평가가 주 1회에서 하루 수십 번이 됐다. 복잡한 기법을 걷어내고 임베딩, 청킹, 검색 가중치 같은 기본기에 집중했다.</li>
+          <li>계약서 에이전트에는 정답을 심는 방법 다섯 가지를 시도했다. 과거 계약서 비교는 자료가 없어 실패했고, 규칙 심기로 테스트 275개를 만들었다.</li>
+          <li>조항을 지운 테스트에서 에이전트는 지운 조항을 대부분 놓쳤다. 정답을 아는 테스트가 약점을 드러냈다.</li>
+          <li>바뀌면 안 되는 것을 바꾸는 테스트와 템플릿 빈칸 조합은 코드만으로 채점한다. 전문가 피드백 4주가 스크립트 5분이 됐다.</li>
+          <li>채점은 <strong>정확 일치와 코드</strong>로 한다. LLM 판사는 잡음이 커서 피한다. 평가할 수 없는 설계는 평가할 수 있게 바꾼다.</li>
+          <li>전문가 피드백은 <strong>테스트를 고치는 데</strong> 쓴다. 생성한 테스트는 출발점이지 출시 승인이 아니다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자 팀이 평가를 만들기 어려웠던 두 가지 이유는?</span></summary><div class="answer">과제가 너무 특수해 공개 벤치마크가 없다. 그리고 만드는 사람은 도메인 전문가가 아니고, 전문가는 다른 부서에서 바쁘다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>2024년 프로젝트의 처음 채점 방식과 그 문제는?</span></summary><div class="answer">주 1회 전문가 회의에서 챗봇 다섯 개의 답을 비교해 골랐다. 전문가끼리 의견이 갈렸고, 한 주에 해법 하나만 시험할 수 있었다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>RAG에서 "문제를 뒤집는다"는 구체적으로 어떤 순서인가?</span></summary><div class="answer">정답 페이지를 고른다. LLM이 그 페이지로 질문을 만든다. 에이전트가 검색한다. 찾은 페이지가 정답 페이지와 같은지 코드로 비교한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>정답부터 만든 뒤 팀의 개발 방식은 어떻게 바뀌었나?</span></summary><div class="answer">평가가 주 1회에서 하루 수십 번으로 늘었다. 효과 없는 복잡한 기법을 걷어내고 임베딩 모델, 청킹, BM25 쪽 alpha 같은 기본기에 집중했다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>계약서 에이전트의 네 단계 중 이미 평가 방법이 있던 단계는?</span></summary><div class="answer">두 번째, 근거 문서 찾기다. RAG의 방법을 그대로 쓸 수 있었다. 문제 찾기, 수정안 쓰기, 걸러내기에는 새 방법이 필요했다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>기법 1(과거 계약서 비교)이 실패한 이유는?</span></summary><div class="answer">팀이 계약서 최종본만 보관해서, 고치기 전 원본과 서명본의 쌍을 구할 수 없었다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>기법 2(규칙 심기)의 장점과 한계는?</span></summary><div class="answer">만들기 쉽고 많이 만들 수 있다. 테스트 275개를 만들었다. 다만 규칙을 알아야 하고, 모은 규칙이 전부를 덮는다는 보장이 없다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>기법 3에서 손대지 않은 계약서를 함께 섞는 이유는?</span></summary><div class="answer">손대지 않은 계약서에는 플래그가 없어야 한다. 그래서 놓친 조항뿐 아니라 괜히 단 플래그도 함께 잡을 수 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>기법 4에서 바꿔 보는 것과 기대하는 결과는?</span></summary><div class="answer">공급사 이름과 주소를 바꾸고, 조항 순서를 섞고, 같은 계약서를 여러 번 돌린다. 어느 경우든 플래그 수가 같아야 한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>기법 5에서 코드만으로 채점할 수 있는 이유는?</span></summary><div class="answer">빈칸에 넣는 값의 조합마다 규칙 위반 여부를 미리 알기 때문이다. 무엇이 플래그를 받아야 하는지가 정해져 있다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>팀이 LLM 판사를 피한 이유는?</span></summary><div class="answer">판사의 잡음이 에이전트의 잡음에 비해 너무 컸다. 판사에 맞는 프롬프트와 하네스를 찾는 일이 원래 문제만큼 어려웠고, 끝내 맞는 방식을 찾지 못했다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>전문가 피드백은 어디에 쓰고, 생성한 테스트는 어떤 위치인가?</span></summary><div class="answer">피드백은 에이전트를 바로 고치는 대신 더 나은 테스트를 만드는 데 쓴다. 생성한 테스트는 출발점이고, 출시 여부를 정하는 기준이 아니다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 에이전트에서 정답을 먼저 정할 수 있는 지점을 찾는다<span class="how">무엇을 찾아야 하는지 알면, 그것이 담긴 입력을 거꾸로 만들 수 있다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>검색 단계는 문서로 질문을 만들어 원래 문서를 다시 찾는지 잰다<span class="how">확인: 검색 정확도를 코드로 하루 여러 번 잴 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>지켜야 할 규칙 목록을 모으고, 규칙을 어긴 입력을 만든다<span class="how">전문가와 내부 문서에서 모으고, 빠진 규칙은 팀이 직접 보탠다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>정상 데이터에서 일부를 지운 테스트를 만든다<span class="how">손대지 않은 원본도 섞어 괜한 플래그가 나오는지 함께 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>결과에 영향이 없어야 할 부분을 바꿔 본다<span class="how">이름, 주소, 순서를 바꾸고 같은 입력을 여러 번 돌려 결과가 같은지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>현업이 쓰는 템플릿을 받아 빈칸 조합으로 입력을 대량으로 만든다<span class="how">조합마다 규칙 위반 여부를 미리 정해 둔다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>채점은 정확 일치와 코드로 먼저 한다<span class="how">LLM 판사는 코드로 안 될 때만 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>평가할 수 없는 설계라면 평가할 수 있는 구조로 바꾼다<span class="how">확인: 각 단계의 출력에 정답을 붙일 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>전문가 피드백은 테스트를 고치는 데 쓴다<span class="how">에이전트를 바로 고치지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>생성한 테스트 통과를 출시 승인으로 쓰지 않는다<span class="how">테스트는 출발점이다. 실제 사용 피드백을 따로 받는다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>벤치마크</td><td>Benchmark. 정답이 달린 문제 모음. 모델이나 에이전트의 점수를 비교하는 데 쓴다</td></tr>
+              <tr><td>평가 (eval)</td><td>에이전트의 결과가 맞는지 재는 테스트와 그 과정</td></tr>
+              <tr><td>테스트 셋</td><td>Test set. 정답을 아는 입력 묶음. 에이전트를 바꿀 때마다 다시 돌려 점수를 본다</td></tr>
+              <tr><td>도메인 전문가</td><td>Domain expert. 그 업무를 실제로 아는 사람. 이 발표에서는 통신 엔지니어, 계약 검토 담당자, 변호사</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 질문에 맞는 문서를 먼저 찾고, 그 문서를 근거로 답을 쓰는 방식</td></tr>
+              <tr><td>파이프라인</td><td>Pipeline. 여러 처리 단계를 차례로 이어 붙인 구조</td></tr>
+              <tr><td>임베딩 모델</td><td>Embedding model. 글을 숫자 벡터로 바꿔, 뜻이 비슷한 글을 찾게 해 주는 모델</td></tr>
+              <tr><td>청킹</td><td>Chunking. 긴 문서를 검색하기 좋은 크기로 자르는 일</td></tr>
+              <tr><td>BM25</td><td>단어가 얼마나 겹치는지로 문서를 찾는 전통적인 키워드 검색 점수</td></tr>
+              <tr><td>alpha</td><td>하이브리드 검색에서 키워드 점수(BM25)와 임베딩 점수를 섞는 비율을 보통 이렇게 부른다. 발표자는 "BM25의 alpha"라고 했다</td></tr>
+              <tr><td>조항</td><td>Clause. 계약서의 한 항목</td></tr>
+              <tr><td>수정안</td><td>Amendment. 조항을 이렇게 바꾸자는 제안 문구</td></tr>
+              <tr><td>플래그</td><td>Flag. 에이전트가 "여기 문제 있다"고 표시한 것</td></tr>
+              <tr><td>diff</td><td>두 버전 사이에 바뀐 부분만 모은 것</td></tr>
+              <tr><td>불변성 테스트</td><td>Invariance test. 결과에 영향이 없어야 할 부분을 바꿔도 결과가 같은지 보는 테스트. 발표자가 쓴 이름은 아니지만 기법 4가 이 방식이다</td></tr>
+              <tr><td>템플릿</td><td>빈칸이 있는 표준 계약서 양식</td></tr>
+              <tr><td>튜플</td><td>Tuple. 빈칸마다 고른 값을 하나씩 묶은 한 조합</td></tr>
+              <tr><td>정확 일치</td><td>Exact match. 출력이 정답과 그대로 같은지 보는 채점</td></tr>
+              <tr><td>LLM 판사</td><td>LLM-as-a-judge. 다른 LLM이 출력을 읽고 점수를 매기는 채점 방식</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 프롬프트, 도구, 실행 순서를 정해 주는 틀</td></tr>
+              <tr><td>궤적</td><td>Trajectory. 에이전트가 실행 중 거친 단계와 호출의 순서</td></tr>
+              <tr><td>엔드포인트</td><td>Endpoint. 에이전트가 호출하는 API 주소</td></tr>
+              <tr><td>trace</td><td>실행 중 무슨 일이 있었는지 단계별로 남긴 기록</td></tr>
+              <tr><td>Text-to-SQL</td><td>자연어 질문을 데이터베이스 질의문(SQL)으로 바꾸는 과제</td></tr>
+              <tr><td>go / no-go</td><td>출시할지 말지 정하는 판단</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개: "평가 없이 배포해 온 사람"</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>Air Canada와 네 사업 부문</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>공개 벤치마크가 없는 특수 과제</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>전문가를 만나기 어렵다</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>2024년: 통신 엔지니어용 Q&amp;A</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>다른 팀들과의 경쟁</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>RAG 원리, 맞는 페이지를 찾으면 90%</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>복잡도를 더하면 다른 곳이 깨진다</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>주 1회 전문가 회의, 챗봇 다섯 개</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>문제 뒤집기: 페이지로 질문 만들기</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>주 1회에서 하루 수십 번으로</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>임베딩, 청킹, BM25 alpha</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>교훈: 채점할 수 없으면 좋게 만들 수 없다</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>2026년: 공급사 계약서 검토</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>같은 문제: 바쁜 전문가, 없는 벤치마크</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>에이전트의 네 단계</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>다섯 기법 개요</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>기법 1: 과거 계약서 비교</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>기법 2: 규칙을 어긴 조항 심기</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>테스트 275개</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>기법 3: 조항 지우기</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>기법 4: 바뀌면 안 되는 것 바꾸기</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>LLM 판사는 되도록 피한다</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>기법 5: 템플릿 빈칸 조합</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>피드백 4주에서 5분으로</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>채점 방식 비교</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>궤적 검사</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>Text-to-SQL과 공통 원리</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>평가할 수 있게 설계 바꾸기</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>피드백으로 테스트 고치기</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>결론: 테스트는 출발점</td></tr>
+              <tr><td><span class="ts">19:20</span></td><td>"첫 24시간 칩이 가장 어렵다"</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'c_SPW__jF9w:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

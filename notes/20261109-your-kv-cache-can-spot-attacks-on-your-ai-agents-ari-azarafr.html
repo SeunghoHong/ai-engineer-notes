@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KV 캐시 보안 신호</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+/* range bar: lighter tail from the lower to the upper bound of a "7~8" style value */
+.chart .fill.range { opacity: 0.4; }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#kv-cache">KV 캐시는 원래 속도용</a></li>
+      <li><a href="#edge">지금의 방어: 가장자리 지키기</a></li>
+      <li><a href="#computation">모든 입력은 계산이 된다</a></li>
+      <li><a href="#why">KV 우선 신호의 세 가지 이유</a></li>
+      <li><a href="#recipe">방법은 세 단계</a></li>
+      <li><a href="#where">스택의 어디에 붙이나</a></li>
+      <li><a href="#voice">사례 1: 음성 에이전트</a></li>
+      <li><a href="#text">사례 2: 텍스트 에이전트</a></li>
+      <li><a href="#hard">운영에서 어려운 두 가지</a></li>
+      <li><a href="#close">회사 소개와 마무리</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 스택에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-09 · 7분 · 영어 발표 한글 정리</span>
+      <h1>KV 캐시로 에이전트 공격을 찾는다</h1>
+      <p class="lead">에이전트를 지키는 가드레일은 보통 들어가고 나오는 글자를 검사한다. 발표자는 모델이 이미 계산해 둔 KV 캐시를 읽으면, 글자 검사를 빠져나간 공격도 계산의 이상으로 드러난다고 주장한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=1NWnSwCB4NM" target="_blank" rel="noopener">Your KV Cache Can Spot Attacks on Your AI Agents</a></span>
+        <span>발표: Ari Azarafrooz (Intrinsec AI 창업자)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 고쳤고, 나머지는 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>KV 캐시는 보통 <strong>속도를 위한 저장소</strong>로 쓰인다. 발표자는 이것을 <strong>보안 신호</strong>로도 쓰자고 제안한다.</li>
+        <li>지금의 가드레일은 입력과 출력의 글자를 검사한다. 그 검사를 빠져나간 공격도 <strong>모델 안에서는 결국 계산이 된다.</strong></li>
+        <li>장점은 세 가지다. <strong>데이터가 이미 있고</strong>, <strong>가드레일의 사각지대를 덮고</strong>, <strong>데이터가 서버 안에 머문다.</strong></li>
+        <li>방법은 세 단계다. 정상 트래픽의 <strong>기준선</strong>을 배우고, 기준선에 비해 <strong>드문 KV 페이지</strong>를 찾고, 그것을 <strong>분류하고 설명</strong>한다.</li>
+        <li>붙일 곳은 두 곳이다. <strong>추론 엔진 안</strong>(실시간)과 <strong>KV 캐시 저장소</strong>(사후 탐색).</li>
+        <li>발표자 회사의 실험에서 음성 에이전트의 <strong>숨은 지시를 찾고 위치까지</strong> 짚었다. 텍스트 에이전트에서는 상위 경보 <strong>10개 중 7~8개</strong>가 의미 있었다.</li>
+        <li>남은 숙제는 둘이다. <strong>모델마다 KV의 좌표가 다르고</strong>, KV 데이터가 <strong>너무 크다</strong>(256토큰에 약 40MB).</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="kv-cache">
+        <header><span class="num">01</span><h2>KV 캐시는 원래 속도용 <span class="ts">00:10</span></h2></header>
+        <p>이 발표는 에이전트를 만들고, 추론 스택 <span class="en">inference stack</span>을 직접 운영하거나 운영할 계획인 사람을 위한 것이다. 추론 스택은 학습된 모델을 서버에서 돌려 답을 만드는 소프트웨어 묶음이다.</p>
+        <p>언어 모델은 글을 토큰 하나씩 만든다. 새 토큰을 만들 때마다 앞의 토큰들을 다시 참고한다. 앞 토큰마다 계산한 키와 값 <span class="en">keys and values</span>을 저장해 두면 같은 계산을 반복하지 않아도 된다. 이 저장소가 <strong>KV 캐시</strong> <span class="en">KV cache</span>다.</p>
+        <p>그래서 KV 캐시는 보통 처리량 <span class="en">throughput</span>을 올리는 장치로 여겨진다. 발표자는 이것을 보안의 눈으로 다시 보자고 한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="edge">
+        <header><span class="num">02</span><h2>지금의 방어: 가장자리 지키기 <span class="ts">00:20</span></h2></header>
+        <p>AI 에이전트 앱이 잘못되는 길은 많고, 계속 늘어난다. 발표자가 든 예는 이렇다.</p>
+        <ul class="plain">
+          <li>프롬프트 인젝션 <span class="en">prompt injection</span></li>
+          <li>탈옥 <span class="en">jailbreak</span></li>
+          <li>잘못된 도구 호출 <span class="en">broken tool call</span>, 민감한 도구 호출 <span class="en">sensitive tool call</span></li>
+          <li>민감 데이터 노출 <span class="en">sensitive data exposure</span></li>
+          <li>숨은 백도어 <span class="en">hidden backdoor</span></li>
+          <li>드리프트 <span class="en">drift</span></li>
+        </ul>
+        <p>지금은 주로 <strong>가장자리</strong> <span class="en">edge</span>를 지킨다. 모델에 들어가는 입력과 나오는 출력을 검사한다는 뜻이다. 방법은 두 가지가 흔하다.</p>
+        <ul class="plain">
+          <li>판정 모델 <span class="en">judge model</span>을 두고, 프롬프트와 응답을 정책과 대조하게 한다.</li>
+          <li>실패 유형마다 분류기 <span class="en">classifier</span>를 따로 만든다.</li>
+        </ul>
+      </section>
+
+      <!-- 3 -->
+      <section id="computation">
+        <header><span class="num">03</span><h2>모든 입력은 계산이 된다 <span class="ts">01:00</span></h2></header>
+        <p>모델은 행동하기 전에 모든 입력을 계산으로 바꾼다. 응답을 만들기 전에 계산이 먼저 일어난다. 그 응답이 다음 도구 호출이 되기 전에도 마찬가지다.</p>
+        <p><strong>KV 캐시는 엔진이 남긴 그 계산의 기록이다.</strong> 요즘 추론 엔진은 이 기록을 이미 공짜로 쓰고 읽는다.</p>
+        <div class="shift" aria-label="검사 대상의 이동">
+          <div><span class="tag">지금</span><b>가장자리를 지킨다</b><span class="muted">입력과 출력의 글자를 검사한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 제안</span><b>계산을 읽는다</b><span class="muted">모델 안에 남은 KV 캐시를 검사한다</span></div>
+        </div>
+        <div class="callout">
+          <span class="title">대체가 아니라 보완</span>
+          <span>발표자는 기존 가드레일을 버리자고 하지 않는다. 지금 쓰는 가드레일에 <strong>더하는 신호</strong>로 제안한다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="why">
+        <header><span class="num">04</span><h2>KV 우선 신호의 세 가지 이유 <span class="ts">01:30</span></h2></header>
+        <p>발표자는 이 접근을 <strong>KV 우선 보안 신호</strong> <span class="en">KV-first security signals</span>라고 부른다. 이유는 세 가지다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 데이터가 이미 있다</span>
+            <p>추론 스택이 어차피 만들고 버리던 데이터다. 새로 모을 필요가 없다. 그 더미에서 쓸 만한 것만 고르면 된다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 사각지대를 덮는다</span>
+            <p>가드레일을 빠져나간 입력도 모델 안에서는 결국 계산이 된다. 글자 검사가 놓친 것도 계산에는 흔적을 남긴다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 데이터가 제자리에 있다</span>
+            <p>KV 캐시는 추론 서버 안에 머문다. 입력과 출력을 읽을 수 없는 환경에서도 쓸 수 있다. 그래서 개인정보 보호가 중요한 곳에 맞다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="recipe">
+        <header><span class="num">05</span><h2>방법은 세 단계 <span class="ts">02:00</span></h2></header>
+        <ol class="plain">
+          <li><strong>기준선을 배운다.</strong> 우리 서비스의 평소 추론 트래픽에서 KV 페이지가 보통 어떻게 생겼는지 익힌다. 기준선 <span class="en">baseline</span>은 정상 상태를 보여 주는 기준 데이터다.</li>
+          <li><strong>드문 페이지를 찾는다.</strong> 기준선에 비해 드문 KV 페이지가 이상 <span class="en">anomaly</span> 후보다.</li>
+          <li><strong>분류하고 설명한다.</strong> 찾은 이상이 어떤 종류인지 꼬리표를 붙이고, 무엇이 이상한지 설명한다.</li>
+        </ol>
+        <p>KV 페이지 <span class="en">KV page</span>는 KV 캐시를 토큰 몇 개 단위로 잘라 둔 조각이다. 뒤에 나오는 음성 실험은 16토큰짜리 페이지를 썼다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="where">
+        <header><span class="num">06</span><h2>스택의 어디에 붙이나 <span class="ts">02:20</span></h2></header>
+        <p>발표자는 KV 캐시 덕분에 추론이 상태를 갖게 됐다고 본다 <span class="en">stateful</span>. 계산 결과가 요청이 끝난 뒤에도 남아 다음 요청에 다시 쓰인다는 뜻이다. 발표자가 든 예는 둘이다.</p>
+        <ul class="plain">
+          <li><strong>LMCache</strong> 같은 KV 캐시 관리 계층은 KV 캐시를 GPU에서 원격 저장소까지 내려 보관한다.</li>
+          <li><strong>llm-d</strong>와 <strong>NVIDIA Dynamo</strong>는 새 요청을, 필요한 KV 페이지를 이미 가진 작업 서버로 보낸다.</li>
+        </ul>
+        <p>즉 KV 페이지는 이미 인프라 안을 돌아다닌다. 이상 탐지나 분류기를 붙일 자리는 두 곳이다.</p>
+
+        <h3>두 연결 지점 <span class="ts">02:50</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">추론 엔진 안 · 실시간</span>
+            <p>vLLM 같은 추론 엔진 안에 직접 넣는다. 장점은 실시간이라는 점이다. 경보가 다음 도구 호출이나 정책 판단에 함께 실려 간다.</p>
+            <p class="verdict"><b>쓰임</b>: 계산에서 본 이상으로 기존 정책과 가드레일을 더 단단하게 만든다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">KV 캐시 저장소 · 위협 탐색</span>
+            <p>LMCache에 붙여 저장된 KV 페이지를 읽는다. 나머지와 어울리지 않는 페이지를 찾는다.</p>
+            <p class="verdict"><b>쓰임</b>: 실시간 차단보다, 쌓인 기록에서 숨은 위협을 찾아내는 위협 탐색 <span class="en">threat discovery</span>에 맞다.</p>
+          </div>
+        </div>
+        <p class="note">추론 엔진 이름은 자막에서 뭉개졌다("via LMs, you name so forth"). vLLM으로 읽었다(추정).</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="voice">
+        <header><span class="num">07</span><h2>사례 1: 음성 에이전트 <span class="ts">03:40</span></h2></header>
+        <p>발표자는 이 방법이 정말 통하는지 숫자로 보여 준다. 첫 사례는 <strong>걸러낼 글자가 아예 없는</strong> 음성 에이전트다. 글자를 검사하는 가드레일을 바로 쓸 수 없는 경우다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>실험 설정 <span class="ts">04:00</span></th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>모델</td><td>자막에는 "Gemini 404B"로 나온다(추정). 정확한 이름은 확인하지 못했다.</td></tr>
+              <tr><td>기준선</td><td>평범한 음성 클립 72개, 목소리 4가지</td></tr>
+              <tr><td>페이지 크기</td><td>16토큰. 기준선 데이터를 늘리려고 짧게 잡았다. 바꿀 수 있다</td></tr>
+              <tr><td>시험</td><td>기준선에 없던 목소리로 만든 음성 두 개. 하나는 깨끗하고, 하나는 숨은 지시가 들어 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">KV 캐시를 직접 읽으려면 가중치가 공개된 모델이어야 한다. 그래서 Gemini가 아니라 Gemma 계열일 수 있다(추측).</p>
+
+        <h3>결과: 찾고, 위치까지 짚었다 <span class="ts">04:20</span></h3>
+        <p>단순한 이상 탐지 <span class="en">anomaly detection</span>만으로 숨은 지시가 든 음성을 골라냈다. 요청의 <strong>어느 페이지</strong>가 이상한지도 짚었다. 긴 요청 안에서 문제 구간을 찾을 수 있다는 뜻이다.</p>
+
+        <h3>KV 페이지로 이상을 설명하기 <span class="ts">04:40</span></h3>
+        <p>발표자 팀은 한발 더 나갔다. KV 페이지를 입력 특징 <span class="en">feature</span>으로 쓰는 모델을 학습해, 이상에 쓸모 있는 꼬리표를 붙이게 했다.</p>
+        <p>이 설명 모델은 오디오로 학습하지 않았다. 그런데도 음성 요청에 대해 맞는 꼬리표를 냈다고 한다.</p>
+        <ul class="plain">
+          <li>개인 정보</li>
+          <li>집 주소</li>
+          <li>위치 데이터</li>
+          <li>여행 정보, 목적지</li>
+        </ul>
+        <p>글자를 읽지 않고도 <strong>민감 데이터가 오가는지</strong> 알 수 있다는 주장이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="text">
+        <header><span class="num">08</span><h2>사례 2: 텍스트 에이전트 <span class="ts">05:00</span></h2></header>
+        <p>모델은 Qwen3-14B(추정)이고, vLLM과 LMCache(추정) 위에서 실시간으로 서비스했다.</p>
+        <p class="note">자막에는 "client 314 billion", "bill 110 cash"로 나온다. 9장의 40MB 계산이 Qwen3-14B의 구성과 맞아서 그렇게 읽었다.</p>
+        <p>발표 화면에는 결과가 두 개 있었다.</p>
+        <ul class="plain">
+          <li><strong>왼쪽</strong>: 공격 트래픽과 정상 트래픽이 어떻게 갈라지는지 보여 주는 그림.</li>
+          <li><strong>오른쪽</strong>(발표자가 더 의미 있다고 본 것): Hugging Face에 있는 ATBench(추정)를 썼다. 정상 에이전트 실행 기록을 기준선으로 삼았다. 시험한 에이전트 실패는 8종이고, 도구 설명에 심은 공격부터 잘못된 정보까지 들어 있다. <span class="ts">05:20</span></li>
+        </ul>
+
+        <figure class="chart" aria-label="텍스트 에이전트 실험에서 이상 탐지 상위 경보 10개 중 의미 있는 이상 활동이 7~8개, 나머지가 2~3개">
+          <span class="chart-title">이상 탐지 상위 경보 10개의 내역 (개)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>의미 있는 이상 활동</span><span class="val">7~8</span></div>
+              <div class="track"><div class="fill key range" style="width:80%" title="많게 잡으면 8개"></div><div class="fill key" style="width:70%" title="적게 잡으면 7개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>나머지 경보</span><span class="val">2~3</span></div>
+              <div class="track"><div class="fill range" style="width:30%" title="많게 잡으면 3개"></div><div class="fill" style="width:20%" title="적게 잡으면 2개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>5</span><span>10</span></div>
+          <span class="caption">발표자는 "10개 중 7~8개"라고 범위로 말했다. 진한 막대는 작은 값, 옅은 끝은 큰 값까지다. 나머지 경보는 10에서 뺀 값이다.</span>
+        </figure>
+
+        <p>상위 경보 10개 중 7~8개가 실제로 의미 있고 쓸모 있는 이상 활동이었다. <span class="ts">05:40</span> 경보 대부분이 헛경보가 아니었다는 뜻이다.</p>
+        <p class="note">발표자 팀은 다른 이상보다 유독 두드러지는 이상 유형이 있는지도 살폈다고 했다. 그 결과는 자막에 나오지 않는다.</p>
+        <p class="note">두 사례 모두 발표자 회사가 직접 한 실험이고, 이 회사는 이 방식을 제품으로 만든다. 결과는 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="hard">
+        <header><span class="num">09</span><h2>운영에서 어려운 두 가지 <span class="ts">06:00</span></h2></header>
+        <h3>1. 모델이 바뀐다</h3>
+        <p>모델은 계속 바뀐다. 파인튜닝한 모델과 새 버전이 나온다. 에이전트마다 다른 모델을 쓰기도 한다. 라우터 <span class="en">router</span>가 요청마다 전문 모델을 고르기도 한다.</p>
+        <p>그런데 모델마다 KV 페이지를 <strong>자기만의 좌표</strong> <span class="en">coordinates</span>로 쓴다. 같은 문장이라도 모델이 다르면 KV 값이 다르다는 뜻이다. 그래서 선택지는 둘이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>선택지</th><th>문제</th></tr></thead>
+            <tbody>
+              <tr><td>모델마다 따로 학습</td><td>모델마다 기준선, 분류기, 설명 모델을 다 만들어야 한다. 계산 비용이 감당이 안 된다</td></tr>
+              <tr><td>공통 공간으로 옮기기</td><td>모든 모델의 KV를 하나의 공통 표현 공간 <span class="en">shared representation space</span>으로 옮기는 방법을 찾아야 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>2. 실시간이면 큰 데이터를 옮겨야 한다 <span class="ts">06:30</span></h3>
+        <p>발표자가 든 예는 Qwen3-14B(추정)의 256토큰 묶음이다. 이 묶음 하나의 KV가 <strong>약 40MB</strong>다.</p>
+        <p>CacheGen 같은 압축·스트리밍 기법이 도움은 된다. 그래도 보안 분석을 위해 데이터를 옮기고 실시간으로 대응하기에는 아직 느리다.</p>
+        <div class="callout">
+          <span class="title">검산 (예시: 발표에 없는 계산)</span>
+          <span>토큰 하나의 KV 크기는 <code>2(키와 값) × 층 수 × KV 헤드 수 × 헤드 차원 × 숫자 하나의 바이트 수</code>다.</span>
+          <span>Qwen3-14B의 공개 구성(40층, KV 헤드 8개, 헤드 차원 128)과 16비트 숫자(2바이트)를 가정하면 <code>2 × 40 × 8 × 128 × 2 = 163,840바이트</code>, 토큰당 160KiB다.</span>
+          <span>256토큰이면 40MiB(약 42MB)다. 발표자가 말한 "약 40MB"와 맞는다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="close">
+        <header><span class="num">10</span><h2>회사 소개와 마무리 <span class="ts">06:50</span></h2></header>
+        <p>발표자는 이 두 문제를 Intrinsec AI가 푼다고 말한다. 자체 추론 스택을 만들면서 보안을 처음부터 설계에 넣으려는 팀을 찾고 있다고 했다.</p>
+        <p class="note">Ari Azarafrooz는 이 방식을 파는 회사의 창업자다. 장점 위주의 설명과 자체 실험 결과는 그 점을 감안해 읽자. 두 문제를 풀었다는 말에는 발표 안에서 근거가 나오지 않는다.</p>
+        <div class="callout">
+          <span class="title">이 발표에서 가져갈 것</span>
+          <span>KV 캐시는 속도용 저장소이면서, 모델이 무엇을 계산했는지 보여 주는 기록이다. 글자를 검사하는 가드레일 옆에 <strong>계산을 검사하는 신호</strong>를 하나 더 둘 수 있다. 다만 모델마다 기준선을 다시 만들어야 하고, 데이터가 커서 실시간 적용은 아직 어렵다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>KV 캐시는 토큰마다 계산한 키와 값을 모아 둔 것이다. 보통은 속도를 위해 쓴다.</li>
+          <li>에이전트는 프롬프트 인젝션, 탈옥, 잘못된 도구 호출, 민감 데이터 노출, 백도어, 드리프트로 잘못될 수 있다.</li>
+          <li>지금의 방어는 가장자리를 지킨다. 판정 모델이나 분류기가 <strong>입력과 출력의 글자</strong>를 검사한다.</li>
+          <li>모델은 행동 전에 모든 입력을 계산으로 바꾼다. <strong>KV 캐시는 그 계산의 기록</strong>이다.</li>
+          <li>가드레일을 빠져나간 공격도 계산은 된다. 그래서 KV 신호는 사각지대를 덮는 <strong>보완책</strong>이다.</li>
+          <li>KV 데이터는 이미 엔진에 있고 서버 밖으로 나가지 않는다. 입력과 출력을 읽을 수 없는 환경에 맞다.</li>
+          <li>방법은 <strong>기준선 → 드문 페이지 찾기 → 분류와 설명</strong>이다.</li>
+          <li>붙일 곳은 <strong>추론 엔진 안</strong>(실시간)과 <strong>KV 캐시 저장소</strong>(위협 탐색)다.</li>
+          <li>발표자 회사 실험: 음성의 숨은 지시를 찾고 위치를 짚었다. 텍스트에서는 상위 경보 <strong>10개 중 7~8개</strong>가 의미 있었다.</li>
+          <li>숙제는 <strong>모델마다 다른 좌표</strong>와 <strong>큰 데이터</strong>(256토큰에 약 40MB)다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>KV 캐시는 원래 무엇을 위해 있나?</span></summary><div class="answer">토큰마다 계산한 키와 값을 저장해, 다음 토큰을 만들 때 같은 계산을 반복하지 않게 한다. 처리량을 올리는 장치다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>지금 에이전트를 지키는 흔한 방법 두 가지는?</span></summary><div class="answer">판정 모델로 프롬프트와 응답을 정책과 대조한다. 또는 실패 유형마다 분류기를 따로 만든다. 둘 다 입력과 출력을 검사하는 가장자리 방어다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>KV 캐시를 보안 신호로 쓸 수 있다고 보는 근거는?</span></summary><div class="answer">모델은 행동하기 전에 모든 입력을 계산으로 바꾸고, KV 캐시는 그 계산의 기록이다. 가드레일을 빠져나간 입력도 계산에는 흔적을 남긴다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>KV 우선 보안 신호의 세 가지 장점은?</span></summary><div class="answer">데이터가 이미 있다. 가드레일의 사각지대를 덮는다. 데이터가 서버 안에 머물러 개인정보 보호가 중요한 곳에 맞다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>발표자가 제시한 세 단계 방법은?</span></summary><div class="answer">정상 트래픽에서 KV 페이지의 기준선을 배운다. 기준선에 비해 드문 페이지를 찾는다. 찾은 이상을 분류하고 설명한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>추론 엔진 안에 붙일 때와 KV 캐시 저장소에 붙일 때의 차이는?</span></summary><div class="answer">엔진 안은 실시간이라 경보가 다음 도구 호출이나 정책 판단에 함께 실린다. 저장소 쪽은 쌓인 KV 페이지를 훑어 어울리지 않는 것을 찾는 위협 탐색에 맞다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>첫 사례로 음성 에이전트를 고른 이유는?</span></summary><div class="answer">걸러낼 글자가 아예 없어서, 글자를 검사하는 가드레일을 바로 쓸 수 없는 경우이기 때문이다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>음성 실험에서 이상 탐지가 알려 준 두 가지는?</span></summary><div class="answer">숨은 지시가 든 음성이 이상하다는 것, 그리고 요청의 어느 페이지가 이상한지다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>설명 모델이 음성 요청에 붙인 꼬리표의 예는? 무엇이 놀라운가?</span></summary><div class="answer">개인 정보, 집 주소, 위치 데이터, 여행 정보, 목적지. 이 모델은 오디오로 학습하지 않았는데도 맞는 꼬리표를 냈다고 한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>텍스트 에이전트 실험에서 상위 경보 10개의 결과는?</span></summary><div class="answer">7~8개가 실제로 의미 있고 쓸모 있는 이상 활동이었다. 발표자 회사의 자체 실험이다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>모델이 바뀌면 왜 문제가 되고, 선택지는 무엇인가?</span></summary><div class="answer">모델마다 KV 페이지를 자기만의 좌표로 쓴다. 모델마다 기준선과 분류기를 따로 학습하면 비용이 너무 크다. 그래서 모든 모델의 KV를 공통 표현 공간으로 옮기는 방법이 필요하다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>실시간 분석이 어려운 이유는?</span></summary><div class="answer">KV 데이터가 크다. 256토큰 묶음 하나가 약 40MB다. CacheGen 같은 압축·스트리밍을 써도 보안 분석용으로 옮겨 실시간 대응하기에는 아직 느리다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 스택에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 에이전트가 잘못될 수 있는 길을 목록으로 만든다<span class="how">프롬프트 인젝션, 탈옥, 도구 호출 오류, 민감 데이터 노출, 백도어, 드리프트. 지금 가드레일이 각각을 막는지 짝지어 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>글자 검사가 닿지 않는 곳을 찾는다<span class="how">음성처럼 글자가 없는 입력, 입력과 출력을 읽을 수 없는 개인정보 환경</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>우리 추론 스택에서 KV 캐시가 머무는 곳을 그린다<span class="how">GPU, 캐시 저장 계층(LMCache 등), 요청 라우팅(llm-d, Dynamo 등)</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>정상 트래픽으로 KV 페이지 기준선을 만든다<span class="how">페이지 크기(토큰 수)를 정하고, 기준선에 충분한 페이지가 모이는지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>시작할 곳을 정한다: 엔진 안(실시간) 또는 캐시 저장소(위협 탐색)<span class="how">실시간이면 경보를 다음 도구 호출의 정책 판단에 연결한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>상위 경보 10개를 사람이 직접 확인해 적중률을 잰다<span class="how">발표 사례의 기준: 10개 중 7~8개가 의미 있었다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>모델이 바뀔 때 기준선을 어떻게 다시 만들지 정한다<span class="how">파인튜닝, 새 버전, 라우터가 모델을 바꾸는 경우를 모두 센다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>KV 데이터를 옮기는 비용을 계산한다<span class="how">토큰당 KV 크기 × 페이지 토큰 수. 9장의 검산 예시를 우리 모델 구성으로 다시 계산한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>KV 캐시</td><td>KV cache. 모델이 토큰마다 계산한 키와 값을 저장해 둔 것. 같은 계산을 반복하지 않게 한다</td></tr>
+              <tr><td>키와 값</td><td>Key / Value. 어텐션 계산에서 토큰마다 만드는 두 벡터. 키는 다른 토큰이 찾아볼 때 쓰는 표지이고, 값은 실제로 가져가는 내용이다</td></tr>
+              <tr><td>KV 페이지</td><td>KV page. KV 캐시를 토큰 몇 개 단위로 잘라 둔 조각</td></tr>
+              <tr><td>처리량</td><td>Throughput. 정해진 시간에 처리하는 요청이나 토큰의 양</td></tr>
+              <tr><td>추론 엔진 / 추론 스택</td><td>Inference engine / stack. 학습된 모델을 돌려 답을 만드는 소프트웨어와 그 주변 묶음</td></tr>
+              <tr><td>가드레일</td><td>Guardrail. 에이전트가 정책을 어기지 않도록 입력과 출력을 검사하는 장치</td></tr>
+              <tr><td>판정 모델</td><td>Judge model. 다른 모델의 입력이나 출력을 보고 정책 위반인지 판단하는 모델</td></tr>
+              <tr><td>분류기</td><td>Classifier. 입력을 정해진 종류 중 하나로 나누는 모델</td></tr>
+              <tr><td>프롬프트 인젝션</td><td>Prompt injection. 입력 안에 지시문을 숨겨 AI가 원래 지시 대신 그걸 따르게 만드는 공격</td></tr>
+              <tr><td>탈옥</td><td>Jailbreak. 모델이 지켜야 할 안전 규칙을 우회하게 만드는 공격</td></tr>
+              <tr><td>백도어</td><td>Backdoor. 특정 신호가 들어오면 숨은 동작을 하도록 모델에 몰래 심은 것</td></tr>
+              <tr><td>드리프트</td><td>Drift. 시간이 지나며 동작이 처음 기대에서 조금씩 벗어나는 것</td></tr>
+              <tr><td>기준선</td><td>Baseline. 평소 정상 상태가 어떤지 보여 주는 기준 데이터</td></tr>
+              <tr><td>이상 탐지</td><td>Anomaly detection. 기준선에서 벗어난 드문 것을 찾는 방법</td></tr>
+              <tr><td>상태를 갖는 추론</td><td>Stateful inference. 요청이 끝나도 계산 결과가 남아 다음 요청에 다시 쓰이는 방식</td></tr>
+              <tr><td>LMCache</td><td>KV 캐시를 GPU 밖 저장소까지 내려 보관하고 다시 쓰게 하는 관리 계층</td></tr>
+              <tr><td>llm-d, NVIDIA Dynamo</td><td>여러 서버에 걸쳐 추론을 돌리는 프레임워크. 필요한 KV 캐시를 가진 서버로 요청을 보낸다</td></tr>
+              <tr><td>위협 탐색</td><td>Threat discovery. 쌓인 기록을 훑어 숨은 공격을 찾아내는 일</td></tr>
+              <tr><td>특징</td><td>Feature. 모델이 판단에 쓰는 입력 값</td></tr>
+              <tr><td>파인튜닝</td><td>Fine-tuning. 이미 학습된 모델을 특정 데이터로 더 학습시키는 것</td></tr>
+              <tr><td>라우터</td><td>Router. 요청마다 어느 모델로 보낼지 고르는 장치</td></tr>
+              <tr><td>공통 표현 공간</td><td>Shared representation space. 서로 다른 모델의 내부 값을 같은 기준으로 비교하도록 옮겨 놓는 공간</td></tr>
+              <tr><td>CacheGen</td><td>KV 캐시를 압축하고 스트리밍해 빨리 옮기는 기법</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 대상 청중</td></tr>
+              <tr><td><span class="ts">00:10</span></td><td>KV 캐시는 보통 처리량 최적화로 여겨진다</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>에이전트가 잘못되는 여러 길</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>지금의 방어: 판정 모델, 분류기</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>다른 시각: 모든 입력은 계산이 된다</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>KV 우선 보안 신호와 세 가지 이유</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>세 단계: 기준선, 드문 페이지, 분류와 설명</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>스택의 어디에: LMCache, llm-d, Dynamo</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>두 연결 지점: 엔진 안, 캐시 저장소</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>숫자로 확인하기: 음성 에이전트 사례 시작</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>음성 실험 설정: 클립 72개, 목소리 4가지, 16토큰 페이지</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>숨은 지시 탐지와 위치 짚기</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>KV 페이지로 설명 모델 학습</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>텍스트 에이전트 사례</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>ATBench(추정)와 에이전트 실패 8종</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>상위 경보 10개 중 7~8개가 의미 있음</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>운영의 어려움 1: 모델이 바뀐다</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>운영의 어려움 2: 256토큰에 약 40MB</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>회사 소개와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '1NWnSwCB4NM:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

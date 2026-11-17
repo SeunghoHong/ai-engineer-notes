@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>추론을 소유한 에이전트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#why">추론을 소유한다는 것</a></li>
+      <li><a href="#stack">워크숍 환경과 vLLM</a></li>
+      <li><a href="#first">첫 측정: 37ms와 40토큰/초</a></li>
+      <li><a href="#cost">빌릴까, 가질까: 비용 계산</a></li>
+      <li><a href="#memory">메모리 예산: 가중치와 KV 캐시</a></li>
+      <li><a href="#prefill">프리필, 디코드, 프리픽스 캐시</a></li>
+      <li><a href="#moe">밀집 모델과 전문가 혼합</a></li>
+      <li><a href="#quant">양자화: BF16에서 FP8로</a></li>
+      <li><a href="#spec">추측 디코딩이 실패한 날</a></li>
+      <li><a href="#knee">무릎 찾기와 vLLM 플래그</a></li>
+      <li><a href="#qa">질문과 답 모음</a></li>
+      <li><a href="#conclusion">결론: 측정하고 하나씩 바꾼다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 환경에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-11 · 1시간 50분 · 영어 발표 한글 정리</span>
+      <h1>추론을 소유한 에이전트</h1>
+      <p class="lead">에이전트는 토큰을 끊임없이 만든다. 그 토큰을 API로 빌려 쓰는 대신 내 GPU에서 직접 만들면 비용, 데이터, 속도를 통제할 수 있다. 이 워크숍은 작은 GPU 하나에 4B 모델을 올리고, 메모리 계산, 양자화, 추측 디코딩, vLLM 플래그 조정을 차례로 해 보며 "측정하고 하나씩 바꾸는" 습관을 가르친다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=4n08JHb90hI" target="_blank" rel="noopener">Agents That Own Their Inference</a></span>
+        <span>발표: Du'an Lightfoot (Akamai 개발자 애드보케이트), Khaja Omer (Akamai 시니어 소프트웨어 엔지니어, Kubernetes 담당)</span>
+      </div>
+      <p class="note">영어 워크숍의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 화면에서 읽거나 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 경우만 알려진 이름으로 바로잡았고, 확실하지 않으면 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다. 두 발표자는 Akamai 소속이고, 워크숍 환경도 Akamai의 Kubernetes 서비스 위에서 돌았다. 인프라 관련 평가는 이 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>추론을 소유한다</strong>는 것은 모델이 올라가는 GPU를 직접 갖거나 빌려서, 데이터와 비용과 속도를 내가 통제하는 것이다. 사용량이 높고 꾸준하거나, 데이터가 밖으로 나가면 안 될 때 맞다. 트래픽이 드물고 들쭉날쭉하거나, 최상위 모델이 필요하거나, 팀에 운영 경험이 없으면 빌리는 쪽이 낫다.</li>
+        <li>GPU 메모리는 <strong>가중치 + KV 캐시</strong>로 쓴다. 4B 모델은 BF16에서 8GB, FP8에서 4GB 안팎이다. 남는 자리가 곧 동시에 받을 수 있는 문맥 양이다. 이 워크숍의 20GB GPU에서는 약 37,000토큰이 남았다.</li>
+        <li>디코드 속도의 천장은 <strong>메모리 대역폭 ÷ 가중치 크기</strong>다. 360GB/s ÷ 8GB ≈ 45토큰/초. 이 천장은 플래그로 못 올린다. 가중치를 줄이거나(양자화), 한 번에 더 많은 요청을 처리하거나(배칭), 한 번에 여러 토큰을 만들어야(추측 디코딩) 넘는다.</li>
+        <li><strong>양자화는 효과가 컸다.</strong> BF16을 FP8로 바꾸자 단일 요청은 37.5에서 53.4토큰/초로, 동시 64요청 처리량은 800에서 1,140토큰/초로 약 1.4배 올랐다. 단, 자기 평가 세트로 품질 저하를 꼭 확인해야 한다.</li>
+        <li><strong>추측 디코딩은 실패했다.</strong> 맞지 않는 드래프트 모델을 붙이자 58.2토큰/초가 16토큰/초로 떨어졌다. 드래프트 모델은 본 모델과 함께 훈련된 것, 같은 정밀도, 1B 미만이 기본이다.</li>
+        <li>동시 요청을 늘리면 처리량은 어느 지점에서 평평해지고 지연만 치솟는다. 이 지점을 <strong>무릎</strong>이라 한다. 그 뒤에는 vLLM 플래그를 하나씩 바꿔 병목을 옮긴다. 최대 동시 시퀀스를 32에서 128로 올리자 동시 64요청에서 처리량은 800에서 1,100토큰/초로, 지연은 2,000에서 800ms로 바뀌었다.</li>
+        <li>발표의 사고 방식은 하나다. <strong>측정하고, 병목을 찾고, 플래그 하나를 바꾸고, 다시 측정한다.</strong> 평가 세트 없이 바꾸지 않는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="why">
+        <header><span class="num">01</span><h2>추론을 소유한다는 것 <span class="ts">00:30</span></h2></header>
+        <p>Du'an Lightfoot은 2023년 1월, 도구 호출 기능이 나오기 전부터 에이전트를 만들었다. 프롬프트를 파싱해서 Python으로 도구를 부르고 결과를 다시 모델에 넣는 식이었다. 그때 두 가지 벽을 만났다. API는 비쌌고, 로컬의 작은 모델은 능력과 메모리가 모자랐다.</p>
+        <p>에이전트는 결국 반복문이다. 모델을 부르고, 모델이 도구를 고르고, 도구 결과를 다시 모델이 보고, 계획을 고친다. 매 바퀴마다 토큰이 생성된다. 그래서 에이전트는 "지능을 빌리는" 비용과 지연이 쌓이는 구조다.</p>
+        <h3>소유의 뜻 <span class="ts">02:30</span></h3>
+        <p>추론을 소유한다는 것은 모델이 올라가는 GPU를 직접 갖거나 빌리는 것이다. 그러면 데이터가 내 클러스터, 내 데이터센터, 내 노트북 밖으로 나가지 않는다. 클라우드라면 사설 네트워크 안에 두어 밖으로 나가지 않게 할 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>소유가 맞을 때</th><th>빌리는 게 맞을 때</th></tr></thead>
+            <tbody>
+              <tr><td>사용량이 높고 꾸준하다. GPU 요금을 내면 그 GPU는 늘 일해야 한다</td><td>트래픽이 적고 들쭉날쭉하다. 가끔만 지능이 필요하다</td></tr>
+              <tr><td>데이터를 밖에 못 내보낸다. 지식재산, 거버넌스, 규제 이유</td><td>가장 능력 있는 모델이 필요하다. 그런 모델은 제공자가 큰 GPU에 올려 준다</td></tr>
+              <tr><td>하드웨어 여유가 있다. 있는 용량이면 직접 돌려서 통제권을 갖는다</td><td>팀에 자체 호스팅을 운영할 지식과 경험이 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 워크숍은 "소유"를 고른 뒤에 무엇을 알아야 하는지 다룬다. 메모리 예산, 프리필과 디코드, KV 캐시, 밀집 모델과 전문가 혼합, 그리고 추론 최적화를 거쳐 에이전트를 클러스터에 배포하는 순서다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="stack">
+        <header><span class="num">02</span><h2>워크숍 환경과 vLLM <span class="ts">06:20</span></h2></header>
+        <p>Khaja Omer가 환경을 설명했다. 참가자마다 Kubernetes 네임스페이스 하나, GPU 하나, Jupyter 노트북 하나, vLLM 엔드포인트 하나를 받는다. 클러스터 전체는 GPU 노드 200개가 넘는다. 참가자는 앞 네 모듈을 끝낸 뒤 자기 vLLM 엔드포인트를 몇 번이고 다시 배포하며 처리량과 지연을 다듬는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>값 (발표자 설명)</th></tr></thead>
+            <tbody>
+              <tr><td>GPU</td><td>NVIDIA RTX 4000 Ada. 참가자당 1장. 전용 GPU</td></tr>
+              <tr><td>VRAM</td><td>20GB. 노드당 최대 4장을 묶어 80GB까지 가능</td></tr>
+              <tr><td>메모리 대역폭</td><td>360GB/s. 디코드 속도 천장을 정하는 숫자</td></tr>
+              <tr><td>오케스트레이션</td><td>Akamai의 LKE <span class="en">Linode Kubernetes Engine</span>. 드라이버 설치와 노드 설정을 대신해 준다고 소개했다</td></tr>
+              <tr><td>모델</td><td>Qwen3 4B, BF16. 다른 모델들도 영구 볼륨에 올려 두어 바꿔 끼울 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">대역폭은 환경 소개 때 "260GB/s", 뒤의 천장 계산에서는 "360GB/s"로 두 숫자가 나왔다. 계산 결과인 45토큰/초는 360으로만 맞아서 이 노트는 360을 쓴다.</p>
+
+        <h3>왜 vLLM인가 <span class="ts">09:10</span></h3>
+        <p>Ollama는 로컬에서 쓰기 좋지만, 프로덕션에는 vLLM이 가진 두 기능이 중요하다.</p>
+        <ul class="plain">
+          <li><strong>연속 배칭</strong> <span class="en">continuous batching</span>: 학교 버스에 비유했다. 정적 배칭은 아이들을 모두 내려 준 뒤에야 다음 아이들을 태운다. 연속 배칭은 한 아이를 내리면서 동시에 다른 아이를 태운다. 요청이 끝나는 자리에 바로 새 요청을 끼워 넣어 GPU를 놀리지 않는다.</li>
+          <li><strong>페이지드 어텐션</strong> <span class="en">paged attention</span>: 예전에는 가장 긴 프롬프트 기준으로 KV 캐시 자리를 통째로 잡아서 짧은 요청도 큰 자리를 차지했다. 페이지 단위로 쪼개 관리하면 낭비가 줄고 더 많은 요청을 동시에 담는다.</li>
+          <li><strong>OpenAI 호환 API</strong>: OpenAI SDK를 쓰는 코드라면 주소만 바꿔 붙인다.</li>
+        </ul>
+        <h3>vLLM이 못 하는 것 <span class="ts">13:50</span></h3>
+        <p>vLLM 엔드포인트 하나는 모델 하나만 서빙한다. 두 모델이면 엔드포인트가 두 개 필요하고 앞에 라우팅이 필요하다. 인증은 되지만 권한 관리는 없고, 요청 제한도 없다. 그래서 앞에 게이트웨이를 둔다. 발표자들은 KServe를 주로 쓴다고 했고, LLM-D 같은 오픈소스 도구도 언급했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>서빙 런타임</th><th>어울리는 자리 (발표자 요약) <span class="ts">26:30</span></th></tr></thead>
+            <tbody>
+              <tr><td>vLLM</td><td>이 워크숍의 기본. 연속 배칭, 페이지드 어텐션, OpenAI 호환</td></tr>
+              <tr><td>SGLang</td><td>긴 공통 프리픽스를 나누는 요청, 여러 턴 대화. 에이전트 용도로 많이 쓴다</td></tr>
+              <tr><td>TensorRT-LLM</td><td>NVIDIA 하드웨어에서 최대 처리량</td></tr>
+              <tr><td>llama.cpp</td><td>엣지, 강하게 양자화한 모델, ARM 서버</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>볼 지표는 처리량, 첫 토큰까지 시간 <span class="en">TTFT, time to first token</span>, KV 캐시 사용률이다. vLLM이 Prometheus 형식으로 내보내고 Grafana로 본다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="first">
+        <header><span class="num">03</span><h2>첫 측정: 37ms와 40토큰/초 <span class="ts">17:10</span></h2></header>
+        <p>스트리밍으로 한 요청을 보내 조각마다 시간을 재면 두 숫자가 나온다. 첫 토큰까지 37ms, 그 뒤 토큰 사이 간격으로 계산한 디코드 속도 약 40토큰/초. 이 40이 요청 하나의 상한이다. 요청이 16개, 100개로 늘면 전체 처리량은 훨씬 커지지만 요청 하나는 여전히 40 근처에 묶인다.</p>
+        <p>CPU로 돌리면 어떨까. 노트북 컨테이너가 1GB뿐이어서 실제로는 못 돌리고 흉내만 냈다. GPU는 행렬 곱을 병렬로 처리하기 때문에 비교가 안 되게 빠르다. GPU에서는 45토큰/초가 나왔다.</p>
+        <div class="callout">
+          <span class="title">39토큰/초는 느린가</span>
+          <span>채팅처럼 사람이 기다리는 자리면 첫 토큰이 빨라야 한다. 하지만 뒤에서 돌아가는 작업이라면 39토큰/초도 충분한 경우가 많다. 속도보다 "일이 제대로 끝나는가"가 중요한 자리가 있다. 어디에 쓰는지에 따라 중요한 지표가 다르다.</span>
+        </div>
+        <h3>첫 에이전트와 관측 <span class="ts">21:00</span></h3>
+        <p>첫 에이전트는 도구 없이 시스템 프롬프트만 준 것이다. "Akamai 솔루션 아키텍트 에이전트"라는 역할을 주고 질문에 답하게 했다. 여기까지는 쉽다. 도구 호출이 여러 번 이어지면 그때부터 KV 캐시와 문맥 길이가 문제가 된다.</p>
+        <p>Du'an Lightfoot은 에이전트를 만들 때 관측을 가장 먼저 붙인다고 했다. 오픈소스 Langfuse를 클러스터 안에 함께 올리면 관측 데이터도 밖으로 나가지 않는다. 단계마다 토큰 수와 지연을 보면 "작은 모델이 도구를 너무 많이 부른다"는 식의 문제가 눈에 보인다. 해법은 프롬프트 수정, 도구 줄이기, 에이전트를 더 전문화하기처럼 단순할 수 있다.</p>
+        <p>프롬프트가 길어지면 첫 토큰까지 시간도 늘어난다. 최적화 기준은 중앙값이 아니라 <strong>가장 오래 걸린 요청</strong>이다. 꼬리를 줄이면 중앙값은 따라온다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="cost">
+        <header><span class="num">04</span><h2>빌릴까, 가질까: 비용 계산 <span class="ts">25:20</span></h2></header>
+        <p>발표자가 든 예시는 이렇다. 하루 20만 토큰을 호스팅 API로 처리하면 월 약 1,500달러, GPU를 빌리면 월 약 1,000달러. GPU 크기, 모델 크기, 그 모델이 실제로 일을 해내는지에 따라 달라지므로 각자 계산해 보라고 했다.</p>
+        <p class="note">이 비교에 쓴 모델과 토큰 단가는 화면에 나오지 않았다. 하루 20만 토큰은 한 달 약 600만 토큰이고, 1,500달러면 100만 토큰당 250달러에 해당한다. 어떤 모델과 단가를 가정했는지에 따라 결론이 크게 달라지니, 이 숫자를 그대로 쓰지 말고 자기 사용량과 단가로 다시 계산해야 한다.</p>
+        <p>비용 외에 데이터 통제, 규제 준수, 보안도 소유 쪽의 이유다. 그리고 API를 쓰더라도 아낄 길은 있다. 5분마다 돌아가는 식의 반복 작업이면 제공자의 <strong>프롬프트 캐싱</strong>이 필수다. 발표자는 제공자에 따라 비용을 최대 75%까지 줄일 수 있다고 인용했다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="memory">
+        <header><span class="num">05</span><h2>메모리 예산: 가중치와 KV 캐시 <span class="ts">28:30</span></h2></header>
+        <p>GPU 메모리는 두 덩어리로 나뉜다. 모델 가중치가 먼저 자리를 잡고, 남는 공간이 KV 캐시다. KV 캐시는 "지금 처리 중인 모든 문맥"이 사는 곳이다. 프롬프트가 들어오면 프리필 단계에서 전체를 읽어 KV 캐시에 저장하고, 토큰을 하나 만들 때마다 캐시가 자란다. 시스템 프롬프트, 도구 결과, 생성된 답이 모두 여기 들어가야 한다.</p>
+        <h3>파라미터당 바이트 <span class="ts">31:50</span></h3>
+        <p>가중치 크기는 파라미터 수에 정밀도당 바이트를 곱한다. FP32는 4바이트, BF16은 2바이트, FP8은 1바이트다.</p>
+        <figure class="chart" aria-label="Qwen3 4B 가중치 크기 비교: FP32 16GB, BF16 8GB, FP8 4GB">
+          <span class="chart-title">Qwen3 4B 가중치가 차지하는 메모리 (GB)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>FP32 (파라미터 × 4)</span><span class="val">16</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="FP32: 16GB"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>BF16 (파라미터 × 2) · 워크숍 기본</span><span class="val">8</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="BF16: 8GB"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>FP8 (파라미터 × 1)</span><span class="val">4</span></div>
+              <div class="track"><div class="fill key" style="width:25%" title="FP8: 4GB"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>8</span><span>16</span></div>
+          <span class="caption">실제로 받은 FP8 파일은 약 5.1GB였다. 모델의 일부만 FP8로 바꾼 "dynamic" 양자화라 절반까지 줄지 않는다(1:10:20의 질의응답).</span>
+        </figure>
+        <p>모델을 받으면 config.json과 safetensors 파일이 함께 온다. safetensors가 가중치고, config.json은 층 수, 은닉 크기, 어텐션 헤드 수, KV 헤드 수, 어휘 크기 같은 구조를 vLLM에 알려 준다. 이 파일은 고칠 수 없다. 고치면 로드가 실패한다. 모델을 바꾸려면 LoRA 같은 미세 조정으로 한다.</p>
+        <h3>속도 천장과 문맥 천장 <span class="ts">34:00</span></h3>
+        <p>디코드는 토큰 하나를 만들 때마다 가중치 전체를 메모리에서 읽는다. 그래서 천장은 <strong>대역폭 ÷ 가중치 크기</strong>다. 360GB/s ÷ 8GB = 초당 45번 읽기, 즉 45토큰/초. 실측 40은 이 천장 바로 아래다.</p>
+        <p>문맥 천장은 남은 메모리로 정한다. 이 GPU에서 8GB를 가중치에 쓰고 나면 KV 캐시에 약 37,000토큰이 들어간다. 사용자 네 명이 각각 입력, 출력, 도구 호출 합쳐 8,000토큰씩 쓰면 꽉 찬다. 수를 더 늘리면 그만큼 한 사람당 문맥이 줄어든다.</p>
+        <div class="callout">
+          <span class="title">발표자의 실전 예시</span>
+          <span>학생 80명에게 20GB GPU 3~4장으로 추론을 제공해야 했다. 질문은 "들어가는가"다. 작업 하나의 문맥은 얼마인가, 모두 동시에 부르면 어떻게 되는가, 연속 배칭이 감당하는가. 답은 머릿속 계산이 아니라 <strong>전체 작업 부하를 흉내 낸 평가</strong>로 얻는다. 천장을 넘으면 CPU로 넘치고 앱이 느려진다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="prefill">
+        <header><span class="num">06</span><h2>프리필, 디코드, 프리픽스 캐시 <span class="ts">36:50</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">프리필 <span class="en">prefill</span></span>
+            <p>프롬프트 전체를 한 번에 읽어 KV 캐시를 채운다. 첫 토큰까지 시간이 여기서 결정된다.</p>
+            <p class="verdict"><b>계산 묶임</b>. 행렬 곱이 많아 연산 성능이 병목이다. 최적화 여지가 많다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">디코드 <span class="en">decode</span></span>
+            <p>첫 토큰 뒤로 토큰을 하나씩 만든다. 토큰 사이 간격이 여기서 결정된다.</p>
+            <p class="verdict"><b>메모리 묶임</b>. 매 토큰마다 가중치를 다 읽는다. 대역폭 천장은 플래그로 못 넘는다.</p>
+          </div>
+        </div>
+        <p>어텐션 계산을 손으로 따라가며 KV 캐시가 왜 필요한지 보였다. 캐시가 없으면 토큰마다 앞 문맥을 다시 계산해야 한다. 캐시가 있으면 앞 토큰의 키와 값을 저장해 두고 참조만 한다. 측정값은 첫 토큰 57ms, 토큰당 디코드 25ms였다. 25ms는 곧 40토큰/초다.</p>
+        <h3>프리픽스 캐싱 <span class="ts">40:40</span></h3>
+        <p>여러 요청이 같은 앞부분을 공유하면(같은 시스템 프롬프트, 같은 도구 설명) 그 부분의 KV 캐시를 다시 쓸 수 있다. 같은 프롬프트를 두 번 보냈을 때 첫 토큰까지 시간이 220ms에서 41ms로 떨어졌다.</p>
+        <div class="callout">
+          <span class="title">프롬프트 캐싱과 프리픽스 캐싱은 다르다</span>
+          <span><strong>프롬프트 캐싱</strong>은 API 제공자의 요금 기능이다. 같은 앞부분에 대해 돈을 덜 받는다. <strong>프리픽스 캐싱</strong>은 vLLM 안에서 KV 캐시를 재사용하는 기술이다. 내 GPU에서 시간을 줄인다. 이름이 비슷해 자주 섞인다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="moe">
+        <header><span class="num">07</span><h2>밀집 모델과 전문가 혼합 <span class="ts">41:50</span></h2></header>
+        <p><strong>밀집 모델</strong> <span class="en">dense</span>은 토큰 하나를 만들 때 모델 전체가 일한다. Qwen3 4B는 8GB를 매번 다 읽는다. <strong>전문가 혼합</strong> <span class="en">MoE, mixture of experts</span>은 모델은 크지만 토큰마다 일부 전문가만 깨운다. 발표의 예시는 30B 모델에 전문가 128개, 토큰당 활성 8개, 48층이었다. 메모리에는 30B가 다 올라가야 하지만 디코드 때 읽는 바이트는 밀집 모델의 약 9분의 1이다. 그래서 더 큰 모델인데 더 빨리 답할 수 있다.</p>
+        <p>루프라인 <span class="en">roofline</span> 그림으로 보면 이 GPU의 능선은 바이트당 297 FLOPs다. 디코드는 그 왼쪽, 메모리 묶임 영역에 있다. 같은 GPU에서 Qwen3 0.6B는 약 300토큰/초, 4B는 약 40토큰/초, 천장은 45토큰/초다. 모델이 작을수록 토큰당 읽는 바이트가 적어 빠르다.</p>
+        <h3>생각 모드의 비용 <span class="ts">45:50</span></h3>
+        <p>에이전트가 도구 결과를 보고 다음 도구를 고르려면 Qwen 모델의 생각 모드 <span class="en">thinking</span>를 켜야 한다. 그 대신 토큰이 늘어난다.</p>
+        <figure class="chart" aria-label="같은 질문에 생성된 토큰: 생각 모드 꺼짐 35, 켜짐 약 600">
+          <span class="chart-title">같은 질문에 생성된 토큰 수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>생각 모드 꺼짐</span><span class="val">35</span></div>
+              <div class="track"><div class="fill" style="width:5.8%" title="생각 모드 꺼짐: 35토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>생각 모드 켜짐</span><span class="val">약 600</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="생각 모드 켜짐: 약 600토큰"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>300</span><span>600</span></div>
+          <span class="caption">생각 토큰에 예산을 걸 수 있다. 많이 생각한다고 늘 좋은 건 아니지만, 도구 호출을 검증하는 데는 도움이 된다.</span>
+        </figure>
+        <p>마지막으로 프리필과 디코드를 다른 GPU 풀로 나누는 구조를 소개했다. 프리필 풀은 계산 성능이 좋은 GPU, 디코드 풀은 대역폭이 좋은 GPU에 맡긴다. 워크숍 환경이 작아 코드로만 보였다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="quant">
+        <header><span class="num">08</span><h2>양자화: BF16에서 FP8로 <span class="ts">48:40</span></h2></header>
+        <p>Khaja Omer가 이어받았다. 양자화는 가중치의 정밀도를 낮춰 크기를 줄이는 것이다. 종류가 많다. FP8, INT4, AWQ, GPTQ, 그리고 NVIDIA의 NVFP4(Blackwell GPU에서 하드웨어 가속). llama.cpp가 쓰는 GGUF는 5비트, 3비트, 2비트, 1비트까지 내려가지만 성능을 얻는 대신 품질을 많이 잃는다.</p>
+        <h3>왜 줄이나</h3>
+        <ul class="plain">
+          <li><strong>KV 캐시 자리가 늘어난다.</strong> 20GB에서 가중치가 8GB에서 4GB대로 줄면 그만큼 동시에 더 많은 요청을 담는다. 처리량이 오른다.</li>
+          <li><strong>디코드가 빨라진다.</strong> 토큰마다 읽는 바이트가 반으로 줄어 천장 자체가 올라간다. 40토큰/초가 60까지도 갈 수 있다고 했다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">자기 평가 세트 없이 바꾸지 않는다</span>
+          <span>BF16에서 FP8은 대개 품질 저하가 거의 없다. 하지만 "대개"다. 특정 작업에서는 JSON이 깨지거나, 함수 호출이 실패하거나, 같은 말을 반복하거나, 환각이 늘 수 있다. Hugging Face와 GitHub의 공개 평가 세트로 시작하되, 자기 작업에 맞는 평가를 꼭 만들어 바꾸기 전과 후를 비교한다.</span>
+        </div>
+        <h3>부하 시험 <span class="ts">54:00</span></h3>
+        <p>요청마다 입력 약 256토큰, 출력 약 128토큰을 보내고 동시 요청 수를 1, 4, 8, 16, 32, 64로 올렸다. BF16 기준선에서 동시 1요청은 37.5토큰/초, 첫 토큰 61ms. 동시 32요청은 합계 714토큰/초, 첫 토큰 277ms. 그런데 64로 올리자 첫 토큰이 1,300ms로 뛰었다. 이 급등은 뒤에서 다시 본다.</p>
+        <p>그다음 Kubernetes 매니페스트의 모델 이름을 Red Hat이 올린 FP8 "dynamic" 버전으로 바꿔 다시 배포했다. 영구 볼륨에 모델이 캐시돼 있어 가중치만 바꿔 올린다. 같은 시험을 다시 돌렸다.</p>
+        <figure class="chart" aria-label="동시 64요청 처리량: BF16 800토큰/초, FP8 1,140토큰/초">
+          <span class="chart-title">동시 64요청 합계 처리량 (토큰/초)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>BF16</span><span class="val">800</span></div>
+              <div class="track"><div class="fill" style="width:70.2%" title="BF16: 800토큰/초"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>FP8</span><span class="val">1,140 · 약 1.4배</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="FP8: 1,140토큰/초"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>600</span><span>1,200</span></div>
+          <span class="caption">동시 1요청에서도 37.5에서 53.4토큰/초로 같은 비율(약 1.4배)만큼 올랐다. 단, 첫 토큰까지 시간은 FP8에서도 32에서 64로 갈 때 크게 뛰었다. 간단한 평가 세트에서는 품질 차이가 없었다.</span>
+        </figure>
+        <h3>질문에서 나온 세부 <span class="ts">59:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>답 (Khaja Omer)</th></tr></thead>
+            <tbody>
+              <tr><td>직접 양자화할 수 있나</td><td>있다. vLLM 쪽의 LLM Compressor를 쓴다. 워크숍은 Hugging Face에서 받은 미리 양자화된 모델을 썼다</td></tr>
+              <tr><td>FP8과 INT8 중 무엇을</td><td>FP8은 부동소수점이라 조금 더 정밀하다. 둘 다 쓸 수 있다. 중요한 건 GPU가 그 형식을 하드웨어로 가속하는가다. RTX 4000 Ada는 FP8을 가속하지만 FP4는 아니어서, FP4로 가면 오히려 느려진다</td></tr>
+              <tr><td>"dynamic"이 무슨 뜻인가</td><td>모델의 일부만 FP8로 바꾸고 나머지는 그대로 둔다는 뜻이라고 설명했다. 그래서 FP8 파일이 4GB가 아니라 5.1GB다. 어디를 얼마나 줄이는지는 모델 구조마다 다르다. 어떤 양자화는 일부를 4비트, 일부를 8비트, 일부를 BF16으로 섞는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">"dynamic"의 정확한 의미는 모델 카드마다 다를 수 있다. 쓰려는 모델의 카드에서 무엇을 어떻게 양자화했는지 확인하는 편이 안전하다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="spec">
+        <header><span class="num">09</span><h2>추측 디코딩이 실패한 날 <span class="ts">1:05:10</span></h2></header>
+        <p><strong>추측 디코딩</strong> <span class="en">speculative decoding</span>은 작은 드래프트 모델이 토큰 몇 개를 미리 적어 두고, 본 모델이 그것을 한 번에 검증하는 방식이다. 드래프트가 4개를 내면 본 모델이 "앞 2개는 맞고 뒤 2개는 아니다" 하고 2개를 받아들인다. 검증은 디코드보다 빠르다. 토큰 하나씩 만드는 대신 여러 후보를 층을 한 번 통과시키며 병렬로 점수를 매기기 때문이다. 연속 배칭이 여러 요청을 한 번에 처리하는 것과 같은 원리다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>설명 (발표자 요약)</th></tr></thead>
+            <tbody>
+              <tr><td>드래프트 모델</td><td>별도의 작은 모델이 순서대로 토큰을 낸다. 이 워크숍이 쓴 방식</td></tr>
+              <tr><td>확산 드래프터</td><td>확산 모델이 많은 토큰을 한 번에 낸다. Khaja Omer가 집 서버에서 쓰는 DFlash(추정)가 이 종류</td></tr>
+              <tr><td>내장 드래프터</td><td>본 모델과 함께 훈련되어 같은 패키지에 들어온다. Medusa, EAGLE 계열</td></tr>
+              <tr><td>서픽스 디코딩</td><td>앞서 나온 텍스트의 패턴을 재사용한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>핵심 설정은 "검증 전에 몇 토큰을 미리 낼 것인가"다. 2에서 4가 보통이다. 4를 냈는데 2만 받아들여지면 수락률 50%다. 이러면 모델 두 개를 돌리는 비용만 들고 처리량은 오히려 떨어진다.</p>
+        <h3>결과 <span class="ts">1:15:30</span></h3>
+        <p>FP8 Qwen3 4B 위에 Qwen3 0.6B를 드래프트로 붙이고 미리 낼 토큰을 4로 두었다. 발표자는 처음부터 "행복한 길이 아니다"라고 예고했다.</p>
+        <figure class="chart" aria-label="동시 1요청 디코드 속도: 추측 디코딩 전 58.2토큰/초, 후 16토큰/초">
+          <span class="chart-title">동시 1요청 디코드 속도 (토큰/초)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>FP8 기준선</span><span class="val">58.2</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="FP8 기준선: 58.2토큰/초"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>추측 디코딩 켬 (0.6B 드래프트, 4토큰)</span><span class="val">16</span></div>
+              <div class="track"><div class="fill key" style="width:27.5%" title="추측 디코딩: 16토큰/초"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>30</span><span>60</span></div>
+          <span class="caption">동시 16요청에서도 700에서 240토큰/초로 떨어졐다. 첫 토큰까지 시간도 조금 늘었다.</span>
+        </figure>
+        <p>원인 후보는 여럿이다. 낮은 수락률, 너무 큰 미리 내기 토큰 수, 스케줄러와의 궁합, 같은 GPU를 두 모델이 나눠 쓰는 경쟁. 발표자의 결론은 <strong>이 드래프트 모델이 본 모델에 맞게 훈련되지 않았다</strong>는 것이다. GPU 자원은 충분했다. 결국 설정을 주석 처리하고 기준선으로 돌아갔다.</p>
+        <h3>제대로 하면 <span class="ts">1:23:30</span></h3>
+        <ul class="plain">
+          <li>vLLM 팀의 보고서는 올바른 모델과 설정에서 약 1.5배 토큰 생성 향상을 보였다고 인용했다.</li>
+          <li>Khaja Omer의 집 서버: Qwen 3.6 35B(추정) 모델에 DFlash(추정) 드래프터로 2~3배. 브라우저 자동화는 약 1.5배, 코딩은 약 3배. 작업에 따라 수락률이 달라서 범용 숫자는 없다.</li>
+          <li>벤치마크는 믿지 말고 자기 작업으로 재라. 발표자 본인도 벤치마크와 같은 결과를 본 적이 없다고 했다.</li>
+        </ul>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>드래프트 모델 고르기</th><th>발표자의 답</th></tr></thead>
+            <tbody>
+              <tr><td>어떤 모델</td><td>연구소가 본 모델과 함께 내놓은 드래프터가 첫 선택. 제3자 드래프터도 잘 맞는 경우가 있다. Qwen, GLM, Kimi 같은 공개 모델에는 대부분 드래프터가 있다</td></tr>
+              <tr><td>크기</td><td>1B 미만이 기본. 3B는 너무 크다. 본 모델이 400B급이면 더 큰 드래프터도 가능하다. 드래프트가 본 모델의 자원을 빼앗지 않을 만큼 작아야 한다</td></tr>
+              <tr><td>정밀도</td><td>본 모델과 같은 정밀도로 맞춘다. BF16 드래프트와 FP8 본 모델처럼 어긋나면 수락률이 떨어진다</td></tr>
+              <tr><td>훈련 방식</td><td>본 모델을 증류하거나, 본 모델과 함께 훈련한다. 함께 훈련한 쪽이 수락률이 높다</td></tr>
+              <tr><td>미리 낼 토큰 수</td><td>2, 4, 6, 1로 바꿔 보며 직접 잰다. DFlash는 8까지도 되지만 그 위로는 불안정했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">DeepSeek가 발표 하루나 이틀 전에 미리 낼 토큰 수를 수락률과 GPU 부하에 따라 실시간으로 바꾸는 기법을 냈다고 언급했다. 이름은 "DSpark"(추정)로 들렸다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="knee">
+        <header><span class="num">10</span><h2>무릎 찾기와 vLLM 플래그 <span class="ts">1:26:50</span></h2></header>
+        <p>GPU에 돈을 냈으면 GPU는 최대한 오래, 최대한 바쁘게 일해야 한다. 이것을 <strong>포화</strong> <span class="en">saturation</span>라고 불렀다. 동시 요청 수를 올리면 처리량은 오르다가 어느 지점에서 평평해진다. 그런데 지연은 계속 오른다. 처리량이 평평해지기 직전, 지연이 아직 견딜 만한 지점이 <strong>무릎</strong> <span class="en">knee</span>이다. 이 환경에서 무릎은 동시 32요청이었다. 32를 넘으면 처리량은 그대로인데 첫 토큰까지 시간만 치솟았다.</p>
+        <p class="note">이 대목에서 클러스터가 잠시 멈춰 노트북을 바꿔 다시 진행했다. 그 뒤 측정은 FP8이 아니라 BF16 모델로 돌아간 상태다.</p>
+        <h3>네 가지 주요 플래그 <span class="ts">1:36:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>vLLM 플래그</th><th>뜻과 조정 요령</th></tr></thead>
+            <tbody>
+              <tr><td>gpu-memory-utilization</td><td>vLLM이 쓸 VRAM 비율. 워크숍은 0.7로 두어 30%가 비어 있었다. 모델 하나만 돌리면 0.9나 0.95까지 올린다. 여러 모델이 한 GPU를 나눠 쓰면 낮게 둔다. 너무 높이면 노드가 죽는다</td></tr>
+              <tr><td>max-num-seqs</td><td>동시에 처리할 요청 수 상한. 워크숍은 32였다. 그래서 64요청을 보내면 절반이 대기열에서 기다렸고 지연이 뛰었다. 시험으로 정한다</td></tr>
+              <tr><td>max-model-len</td><td>요청 하나의 최대 문맥 길이. 실제 작업에 맞게 잡는다</td></tr>
+              <tr><td>max-num-batched-tokens</td><td>한 배치에 넣을 토큰 수. GPU가 감당하면 크게 두어 프리필을 빨리, 느린 GPU면 작게</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">한 번에 하나만 바꾼다</span>
+          <span>플래그를 여러 개 동시에 바꾸면 무엇이 효과를 냈는지 모른다. 하나 바꾸고, 부하 시험을 돌리고, 어느 지표가 어떻게 움직였는지 보고, 그 결과로 다음 가정을 세운다. 처리량은 그대로인데 지연만 바뀌었다면 무언가가 맞거나 틀린 것이다.</span>
+        </div>
+        <h3>max-num-seqs 32 → 128 <span class="ts">1:44:30</span></h3>
+        <div class="pair">
+          <figure class="chart" aria-label="동시 64요청 처리량: 변경 전 800토큰/초, 변경 후 1,100토큰/초">
+            <span class="chart-title">동시 64요청 처리량 (토큰/초)</span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>max-num-seqs 32</span><span class="val">800</span></div>
+                <div class="track"><div class="fill" style="width:72.7%" title="32: 800토큰/초"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>max-num-seqs 128</span><span class="val">1,100</span></div>
+                <div class="track"><div class="fill key" style="width:100%" title="128: 1,100토큰/초"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>1,100</span></div>
+          </figure>
+          <figure class="chart" aria-label="동시 64요청 첫 토큰까지 시간: 변경 전 2,000ms, 변경 후 800ms">
+            <span class="chart-title">동시 64요청 첫 토큰까지 시간 (ms)</span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>max-num-seqs 32</span><span class="val">2,000</span></div>
+                <div class="track"><div class="fill" style="width:100%" title="32: 2,000ms"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>max-num-seqs 128</span><span class="val">800</span></div>
+                <div class="track"><div class="fill key" style="width:40%" title="128: 800ms"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>2,000</span></div>
+          </figure>
+        </div>
+        <p>동시 1요청 속도는 37에서 35로 조금 내려갔다. 발표자는 실행마다 ±2토큰 정도는 흔들린다고 했다. 이것이 조정의 한 바퀴다. 병목을 찾고, 왜 생기는지 짚고, 그것을 푸는 플래그 하나를 바꾸고, 다시 잰다. 모든 작업에 동시 64요청이 오는 건 아니니 자기 사용 패턴에 맞는 값을 고른다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="qa">
+        <header><span class="num">11</span><h2>질문과 답 모음</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>답 (발표자 요약)</th></tr></thead>
+            <tbody>
+              <tr><td>32에서 64로 갈 때 왜 지연이 뛰나 <span class="ts">1:14:30</span></td><td>KV 캐시가 상한에 닿았고, max-num-seqs 때문에 요청이 대기열에 쌓였다. 연속 배칭 설정이 최적이 아니면 같은 증상이 난다</td></tr>
+              <tr><td>그 지점이면 하드웨어를 늘려야 하나 <span class="ts">1:39:50</span></td><td>먼저 수식으로 천장을 계산한다. 측정이 그 천장에 닿았으면 하드웨어의 한계다. 아니면 아직 플래그로 짜낼 여지가 있다</td></tr>
+              <tr><td>Ollama와 vLLM 중 무엇을 <span class="ts">1:42:20</span></td><td>모델을 고르고 시험하는 단계, 에이전트 하나만 돌리는 상황이면 Ollama나 llama.cpp가 편하다. 에이전트 20개를 병렬로 돌리거나 하드웨어를 최대로 쓰려면 vLLM이나 SGLang으로 간다. Ollama는 추측 디코딩을 지원하지 않는 것으로 알고 있다고 했다</td></tr>
+              <tr><td>들쭉날쭉한 트래픽은 <span class="ts">1:46:00</span></td><td>자동 확장이 기본 패턴이다. LKE에서는 GPU 1장 노드에서 4장 노드로 늘리는 식으로 확장할 수 있다고 했다. 트래픽 패턴을 통계로 모델링해 미리 늘리는 방법도 있다</td></tr>
+              <tr><td>추측 디코딩이 잘 맞는 작업은 <span class="ts">1:29:50</span></td><td>에이전트 루프, 도구 호출, 브라우저 자동화. 발표자 경험으로 브라우저는 약 1.5배, 코딩은 약 3배</td></tr>
+              <tr><td>OpenAI나 Anthropic도 이걸 쓰나 <span class="ts">1:31:20</span></td><td>발표자는 모른다고 답했다. 공개 모델 생태계에서는 Qwen, GLM, Kimi 모두 드래프터가 나와 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="conclusion">
+        <header><span class="num">12</span><h2>결론: 측정하고 하나씩 바꾼다 <span class="ts">1:40:40</span></h2></header>
+        <div class="shift" aria-label="추론 운영 방식의 이동">
+          <div><span class="tag">빌리는 쪽</span><b>API 토큰에 돈을 낸다</b><span class="muted">모델, 데이터 위치, 속도를 제공자가 정한다. 드문 트래픽과 최상위 모델에 맞다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">가지는 쪽</span><b>GPU 시간에 돈을 낸다</b><span class="muted">메모리 예산, 양자화, 플래그를 내가 정한다. GPU를 늘 바쁘게 만들어야 값이 나온다</span></div>
+        </div>
+        <p>워크숍이 남긴 절차는 단순하다.</p>
+        <ol class="plain">
+          <li><strong>수식으로 천장을 계산한다.</strong> 가중치 크기, 남는 KV 캐시, 대역폭 ÷ 가중치. 이게 기대치다.</li>
+          <li><strong>부하 시험으로 기준선을 잰다.</strong> 동시 요청 수를 올리며 처리량, 첫 토큰까지 시간, 토큰당 시간을 기록한다.</li>
+          <li><strong>무릎을 찾는다.</strong> 처리량이 평평해지고 지연이 뛰는 지점.</li>
+          <li><strong>플래그 하나를 바꾸고 다시 잰다.</strong> 양자화, max-num-seqs, 메모리 비율, 추측 디코딩. 한 번에 하나.</li>
+          <li><strong>평가 세트로 품질을 확인한다.</strong> 속도가 올라도 JSON이 깨지면 실패다.</li>
+        </ol>
+        <p class="note">발표 자료, 노트북 저장소, 매니페스트는 QR 코드로 공개했다. 발표자들은 Akamai 클라우드 무료 계정에 300달러 크레딧이 있다고 안내했다. 자사 서비스 안내다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>추론 소유는 <strong>GPU를 갖거나 빌려서 데이터, 비용, 속도를 통제하는 것</strong>이다. 사용량이 높고 꾸준하거나 데이터를 못 내보낼 때 맞다.</li>
+          <li>GPU 메모리 = <strong>가중치 + KV 캐시</strong>. 가중치는 파라미터 × 바이트(FP32 4, BF16 2, FP8 1). 남는 자리가 동시 문맥 양이다.</li>
+          <li>디코드 천장 = <strong>대역폭 ÷ 가중치 크기</strong>. 360GB/s ÷ 8GB ≈ 45토큰/초. 플래그로는 못 넘는다.</li>
+          <li>프리필은 계산 묶임, 디코드는 메모리 묶임. 첫 토큰까지 시간은 프리필, 토큰 간격은 디코드가 정한다.</li>
+          <li>vLLM의 <strong>연속 배칭과 페이지드 어텐션</strong>이 작은 GPU로 많은 요청을 받게 한다. 라우팅, 권한, 요청 제한은 게이트웨이가 맡는다.</li>
+          <li>전문가 혼합은 메모리에는 크게 올라가지만 토큰마다 일부만 읽어 <strong>큰 모델이 더 빠를 수 있다</strong>.</li>
+          <li>FP8 양자화로 처리량 <strong>약 1.4배</strong>. 단, GPU가 그 형식을 가속해야 하고, 자기 평가 세트로 품질을 확인해야 한다.</li>
+          <li>추측 디코딩은 <strong>맞지 않는 드래프트 모델이면 속도가 3분의 1로 떨어진다</strong>. 함께 훈련된 드래프터, 같은 정밀도, 1B 미만, 미리 낼 토큰 2~4.</li>
+          <li>동시 요청을 올리면 <strong>무릎</strong>이 나온다. 그 뒤는 max-num-seqs, 메모리 비율, 문맥 길이, 배치 토큰 수 같은 플래그를 하나씩 바꾼다.</li>
+          <li>절차는 <strong>계산 → 측정 → 무릎 찾기 → 플래그 하나 → 재측정 → 평가</strong>다. 벤치마크보다 자기 작업으로 재라.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>추론을 "소유"하는 게 맞는 세 조건은?</span></summary><div class="answer">사용량이 높고 꾸준할 때, 데이터를 밖으로 내보낼 수 없을 때(지식재산, 규제), 하드웨어 여유가 있을 때. 반대로 트래픽이 드물거나 최상위 모델이 필요하거나 팀에 운영 경험이 없으면 빌린다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Qwen3 4B가 BF16, FP8, FP32에서 차지하는 메모리는?</span></summary><div class="answer">파라미터 수 × 정밀도당 바이트. BF16은 2바이트라 8GB, FP8은 1바이트라 4GB, FP32는 4바이트라 16GB. 실제 FP8 파일은 일부만 양자화해 5.1GB였다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>이 GPU의 디코드 속도 천장 45토큰/초는 어떻게 나왔나?</span></summary><div class="answer">메모리 대역폭 360GB/s를 가중치 크기 8GB로 나눈 값. 토큰 하나마다 가중치 전체를 읽어야 하므로 1초에 45번 읽을 수 있다는 뜻이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>프리필과 디코드는 각각 무엇에 묶이고, 어느 지표를 정하나?</span></summary><div class="answer">프리필은 계산 성능에 묶이고 첫 토큰까지 시간을 정한다. 디코드는 메모리 대역폭에 묶이고 토큰 사이 간격을 정한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>연속 배칭을 학교 버스로 설명하면?</span></summary><div class="answer">정적 배칭은 모든 아이를 내려 준 뒤에야 새 아이를 태운다. 연속 배칭은 한 아이가 내리는 자리에 바로 다른 아이를 태운다. 끝난 요청 자리에 새 요청을 즉시 넣어 GPU를 놀리지 않는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>프롬프트 캐싱과 프리픽스 캐싱의 차이는?</span></summary><div class="answer">프롬프트 캐싱은 API 제공자의 요금 기능으로 같은 앞부분에 돈을 덜 받는다. 프리픽스 캐싱은 vLLM이 같은 앞부분의 KV 캐시를 재사용해 시간을 줄이는 기술이다. 워크숍에서 220ms가 41ms로 줄었다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>전문가 혼합 모델이 더 큰데 더 빠를 수 있는 이유는?</span></summary><div class="answer">토큰마다 전문가 일부만 깨워서 읽는 바이트가 적다. 발표의 30B 예시는 전문가 128개 중 8개만 활성이라 밀집 모델보다 약 9분의 1만 읽는다. 디코드가 메모리 묶임이라 읽는 양이 적으면 빠르다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>FP8로 바꿀 때 속도 외에 꼭 확인할 것과, 하드웨어 쪽 조건은?</span></summary><div class="answer">자기 평가 세트로 JSON 깨짐, 함수 호출 실패, 반복, 환각을 확인한다. 하드웨어는 그 정밀도를 가속해야 한다. RTX 4000 Ada는 FP8은 가속하지만 FP4는 아니어서 FP4로 가면 오히려 느려진다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>추측 디코딩이 58.2에서 16토큰/초로 떨어진 주된 원인은?</span></summary><div class="answer">드래프트 모델이 본 모델에 맞게 훈련되지 않아 수락률이 매우 낮았다. 드래프트를 만드는 비용만 들고 본 모델이 대부분 거부했다. GPU 자원은 충분했다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>"무릎"은 무엇이고, 이 환경에서는 어디였나?</span></summary><div class="answer">동시 요청을 올릴 때 처리량은 평평해지고 지연만 치솟기 직전의 지점. 이 환경에서는 동시 32요청이었다. 원인은 KV 캐시 상한과 max-num-seqs 32였다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>max-num-seqs를 32에서 128로 올리자 동시 64요청에서 무엇이 바뀌었나?</span></summary><div class="answer">처리량은 800에서 1,100토큰/초로 올랐고 첫 토큰까지 시간은 2,000에서 800ms로 줄었다. 대기열에서 기다리던 요청이 바로 처리되기 시작했기 때문이다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>플래그 조정의 원칙 한 줄은?</span></summary><div class="answer">한 번에 하나만 바꾸고 부하 시험으로 다시 잰다. 어느 지표가 어떻게 움직였는지 보고 다음 가정을 세운다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 환경에 적용하기</h2><p class="muted">워크숍 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>빌릴지 가질지를 숫자로 판단한다<span class="how">하루 토큰 수 × 단가 × 30 과 GPU 월 요금을 비교한다. GPU가 늘 바쁠 수 있는지도 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>메모리 예산을 계산한다<span class="how">가중치 = 파라미터 × 바이트. 남는 VRAM이 KV 캐시. 동시 사용자 수 × 요청당 문맥이 들어가는지 확인</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>디코드 천장을 먼저 적어 둔다<span class="how">대역폭 ÷ 가중치 크기. 측정이 이 근처면 플래그로 더 못 올린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>부하 시험 스크립트를 만든다<span class="how">동시 1, 4, 8, 16, 32, 64. 처리량, 첫 토큰까지 시간, 토큰당 시간을 기록. 무릎을 찾는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>자기 작업용 평가 세트를 만든다<span class="how">JSON 유효성, 함수 호출 성공, 반복 여부. 양자화나 모델 교체 전후로 돌린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>FP8 양자화를 시험한다<span class="how">GPU가 FP8을 가속하는지 먼저 확인. 모델 카드에서 무엇을 양자화했는지 읽는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>추측 디코딩은 맞는 드래프터로만 시험한다<span class="how">연구소가 함께 낸 드래프터, 같은 정밀도, 1B 미만. 미리 낼 토큰 2, 4, 6을 비교한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>vLLM 플래그를 하나씩 조정한다<span class="how">gpu-memory-utilization, max-num-seqs, max-model-len, max-num-batched-tokens. 하나 바꾸고 다시 잰다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>앞에 게이트웨이, 옆에 관측을 둔다<span class="how">라우팅, 권한, 요청 제한은 게이트웨이. 단계별 토큰과 지연은 Langfuse 같은 자체 호스팅 도구</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>추론</td><td>Inference. 훈련된 모델에 입력을 넣어 출력을 얻는 일. 토큰 생성이 여기 속한다</td></tr>
+              <tr><td>vLLM</td><td>오픈소스 모델 서빙 엔진. 연속 배칭, 페이지드 어텐션, OpenAI 호환 API를 제공한다</td></tr>
+              <tr><td>연속 배칭</td><td>Continuous batching. 끝난 요청 자리에 새 요청을 바로 넣어 GPU를 놀리지 않는 방식</td></tr>
+              <tr><td>페이지드 어텐션</td><td>Paged attention. KV 캐시를 페이지 단위로 나눠 관리해 메모리 낭비를 줄이는 기술</td></tr>
+              <tr><td>KV 캐시</td><td>Key-Value cache. 앞서 처리한 토큰의 키와 값을 저장해 두는 GPU 메모리 영역. 문맥이 여기 산다</td></tr>
+              <tr><td>프리필</td><td>Prefill. 프롬프트 전체를 읽어 KV 캐시를 채우는 단계. 첫 토큰까지 시간을 정한다</td></tr>
+              <tr><td>디코드</td><td>Decode. 토큰을 하나씩 만드는 단계. 토큰 사이 간격을 정한다</td></tr>
+              <tr><td>TTFT</td><td>Time to first token. 요청을 보낸 뒤 첫 토큰이 돌아오기까지 걸린 시간</td></tr>
+              <tr><td>처리량</td><td>Throughput. 모든 요청을 합쳐 초당 만드는 토큰 수</td></tr>
+              <tr><td>계산 묶임 / 메모리 묶임</td><td>Compute-bound / memory-bound. 속도를 제한하는 것이 연산 성능인지 메모리 대역폭인지</td></tr>
+              <tr><td>루프라인</td><td>Roofline. 연산 성능과 메모리 대역폭 두 천장을 한 그림에 그려 작업이 어디에 묶이는지 보는 모델</td></tr>
+              <tr><td>BF16 / FP8 / FP32</td><td>가중치를 저장하는 정밀도. 파라미터당 2바이트, 1바이트, 4바이트</td></tr>
+              <tr><td>양자화</td><td>Quantization. 가중치 정밀도를 낮춰 크기를 줄이는 것. 속도를 얻고 품질을 조금 잃을 수 있다</td></tr>
+              <tr><td>GGUF</td><td>llama.cpp가 쓰는 모델 파일 형식. 1~5비트까지 강한 양자화를 지원한다</td></tr>
+              <tr><td>전문가 혼합</td><td>MoE, mixture of experts. 토큰마다 일부 전문가 층만 활성화하는 모델 구조</td></tr>
+              <tr><td>밀집 모델</td><td>Dense model. 토큰마다 모델 전체가 계산에 참여하는 구조</td></tr>
+              <tr><td>추측 디코딩</td><td>Speculative decoding. 작은 드래프트 모델이 토큰 여러 개를 미리 내고 본 모델이 한 번에 검증하는 기법</td></tr>
+              <tr><td>드래프트 모델</td><td>Draft model, drafter. 추측 디코딩에서 토큰 후보를 미리 내는 작은 모델</td></tr>
+              <tr><td>수락률</td><td>Acceptance rate. 드래프트가 낸 토큰 중 본 모델이 받아들인 비율</td></tr>
+              <tr><td>프리픽스 캐싱</td><td>Prefix caching. 같은 앞부분을 가진 요청끼리 KV 캐시를 재사용하는 것</td></tr>
+              <tr><td>프롬프트 캐싱</td><td>Prompt caching. API 제공자가 같은 앞부분에 요금을 덜 받는 기능</td></tr>
+              <tr><td>무릎</td><td>Knee. 동시 요청을 올릴 때 처리량은 평평해지고 지연만 치솟기 직전의 지점</td></tr>
+              <tr><td>포화</td><td>Saturation. GPU가 쉬지 않고 최대한 일하는 상태</td></tr>
+              <tr><td>max-num-seqs</td><td>vLLM이 동시에 처리할 요청 수 상한</td></tr>
+              <tr><td>gpu-memory-utilization</td><td>vLLM이 쓸 VRAM 비율</td></tr>
+              <tr><td>게이트웨이</td><td>모델 엔드포인트 앞에서 라우팅, 권한, 요청 제한을 맡는 층. KServe 등</td></tr>
+              <tr><td>LKE</td><td>Linode Kubernetes Engine. Akamai의 관리형 Kubernetes 서비스</td></tr>
+              <tr><td>PVC</td><td>Persistent Volume Claim. Kubernetes의 영구 저장소. 워크숍에서 모델 파일을 캐시했다</td></tr>
+              <tr><td>Langfuse</td><td>오픈소스 LLM 관측 도구. 단계별 토큰과 지연을 추적한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개. 2023년 도구 호출 이전의 에이전트 경험</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>에이전트는 반복문. 토큰 비용과 지연</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>추론 소유의 뜻. 소유할 때와 빌릴 때</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>워크숍 순서</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>환경: GPU 노드 200개, 참가자당 네임스페이스 하나</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>RTX 4000 Ada, 20GB, LKE</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>vLLM: 연속 배칭, 페이지드 어텐션</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>볼 지표: 처리량, TTFT, KV 캐시 사용률</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>모듈 1: 추론 스택. Qwen3 4B BF16</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>vLLM 한계와 게이트웨이. KServe, LLM-D</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>첫 요청: TTFT 37ms, 40토큰/초</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>CPU 대 GPU. 뒤에서 돌아가는 작업이면 39토큰/초도 충분</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>첫 에이전트. 시스템 프롬프트만</td></tr>
+              <tr><td><span class="ts">23:10</span></td><td>관측: Prometheus, Grafana, Langfuse</td></tr>
+              <tr><td><span class="ts">24:40</span></td><td>프롬프트 길이와 TTFT. 꼬리를 최적화</td></tr>
+              <tr><td><span class="ts">25:20</span></td><td>비용 비교: 월 1,500달러 대 1,000달러</td></tr>
+              <tr><td><span class="ts">26:30</span></td><td>런타임 지형: SGLang, TensorRT-LLM, llama.cpp</td></tr>
+              <tr><td><span class="ts">28:30</span></td><td>모듈 2: 가중치와 KV 캐시 예산</td></tr>
+              <tr><td><span class="ts">30:40</span></td><td>config.json과 safetensors</td></tr>
+              <tr><td><span class="ts">31:50</span></td><td>파라미터당 바이트. FP32, BF16, FP8</td></tr>
+              <tr><td><span class="ts">34:00</span></td><td>대역폭으로 천장 계산. KV 캐시 37,000토큰</td></tr>
+              <tr><td><span class="ts">34:50</span></td><td>학생 80명, GPU 3~4장 예시</td></tr>
+              <tr><td><span class="ts">36:50</span></td><td>모듈 3: 프리필, 디코드, 어텐션 수식</td></tr>
+              <tr><td><span class="ts">39:40</span></td><td>TTFT 57ms, 디코드 25ms/토큰</td></tr>
+              <tr><td><span class="ts">40:40</span></td><td>프리픽스 캐싱 220ms → 41ms. 프롬프트 캐싱과의 차이</td></tr>
+              <tr><td><span class="ts">41:50</span></td><td>모듈 4: 밀집 모델 대 전문가 혼합</td></tr>
+              <tr><td><span class="ts">43:30</span></td><td>루프라인. 능선 297 FLOPs/바이트</td></tr>
+              <tr><td><span class="ts">45:50</span></td><td>생각 모드: 35토큰 대 600토큰</td></tr>
+              <tr><td><span class="ts">47:20</span></td><td>프리필, 디코드 분리</td></tr>
+              <tr><td><span class="ts">48:40</span></td><td>Khaja Omer 시작. 최적화 기법 개요</td></tr>
+              <tr><td><span class="ts">50:10</span></td><td>모듈 5: 양자화 종류</td></tr>
+              <tr><td><span class="ts">53:20</span></td><td>자기 평가 세트의 중요성</td></tr>
+              <tr><td><span class="ts">54:00</span></td><td>BF16 부하 시험 기준선</td></tr>
+              <tr><td><span class="ts">56:50</span></td><td>매니페스트 수정, FP8 모델로 재배포</td></tr>
+              <tr><td><span class="ts">59:50</span></td><td>질의응답: LLM Compressor, FP8 대 INT8, GPU 지원</td></tr>
+              <tr><td><span class="ts">1:03:50</span></td><td>FP8 결과: 37.5 → 53.4, 800 → 1,140</td></tr>
+              <tr><td><span class="ts">1:05:10</span></td><td>모듈 6: 추측 디코딩 원리</td></tr>
+              <tr><td><span class="ts">1:06:50</span></td><td>드래프터 종류. 확산 드래프터, 내장 드래프터</td></tr>
+              <tr><td><span class="ts">1:09:40</span></td><td>질의응답: dynamic 양자화의 뜻</td></tr>
+              <tr><td><span class="ts">1:11:50</span></td><td>speculative config 설정, 재배포</td></tr>
+              <tr><td><span class="ts">1:13:10</span></td><td>질의응답: gpu-memory-utilization 0.7</td></tr>
+              <tr><td><span class="ts">1:15:30</span></td><td>추측 디코딩 결과: 58.2 → 16</td></tr>
+              <tr><td><span class="ts">1:17:40</span></td><td>원인: 드래프트 모델 불일치</td></tr>
+              <tr><td><span class="ts">1:19:10</span></td><td>질의응답: 정밀도 불일치, 검증이 빠른 이유</td></tr>
+              <tr><td><span class="ts">1:23:30</span></td><td>제대로 하면: vLLM 1.5배, 집 서버 2~3배</td></tr>
+              <tr><td><span class="ts">1:24:30</span></td><td>드래프터 크기와 훈련 방식</td></tr>
+              <tr><td><span class="ts">1:26:50</span></td><td>모듈 7: 포화와 무릎</td></tr>
+              <tr><td><span class="ts">1:29:50</span></td><td>질의응답: 추측 디코딩이 맞는 작업, 벤치마크 불신</td></tr>
+              <tr><td><span class="ts">1:32:00</span></td><td>DeepSeek의 동적 추측 디코딩(추정)</td></tr>
+              <tr><td><span class="ts">1:33:00</span></td><td>클러스터 장애, 노트북 교체</td></tr>
+              <tr><td><span class="ts">1:36:00</span></td><td>모듈 8: 네 가지 플래그. 하나씩 바꾼다</td></tr>
+              <tr><td><span class="ts">1:39:50</span></td><td>질의응답: 하드웨어를 늘릴 시점</td></tr>
+              <tr><td><span class="ts">1:40:40</span></td><td>자료 QR 코드</td></tr>
+              <tr><td><span class="ts">1:42:20</span></td><td>질의응답: Ollama 대 vLLM</td></tr>
+              <tr><td><span class="ts">1:44:30</span></td><td>max-num-seqs 32 → 128</td></tr>
+              <tr><td><span class="ts">1:46:00</span></td><td>질의응답: 들쭉날쭉한 트래픽과 자동 확장</td></tr>
+              <tr><td><span class="ts">1:47:40</span></td><td>결과: 800 → 1,100토큰/초, 2,000 → 800ms</td></tr>
+              <tr><td><span class="ts">1:49:30</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '4n08JHb90hI:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

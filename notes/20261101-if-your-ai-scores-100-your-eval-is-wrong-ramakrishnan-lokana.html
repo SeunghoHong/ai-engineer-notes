@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>만점 평가의 함정</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#exam">eval은 AI의 시험이다</a></li>
+      <li><a href="#signal">시험 하나는 신호 하나</a></li>
+      <li><a href="#speaker">발표자와 관점</a></li>
+      <li><a href="#why-now">eval이 지금 필요한 이유</a></li>
+      <li><a href="#ambition">원칙 1: 가장 큰 성공부터</a></li>
+      <li><a href="#workflow">원칙 2: 답이 아니라 과정</a></li>
+      <li><a href="#holistic">원칙 3: 점수 하나는 시스템이 아니다</a></li>
+      <li><a href="#games">되받아치는 시험: 게임</a></li>
+      <li><a href="#regression">원칙 4: 시험을 계속 바꾼다</a></li>
+      <li><a href="#reality">원칙 5: 실제 실패를 시험으로</a></li>
+      <li><a href="#conclusion">결론: 일을 시험하라</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-01 · 19분 · 영어 발표 한글 정리</span>
+      <h1>AI가 100점이면 시험이 틀렸다</h1>
+      <p class="lead">eval은 AI 시스템이 사용자에게 한 약속을 지키는지 확인하는 시험이다. 만점이 나오면 시험이 너무 쉽다는 뜻이다. 발표자는 위험이 큰 서비스에서 eval을 설계하는 다섯 가지 원칙을 제시한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=7WUzHIF32vA" target="_blank" rel="noopener">If Your AI Scores 100%, Your Eval Is Wrong</a></span>
+        <span>발표: Ramakrishnan Lokanathan (E-Slams 제작자, Lawrence Berkeley Lab AI 안전 연구)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 경우만 알려진 이름으로 바로잡았고, 나머지는 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>eval은 <strong>AI 시스템의 시험</strong>이다. 시험 하나는 능력의 일부만 보여 주는 <strong>신호 하나</strong>일 뿐이다.</li>
+        <li>eval의 목적은 하나다. <strong>제품이 사용자에게 한 약속을 실제로 지키는지</strong> 확인한다.</li>
+        <li>원칙 1: 시험을 만들기 전에 <strong>가장 야심 찬 성공</strong>을 정한다. eval 점수가 <strong>100점이면 eval이 틀린 것</strong>이다.</li>
+        <li>원칙 2: 최종 답만 보지 말고 <strong>워크플로의 모든 단계</strong>를 시험한다. 단계마다 그 단계에 맞는 시험을 쓴다.</li>
+        <li>원칙 3: <strong>점수 하나는 시스템이 아니다.</strong> 자동 검사(CI), 사람의 검토, 적대적 테스트, 게임 같은 새 평가 방식을 함께 쓴다.</li>
+        <li>원칙 4: 예전에 <strong>잘 되던 일을 계속 시험</strong>하고, 점수가 85~90에 닿으면 시험을 더 어렵게 바꾼다.</li>
+        <li>원칙 5: <strong>실제 사용자의 실패를 다음 시험으로</strong> 만든다. 마지막 5%의 예외 상황은 거기서 나온다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="exam">
+        <header><span class="num">01</span><h2>eval은 AI의 시험이다 <span class="ts">00:00</span></h2></header>
+        <p>발표자는 eval이 지금 망가져 있다고 본다. 가장 큰 이유는 eval을 너무 복잡하게 생각하고, 정작 무엇인지 제대로 이해하지 못하기 때문이다.</p>
+        <p>eval은 평가<span class="en">evaluation</span>의 줄임말이다. 사람에게 시험이 있듯 AI에게도 시험이 있다고 생각하면 쉽다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>대상</th><th>시험의 예</th></tr></thead>
+            <tbody>
+              <tr><td>사람</td><td>SAT, GMAT, 변호사 시험</td></tr>
+              <tr><td>AI</td><td>SWE-bench, Humanity's Last Exam</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>시험이든 eval이든 구성은 같다. <strong>과제</strong>, <strong>기준</strong>, 그리고 <strong>증거</strong>다. 이 셋으로 무언가가 기대대로 일하는지 판단한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="signal">
+        <header><span class="num">02</span><h2>시험 하나는 신호 하나 <span class="ts">01:40</span></h2></header>
+        <p>시험은 범위가 정해진 질문 하나에만 답한다. SAT는 학생의 언어와 수학 실력을 알려 준다. 하지만 대학에 갈 준비가 됐는지 판단하는 여러 신호 중 하나일 뿐이다.</p>
+        <p>발표자는 출신지 인도와 미국을 비교한다. 발표자에 따르면 인도는 지금도 시험 하나로 대학 입학이 정해진다. 미국에서 SAT는 여러 신호 중 하나다.</p>
+        <div class="callout">
+          <span class="title">AI에 옮기면</span>
+          <span>모델이 Humanity's Last Exam이나 SWE-bench에서 점수가 높다고 그 점수에 매달리지 않는다. 어떤 시험도 능력 전체를 재지 못한다. eval 하나는 준비 상태를 알려 주는 신호 하나로만 다룬다.</span>
+        </div>
+        <blockquote>우리가 eval로 답하려는 질문은 하나다. 지금의 성능이 사용자에게 한 약속과 맞는가.<cite>발표 02:40 부근 내용을 옮김</cite></blockquote>
+      </section>
+
+      <!-- 3 -->
+      <section id="speaker">
+        <header><span class="num">03</span><h2>발표자와 관점 <span class="ts">02:50</span></h2></header>
+        <ul class="plain">
+          <li>인도 남부 코친<span class="en">Cochin</span> 출신이다. 고등학생 때 머신러닝 분류기를 만들었다.</li>
+          <li>인도의 에듀테크 유니콘에서 일을 시작했다. 2021년에 GPT-3 기반 제품 시연을 보고 진로를 바꿨다.</li>
+          <li>2022년 9월에 GPT-3 API로 새 앱을 만드는 일에 전념했다. 약 두 달 뒤 ChatGPT가 나왔다. 발표자는 이 일이 회사를 "증명해 주는 동시에 죽였다"고 말한다.</li>
+          <li>여러 번 방향을 바꾼 끝에 반려동물 돌봄 AI 비서를 만들었다. 이커머스와 추천으로 수익을 냈고, 인도에서 인수됐다.</li>
+          <li>GPT-3 시절부터 eval이 꼭 필요했다. 그 경험으로 NVIDIA Nemotron 3 모델의 레드팀<span class="en">red teamer</span>으로 일했다.</li>
+          <li>지금은 Lawrence Berkeley Lab에서 AI 안전 연구를 하고, London Business School의 데이터 과학·AI 프로그램에도 참여한다.</li>
+        </ul>
+        <p>발표 내용은 사용자 수백만 명 규모의 AI 제품을 만들며 나눈 대화와 경험을 모은 것이다. 발표자는 특정 업체를 홍보하지 않겠다고 밝혔다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="why-now">
+        <header><span class="num">04</span><h2>eval이 지금 필요한 이유 <span class="ts">04:50</span></h2></header>
+        <p>발표자는 10년 뒤에는 eval이 지금처럼 중요하지 않을 거라고 본다. 모델 능력이 계속 좋아진다면 그렇게 많은 eval이 필요 없어진다. 그때 eval은 확인 절차 정도로 남는다.</p>
+        <p>하지만 프로덕션<span class="en">production</span>은 기다려 주지 않는다. 프로덕션은 실제 사용자가 쓰는 운영 환경이다.</p>
+        <div class="callout warn">
+          <span class="title">eval 구조가 없으면 생기는 일</span>
+          <span>발표자는 MIT의 "GenAI Divide" 보고서를 인용한다. 조직의 95%가 생성형 AI에서 수익을 얻지 못한다는 내용이다. 발표자는 그 이유를 이렇게 본다. LLM으로 한 약속을 프로덕션에서 지키지 못하기 때문이다.</span>
+        </div>
+        <p>그래서 오늘 eval이 할 일은 프로덕션에서 약속을 지키게 만드는 것이다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="ambition">
+        <header><span class="num">05</span><h2>원칙 1: 가장 야심 찬 성공부터 정한다 <span class="ts">05:30</span></h2></header>
+        <p>시험을 설계하기 전에 먼저 성공의 최대치를 정한다. AGI<span class="en">Artificial General Intelligence</span>, 즉 사람만큼 무엇이든 하는 AI가 있다고 가정한다. 그때 내 에이전트가 해낼 최고의 결과는 무엇인가.</p>
+        <p>이 목표가 앞으로 설계할 시험의 범위를 정한다. 출발점은 점수가 아니라 <strong>에이전트가 맡을 일</strong>이다.</p>
+        <div class="pair">
+          <div class="card"><span class="tag">질문 1</span><p><strong>무엇이 반드시 일어나야 하나?</strong></p></div>
+          <div class="card"><span class="tag">질문 2</span><p><strong>무엇이 절대 일어나면 안 되나?</strong></p></div>
+          <div class="card"><span class="tag">질문 3</span><p><strong>언제 멈춰야 하나?</strong></p></div>
+        </div>
+        <p>여기서 다른 육하원칙 질문으로 넓혀 가며 최고의 결과를 정의한다.</p>
+
+        <h3>100점이면 eval이 틀렸다 <span class="ts">06:10</span></h3>
+        <p>eval에서 100점 만점에 100점이 나오면, 목표가 낮고 시험이 부족하다는 뜻이다. 발표자에 따르면 요즘 모델 평가에서 최고 점수는 85~86 정도다. 100점에 닿는 모델은 없다.</p>
+
+        <figure class="chart" aria-label="점수 비교: 발표자가 말한 공개 모델 평가 최고 수준 약 86점, 내 eval 만점 100점. 점선은 eval을 더 어렵게 바꿀 신호인 85점">
+          <span class="chart-title">내 eval 점수와 공개 평가 최고 수준 (100점 만점)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>공개 모델 평가의 최고 수준 (발표자 언급)</span><span class="val">약 86</span></div>
+              <div class="track"><div class="fill" style="width:86%" title="공개 모델 평가 최고 수준: 약 86점"></div><div class="baseline" style="left:85%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>만점이 나온 내 eval</span><span class="val">100</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="내 eval: 100점"></div><div class="baseline" style="left:85%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 85, eval을 더 어렵게 바꿀 신호</span><span>100</span></div>
+          <span class="caption">발표자는 85~86을 "최대치"로 말했다. 막대는 86에 맞춰 그렸다. 원칙 4에서 발표자는 내 eval 점수가 85~90에 닿으면 시험을 바꾸라고 한다.</span>
+        </figure>
+        <p>eval의 목표는 지금 모델이 할 수 있는 수준보다 높아야 한다. 그래야 모델에게 쉬운 시험이 아니라 <strong>스트레스 테스트</strong>가 된다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="workflow">
+        <header><span class="num">06</span><h2>원칙 2: 답이 아니라 과정 전체를 시험한다 <span class="ts">06:40</span></h2></header>
+        <p>발표자는 이미지 편집 사례를 보여 준다. 원본 사진을 주고 "배경만 바꿔 달라"고 요청했다.</p>
+        <div class="shift" aria-label="최종 결과만 볼 때와 과정을 볼 때의 차이">
+          <div><span class="tag">최종 결과만 보면</span><b>배경이 크림색으로 바뀌었다</b><span class="muted">요청대로 된 것처럼 보인다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">자세히 보면</span><b>손잡이가 두 개가 됐다</b><span class="muted">배경 말고 다른 것까지 바뀌었다</span></div>
+        </div>
+        <p>시작점과 끝점만 비교하면 "배경이 바뀌었다"로 통과한다. 하지만 그게 원래 목표였는지는 따로 확인해야 한다.</p>
+        <div class="callout">
+          <span class="title">단계마다 세 가지를 잰다</span>
+          <span>워크플로가 100단계라면 단계마다 평가한다. 그 단계에 무엇이 들어가는지, 무엇이 나오는지, 기대한 결과가 무엇인지 본다.</span>
+        </div>
+
+        <h3>단계에 맞는 시험을 쓴다 <span class="ts">15:50</span></h3>
+        <p>발표자가 결론에서 덧붙인 내용이다. 각 단계의 시험은 그 단계가 하는 일에 맞춰 설계한다. 예를 들어 어떤 단계가 계속 툴 호출<span class="en">tool call</span>로 정보를 가져온다면, 그 단계의 eval은 툴 호출을 재야 한다. 그 단계에서 알고 싶은 것은 툴 호출 능력과 툴 호출 정확도이기 때문이다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="holistic">
+        <header><span class="num">07</span><h2>원칙 3: 점수 하나는 시스템이 아니다 <span class="ts">07:30</span></h2></header>
+        <p>2022~2023년에는 코딩 능력이나 글쓰기 능력처럼 한 가지씩 쟀다. 지금의 에이전트는 오래 돌며 여러 일을 하는 <strong>에이전트형 시스템</strong><span class="en">agentic persistent system</span>이다. 그래서 여러 방법을 묶은 <strong>종합 평가 시스템</strong><span class="en">holistic evaluation system</span>이 필요하다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 자동 검사</span>
+            <p>eval을 CI 파이프라인에 넣는다. 배포할 때마다 같은 eval 질문을 에이전트에게 던진다.</p>
+            <p class="verdict">모델을 고를 때 한 번 잰 점수로 끝나지 않게 한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 사람의 검토</span>
+            <p>결과가 말이 되는지 사람이 계속 검토한다.</p>
+            <p class="verdict">에이전트로 eval 과정을 빠르게 할 수는 있다. 하지만 <b>eval의 검토자를 에이전트에게만 맡기지 않는다.</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 적대적 테스트</span>
+            <p>워크플로를 어디서 깨뜨릴 수 있는지 찾는다. 일부러 어려운 상황에 몰아넣는다.</p>
+            <p class="verdict">시험은 그것이 드러낼 수 있는 실패를 기준으로 고른다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="games">
+        <header><span class="num">08</span><h2>되받아치는 시험: 게임으로 평가하기 <span class="ts">08:40</span></h2></header>
+        <p>SWE-bench에서는 모델이 과제 하나를 받고 결과 하나를 낸다. 그 사이에 이어지는 판단은 평가하지 않는다. 정답 하나를 여러 번 맞히는 것과 <strong>좋은 결정을 연달아 내리는 것</strong>은 다르다. 후자에는 에이전트의 행동과 긴 추론이 필요하다.</p>
+        <p>오랫동안 사람의 지능을 재는 대표 수단은 체스와 바둑 같은 보드게임이었다. AlphaGo는 AI 발전에서 중요한 한 걸음이었다. 하지만 바둑 하나만을 위해 학습시킨 모델이었다. 지금의 범용 LLM은 바둑이나 체스로 시험하지 않는다.</p>
+
+        <h3>E-Slams <span class="ts">09:40</span></h3>
+        <p>발표자는 이 빈틈을 채우려고 오픈소스 저장소 <strong>E-Slams</strong>(electronic slams)를 만들었다. AI에게 게임을 시키는 도구다. Python 패키지라 PyPI에서 설치하고, 내 에이전트나 모델에게 게임을 시킬 수 있다.</p>
+        <div class="callout">
+          <span class="title">쓰는 예: 에이전트 모델 교체</span>
+          <span>에이전트의 모델을 새 모델로 바꾸려 한다고 하자. 기존 에이전트와 새 에이전트에게 체스를 두게 한다. 이긴 쪽이 더 나은 모델이라는 뜻은 아니다. 대신 어떻게 판에 들어가고 어떻게 두는지가 많은 것을 알려 준다. 체스에서는 전략을 바꿔야 하고, 실수에서 빠져나와야 하고, 예전에 둔 수가 약점이 되기도 한다. 이 상황을 어떻게 추론하는지가 평가의 새 축이 된다.</span>
+        </div>
+        <p>발표자의 제안은 평가 방식을 최대한 많이 쓰는 것이다. 코딩 평가, 글쓰기 평가, Humanity's Last Exam에 게임 평가를 하나 더 얹는다.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>게임 종류 <span class="ts">10:40</span></th><th>보는 능력</th></tr></thead>
+            <tbody>
+              <tr><td>체스, 바둑</td><td>상태가 다 보이는 판에서 계획하기</td></tr>
+              <tr><td>포커</td><td>숨은 정보가 있을 때 결정하기</td></tr>
+              <tr><td>협동 게임</td><td>공동 목표를 두고 협력하기</td></tr>
+              <tr><td>아케이드 게임</td><td>시험 운영 중</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자에 따르면 게임 약 50개와 모델 제공사 약 90곳을 지원한다.</p>
+        <p class="note">자막에는 체스·바둑이 "planning invisible state"로 들렸다. 체스와 바둑은 모든 정보가 보이는 게임이고 바로 뒤의 포커가 "숨은 정보"로 대비된다. 그래서 "planning in visible state"(보이는 상태에서 계획)로 읽었다.</p>
+
+        <h3>Fable 5.1 대 GPT-6 Astra <span class="ts">11:00</span></h3>
+        <p>eslams.com에서 저장소 사용 예를 미리 볼 수 있다. 발표자는 Fable 5.1과 GPT-6 Astra(추정)가 틱택토를 두는 장면을 보여 줬다. 두 모델이 상대의 수를 어떻게 읽는지 볼 수 있다. 대부분의 판은 한쪽이 이기는데, 이 판은 무승부로 끝났다.</p>
+        <ul class="plain">
+          <li>사이트에서 사람이 직접 AI 모델과 여러 게임을 둘 수 있다.</li>
+          <li>오픈소스 저장소로 내 에이전트끼리 게임을 시켜 평가할 수 있다.</li>
+          <li>2월에 AI 모델끼리 겨루는 대회 "Grand Slams of AI"를 열 계획이다. 발표자는 이를 AI 올림픽이라고 부른다.</li>
+        </ul>
+        <p class="note">E-Slams와 eslams.com은 발표자 자신의 프로젝트다. 발표 초반에 특정 업체를 홍보하지 않겠다고 했지만, 이 절은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="regression">
+        <header><span class="num">09</span><h2>원칙 4: 잘 되던 것을 지키고, 시험을 계속 바꾼다 <span class="ts">12:10</span></h2></header>
+        <p>평가 방식을 늘려 가는 동안에도 eval 워크플로 자체를 계속 시험해야 한다. 가장 중요한 건 <strong>잘 되던 기능을 계속 지키는 것</strong>이다.</p>
+        <div class="callout warn">
+          <span class="title">발표자의 경험: Google Assistant에서 Gemini로 <span class="ts">12:20</span></span>
+          <span>발표자는 모든 알림을 Google Assistant로 설정했다. 어느 날 Gemini로 바뀌자 알림을 설정해 주지 않았다. "언어 모델이라 알림을 설정할 수 없다"고 답했다. 발표자는 이를 Google이 예전에 잘 되던 일을 eval하지 않은 사례로 본다.</span>
+        </div>
+        <p>훨씬 좋아진 새 모델도 예전 모델이 잘하던 일을 못 할 수 있다. 그래서 다음을 계속 시험한다.</p>
+        <ul class="plain">
+          <li><strong>회귀 케이스</strong>: 새 변경 때문에 원래 되던 기능이 망가지지 않았는지</li>
+          <li><strong>이미 아는 과제</strong>: 지금까지 해 오던 일</li>
+          <li><strong>과거의 실패</strong>: 전에 틀렸던 사례</li>
+        </ul>
+
+        <h3>새 도전 과제를 계속 넣는다 <span class="ts">13:00</span></h3>
+        <p>원칙 1과 이어진다. 모델을 계속 밀어붙여야 한다. 내 eval에서 모델이 85나 90을 받기 시작하면, eval을 더 어렵게 바꿀 때다. 모델이 기대에 못 미치는 케이스가 늘 남아 있어야 한다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="reality">
+        <header><span class="num">10</span><h2>원칙 5: 실제 실패를 다음 시험으로 <span class="ts">13:30</span></h2></header>
+        <p>소프트웨어의 오랜 원칙과 같다. 실제 세계의 실패를 앞으로의 테스트로 만든다. 고객과 사용자가 에이전트와 모델의 <strong>가장 중요한 평가자</strong>다. 그래서 실패마다 시스템에 들어오는 정해진 경로가 있어야 한다.</p>
+        <ol class="plain">
+          <li><strong>관찰한다</strong> <span class="ts">14:00</span>: 관측 도구<span class="en">observability tool</span>로 데이터를 자동으로 모은다. 사용자가 좋아요·싫어요로 직접 알릴 수 있게 한다.</li>
+          <li><strong>재현한다</strong>: 일반 소프트웨어 QA처럼 문제를 다시 일으켜 본다.</li>
+          <li><strong>원인을 찾는다</strong>: 모델이 어디서 틀렸는지 본다. 툴 호출인지, 다른 단계인지 확인한다. eval 묶음의 어느 부분이 이 실패를 놓쳤는지도 본다.</li>
+          <li><strong>검토하고 추가한다</strong>: 검토한 뒤 eval 파이프라인에 넣는다.</li>
+        </ol>
+        <p>이 피드백 고리가 계속 돌아야 그때그때 놓치던 영역을 찾을 수 있다.</p>
+        <div class="callout">
+          <span class="title">종합 eval에 이르는 두 길 <span class="ts">14:40</span></span>
+          <span>첫째, 과정을 사람이 꾸준히 검토한다. 둘째, 고객 피드백을 eval 파이프라인에 넣는다. 모델이나 기존 eval이 잡지 못하는 마지막 5%의 예외 상황<span class="en">edge case</span>은 여기서 드러난다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="conclusion">
+        <header><span class="num">11</span><h2>결론: 답이 아니라 일을 시험하라 <span class="ts">15:00</span></h2></header>
+        <p>발표자는 다섯 가지 생각을 다시 정리한다. 일부 항목에는 앞에서 빠뜨린 내용을 덧붙였다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>원칙</th><th>할 일</th><th>결론에서 덧붙인 것</th></tr></thead>
+            <tbody>
+              <tr><td>1. 가장 큰 성공 정의</td><td>못 하는 게 없는 AGI라면 무엇을 할지 상상하고, 흉내 내려는 사람만큼 일하는 모습을 목표로 둔다</td><td>—</td></tr>
+              <tr><td>2. 워크플로 전체 시험</td><td>입력과 출력만 보고 결과를 짐작하지 않는다</td><td>단계마다 그 단계에 맞는 시험을 쓴다. 예: 툴 호출 정확도 <span class="ts">15:50</span></td></tr>
+              <tr><td>3. 증거를 종합적으로 모으기</td><td>평가할 무대와 방식을 계속 찾는다</td><td>게임 평가, 그리고 실시간 데이터가 필요한 모델이면 검색 인덱스 활용 능력 평가 <span class="ts">16:50</span></td></tr>
+              <tr><td>4. 시간에 따라 시험 바꾸기</td><td>과거 사례와 앞으로의 사례를 모두 담는다</td><td>점수가 85~90이면 시험을 더 어렵게 <span class="ts">17:20</span></td></tr>
+              <tr><td>5. 현실에서 배우기</td><td>실제 사용자 피드백, 실제 환경 테스트, 사람의 검토를 넣는다</td><td>현실이 가장 좋은 선생이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>3번에서 발표자는 행사장에서 본 "Parallel 검색 인덱스"(추정)를 예로 든다. 모델이 이런 AI 검색 인덱스에서 정보를 얼마나 잘 가져오는지도 평가 대상이 된다는 것이다.</p>
+        <p>4번에서 발표자는 SAT에 빗댄다. 모두가 SAT에서 99번째 백분위를 받는다면 시험 자체를 바꿔야 할 때라는 것이다.</p>
+        <p class="note">백분위는 서로 줄 세운 순위라서 정의상 모두가 99번째 백분위일 수는 없다. "거의 모두가 만점 근처를 받는다면"이라는 뜻으로 읽는 것이 맞다.</p>
+        <blockquote>답만이 아니라 일을 시험하라.<cite>발표자의 마무리 문장을 옮김 (Test the job, not just the answer)</cite></blockquote>
+        <p>eval의 처음 목적으로 돌아가면, 사용자에게 한 약속을 프로덕션에서 지키는 것이다. 그 약속이 가장 잘 드러나는 곳은 고객 피드백과 실제로 일어난 일이다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>eval은 AI 시스템의 시험이다. 과제, 기준, 증거로 이뤄진다.</li>
+          <li>시험 하나는 능력의 일부를 보여 주는 신호 하나다. 한 벤치마크 점수에 매달리지 않는다.</li>
+          <li>eval의 목적은 <strong>성능이 사용자에게 한 약속과 맞는지</strong> 확인하는 것이다.</li>
+          <li>시험을 짜기 전에 <strong>무엇이 반드시 일어나야 하고, 무엇이 절대 일어나면 안 되고, 언제 멈춰야 하는지</strong> 정한다.</li>
+          <li><strong>eval이 100점이면 eval이 틀렸다.</strong> 목표는 지금 모델 수준보다 높아야 한다.</li>
+          <li>최종 답만 보지 말고 단계마다 입력, 출력, 기대 결과를 잰다. 단계마다 맞는 지표를 쓴다.</li>
+          <li>종합 평가는 <strong>CI 자동 검사, 사람의 검토, 적대적 테스트</strong>를 함께 쓴다. 검토를 에이전트에게만 맡기지 않는다.</li>
+          <li>게임처럼 결정을 연달아 내려야 하는 평가는 단발성 과제가 못 보는 추론을 보여 준다.</li>
+          <li>새 모델도 예전 모델이 잘하던 일을 못 할 수 있다. <strong>회귀 케이스와 과거 실패</strong>를 계속 시험한다.</li>
+          <li>사용자의 실제 실패를 관찰, 재현, 원인 분석을 거쳐 <strong>eval에 다시 넣는다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 eval의 세 구성 요소는?</span></summary><div class="answer">과제, 기준, 증거. 이 셋으로 무언가가 기대대로 일하는지 판단한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>SAT 예시가 eval에 주는 교훈은?</span></summary><div class="answer">시험 하나는 범위가 정해진 질문 하나에만 답한다. 능력 전체가 아니라 신호 하나이니, 한 벤치마크 점수에 매달리면 안 된다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>eval이 답하려는 단 하나의 질문은?</span></summary><div class="answer">지금의 성능이 사용자에게 한 약속과 맞는가.</div></details>
+          <details><summary><span class="qn">Q4</span><span>가장 야심 찬 성공을 정할 때 던지는 세 질문은?</span></summary><div class="answer">무엇이 반드시 일어나야 하나, 무엇이 절대 일어나면 안 되나, 언제 멈춰야 하나.</div></details>
+          <details><summary><span class="qn">Q5</span><span>eval 점수가 100점이면 왜 문제인가?</span></summary><div class="answer">목표가 낮고 시험이 부족하다는 뜻이다. 발표자에 따르면 공개 모델 평가의 최고 점수도 85~86 정도다. eval은 지금 모델 수준보다 어려워야 스트레스 테스트가 된다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>배경만 바꿔 달라는 이미지 편집 사례에서 최종 결과만 보면 놓치는 것은?</span></summary><div class="answer">배경은 바뀌었지만 손잡이가 두 개로 바뀌는 등 다른 부분까지 달라졌다. 시작과 끝만 비교하면 통과로 보인다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>툴 호출을 반복하는 단계에는 어떤 eval을 써야 하나?</span></summary><div class="answer">툴 호출 능력과 툴 호출 정확도를 재는 eval. 단계마다 그 단계가 하는 일에 맞춰 시험을 설계한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>종합 평가 시스템의 세 요소는?</span></summary><div class="answer">CI 파이프라인의 자동 검사, 사람의 검토, 적대적 테스트.</div></details>
+          <details><summary><span class="qn">Q9</span><span>두 에이전트에게 체스를 두게 할 때 봐야 하는 것은 승패인가?</span></summary><div class="answer">승패가 아니다. 전략을 바꾸고, 실수에서 빠져나오고, 예전 수가 약점이 될 때 어떻게 추론하는지를 본다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>Google Assistant가 Gemini로 바뀐 사례는 어떤 원칙의 예인가?</span></summary><div class="answer">원칙 4. 예전에 잘 되던 일(알림 설정)을 계속 시험해야 한다. 더 좋은 새 모델도 옛 모델이 하던 일을 못 할 수 있다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>실제 사용자의 실패를 eval로 바꾸는 네 단계는?</span></summary><div class="answer">관찰(관측 도구, 좋아요·싫어요), 재현, 원인 찾기(어느 단계, eval의 어느 부분이 놓쳤나), 검토 후 eval 파이프라인에 추가.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트가 반드시 할 일, 절대 하면 안 되는 일, 멈출 때를 글로 쓴다<span class="how">점수 목표가 아니라 맡길 일에서 출발한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>지금 eval 점수를 확인하고, 85~90 이상이면 더 어려운 케이스를 넣는다<span class="how">확인: 모델이 실패하는 케이스가 eval 안에 남아 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>워크플로 단계마다 입력, 출력, 기대 결과를 정의한다<span class="how">최종 답만 비교하는 eval이 없는지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>단계 성격에 맞는 지표를 쓴다<span class="how">예: 툴 호출 단계는 툴 호출 정확도</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>eval을 CI 배포 파이프라인에 넣는다<span class="how">확인: 배포할 때마다 같은 eval이 돌아가는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>eval 결과를 사람이 정기적으로 검토한다<span class="how">에이전트의 검토는 속도를 올리는 용도로만 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>워크플로를 깨뜨리는 적대적 테스트 케이스를 만든다<span class="how">이 테스트가 어떤 실패를 드러낼 수 있는지 먼저 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>모델을 바꾸기 전에 회귀 세트를 돌린다<span class="how">예전 모델이 잘하던 일, 이미 아는 과제, 과거 실패</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>사용자 실패가 eval까지 들어오는 경로를 만든다<span class="how">좋아요·싫어요 수집 → 재현 → 원인 → eval 추가</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>지금 쓰지 않는 평가 방식을 하나 더한다<span class="how">예: 게임으로 연속 판단 보기, 실시간 검색 활용 능력 보기</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>eval</td><td>Evaluation. 모델이나 AI 시스템이 기대대로 일하는지 재는 시험</td></tr>
+              <tr><td>벤치마크</td><td>여러 모델을 같은 기준으로 비교하려고 만든 공개 시험</td></tr>
+              <tr><td>SWE-bench</td><td>실제 오픈소스 이슈를 모델이 고치고 테스트 통과 여부로 채점하는 벤치마크</td></tr>
+              <tr><td>Humanity's Last Exam</td><td>여러 분야의 매우 어려운 문제로 모델의 지식과 추론을 재는 벤치마크</td></tr>
+              <tr><td>프로덕션</td><td>Production. 실제 사용자가 쓰는 운영 환경</td></tr>
+              <tr><td>AGI</td><td>Artificial General Intelligence. 사람처럼 거의 모든 일을 해내는 AI</td></tr>
+              <tr><td>워크플로</td><td>에이전트가 일을 끝내기까지 거치는 여러 단계의 흐름</td></tr>
+              <tr><td>툴 호출</td><td>Tool call. 모델이 검색, API 같은 외부 도구를 불러 쓰는 것</td></tr>
+              <tr><td>CI 파이프라인</td><td>Continuous Integration. 코드를 바꿀 때마다 빌드와 검사를 자동으로 돌리는 흐름</td></tr>
+              <tr><td>적대적 테스트</td><td>Adversarial test. 시스템을 일부러 깨뜨리려고 어려운 입력과 상황을 주는 시험</td></tr>
+              <tr><td>레드팀</td><td>Red team. 공격자 입장에서 모델의 약점을 찾는 사람이나 팀</td></tr>
+              <tr><td>회귀</td><td>Regression. 새 변경 때문에 원래 되던 기능이 망가지는 것</td></tr>
+              <tr><td>관측 도구</td><td>Observability tool. 운영 중인 시스템의 동작 기록을 자동으로 모으는 도구</td></tr>
+              <tr><td>예외 상황</td><td>Edge case. 드물게 일어나서 보통의 시험으로는 잘 안 잡히는 상황</td></tr>
+              <tr><td>숨은 정보 게임</td><td>포커처럼 상대가 가진 정보를 볼 수 없는 게임. 체스·바둑은 모든 정보가 보인다</td></tr>
+              <tr><td>PyPI</td><td>Python 패키지를 올리고 설치하는 공식 저장소</td></tr>
+              <tr><td>백분위</td><td>전체를 줄 세웠을 때 내 아래에 몇 %가 있는지 나타낸 순위</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>eval은 왜 망가졌나, eval이란 무엇인가</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>사람의 시험과 AI의 시험</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>시험 하나는 신호 하나: SAT와 인도의 입시</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>eval의 목적: 약속과 성능이 맞는가</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>10년 뒤의 eval, MIT 보고서의 95%</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>원칙 1: 가장 야심 찬 성공 정의</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>100점이면 eval이 틀렸다</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>원칙 2: 워크플로 전체 시험, 이미지 편집 사례</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>원칙 3: 종합 평가 시스템</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>CI 자동 검사, 사람의 검토, 적대적 테스트</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>되받아치는 시험, 보드게임과 AlphaGo</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>E-Slams 소개, 기존 에이전트 대 새 에이전트</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>지원 게임 종류</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>Fable 5.1 대 GPT-6 Astra(추정) 틱택토</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>Grand Slams of AI 예고</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>원칙 4: 잘 되던 것을 계속 시험</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>Google Assistant에서 Gemini로 바뀐 뒤 사라진 알림</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>새 도전 과제, 85~90이면 eval 강화</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>원칙 5: 실제 실패를 테스트로</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>관찰, 재현, 원인 찾기, eval 추가</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>사람 검토와 고객 피드백, 마지막 5%</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>결론과 다섯 원칙 다시 보기</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>단계에 맞는 시험: 툴 호출 예</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>증거를 종합적으로 모으기, 검색 인덱스 평가</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>시험을 계속 바꾸기, SAT 비유</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>현실에서 배우기</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>마무리: 답이 아니라 일을 시험하라</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '7WUzHIF32vA:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

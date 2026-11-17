@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>서브에이전트 분산 시스템 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#shape">이 구조는 분산 시스템이다</a></li>
+      <li><a href="#four">새롭지 않은 네 가지 장애</a></li>
+      <li><a href="#failure-model">장애 모델 세 가지</a></li>
+      <li><a href="#half-done">반쯤 끝낸 일이 성공처럼 보인다</a></li>
+      <li><a href="#timeout">타임아웃은 의심일 뿐이다</a></li>
+      <li><a href="#value">실패를 값으로 돌려주기</a></li>
+      <li><a href="#dirty">더티 리드: 추측이 사실이 된다</a></li>
+      <li><a href="#ladder">어떤 일관성이 필요한가</a></li>
+      <li><a href="#safe">SAFE 모델 한눈에</a></li>
+      <li><a href="#s">S: 출처 있는 사실</a></li>
+      <li><a href="#a">A: 부작용은 최대 한 번</a></li>
+      <li><a href="#f">F: 팬아웃 예산</a></li>
+      <li><a href="#e">E: 명시적 결과</a></li>
+      <li><a href="#limits">SAFE가 하지 않는 것</a></li>
+      <li><a href="#takeaways">결론: 세 가지</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-10 · 23분 · 영어 발표 한글 정리</span>
+      <h1>서브에이전트는 분산 시스템이다</h1>
+      <p class="lead">오케스트레이터가 일을 나눠 서브에이전트에게 넘기는 순간, 분산 시스템의 오래된 장애가 그대로 나타난다. 발표자는 이를 다루는 일관성 모델 SAFE를 제안한다. 출처 있는 사실, 최대 한 번의 부작용, 팬아웃 예산, 명시적 결과다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=DxP5aW4VknQ" target="_blank" rel="noopener">Your Sub-Agents Are a Distributed System. Treat Them Like One.</a></span>
+        <span>발표: Girish Konda (Microsoft 수석 소프트웨어 엔지니어, AI 에이전트용 오픈소스 도구 제작)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 발표자는 이 발표가 회사가 아닌 개인 의견이라고 밝혔다. 수치와 논문 인용은 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 용어는 발표 앞뒤 설명으로 확실할 때만 바로잡았고, 확실하지 않은 것에는 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>오케스트레이터, 동시에 도는 서브에이전트, 함께 읽는 공유 상태, 결과 병합. 이 구조는 고전적인 <strong>분산 시스템</strong>이다. 그런데 손에 쥔 도구는 문자열을 받아 문자열을 돌려주는 함수 하나뿐이다.</li>
+        <li>반쯤 끝낸 서브에이전트는 에러 대신 <strong>성공처럼 보이는 텍스트</strong>를 돌려준다. 오케스트레이터는 결론 뒤에 일이 얼마나 있었는지 알 수 없다.</li>
+        <li>타임아웃은 "죽었다"가 아니라 <strong>"모름"</strong>이다. 원래 원인을 덮어쓰지 말고 남긴다.</li>
+        <li>공유 컨텍스트에 쓴 추측은 곧바로 사실처럼 읽힌다. 서브에이전트 셋의 동의는 <strong>출처 하나를 세 번 센 것</strong>이다.</li>
+        <li>발표자의 처방은 <strong>SAFE</strong>다. 출처 있는 사실(S), 부작용은 최대 한 번(A), 팬아웃 예산(F), 명시적 결과(E).</li>
+        <li>검사는 프롬프트가 아니라 <strong>오케스트레이터 코드</strong>가 한다. 모델이 검사를 건너뛸 수 있으면 그건 경계가 아니라 부탁이다.</li>
+        <li>SAFE는 사실을 참으로 만들지 않고, 되돌리기도 하지 않는다. 사람이 읽기만 하는 초안 작업이나 오케스트레이터가 여럿인 구조에는 맞지 않는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="shape">
+        <header><span class="num">01</span><h2>이 구조는 분산 시스템이다 <span class="ts">00:40</span></h2></header>
+        <p>발표자는 MCP 서버가 계속 돌도록 감독하는 브리지 MCP Pacemaker(추정: 자막에 Peacemaker와 pacemaker가 섞여 들림)를 오픈소스로 만든다. 지난 1년 동안 개발 세션, 코드 리뷰 같은 실제 엔지니어링 일에 에이전트와 서브에이전트를 썼다. 이 발표는 한 에이전트가 다른 에이전트에게 일을 넘길 때 생기는 일을 다룬다.</p>
+        <p>흔한 구조는 이렇다.</p>
+        <ol class="plain">
+          <li><strong>오케스트레이터</strong> <span class="en">orchestrator</span>가 작업을 쪼개 <strong>서브에이전트</strong> <span class="en">sub-agent</span> 셋에게 나눠 준다. 오케스트레이터는 일을 나누고 결과를 합치는 상위 에이전트다.</li>
+          <li>서브에이전트 셋은 동시에 돈다.</li>
+          <li>셋은 같은 공유 상태를 읽는다. 대화, 메모리 파일, 저장소, 작업 트리, 이슈, 벡터 스토어가 여기에 들어간다.</li>
+          <li>셋은 생각만 하지 않는다. 데이터베이스, API, CI 도구, 배포 파이프라인 같은 실제 시스템을 도구로 호출한다.</li>
+          <li>결과가 돌아오면 오케스트레이터가 하나의 답으로 합친다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">고전적인 분산 시스템의 모양</span>
+          <span>조정자와 작업자가 있다. 여럿이 함께 고치는 공유 상태가 있다. 동시에 돈 결과를 합친다. 분산 시스템을 다루는 방법은 수십 년 동안 쌓였다. 그런데 이 구조에는 그 방법이 하나도 딸려 오지 않는다. 손에 쥐는 건 문자열을 받아 문자열을 돌려주는 함수 하나뿐이다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="four">
+        <header><span class="num">02</span><h2>새롭지 않은 네 가지 장애 <span class="ts">01:50</span></h2></header>
+        <p>발표자가 겪은 장애는 새롭지 않다. AI 에이전트만의 것도 아니다. 모두 고전적인 분산 시스템 장애다. 차이는 서브에이전트에서 그 장애가 드러나는 방식이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>장애</th><th>보통의 분산 시스템</th><th>서브에이전트</th></tr></thead>
+            <tbody>
+              <tr><td>부분 실패 <span class="en">partial failure</span></td><td>중간에 실패하면 예외나 에러 코드를 돌려준다</td><td>성공처럼 보이는 텍스트를 돌려준다</td></tr>
+              <tr><td>더티 리드 <span class="en">dirty read</span></td><td>격리 수준과 버전이 있다</td><td>모든 작업자가 공유 컨텍스트 하나를 읽는다. 다른 작업자가 추측만 한 내용까지 읽는다</td></tr>
+              <tr><td>무제한 팬아웃 <span class="en">unbounded fan-out</span></td><td>바쁜 서비스는 큐, 429, 503으로 밀어낸다</td><td>오케스트레이터는 그 신호를 못 보고 작업자를 또 띄운다</td></tr>
+              <tr><td>재시도 <span class="en">retry</span></td><td>멱등성을 만들어 재시도를 안전하게 한다</td><td>작업 전체를 부작용까지 포함해 다시 돌린다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 각 장애에 분산 시스템의 이름을 붙인다. 그다음 그것들을 묶어 하나의 일관성 모델로 제안한다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="failure-model">
+        <header><span class="num">03</span><h2>장애 모델 세 가지 <span class="ts">03:00</span></h2></header>
+        <p>나머지 논의가 모두 여기에 기댄다. 그래서 <strong>장애 모델</strong> <span class="en">failure model</span>부터 정한다. 장애 모델은 부품이 어떤 식으로 고장 나는지에 대한 가정이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>종류</th><th>무엇이 일어나나</th><th>서브에이전트에서</th></tr></thead>
+            <tbody>
+              <tr><td>크래시-스톱 <span class="en">crash-stop</span></td><td>잘 돌던 프로세스가 멈추고, 그대로 멈춰 있다</td><td>에러를 던지는 서브에이전트. 다루기 쉽다</td></tr>
+              <tr><td>무응답</td><td>호출이 사라지거나 아주 늦게 온다</td><td>타임아웃 (05절에서 다룬다)</td></tr>
+              <tr><td>비잔틴 <span class="en">Byzantine</span></td><td>부품이 답은 하는데 그 답이 틀렸다. 서로 엇갈리는 정보를 준다</td><td>반쯤 끝낸 서브에이전트. 악의는 없지만 밖에서 보면 똑같다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>비잔틴이라는 이름은 비잔틴 장군 문제에서 왔다. 반쯤 끝낸 서브에이전트는 멈추지 않는다. 유창하게 답한다. 그래서 다루기 가장 어렵다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="half-done">
+        <header><span class="num">04</span><h2>반쯤 끝낸 일이 성공처럼 보인다 <span class="ts">03:50</span></h2></header>
+        <p>반쯤 끝낸 서브에이전트는 예외를 던지지 않는다. 성공했을 때와 같은 형태의 평범한 텍스트를 돌려준다.</p>
+
+        <h3>같은 답, 다른 노력 <span class="ts">04:10</span></h3>
+        <p>발표자의 다른 발표에 나온 그림이다. 에이전트에게 경보 <span class="en">alert</span>를 분류하게 했다. 세 경보가 서로 다른 길로 같은 답에 도착했다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">경보 1</span>
+            <p>텔레메트리를 가져와 기준 목록과 비교했다. 실제로 일을 했다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">경보 2</span>
+            <p>전에 본 적 있는 제목과 맞춰 보고 답했다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">경보 3</span>
+            <p>아무것도 조사하지 않았다. 결론만 냈다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">셋 다 "무해", 확신도도 같다</span>
+          <span>뒤 단계는 셋을 구별하지 못한다. 오케스트레이터는 결론은 읽는다. 그 결론 뒤에 일이 얼마나 있었는지는 읽지 못한다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="timeout">
+        <header><span class="num">05</span><h2>타임아웃은 의심일 뿐이다 <span class="ts">04:50</span></h2></header>
+        <p>오케스트레이터가 일을 보냈고 타임아웃이 터졌다. 여기서 세 상황이 똑같아 보인다.</p>
+        <ul class="plain">
+          <li>서브에이전트가 아직 일하는 중이다.</li>
+          <li>서브에이전트가 죽었다.</li>
+          <li>답은 왔는데 도중에 사라졌다.</li>
+        </ul>
+        <p>이건 도구가 부족해서 생긴 문제가 아니다. 이론으로 증명된 한계다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>연구</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>FLP 논문 (1985) <span class="ts">05:10</span></td><td>비동기 시스템에서 고장 나는 프로세스가 하나만 있어도, 합의 과정이 끝나지 못할 수 있다</td></tr>
+              <tr><td>Chandra와 Toueg (1996)</td><td>그에 대한 답으로 틀릴 수 있는 <strong>장애 감지기</strong> <span class="en">failure detector</span>를 내놨다. 감지기는 "의심"할 뿐 "알지" 못한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>발표자 프로젝트에서 겪은 두 방향 <span class="ts">05:30</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">느린 것을 죽은 것으로 봤다</span>
+            <p>처음 실행할 때 자기 자신을 내려받는 서버가 있었다. 이 서버가 30초 호출 타임아웃에 걸려 고장 난 것처럼 보였다. 실제로는 느렸을 뿐이다.</p>
+            <p class="verdict"><b>고친 법</b>: 초기화 <span class="en">initialize</span> 단계에 따로 타임아웃을 줬다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">죽은 것을 느린 것으로 봤다</span>
+            <p>호출 도중 서버가 죽었다. 그 뒤 호출이 타임아웃으로 끝났다. 타임아웃 기록이 죽은 원인을 알려주는 종료 코드를 덮어썼다.</p>
+            <p class="verdict"><b>고친 법</b>: 프로세스가 살아 있을 때만 타임아웃으로 기록했다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">타임아웃은 의심이다</span>
+          <span>"모름" <span class="en">unknown</span>으로 기록한다. 진짜 원인은 지우지 않고 남긴다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="value">
+        <header><span class="num">06</span><h2>실패를 값으로 돌려주기 <span class="ts">06:10</span></h2></header>
+        <p>실패를 텍스트가 아닌 <strong>값</strong>으로 만든다. 발표자의 그림에서 서브에이전트는 다섯 가지를 돌려준다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>담는 것</th><th>예시 값 (예시)</th></tr></thead>
+            <tbody>
+              <tr><td>상태 <span class="en">status</span></td><td>어떻게 끝났나</td><td><code>partial</code></td></tr>
+              <tr><td>한 일</td><td>실제로 한 작업</td><td>로그 두 곳 조회</td></tr>
+              <tr><td>안 한 일</td><td>하지 않았거나 못 한 작업</td><td>세 번째 로그는 권한이 없어 못 읽음</td></tr>
+              <tr><td>근거 <span class="en">evidence</span></td><td>결론을 받치는 자료</td><td>실행한 쿼리와 결과 위치</td></tr>
+              <tr><td>부작용 <span class="en">side effects</span></td><td>바깥 시스템에 남긴 변화</td><td>없음</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">세 번째 열은 이해를 돕기 위해 노트에서 만든 예시다. 발표에는 항목 이름만 나온다.</p>
+
+        <h3>프로토콜에는 이미 자리가 있다 <span class="ts">06:30</span></h3>
+        <ul class="plain">
+          <li><strong>A2A</strong>(추정: 자막에서 이름이 끊김): 작업은 완료 <span class="en">completed</span>, 실패 <span class="en">failed</span>, 취소 <span class="en">canceled</span>, 거부 <span class="en">rejected</span>로 끝날 수 있다. 멈추고 입력을 요청할 수도 있다.</li>
+          <li><strong>MCP</strong>: 도구 결과에 <code>isError: true</code>를 표시할 수 있다.</li>
+        </ul>
+        <p>그래도 서브에이전트가 상태는 "완료"라고 하면서 본문에는 다른 말을 쓸 수 있다. 텍스트만 읽는 루프는 이 어긋남을 놓친다.</p>
+
+        <h3>"아니다"와 "확인 못 했다"는 다르다 <span class="ts">07:00</span></h3>
+        <p>조건을 확인해서 "아니다"가 나온 것과, 확인 자체를 못 한 것은 다른 사실이다. 발표자가 개인 자격으로 낸 인터넷 드래프트 <span class="en">Internet-Draft</span>가 평가 상태를 다루며 이 구분을 짚는다. 둘을 하나로 뭉치면 결과 처리가 달라진다. 누가 대가를 받는지도 달라진다. 나중에 감사 기록이 말하는 내용도 달라진다.</p>
+
+        <div class="shift" aria-label="서브에이전트가 돌려주는 것의 변화">
+          <div><span class="tag">지금</span><b>텍스트를 돌려준다</b><span class="muted">"완료했습니다"라는 문장으로는 얼마나 했는지 알 수 없다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">제안</span><b>이름 붙은 상태를 돌려준다</b><span class="muted">완료, 일부만 함, 오래됨, 모름 같은 상태와 그 근거</span></div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="dirty">
+        <header><span class="num">07</span><h2>더티 리드: 추측이 사실이 된다 <span class="ts">07:20</span></h2></header>
+        <p>발표자가 지어낸 예시다.</p>
+        <ol class="plain">
+          <li>서브에이전트 A가 공유 컨텍스트에 "오류율이 80% 줄었다"라고 쓴다. 잰 게 아니라 추론한 것이다.</li>
+          <li>서브에이전트 B가 같은 컨텍스트를 읽고 이 문장을 가져다 쓴다.</li>
+          <li>서브에이전트 C는 이 문장을 다음 단계로 넘어갈 근거로 쓴다.</li>
+          <li>오케스트레이터가 셋을 합친다. 결과물 셋이 모두 같은 말을 한다.</li>
+        </ol>
+        <div class="callout warn">
+          <span class="title">세 번의 동의가 아니다</span>
+          <span>근거 없는 문장 하나를 세 번 읽은 것이다.</span>
+        </div>
+        <p>1995년에 나온 SQL 격리 수준 비판 논문은 더티 리드를 이렇게 정의한다. 쓰는 쪽이 커밋하거나 롤백하기 전에 그 값을 읽는 것이다. <span class="ts">08:10</span> 공유 컨텍스트에서는 추측이 쓰이는 순간 바로 읽힌다. 아직 확인되지 않았다는 표시도 없다.</p>
+
+        <h3>셋에게 물어 다수결을 내면? <span class="ts">08:30</span></h3>
+        <p>흔한 처방은 서브에이전트 셋에게 묻고 <strong>정족수</strong> <span class="en">quorum</span>를 받는 것이다. 정족수가 통하는 데는 분명한 이유가 있다.</p>
+        <p>1979년 가중 투표 <span class="en">weighted voting</span> 논문의 조건은 <strong>읽기 정족수 + 쓰기 정족수 &gt; 전체 수</strong>다. 그래서 어떤 읽기든 최신 쓰기와 반드시 겹친다. 이 겹침이 보장이다.</p>
+        <p class="note">예시: 복제본이 5개이고 쓰기 정족수와 읽기 정족수가 각각 3이면 3 + 3 = 6 &gt; 5다. 그래서 어떤 복제본 3개를 읽든, 최신 값을 쓴 3개 중 적어도 하나가 들어 있다.</p>
+        <p>서브에이전트 셋은 이 보장을 주지 못한다. 서로 독립된 복제본이 아니기 때문이다. 셋은 같은 공유 컨텍스트에서 같은 추측을 읽는다. 셋의 동의는 <strong>출처 하나를 세 번 센 것</strong>이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="ladder">
+        <header><span class="num">08</span><h2>어떤 일관성이 필요한가 <span class="ts">09:10</span></h2></header>
+        <p>데이터베이스에는 <strong>일관성 모델</strong> <span class="en">consistency model</span>의 사다리가 있다. 일관성 모델은 여럿이 동시에 읽고 쓸 때 무엇을 보게 되는지에 대한 약속이다. 위가 가장 강하다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>약속</th></tr></thead>
+            <tbody>
+              <tr><td>선형화 가능 <span class="en">linearizable</span></td><td>모든 연산이 실제 시간 순서에서 한 시점에 일어난 것처럼 보인다</td></tr>
+              <tr><td>순차 <span class="en">sequential</span></td><td>전체 순서가 하나 있고, 그 순서는 각 프로세스 자신의 순서를 지킨다</td></tr>
+              <tr><td>인과 <span class="en">causal</span></td><td>원인과 결과로 이어진 연산은 어디서 보든 같은 순서로 보인다</td></tr>
+              <tr><td>세션 보장 <span class="en">session guarantees</span></td><td>클라이언트 하나에게 하는 약속. 예: 내가 쓴 건 내가 읽는다 <span class="en">read your writes</span>, 읽은 값이 뒤로 가지 않는다 <span class="en">monotonic reads</span></td></tr>
+              <tr><td>최종 <span class="en">eventual</span></td><td>새 갱신이 멈추면 언젠가는 마지막 값을 읽게 된다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          <span class="title">공유 컨텍스트는 이 중 아무것도 주지 않는다</span>
+          <span>약한 약속조차 없다. 무엇을 보게 될지 정해진 게 없다.</span>
+        </div>
+        <p>꼭대기 모델까지 필요하지는 않다. 가장 강한 모델들은 네트워크가 갈라지면 가용성을 지키지 못한다. 인과 일관성과 세션 보장은 각 클라이언트가 한 곳에 붙어 있기만 하면 지킬 수 있다. <strong>서브에이전트에게 그 한 곳은 오케스트레이터다.</strong></p>
+      </section>
+
+      <!-- 9 -->
+      <section id="safe">
+        <header><span class="num">09</span><h2>SAFE 모델 한눈에 <span class="ts">10:10</span></h2></header>
+        <p>발표자가 자기 서브에이전트에 쓰는 일관성 모델이다. 이름은 SAFE 핸드오프 <span class="en">safe handoff</span>다. 핸드오프는 한 에이전트가 다른 에이전트에게 일을 넘기는 것이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">S · Source facts</span>
+            <b>출처 있는 사실</b>
+            <p>작업자가 넘기는 사실마다 출처, 버전, 기준 시각, 리비전이 붙는다. 결정은 신선한 출처 사실만 읽는다.</p>
+            <p class="verdict"><b>막는 장애</b>: 더티 리드</p>
+          </div>
+          <div class="card">
+            <span class="tag">A · At-most-once effects</span>
+            <b>부작용은 최대 한 번</b>
+            <p>쓰기마다 식별자가 있다. 그 동작 하나에만 쓰는 1회용 승인이 있다. 결과는 다시 읽어 확인하고, 다시 실행하지 않는다.</p>
+            <p class="verdict"><b>막는 장애</b>: 재시도</p>
+          </div>
+          <div class="card">
+            <span class="tag">F · Fan-out budgets</span>
+            <b>팬아웃 예산</b>
+            <p>하류 서비스마다 관문과 기다림 한도가 있다. 거절도 실패로 센다.</p>
+            <p class="verdict"><b>막는 장애</b>: 무제한 팬아웃</p>
+          </div>
+          <div class="card">
+            <span class="tag">E · Explicit outcomes</span>
+            <b>명시적 결과</b>
+            <p>모든 넘김은 이름 붙은 상태로 끝난다. 타임아웃은 "모름"이고, 원인은 남긴다.</p>
+            <p class="verdict"><b>막는 장애</b>: 부분 실패</p>
+          </div>
+        </div>
+        <p class="note">자막에는 source feeds, bounded weight, cost kept, single user approval로 들렸다. 발표 뒷부분 설명("신선한 source facts만 읽는다", "기다림은 15초로 제한", "진짜 원인을 남긴다", "한 번만 쓴다")과 맞춰 source facts, bounded wait, cause kept, single-use approval로 바로잡았다.</p>
+        <p class="note">발표자는 이 모델이 보편 모델이 아니라고 밝혔다. 발표자 본인의 오픈소스 브리지, 다른 발표, 인터넷 드래프트에서 나온 것이다. 사례 대부분이 발표자 자신의 프로젝트 이야기라는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="s">
+        <header><span class="num">10</span><h2>S: 출처 있는 사실 <span class="ts">11:30</span></h2></header>
+        <p>한 작업자의 추측이 다른 작업자의 사실이 되는 더티 리드에 대한 답이다. 핵심은 사실을 문장이 아니라 <strong>기록</strong> <span class="en">record</span>으로 다루는 것이다.</p>
+        <p>Lamport의 1978년 논문은 한 사건이 다른 사건보다 "먼저 일어났다" <span class="en">happened-before</span>는 게 무슨 뜻인지 정의했다. 사실의 <strong>출처</strong> <span class="en">provenance</span>가 바로 그 기록이다. 무엇에서 읽었고, 언제 읽었나.</p>
+
+        <h3>사실 기록에 들어가는 것 <span class="ts">12:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>주장 <span class="en">claim</span>과 리비전</td><td>무엇을 말하나, 몇 번째 판인가</td></tr>
+              <tr><td>출처 <span class="en">source</span>와 버전</td><td>어디서, 어느 버전을 읽었나</td></tr>
+              <tr><td>범위 <span class="en">scope</span></td><td>이 사실이 어디까지 해당하나</td></tr>
+              <tr><td>세 가지 시각</td><td>데이터가 언제까지의 것인가, 언제 읽었나, 언제 결정에 썼나</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>신선도는 쓰는 순간에 확인한다 <span class="ts">12:20</span></h3>
+        <p>발표자가 지어낸 예시다. 데이터는 9:05까지의 것이다. 9:06에 읽었고 9:07에 결정에 썼다. 신선도 한도는 5분으로 정했다. 9:07 결정은 괜찮다. 9:15에 두 번째 결정이 들어오면 데이터가 한도를 넘었으므로 거절한다. 다음 결정을 하려면 다시 읽어야 한다.</p>
+        <figure class="chart" aria-label="결정 시점의 데이터 나이: 9시 7분 결정은 2분, 9시 15분 결정은 10분. 한도는 5분">
+          <span class="chart-title">결정 시점의 데이터 나이 (분)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>9:07 결정 · 통과</span><span class="val">2</span></div>
+              <div class="track"><div class="fill" style="width:20%" title="9:07 결정: 데이터 나이 2분, 통과"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>9:15 결정 · 거절</span><span class="val">10</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="9:15 결정: 데이터 나이 10분, 거절"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 한도 5분</span><span>10</span></div>
+          <span class="caption">데이터 기준 시각 9:05부터 잰 나이다. 읽은 시각 9:06부터 재도 1분과 9분이라 결론은 같다.</span>
+        </figure>
+        <div class="callout">
+          <span class="title">관찰과 추론을 가르는 법 <span class="ts">13:00</span></span>
+          <span>관찰에는 출처와 읽은 시각이 있다. 추론에는 둘 다 없다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="a">
+        <header><span class="num">11</span><h2>A: 부작용은 최대 한 번 <span class="ts">13:00</span></h2></header>
+        <p>재시도 문제에 대한 답이다. 발표자가 MCP Pacemaker에 대해 쓴 글에 나온 그림이다.</p>
+        <ol class="plain">
+          <li>오케스트레이터가 일을 맡긴다.</li>
+          <li>서브에이전트가 실제로 무언가를 쓰는 도구를 호출한다. 예: PR 만들기.</li>
+          <li>답이 사라진다. 오케스트레이터가 아는 건 "결과를 모른다"뿐이다.</li>
+          <li>그래서 작업 전체를 다시 돌린다.</li>
+          <li>쓰기가 한 번 더 일어난다.</li>
+        </ol>
+        <p>오래된 문제다. 1984년 RPC(원격 프로시저 호출) 논문은 이렇게 말한다. <span class="ts">13:40</span> 호출이 정상으로 돌아오면 그 절차는 정확히 한 번 돌았다. 예외가 나면 한 번 돌았거나 아예 안 돌았다. 어느 쪽인지는 알려주지 않는다.</p>
+
+        <h3>전달 방식은 골라야 한다 <span class="ts">14:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>하는 일</th><th>대가</th></tr></thead>
+            <tbody>
+              <tr><td>최대 한 번 <span class="en">at-most-once</span></td><td>재시도하지 않는다</td><td>일이 사라질 수 있다</td></tr>
+              <tr><td>최소 한 번 <span class="en">at-least-once</span></td><td>재시도한다</td><td>중복이 생길 수 있다</td></tr>
+              <tr><td>정확히 한 번 <span class="en">exactly-once</span></td><td>최소 한 번 일어나게 하고, 중복을 걸러 낼 방법을 둔다. 예: 멱등 키(자막이 끊겨 추정)</td><td>걸러 내는 장치를 직접 만들어야 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>MCP의 <code>idempotentHint</code>는 힌트일 뿐이고, 기본값은 <code>false</code>다. 필요하면 직접 만들어야 한다. <span class="ts">14:30</span></p>
+
+        <h3>브리지에서 쓴 설계 <span class="ts">14:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>상황</th><th>브리지의 동작</th></tr></thead>
+            <tbody>
+              <tr><td>다시 보내도 되는 것</td><td>클라이언트가 재시작 뒤 돌아오면, 그 클라이언트가 기록해 둔 초기화 요청을 새 서버에 다시 보낸다. 악수 <span class="en">handshake</span>일 뿐이고 도구 상태를 되살리지 않으니 안전하다</td></tr>
+              <tr><td>절대 다시 보내지 않는 것</td><td>결과가 불확실한 도구 호출</td></tr>
+              <tr><td>공유 서버를 교체할 때</td><td>먼저 그 서버로 가는 일을 비운다 <span class="en">drain</span>. 마감 시각까지 답이 없는 호출은 "실행됐을 수도 있음"으로 실패 처리한다(자막에는 excluded로 들려 추정). 호출한 쪽에 "가서 확인하라"고 알리는 정직한 상태다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">도움이 된 것: 부작용마다 식별자 <span class="ts">15:10</span></span>
+          <span>승인은 그 동작 하나에 묶이고, 한 번만 쓰인다. 호출 뒤에는 그 식별자로 결과를 다시 읽는다. <strong>제출됨</strong> <span class="en">submitted</span>은 <strong>확인됨</strong> <span class="en">confirmed</span>이 아니다. 확인됨은 효과를 직접 본 것이다.</span>
+        </div>
+
+        <h3>멈췄다 깨어난 작업 <span class="ts">15:30</span></h3>
+        <p>A의 마지막 부분은 작업이 멈췄다가 다시 이어질 때 나온다. <strong>리스</strong> <span class="en">lease</span>는 타임아웃이 달린 잠금이다. Martin Kleppmann이 분산 잠금에 관한 글에서 보여 준 문제는 이렇다.</p>
+        <ol class="plain">
+          <li>클라이언트가 잠금을 쥔 채 멈춘다.</li>
+          <li>리스가 만료된다.</li>
+          <li>다른 쪽이 잠금을 가져간다.</li>
+          <li>처음 클라이언트가 깨어나 그대로 쓴다.</li>
+        </ol>
+        <p>Kleppmann이 제안한 해결책은 <strong>펜싱 토큰</strong> <span class="en">fencing token</span>이다. 잠금을 줄 때마다 올라가는 숫자다. 저장소는 지금까지 본 가장 큰 토큰을 기억한다. 그보다 오래된 토큰이 붙은 쓰기는 거절한다.</p>
+        <p class="note">예시: 토큰 33을 받은 클라이언트가 멈춘 사이 다른 클라이언트가 34를 받아 썼다. 나중에 33을 들고 온 쓰기는 거절된다.</p>
+        <p>서브에이전트는 수시로 멈췄다 다시 이어진다. 발표자는 다른 발표에서 이것을 "컨텍스트는 되살리되, 부작용은 되살리지 않는다"고 표현했다. <span class="ts">16:10</span></p>
+        <div class="callout">
+          <span class="title">승인을 펜싱 토큰처럼 다룬다</span>
+          <span>동작 하나에 한 번만 쓴다. 관문 <span class="en">gate</span>에서 확인한다. 프롬프트나 대화가 승인을 기억하게 두지 않는다.</span>
+        </div>
+        <p>브리지도 같은 종류의 버그를 고쳤다. 이제 오래된 종료 신호나 재개 요청이 새로 띄운 대체 세션을 지우거나 되살리지 못한다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="f">
+        <header><span class="num">12</span><h2>F: 팬아웃 예산 <span class="ts">16:40</span></h2></header>
+        <p>무제한 팬아웃에 대한 답이다. <strong>흐름 제어</strong> <span class="en">flow control</span>, 또는 그것이 없는 상태의 문제다. 흐름 제어는 받는 쪽이 감당할 만큼만 보내게 하는 장치다.</p>
+
+        <h3>발표자가 겪은 일 <span class="ts">16:50</span></h3>
+        <p>브리지에 콜드 스타트 제한이 없던 때다. 콜드 스타트 <span class="en">cold start</span>는 서버를 처음부터 새로 띄우는 것이다. 여러 세션이 npx로 동시에 서버를 띄웠다. 세션들은 패키지 캐시 하나를 같이 썼다. 전부 npm의 잠금 손상 오류 <span class="en">lock compromised</span>로 실패했다.</p>
+        <div class="callout warn">
+          <span class="title">요청 하나하나는 멀쩡했다</span>
+          <span>어느 요청에도 잘못은 없었다. 동시에 몰린 것 자체가 장애였다.</span>
+        </div>
+
+        <h3>밀어내는 신호가 문장으로 온다 <span class="ts">17:10</span></h3>
+        <p>하류 서비스가 밀어내도 그 신호가 그냥 텍스트로 올 수 있다. MCP 명세에 나오는 도구 실행 오류 예시가 그렇다. 속도 제한 <span class="en">rate limit</span>이 문장 하나로 온다. 모델은 그 문장을 읽는다. 오케스트레이터 코드는 그걸 들여다보지 않을 수 있다. 그러면 다음 작업자가 그대로 시작한다.</p>
+
+        <h3>브리지에 넣은 예산 <span class="ts">17:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>장치</th><th>동작</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>콜드 스타트 관문</td><td>패키지 매니저를 쓰는 콜드 스타트는 기본 2개씩만 관문을 지난다. 나머지는 기다린다</td><td>캐시 하나를 한꺼번에 건드리지 않게 한다</td></tr>
+              <tr><td>기다림 한도</td><td>최대 15초. 넘으면 관문 없이 그냥 시작한다</td><td>캐시가 깨지는 건 위험이지만, 클라이언트 요청이 멈추는 건 확실한 피해다. 가용성을 일부러 고르고 그 이유를 문서로 남겼다</td></tr>
+              <tr><td>세션 상한 <span class="ts">18:00</span></td><td>상한에 닿으면 새 세션은 10초까지 기다린 뒤 거절된다</td><td>이 거절은 실패로 센다</td></tr>
+              <tr><td>자리 먼저 잡기 <span class="ts">18:20</span></td><td>시작 작업을 띄우기 전에 자리를 먼저 잡는다</td><td>나중에 잡으면 줄 서 있던 시작들이 상한을 넘겨 들어온다. 확인한 뒤 행동하는 사이에 끼어드는 경쟁 조건 <span class="en">check-then-act race</span>이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">서브에이전트에 옮기면</span>
+          <span>오케스트레이터에게 하류 서비스마다 세 가지를 준다. 동시 실행 한도 숫자 하나, 기다림 한도, 그리고 눈에 보이는 거절.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="e">
+        <header><span class="num">13</span><h2>E: 명시적 결과 <span class="ts">18:40</span></h2></header>
+        <p>모든 넘김은 이름 붙은 상태로 끝난다. 예를 들면 오래됨 <span class="en">stale</span>, 모름 <span class="en">unknown</span>이다. 그냥 텍스트로 끝나지 않는다.</p>
+        <p>마지막 조각은 그 상태를 누가 정하느냐다. 에이전트의 출력은 <strong>믿을 수 없는 입력</strong>으로 다룬다. 인터넷에서 들어온 요청 본문을 다루듯이 다룬다.</p>
+
+        <h3>오케스트레이터가 코드로 하는 검사 <span class="ts">19:00</span></h3>
+        <ul class="plain">
+          <li>결과가 스키마에 맞나?</li>
+          <li>근거가 있나?</li>
+          <li>충분히 신선한가?</li>
+          <li>숫자를 다시 계산해도 맞나?</li>
+        </ul>
+        <p>검사에 실패하면 그 단계는 이유를 붙여 거절을 돌려준다. 밑에 경고 문단을 달아 텍스트를 그대로 넘기지 않는다.</p>
+        <blockquote>같은 모델이 검사를 건너뛰고 통과했다고 선언할 수 있다면, 그건 경계가 아니라 부탁이다.<cite>Girish Konda, 19:20 (발표자의 말을 옮김)</cite></blockquote>
+
+        <h3>다시 계산하면 거절되는 주장 <span class="ts">19:30</span></h3>
+        <p>발표자가 다른 발표에서 쓴 지어낸 예시다. 서브에이전트가 "오류율이 줄었다"고 한다. 이전에는 요청 1,000건에 오류 10건이었다. 이후에는 요청 600건에 오류 6건이었다. 오류 건수가 10에서 6으로 줄었으니 오류율도 줄었다고 주장했다.</p>
+        <div class="pair">
+          <figure class="chart" aria-label="오류 건수 비교: 이전 10건, 이후 6건">
+            <span class="chart-title">오류 건수 (건)</span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>이전 · 요청 1,000건</span><span class="val">10</span></div>
+                <div class="track"><div class="fill" style="width:100%" title="이전: 오류 10건"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>이후 · 요청 600건</span><span class="val">6</span></div>
+                <div class="track"><div class="fill" style="width:60%" title="이후: 오류 6건"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>5</span><span>10</span></div>
+            <span class="caption">서브에이전트가 본 숫자. 줄어든 것처럼 보인다.</span>
+          </figure>
+          <figure class="chart" aria-label="오류율 비교: 이전 1.0%, 이후 1.0%">
+            <span class="chart-title">오류율 (%)</span>
+            <div class="rows">
+              <div class="row">
+                <div class="row-head"><span>이전 · 10 ÷ 1,000</span><span class="val">1.0</span></div>
+                <div class="track"><div class="fill key" style="width:50%" title="이전 오류율: 1.0%"></div></div>
+              </div>
+              <div class="row">
+                <div class="row-head"><span>이후 · 6 ÷ 600</span><span class="val">1.0</span></div>
+                <div class="track"><div class="fill key" style="width:50%" title="이후 오류율: 1.0%"></div></div>
+              </div>
+            </div>
+            <div class="axis"><span>0</span><span>1</span><span>2</span></div>
+            <span class="caption">다시 계산한 숫자. 그대로다.</span>
+          </figure>
+        </div>
+        <p>다시 계산하니 둘 다 1%다. 주장은 거절된다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>넘김의 종류</th><th>판정</th></tr></thead>
+            <tbody>
+              <tr><td>근거가 받치는 답</td><td>괜찮다</td></tr>
+              <tr><td>사람에게 일부러 넘기는 것</td><td>괜찮다</td></tr>
+              <tr><td>자신 있는 추측</td><td>안 된다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="limits">
+        <header><span class="num">14</span><h2>SAFE가 하지 않는 것 <span class="ts">20:00</span></h2></header>
+        <p>일관성 모델은 어디서 멈추는지 알 때만 쓸모가 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>하지 않는 것</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>사실을 참으로 만들지 않는다</td><td>출처 있는 사실은 확인할 수 있을 뿐, 맞다는 보장은 없다</td></tr>
+              <tr><td>정확히 한 번 전달을 주지 않는다</td><td>사라진 답은 다시 읽어 볼 때까지 "모름"이다</td></tr>
+              <tr><td>되돌리지 않는다</td><td>반쯤 끝난 작업을 되돌리려면 보상 단계 <span class="en">compensation</span>를 직접 설계해야 한다. 1987년 Sagas 논문이 다룬 방식이다</td></tr>
+              <tr><td>작업자 전체의 순서를 주지 않는다</td><td>사실마다 인과 순서만 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>대가 <span class="ts">20:40</span></h3>
+        <p><strong>CAP 정리</strong>에 따르면 네트워크가 갈라질 때 가용성과 일관성 중 하나를 양보해야 한다. 브리지는 콜드 스타트에서 일부러 가용성을 골랐다. 쓰기에서 SAFE는 가용성보다 일관성을 고른다. 추측하느니 거절한다.</p>
+        <p><strong>PACELC</strong>는 하나를 더한다. 장애가 없을 때도 지연 시간과 일관성을 맞바꾼다는 것이다. 신선도 검사 하나가 읽기 한 번이다. 거절이 나올 때마다 그걸 받아 처리할 쪽도 필요하다(자막이 불분명해 추정).</p>
+
+        <h3>맞지 않는 곳 <span class="ts">21:20</span></h3>
+        <ul class="plain">
+          <li>서브에이전트가 초안만 쓰고, 무슨 일이 일어나기 전에 사람이 읽는다면 대부분 부담일 뿐이다.</li>
+          <li>오케스트레이터가 하나라고 가정한다. 여럿이면 맞지 않는다.</li>
+          <li>붙어 있을 한 곳이 없는 동료 에이전트 <span class="en">peer agents</span> 구조에는 다른 방법이 필요하다.</li>
+        </ul>
+        <p>발표자가 실제 프로덕션 시스템을 건드리는 자기 에이전트에 쓰는 모델이다. 보편 모델은 아니다.</p>
+      </section>
+
+      <!-- 15 -->
+      <section id="takeaways">
+        <header><span class="num">15</span><h2>결론: 세 가지 <span class="ts">21:50</span></h2></header>
+        <ol class="plain">
+          <li><strong>서브에이전트에게 넘기는 일은 네트워크 호출로 다룬다.</strong> 중간에 실패할 수 있다. 느릴 수 있다. 두 번 돌아올 수 있다.</li>
+          <li><strong>텍스트만이 아니라 상태를 돌려준다.</strong> 결과가 "일부만 함", "오래됨", "모름"을 말할 수 없으면 오케스트레이터는 "끝났다"로 읽는다.</li>
+          <li><strong>SAFE에서 시작해 코드로 강제한다.</strong> 맞는 건 두고, 안 맞는 건 바꾼다.</li>
+        </ol>
+        <blockquote>우리는 분산 시스템을 만드는 법을 이미 안다. 지금 하나를 만들고 있다는 걸 알아차리기만 하면 된다.<cite>Girish Konda, 22:20 (발표자의 말을 옮김)</cite></blockquote>
+      </section>
+
+      <!-- 16 -->
+      <section id="recap">
+        <header><span class="num">16</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>오케스트레이터, 작업자, 공유 가변 상태, 결과 병합이 있으면 <strong>분산 시스템</strong>이다. 문자열 함수 하나로는 그 성질을 다룰 수 없다.</li>
+          <li>네 가지 장애는 부분 실패, 더티 리드, 무제한 팬아웃, 재시도다. 모두 오래된 분산 시스템 장애다.</li>
+          <li>반쯤 끝낸 서브에이전트는 <strong>비잔틴 장애</strong>에 가깝다. 멈추지 않고 유창하게 틀린다.</li>
+          <li>타임아웃 뒤에는 "아직 하는 중", "죽음", "답 분실"이 구별되지 않는다. 타임아웃은 <strong>"모름"</strong>으로 기록하고 원인을 남긴다.</li>
+          <li>실패는 값이다. 상태, 한 일, 안 한 일, 근거, 부작용을 돌려준다. "아니다"와 "확인 못 함"을 나눈다.</li>
+          <li>공유 컨텍스트는 어떤 일관성도 약속하지 않는다. 셋의 동의는 출처 하나를 세 번 센 것일 수 있다.</li>
+          <li><strong>S</strong>: 사실마다 출처, 버전, 시각을 단다. 쓸 때 신선도를 확인한다. 출처와 읽은 시각이 없으면 추론이다.</li>
+          <li><strong>A</strong>: 쓰기마다 식별자와 1회용 승인을 둔다. 결과는 다시 읽어 확인하고, 불확실한 호출은 다시 실행하지 않는다. 승인은 펜싱 토큰처럼 관문에서 확인한다.</li>
+          <li><strong>F</strong>: 하류 서비스마다 동시 실행 한도, 기다림 한도, 눈에 보이는 거절을 둔다. 거절도 실패로 센다.</li>
+          <li><strong>E</strong>: 모든 넘김은 이름 붙은 상태로 끝난다. 에이전트 출력은 믿을 수 없는 입력이고, 검사는 코드가 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 17 -->
+      <section id="quiz">
+        <header><span class="num">17</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>부분 실패는 보통 시스템과 서브에이전트에서 각각 어떻게 드러나나?</span></summary><div class="answer">보통 시스템은 예외나 에러 코드를 돌려준다. 서브에이전트는 성공처럼 보이는 텍스트를 돌려준다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>반쯤 끝낸 서브에이전트가 크래시-스톱보다 비잔틴 장애에 가까운 이유는?</span></summary><div class="answer">멈추지 않고 답을 한다. 그 답이 틀렸는데, 밖에서 보면 정상 답과 구별되지 않는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>세 경보 예시에서 오케스트레이터가 알 수 없었던 것은?</span></summary><div class="answer">결론 뒤에 일이 얼마나 있었는지. 실제로 조사한 경보, 제목만 맞춘 경보, 아무것도 안 한 경보가 모두 같은 확신도의 "무해"로 돌아왔다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>타임아웃이 터진 뒤 구별되지 않는 세 상황과, 발표자의 권고는?</span></summary><div class="answer">아직 일하는 중, 죽음, 답 분실. 타임아웃은 의심일 뿐이니 "모름"으로 기록하고 진짜 원인은 남긴다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>서브에이전트 셋에게 물어 다수결을 내도 더티 리드를 막지 못하는 이유는?</span></summary><div class="answer">정족수는 읽기 정족수 + 쓰기 정족수 &gt; 전체 수라서 읽기가 최신 쓰기와 겹칠 때 통한다. 서브에이전트 셋은 같은 공유 컨텍스트에서 같은 추측을 읽는다. 독립 복제본이 아니므로 출처 하나를 세 번 센 것이다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>가장 강한 일관성 모델이 필요 없는 이유와, 대신 충분한 수준은?</span></summary><div class="answer">가장 강한 모델은 네트워크가 갈라지면 가용성을 잃는다. 인과 일관성과 세션 보장은 각 클라이언트가 한 곳에 붙어 있으면 지킬 수 있다. 서브에이전트에게 그 한 곳은 오케스트레이터다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>데이터 기준 시각 9:05, 신선도 한도 5분. 9:15 결정은 어떻게 되나?</span></summary><div class="answer">데이터가 10분 지나 한도를 넘었으므로 거절된다. 다음 결정을 하려면 다시 읽어야 한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>1984년 RPC 논문에 따르면 예외가 난 호출은 몇 번 실행됐나?</span></summary><div class="answer">한 번 또는 0번. 어느 쪽인지는 알려주지 않는다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>"제출됨"과 "확인됨"은 어떻게 다른가?</span></summary><div class="answer">제출됨은 요청을 보냈다는 뜻이다. 확인됨은 부작용의 식별자로 결과를 다시 읽어 효과를 직접 봤다는 뜻이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>펜싱 토큰이 막는 문제와, 승인에 적용하는 방법은?</span></summary><div class="answer">리스가 만료된 뒤 깨어난 클라이언트의 오래된 쓰기를 막는다. 승인도 동작 하나에 한 번만 쓰고, 관문에서 확인하고, 프롬프트나 대화가 기억하게 두지 않는다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>브리지가 15초 기다린 뒤 관문 없이 시작하게 한 이유는?</span></summary><div class="answer">캐시가 깨지는 건 위험일 뿐이지만, 클라이언트 요청이 멈추는 건 확실한 피해다. 가용성을 일부러 고르고 그 이유를 문서로 남겼다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>"1,000건 중 10건 → 600건 중 6건, 오류율이 줄었다"는 주장은 왜 거절되나?</span></summary><div class="answer">다시 계산하면 둘 다 1%다. 건수만 줄었고 비율은 그대로다. 오케스트레이터가 코드로 숫자를 재계산해서 거절한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="apply">
+        <header><span class="num">18</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>서브에이전트 결과를 텍스트 대신 상태 값으로 받는다<span class="how">확인: 상태, 한 일, 안 한 일, 근거, 부작용 칸이 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>"아니다"와 "확인 못 함"을 다른 상태로 나눈다<span class="how">확인: 확인을 못 한 경우가 "통과"나 "실패"로 뭉개지지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>타임아웃을 "모름"으로 기록한다<span class="how">확인: 종료 코드 같은 원래 원인이 타임아웃 기록에 덮어써지지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>공유 컨텍스트에 남기는 사실에 출처와 읽은 시각을 단다<span class="how">확인: 출처 없는 문장이 추론으로 표시되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>결정에 쓰는 사실마다 신선도 한도를 정한다<span class="how">확인: 한도를 넘은 사실로 결정하면 거절되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>바깥에 쓰는 도구 호출마다 식별자를 주고, 재시도 전에 그 식별자로 결과를 다시 읽는다<span class="how">확인: 같은 PR이나 같은 쓰기가 두 번 생기지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>승인은 동작 하나에 한 번만 쓰게 하고, 코드의 관문에서 확인한다<span class="how">확인: 프롬프트나 대화 기록에 승인을 맡기지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>하류 서비스마다 동시 실행 한도와 기다림 한도를 둔다<span class="how">확인: 거절과 속도 제한이 오케스트레이터 코드에서 실패로 잡히는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>오케스트레이터 코드에서 스키마, 근거, 신선도, 숫자 재계산을 검사한다<span class="how">확인: 검사에 실패하면 이유가 붙은 거절을 돌려주는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 19 -->
+      <section id="glossary">
+        <header><span class="num">19</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>오케스트레이터</td><td>Orchestrator. 일을 나눠 맡기고 결과를 합치는 상위 에이전트</td></tr>
+              <tr><td>서브에이전트</td><td>Sub-agent. 오케스트레이터에게 작업 일부를 받아 처리하는 하위 에이전트</td></tr>
+              <tr><td>공유 가변 상태</td><td>Shared mutable state. 여러 작업자가 함께 읽고 고치는 상태. 대화, 메모리 파일, 저장소 등</td></tr>
+              <tr><td>부분 실패</td><td>Partial failure. 작업이 중간까지만 되고 멈춘 것</td></tr>
+              <tr><td>더티 리드</td><td>Dirty read. 아직 확정(커밋)되지 않은 값을 읽는 것</td></tr>
+              <tr><td>팬아웃</td><td>Fan-out. 한 곳에서 여러 하류로 작업을 퍼뜨리는 것</td></tr>
+              <tr><td>멱등성</td><td>Idempotency. 같은 작업을 여러 번 해도 한 번 한 것과 결과가 같은 성질</td></tr>
+              <tr><td>크래시-스톱</td><td>Crash-stop. 프로세스가 멈추고 그대로 멈춰 있는 장애</td></tr>
+              <tr><td>비잔틴 장애</td><td>Byzantine failure. 부품이 멈추지 않고 틀리거나 엇갈리는 답을 내는 장애</td></tr>
+              <tr><td>FLP 불가능성</td><td>비동기 시스템에서 고장 프로세스가 하나만 있어도 합의가 끝난다고 보장할 수 없다는 1985년 결과</td></tr>
+              <tr><td>장애 감지기</td><td>Failure detector. 다른 프로세스가 죽었는지 의심하는 장치. 틀릴 수 있다</td></tr>
+              <tr><td>정족수</td><td>Quorum. 결정에 필요한 최소 응답 수</td></tr>
+              <tr><td>일관성 모델</td><td>Consistency model. 여럿이 동시에 읽고 쓸 때 무엇을 보게 되는지에 대한 약속</td></tr>
+              <tr><td>출처</td><td>Provenance. 사실을 어디서, 언제 읽었는지에 대한 기록</td></tr>
+              <tr><td>신선도</td><td>Freshness. 데이터가 결정에 쓰기에 충분히 최근 것인가</td></tr>
+              <tr><td>최대 한 번 / 최소 한 번 / 정확히 한 번</td><td>At-most-once / at-least-once / exactly-once. 재시도와 중복을 어떻게 다룰지에 대한 전달 방식</td></tr>
+              <tr><td>멱등 키</td><td>Idempotency key. 같은 요청인지 알아보도록 요청마다 붙이는 고유 값</td></tr>
+              <tr><td>리스</td><td>Lease. 타임아웃이 달린 잠금</td></tr>
+              <tr><td>펜싱 토큰</td><td>Fencing token. 잠금을 줄 때마다 커지는 번호. 오래된 번호가 붙은 쓰기를 거절하는 데 쓴다</td></tr>
+              <tr><td>콜드 스타트</td><td>Cold start. 서버를 처음부터 새로 띄우는 것</td></tr>
+              <tr><td>흐름 제어</td><td>Flow control. 받는 쪽이 감당할 만큼만 보내게 하는 장치</td></tr>
+              <tr><td>check-then-act 경쟁</td><td>확인한 시점과 행동한 시점 사이에 상태가 바뀌어 생기는 버그</td></tr>
+              <tr><td>보상 단계</td><td>Compensation. 이미 일어난 작업을 되돌리려고 따로 설계한 반대 작업. 사가 <span class="en">saga</span> 방식의 핵심</td></tr>
+              <tr><td>CAP 정리</td><td>네트워크가 갈라지면 일관성과 가용성을 동시에 다 가질 수 없다는 정리</td></tr>
+              <tr><td>PACELC</td><td>CAP에 더해, 장애가 없을 때도 지연 시간과 일관성을 맞바꾼다는 관점</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 모델을 외부 도구와 데이터에 연결하는 프로토콜</td></tr>
+              <tr><td>인터넷 드래프트</td><td>Internet-Draft. IETF에 내는 표준 제안 초안</td></tr>
+              <tr><td>429 / 503</td><td>HTTP 상태 코드. 429는 요청이 너무 많다, 503은 지금 서비스를 쓸 수 없다는 뜻</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 20 -->
+      <section id="timeline">
+        <header><span class="num">20</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, MCP Pacemaker, 개인 의견이라는 고지</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>오케스트레이터와 서브에이전트 구조</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>이건 고전적인 분산 시스템이다</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>네 가지 장애: 부분 실패, 더티 리드, 팬아웃, 재시도</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>장애 모델: 크래시-스톱, 무응답, 비잔틴</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>반쯤 끝낸 서브에이전트</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>같은 답을 낸 세 경보</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>무응답과 타임아웃</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>FLP(1985), Chandra와 Toueg(1996)</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>브리지에서 겪은 두 방향의 타임아웃 버그</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>실패를 값으로</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>작업 상태와 MCP isError</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>"아니다"와 "확인 못 함"</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>더티 리드: 오류율 80% 예시</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>1995년 격리 수준 비판 논문</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>정족수와 가중 투표(1979)</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>일관성 모델의 사다리</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>오케스트레이터 한 곳이면 충분하다</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>SAFE 핸드오프</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>발표자 개인의 모델이라는 단서</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>S: 출처 있는 사실, Lamport(1978)</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>사실 기록과 신선도 예시</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>관찰과 추론, A: 재시도 문제</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>RPC 논문(1984)</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>최대 한 번, 최소 한 번, 정확히 한 번</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>MCP idempotentHint, 브리지 설계</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>부작용 식별자, 제출과 확인</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>리스와 펜싱 토큰</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>승인을 펜싱 토큰처럼</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>F: 팬아웃 예산, npx 동시 시작 장애</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>문장으로 오는 속도 제한</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>콜드 스타트 관문, 세션 상한</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>check-then-act 경쟁</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>E: 명시적 결과, 믿을 수 없는 입력</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>코드로 하는 검사</td></tr>
+              <tr><td><span class="ts">19:30</span></td><td>오류율 재계산 예시</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>SAFE가 하지 않는 것</td></tr>
+              <tr><td><span class="ts">20:40</span></td><td>대가: CAP, PACELC</td></tr>
+              <tr><td><span class="ts">21:20</span></td><td>맞지 않는 곳</td></tr>
+              <tr><td><span class="ts">21:50</span></td><td>세 가지 결론</td></tr>
+              <tr><td><span class="ts">22:30</span></td><td>참고 자료</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'DxP5aW4VknQ:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

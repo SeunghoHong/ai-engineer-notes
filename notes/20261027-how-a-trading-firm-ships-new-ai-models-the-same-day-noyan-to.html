@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>옵티버 AI 플랫폼 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#firm">Optiver는 어떤 회사인가</a></li>
+      <li><a href="#loop">몇 시간 만에 손익으로 보인다</a></li>
+      <li><a href="#principles">플랫폼의 원칙</a></li>
+      <li><a href="#stack">플랫폼 구조 한눈에</a></li>
+      <li><a href="#sameday">새 모델을 출시 당일 쓰는 법</a></li>
+      <li><a href="#agnostic">모델과 하네스에 묶이지 않기</a></li>
+      <li><a href="#spend">더 쓰되 현명하게 쓰기</a></li>
+      <li><a href="#users">사용자가 있는 곳으로 가기</a></li>
+      <li><a href="#qa-knowledge">질문 1: 지식 베이스</a></li>
+      <li><a href="#qa-build">질문 2: 왜 직접 만드나</a></li>
+      <li><a href="#qa-eval">질문 3: 도구 호출 평가</a></li>
+      <li><a href="#qa-scope">질문 4: 커지는 에이전트</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-27 · 23분 · 영어 발표 한글 정리</span>
+      <h1>새 AI 모델을 나온 날 바로 쓰는 트레이딩 회사</h1>
+      <p class="lead">Optiver는 새 AI 모델이 나오면 그날 사내 데이터로 평가해 바로 업무에 쓴다. 이를 받치는 것은 모델과 도구를 언제든 갈아 끼우고 모든 층에서 잴 수 있게 직접 만든 사내 플랫폼이다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=aGIUg8zKI8A" target="_blank" rel="noopener">How a Trading Firm Ships New AI Models the Same Day</a></span>
+        <span>발표: Noyan Tokgozoglu (Optiver AI 엔지니어링 총괄)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막의 "Nayan"은 영상 제목에 따라 Noyan으로, "hotel logging"은 OTel(OpenTelemetry) 기록으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>트레이딩 회사는 변경의 효과가 <strong>몇 시간 안에 손익으로</strong> 보인다. 그래서 빨리 결정하고 빨리 잰다.</li>
+        <li>플랫폼 원칙은 <strong>갈아 끼울 수 있는 구조</strong>, <strong>모든 층에서 측정</strong>, 셀프서비스와 좋은 기본값, 안전, 사내 운영이다.</li>
+        <li>새 프런티어 모델이 나오면 <strong>그날 트레이딩 팀의 평가 문제로 돌려 보고</strong>, 게이트웨이와 비용 관리와 하네스를 맞춰 바로 내놓는다.</li>
+        <li>모든 모델 호출은 <strong>추론 게이트웨이 하나</strong>를 지난다. 전부 기록되어 평가로 가고, 업체가 멈추면 다른 업체로 바꾼다.</li>
+        <li>셀프서비스로 두자 새 세션이 <strong>20만 토큰</strong>으로 시작했다. 도구 검색, CLI, 캐시 조정, 지식 베이스로 줄이고 팀마다 지출을 보여 줬다.</li>
+        <li>사용자가 엉성한 도구를 각자 만들고 있으면 <strong>더 나은 버전을 만들어 모두에게 준다.</strong></li>
+        <li>남은 숙제는 지식 베이스와 도구 호출 평가의 재현이다. 에이전트는 <strong>하나로 키우지 말고 작게 나눈다.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="firm">
+        <header><span class="num">01</span><h2>Optiver는 어떤 회사인가 <span class="ts">00:20</span></h2></header>
+        <p>Optiver는 마켓 메이커<span class="en">market maker</span>다. 사려는 사람과 팔려는 사람이 언제든 거래할 수 있도록 가격을 내고 거래를 받아 주는 회사다.</p>
+        <p>고객은 없다. 자기 돈으로 거래한다.</p>
+        <p>기술 회사의 눈으로 보면 하는 일은 단순하다. 데이터를 많이 모으고, 모델을 만들고, 그 모델로 결정을 내린다. 그 결정은 아주 빠르게 돌아가야 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>규모 (발표자가 말한 수치)</th><th>값</th></tr></thead>
+            <tbody>
+              <tr><td>하루 거래 수</td><td>1천만 건 이상</td></tr>
+              <tr><td>가격을 매기는 금융 상품</td><td>100만 개 이상</td></tr>
+              <tr><td>하루 처리 데이터</td><td>페타바이트 단위</td></tr>
+              <tr><td>사무소</td><td>전 세계 10곳 이상</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>사무소가 여러 대륙에 흩어져 있다는 점은 뒤에서 24시간 지원과 지역별 배포 문제로 이어진다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="loop">
+        <header><span class="num">02</span><h2>몇 시간 만에 손익으로 보인다 <span class="ts">01:00</span></h2></header>
+        <p>발표자는 Apple에서 일한 경험을 들어 일반 기술 회사와 비교했다.</p>
+        <div class="shift" aria-label="일반 기술 회사와 Optiver의 피드백 속도 비교">
+          <div><span class="tag">일반 기술 회사</span><b>몇 주에서 몇 년</b><span class="muted">변경을 사용자에게 내보낸다.</span><span class="muted">며칠에서 몇 주 동안 사용 지표를 모은다.</span><span class="muted">몇 달에서 몇 년 뒤 매출과 고객 생애 가치를 본다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Optiver</span><b>몇 시간</b><span class="muted">변경을 트레이더와 퀀트에게 내보낸다.</span><span class="muted">몇 시간 안에 손익<span class="en">P&amp;L</span>이 보인다.</span><span class="muted">매일 아침 장부를 0으로 맞추고, 저녁에 얼마를 벌었는지 본다.</span></div>
+        </div>
+
+        <h3>그래서 생기는 일 <span class="ts">01:40</span></h3>
+        <ul class="plain">
+          <li><strong>피드백이 빠르다.</strong> 오늘 내린 결정의 효과가 오늘 안에 보이기 시작한다. 긴 기간을 보고 거래하는 상품도 물론 있다.</li>
+          <li><strong>놓친 기회가 비싸다.</strong> 큰 상장 같은 특별한 시장 이벤트를 놓치면 손해가 크다. 발표자는 가상의 예로 "SpaceX AI IPO"를 들었다.</li>
+          <li><strong>그래서 실행 쪽으로 기운다.</strong> 빨리 결정하고, 효과를 정확하고 싸게 잰다. 발표자는 이를 <span class="en">bias for action</span>이라고 불렀다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">서비스 회사와 다른 계산 <span class="ts">02:30</span></span>
+          <span>Spotify 같은 사용자 서비스는 고객의 한정된 관심을 놓고 경쟁한다. 트레이딩은 더 많이 거래할수록 더 많이 번다. 그래서 좋은 결정 하나가 낼 수 있는 가치의 천장이 아주 높다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="principles">
+        <header><span class="num">03</span><h2>플랫폼의 원칙 <span class="ts">02:50</span></h2></header>
+        <p>이렇게 일하려고 Optiver는 사내 AI 플랫폼을 직접 만들었다. 기준이 된 원칙은 다섯 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>원칙</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>빨리 움직인다</td><td>놓친 기회가 비싸므로 결정을 미루지 않는다</td></tr>
+              <tr><td>모듈로 만든다</td><td>새 모델, 새 제품, 새 방식이 매일 나온다. 루프였다가 스웜이었다가 그래프가 된다. 부품을 갈아 끼울 수 있어야 쓸모 있는 것을 바로 들여온다</td></tr>
+              <tr><td>모든 층에서 잰다</td><td>외부 벤치마크만 믿지 않는다. 사내 데이터는 외부 벤치마크와 분포가 달라서 내부 벤치마크가 따로 필요하다. 트레이딩에서 하던 백테스트를 AI에도 적용하는 셈이다</td></tr>
+              <tr><td>셀프서비스와 좋은 기본값</td><td>트레이더는 똑똑하고 스스로 일을 찾아 하는 사람들이다. 다만 아무 제약 없이 열어 두면 혼란스러워지므로 기본 설정을 잘 잡아 준다</td></tr>
+              <tr><td>현장에 파견한다</td><td>AI 엔지니어가 트레이더 옆에 앉아 함께 일한다. 거래 방식을 배우고, AI 활용법을 알려 주고, 배운 것을 플랫폼에 되돌린다. 이를 포워드 디플로이<span class="en">forward deploy</span>라고 부른다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>안전과 사내 운영 <span class="ts">04:20</span></h3>
+        <p>AI를 많이 쓸수록 안전이 중요해진다. 에이전트가 제멋대로 움직여 회사 시스템을 건드리면 피해가 클 수 있다.</p>
+        <p class="note">발표자는 여기서 업계에 알려진 사고 이야기를 언급했다. 자막에는 "opening eye, hugging face"로 들린다(추정). 어떤 사건인지는 발표에서 설명하지 않았다.</p>
+        <p>발표자에 따르면 회사의 모든 사람이 AI를 쓴다. 쓰는 방식만 사람마다 다르다.</p>
+        <div class="callout">
+          <span class="title">모든 것을 사내에 둔다 <span class="ts">04:50</span></span>
+          <span>규제가 강한 업종이고, 회사의 지적 재산을 중요하게 여긴다. 그래서 GPU와 인프라를 직접 보유하고 운영한다<span class="en">on-prem</span>. 밖으로 나가는 것은 외부 모델 추론뿐이다. 그 업체들과는 보낸 데이터를 저장하지 않는다는 계약<span class="en">zero data retention</span>을 맺는다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="stack">
+        <header><span class="num">04</span><h2>플랫폼 구조 한눈에 <span class="ts">05:10</span></h2></header>
+        <p>발표자가 보여 준 플랫폼 구조도는 정보가 아주 많다. 발표자가 강조한 점은 하나다. <strong>스택의 모든 층을 플랫폼 팀이 책임진다.</strong> 아래층부터 정리하면 다음과 같다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>모델</td><td>외부 업체의 모델, 직접 운영하는 자체 모델, 오픈소스 모델</td></tr>
+              <tr><td>추론 게이트웨이</td><td>모든 모델 호출이 지나는 관문<span class="en">inference gateway</span>. 모델 사이 라우팅, 모델별 지출 측정, 예산 배정을 맡는다</td></tr>
+              <tr><td>에이전트 플랫폼 <span class="ts">06:00</span></td><td>에이전트마다 스킬, 플러그인, 도구 같은 능력을 등록한다. 팀마다 자기 지식과 메모리 시스템을 붙인다</td></tr>
+              <tr><td>에이전트 게이트웨이</td><td>회사의 모든 에이전트를 한 장부에 올린다<span class="en">agent gateway</span>. 에이전트끼리 대화하고, 사람과 에이전트를 비슷한 신원 관리 방식으로 함께 조율한다</td></tr>
+              <tr><td>사용자 화면 <span class="ts">06:30</span></td><td>세션을 다루는 웹 화면, 팀별 사용 방식을 프로필로 만들어 공유하는 에이전트 워크벤치, 전 직원이 쓰는 개인 비서</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">게이트웨이를 두는 이유</span>
+          <span>모델 업체 하나가 멈춰도 다른 업체로 바로 돌릴 수 있다. 트레이딩 회사에서 멈춘 시간은 곧 벌지 못한 돈이다.</span>
+        </div>
+        <p>발표자는 스스로를 제품을 중시하는 사람이라고 소개했다. 플랫폼을 잘 만들어도 사람들이 쓰고 싶어 하지 않거나 쓰는 법을 모르면 소용없다. 그래서 사용자 화면을 따로 챙긴다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="sameday">
+        <header><span class="num">05</span><h2>새 모델을 출시 당일 쓰는 법 <span class="ts">07:10</span></h2></header>
+        <p>Optiver의 원칙이 하나 있다. 새 프런티어 모델<span class="en">frontier model</span>이 공개되면 그날 바로 실제 업무 흐름에 쓸 수 있어야 한다. 정말 가치가 있다면 하루라도 빨리 쓰는 쪽이 이득이기 때문이다.</p>
+        <p>문제는 "정말 가치가 있나"를 그날 알아내는 것이다. 그래서 하는 일이 여러 가지다.</p>
+        <ol class="plain">
+          <li><strong>골든 셋으로 평가한다.</strong> 골든 셋<span class="en">golden set</span>은 정답을 아는 평가용 문제 묶음이다. 이걸 돌리려면 평가 체계가 성숙해 있어야 한다.</li>
+          <li><strong>트레이딩 팀의 벤치마크를 미리 모아 둔다.</strong> 주요 트레이딩 팀과 손잡고 그 팀의 평가 문제를 플랫폼에 올려 둔다. 새 모델이 나오면 바로 돌려 지표를 확인하고 사내에 공유한다.</li>
+          <li><strong>게이트웨이에 올린다.</strong> <span class="ts">07:40</span> API와 인터페이스를 맞추고 비용 관리를 설정한다.</li>
+          <li><strong>하네스를 고친다.</strong> 새 모델은 하네스<span class="en">harness</span> 수정이 필요한 경우가 많다. 고친 하네스를 배포하는 일까지 플랫폼 팀이 맡는다.</li>
+          <li><strong>24시간 지원한다.</strong> <span class="ts">08:00</span> 전 세계에 사무소가 있으므로 지역마다 지원 당번을 돌려 가동률을 지킨다.</li>
+          <li><strong>결과를 알린다.</strong> <span class="ts">08:10</span> "이 모델을 평가했다, 이 정도로 잘 된다, 이렇게 쓰면 된다, 우리는 이걸 권한다"를 사내에 꾸준히 전한다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">당일 판단이 가능한 이유</span>
+          <span>평가 문제를 모델이 나오기 전에 이미 모아 두었기 때문이다. 모델이 나온 뒤에 벤치마크를 만들기 시작하면 그날 안에 판단할 수 없다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="agnostic">
+        <header><span class="num">06</span><h2>모델과 하네스에 묶이지 않기 <span class="ts">08:30</span></h2></header>
+        <p>여러 모델 중 고를 수 있으니, 가치를 더하는 모델은 무엇이든 들여온다. 그러려면 다음 상황에 흔들리지 않아야 한다.</p>
+        <ul class="plain">
+          <li>지역이나 클라우드 업체에 따라 쓸 수 있는 모델이 다르다.</li>
+          <li>일부 작업은 다른 망과 완전히 분리된 사내 구역<span class="en">DMZ</span>에서만 돌아야 한다. 비용 때문이기도 하고 격리 때문이기도 하다.</li>
+        </ul>
+        <p>그래서 Optiver는 <strong>모델에도 하네스에도 묶이지 않게</strong> 플랫폼을 만든다.</p>
+
+        <h3>모든 호출은 기록되고 평가로 간다 <span class="ts">08:50</span></h3>
+        <p>외부 모델도 사내 모델도 모두 추론 게이트웨이를 지난다. 모델과 주고받는 모든 상호작용이 기록된다. 이 기록은 자동으로 평가 시스템에 들어간다.</p>
+
+        <h3>메타 하네스 <span class="ts">09:10</span></h3>
+        <p>플랫폼은 여러 하네스를 지원한다. 그 위에 메타 하네스<span class="en">meta harness</span>라는 층을 하나 더 둔다.</p>
+        <ul class="plain">
+          <li>팀은 메타 하네스에서 자기 하네스 설정을 정의한다.</li>
+          <li>그래서 아래 하네스를 바꿔도 설정을 들고 옮겨 갈 수 있다.</li>
+          <li>설정은 팀의 지식 베이스에 연결된다.</li>
+          <li>실행 기록<span class="en">trace</span>을 살펴 지식을 자동으로 모아 쌓는다.</li>
+          <li>메타 하네스를 통해 에이전트를 플랫폼에 배포해 관리할 수도 있고, 웹 포털의 IDE 화면에서 쓸 수도 있다.</li>
+        </ul>
+      </section>
+
+      <!-- 7 -->
+      <section id="spend">
+        <header><span class="num">07</span><h2>더 쓰되 현명하게 쓰기 <span class="ts">09:50</span></h2></header>
+        <p>발표자는 숫자를 지운 AI 지출 그래프를 보여 줬다. 흐름만 옮기면 다음과 같다.</p>
+        <ol class="plain">
+          <li><strong>12월</strong>: Claude Code가 널리 쓰이면서 지출이 오른다. 발표자는 그래프가 꺾이는 지점이 자기 입사 시점이라고 농담했다.</li>
+          <li><strong>여름</strong>: 큰 프런티어 모델이 연달아 나오며 지출이 급등한다.</li>
+          <li><strong>그 뒤</strong>: 최적화를 넣어 다시 통제한다.</li>
+        </ol>
+        <p class="note">그래프에 숫자가 없어서 이 노트에도 차트를 그리지 않았다. 지출을 통제했다는 효과도 숫자 없이 발표자가 말한 것이다.</p>
+        <p>기조는 분명하다. <strong>더 쓸수록 더 많은 가치를 얻는다고 본다.</strong> 다만 현명하게 써야 한다.</p>
+
+        <h3>새 세션이 20만 토큰으로 시작했다 <span class="ts">10:40</span></h3>
+        <p>MCP 서버와 지식 베이스를 다들 마구 붙였다. 그 결과 아무것도 하지 않은 새 세션의 컨텍스트가 기본 20만 토큰 이상이었다. 발표자는 "말도 안 된다"고 했다.</p>
+        <p>완전한 셀프서비스의 부작용이다. 플랫폼 팀이 직접 책임을 지고 나서야 했다.</p>
+
+        <h3>세션 하나에서 줄인 것 <span class="ts">11:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>바꾼 것</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>MCP 도구 검색</td><td>모든 도구 설명을 처음부터 싣지 않고, 필요할 때 찾아서 불러온다</td></tr>
+              <tr><td>MCP 대신 CLI</td><td>여러 MCP를 감싼 명령줄 도구를 에이전트에게 준다. 발표자는 MCP를 직접 부르는 것보다 훨씬 효율적이라고 했다</td></tr>
+              <tr><td>캐시 설정</td><td>캐시가 언제 깨지는지 살폈다. 유지 시간을 얼마로 둘지, 경우마다 다르게 둘지, 상황에 따라 바꿀지 검토했다</td></tr>
+              <tr><td>팀별 하네스 손질</td><td>팀과 함께 하네스를 다듬는다. 거대한 시스템 프롬프트에 넣던 내용을 지식 베이스로 옮긴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">토큰 값이 오를수록 더 아낀다 <span class="ts">11:40</span></span>
+          <span>이 개선은 모두 토큰 값에 비례해 효과가 커진다. 발표자는 모델 라우팅이나 서브 에이전트 최적화까지 가지 않아도 된다고 했다. 세션 하나만 들여다봐도 아낄 여지가 거의 언제나 남아 있다.</span>
+        </div>
+        <p class="note">최적화를 출시해도 전 세계 지역에 다 퍼지기까지는 시간이 걸린다. <span class="ts">12:10</span></p>
+
+        <h3>그 밖에 지출을 줄인 방법 <span class="ts">12:20</span></h3>
+        <ul class="plain">
+          <li><strong>보여 주기.</strong> 팀마다 얼마를 쓰는지 보여 주고 알림을 줬다. 팀이 직접 알림과 한도를 정하는 시스템도 만들었다. 그러자 많은 팀이 적당한 한도를 스스로 정했다.</li>
+          <li><strong>오픈소스 모델.</strong> <span class="ts">12:40</span> 토큰 값 기준으로 프런티어 모델과 겨룰 만한 오픈소스 모델이 있다. 모든 용도에 맞지는 않는다. 값싼 대안이 되는 곳에는 사내에 제공했고, 쓰는 사람이 늘고 있다.</li>
+          <li><strong>모델 라우팅.</strong> <span class="ts">13:10</span> 프롬프트를 상황에 따라 더 싼 모델로 보낸다. 큰 모델이 계획을 세우고, 잘게 나눈 구현은 작은 모델이 맡게 하기도 한다.</li>
+          <li><strong>지식 베이스.</strong> <span class="ts">13:20</span> 발표자는 지식 베이스가 과소평가되어 있다고 본다. 필요한 만큼만 정확히 꺼내 오면 컨텍스트 자체가 줄어든다.</li>
+        </ul>
+        <blockquote>토큰을 덜 쓰자는 게 아니다. 같은 토큰에서 더 많은 가치를 얻자는 것이다.<cite>발표자의 말을 옮김 · 13:40</cite></blockquote>
+      </section>
+
+      <!-- 8 -->
+      <section id="users">
+        <header><span class="num">08</span><h2>사용자가 있는 곳으로 가기 <span class="ts">13:50</span></h2></header>
+        <p>몇 달 전에는 사람마다 다른 하네스를 썼다. 각자 개발 서버에 붙는 독특한 방식을 만들었다. 엉성한 웹 화면을 직접 만드는 사람도 있었다.</p>
+        <p>플랫폼 팀의 판단은 간단했다. 많은 사람이 같은 걸 만들고 있다면, 제대로 된 버전을 하나 만들어 모두에게 준다.</p>
+        <h3>웹 포털에 들어간 것 <span class="ts">14:20</span></h3>
+        <ul class="plain">
+          <li>세션 관리, 채팅 창, 아티팩트</li>
+          <li><strong>트레이더의 직접 기여.</strong> 자기 업무에 쓸모 있는 기능을 PR로 올리면 반영한다. 협업 문서 편집도 이렇게 들어왔다.</li>
+          <li><strong>에이전트 멀티플레이어.</strong> <span class="ts">15:00</span> 방을 만들어 내 에이전트, 동료의 에이전트, 배포된 에이전트를 한곳에 모은다.</li>
+          <li><strong>Slack 클라이언트.</strong> 이동 중에도 쓴다.</li>
+        </ul>
+        <p>비슷한 제품은 하네스를 만드는 회사들도 내놓았다. 그래도 직접 만든 이유는 두 가지다. 사내 인프라와 잘 맞고, 원하는 속도로 고칠 수 있다.</p>
+        <blockquote>사용자들은 우리가 안 만들어 주면 직접 만든다. 그래서 우리가 더 나은 버전을 만들었다.<cite>발표자의 말을 옮김 · 15:20</cite></blockquote>
+      </section>
+
+      <!-- 9 -->
+      <section id="qa-knowledge">
+        <header><span class="num">09</span><h2>질문 1: 지식 베이스는 아직 숙제 <span class="ts">16:10</span></h2></header>
+        <p class="note">질문 내용은 자막에 남지 않았다. 답으로 보아 지식 베이스를 어떻게 만드느냐는 질문이다.</p>
+        <p>발표자는 지금 나와 있는 방식 어느 것에도 만족하지 않는다고 했다. 방식마다 장단점이 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>발표자의 평가</th></tr></thead>
+            <tbody>
+              <tr><td>큰 마크다운 파일, 계층형 마크다운</td><td>프런티어 연구소들이 권하는 방식이다. 잘 맞는 곳도 있다</td></tr>
+              <tr><td>벡터 검색</td><td>장점과 단점이 따로 있다</td></tr>
+              <tr><td>하이브리드</td><td>Optiver가 지금 쓰는 방식이다. 여러 방법을 시험해 볼 수 있다</td></tr>
+              <tr><td>그래프 데이터베이스</td><td>발표자가 더 시간을 쓰고 싶은 방향이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>메모리와 지식을 다루는 새 방법이 매일 나오는 분야다. 발표자는 이 문제에 시간을 더 쓰고 싶다고 했다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="qa-build">
+        <header><span class="num">10</span><h2>질문 2: 왜 직접 만드나 <span class="ts">17:10</span></h2></header>
+        <p>질문은 직접 만든 도구가 Codex 같은 기성 제품보다 나은 점이 무엇이냐였다. 발표자는 세 가지 이유를 들었다.</p>
+        <ol class="plain">
+          <li><strong>인프라가 사내에 있다.</strong> 많은 기성 도구가 사내 인프라에서는 원하는 대로 돌지 않는다. 최근까지 Codex도 자기 인프라에서 관리형 에이전트를 돌리는 선택지가 없었다. 이제는 생겼고, Optiver는 그 업체와 함께 작업하고 있다.</li>
+          <li><strong>업체에 묶이지 않는다.</strong> <span class="ts">17:50</span> 이런 제품을 파는 곳은 대개 자기 모델이나 다른 제품까지 함께 쓰게 만들려 한다.</li>
+          <li><strong>앞서 있다고 본다.</strong> <span class="ts">18:30</span> 발표자에 따르면, 관리형 에이전트 기능을 어떻게 만들었는지 프런티어 연구소들이 오히려 물어 온다.</li>
+        </ol>
+        <blockquote>인프라가 한 업체에 너무 기대면, 그 업체가 허락하는 속도로만 움직이게 된다.<cite>발표자의 말을 옮김 · 18:00</cite></blockquote>
+        <div class="callout warn">
+          <span class="title">실제로 겪은 일 <span class="ts">18:10</span></span>
+          <span>예전에 쓰던 추론 게이트웨이 업체가 있었다. 새 기능이 나와서 당장 필요했다. 업체는 "영업 팀과 이야기해 로드맵에 올려 보자"고 답했다. Optiver는 그 속도를 기다릴 수 없었다.</span>
+        </div>
+        <p>발표자도 이 방식이 모두에게 맞지는 않는다고 했다. Optiver에는 이렇게 할 수 있는 특별한 조건이 여럿 겹쳐 있다는 것이다.</p>
+        <p class="note">"앞서 있다"는 말은 그 플랫폼을 만든 팀의 책임자가 한 자평이다. 외부와 비교한 근거는 발표에 나오지 않았으니 감안해 읽자.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="qa-eval">
+        <header><span class="num">11</span><h2>질문 3: 도구 호출은 다시 돌리기 어렵다 <span class="ts">19:10</span></h2></header>
+        <p>질문은 이 플랫폼을 평가와 메모리에 어떻게 엮느냐였다.</p>
+        <p>출발점은 전부 기록하는 것이다. 모든 도구 호출과 입력, 출력을 OpenTelemetry<span class="en">OTel</span> 형식으로 남긴다. 이 기록이 평가 시스템에 들어간다.</p>
+        <p>발표자는 남은 어려움을 "아직 열린 문제"라고 했다.</p>
+        <div class="callout">
+          <span class="title">예: Slack 지원 봇 <span class="ts">20:00</span></span>
+          <span>Slack에서 돌리는 지원 봇 에이전트가 있다. 이 봇을 다른 모델로 돌리면 어떨지 평가하고 싶다. 그런데 봇이 쓰는 도구는 그때의 세상 상태에 기대 있다. 지금 다시 돌리면 도구가 그때와 다른 결과를 돌려준다.</span>
+        </div>
+        <p>그래서 도구가 닿는 시스템마다 그 시점의 상태를 되살릴 수 있는지 따진다. 답은 시스템마다 다르다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시스템</th><th>그 시점으로 되돌리기</th></tr></thead>
+            <tbody>
+              <tr><td>트레이딩 백테스트 데이터베이스</td><td>쉽다. 언제든 특정 시점 기준으로 조회할 수 있다</td></tr>
+              <tr><td>Slack</td><td>특정 시점부터 다시 재생하는 방법이 있을지도 모른다</td></tr>
+              <tr><td>그 밖의 시스템</td><td>대부분 어렵다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="plain">
+          <li>도구 호출마다 "이 시점을 얼마나 정확히 되살릴 수 있나"를 신뢰도 값으로 매겨 함께 기록한다.</li>
+          <li>평가를 다시 돌릴 때는 MCP 앞에 둔 프록시가 도구 호출을 스냅샷 쪽으로 보낸다.</li>
+        </ul>
+        <p>발표자는 이 방법이 불완전하다고 인정했다. 모든 것을 기록해 두는 것 말고는 완벽한 답이 없을지도 모른다고 했다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="qa-scope">
+        <header><span class="num">12</span><h2>질문 4: 에이전트가 커질 때 <span class="ts">21:30</span></h2></header>
+        <p class="note">질문은 자막에 일부만 남았다. 답으로 보아 한 팀의 에이전트를 다른 팀까지 쓰려 할 때 어떻게 하느냐는 질문이다.</p>
+        <p>발표자는 여러 번 겪은 전형적인 문제라고 했다. 한 팀이 자기 저장소에 맞춘 코딩·분석 에이전트를 만들었다. 다른 팀도 같이 쓰자고 하자 복잡도가 폭발했다. 이제 권한 체계가 서로 다른 여러 저장소를 다뤄야 했다.</p>
+        <div class="shift" aria-label="에이전트 확장 방식의 변화">
+          <div><span class="tag">처음 시도</span><b>기능을 모두 합친 에이전트 하나</b><span class="muted">기술 부채가 쌓이고 잘 동작하지 않았다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">지금 권하는 방식</span><b>잘하는 일 하나에 맞춘 작은 에이전트 여럿</b><span class="muted">에이전트 게이트웨이의 장부를 통해 서로 부르고 띄운다.</span></div>
+        </div>
+        <ul class="plain">
+          <li>모든 에이전트에 버전이 있다. 작은 변화는 새 버전으로 올리면 된다.</li>
+          <li>앞으로는 에이전트의 일을 좁게 잡도록 권한다. 일이 좁으면 측정하기 쉽고 수명 주기를 관리하기 쉽다.</li>
+          <li>대신 여러 에이전트를 조율하는 문제가 새로 생긴다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">측정할 수 있게 유지하는 것이 핵심 <span class="ts">23:00</span></span>
+          <span>에이전트 하나를 부풀리면 어떤 기능은 좋아지고 어떤 기능은 나빠진다. 그런데 무엇이 왜 바뀌었는지 손보기 어렵다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>트레이딩 회사는 변경의 효과가 <strong>몇 시간 안에 손익으로</strong> 보인다. 그래서 빨리 결정하고 빨리 잰다.</li>
+          <li>놓친 기회가 비싸다. 새 모델이 가치 있다면 <strong>하루라도 빨리</strong> 써야 한다.</li>
+          <li>플랫폼 원칙은 모듈 구조, 모든 층에서 측정, 셀프서비스와 좋은 기본값, 현장 파견, 안전, 사내 운영이다.</li>
+          <li>외부 벤치마크만 믿지 않는다. 사내 데이터는 분포가 달라서 <strong>트레이딩 팀의 골든 셋</strong>으로 따로 평가한다.</li>
+          <li>당일 출시는 평가만이 아니다. 게이트웨이 등록, 비용 관리, 하네스 수정, 24시간 지원, 사내 안내까지 한 묶음이다.</li>
+          <li>모든 모델 호출은 <strong>추론 게이트웨이</strong>를 지나며 기록되고 평가로 간다. 업체가 멈추면 다른 업체로 바꾼다.</li>
+          <li>셀프서비스만으로는 새 세션이 <strong>20만 토큰</strong>으로 시작했다. 도구 검색, CLI, 캐시 조정, 지식 베이스로 줄였다.</li>
+          <li>지출을 보여 주고 한도를 스스로 정하게 하면 팀은 대체로 알아서 아낀다. 목표는 <strong>같은 토큰에서 더 많은 가치</strong>다.</li>
+          <li>사용자가 엉성한 도구를 각자 만들면 더 나은 버전을 만들어 준다. 한 업체에 묶이면 <strong>그 업체의 속도로만</strong> 움직인다.</li>
+          <li>에이전트는 <strong>작게 나눠 측정할 수 있게</strong> 둔다. 도구 호출 평가의 재현과 지식 베이스는 아직 풀리지 않은 숙제다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>Optiver가 일반 기술 회사와 가장 다른 점은?</span></summary><div class="answer">변경의 효과가 몇 시간 안에 손익으로 보인다. 일반 기술 회사는 사용 지표에 몇 주, 매출 효과에 몇 달에서 몇 년이 걸린다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>트레이딩 회사에서 좋은 결정 하나의 가치가 특히 큰 이유는?</span></summary><div class="answer">한정된 고객 관심을 놓고 다투는 서비스 회사와 달리, 트레이딩은 더 많이 거래할수록 더 많이 번다. 그래서 가치의 천장이 높고, 놓친 기회도 비싸다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>외부 벤치마크가 있는데도 내부 벤치마크가 필요한 이유는?</span></summary><div class="answer">사내 데이터의 분포가 외부 벤치마크와 다르다. 외부 점수가 높아도 사내 업무에서 잘 된다는 보장이 없다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>새 모델을 출시 당일 쓰려면 평가 말고 무엇이 더 필요한가?</span></summary><div class="answer">게이트웨이 등록, API와 인터페이스, 비용 관리 설정, 하네스 수정과 배포, 지역별 24시간 지원, 평가 결과와 권장 사용법의 사내 안내.</div></details>
+          <details><summary><span class="qn">Q5</span><span>당일 판단을 가능하게 하는 준비는?</span></summary><div class="answer">주요 트레이딩 팀의 벤치마크를 미리 모아 플랫폼에 올려 둔 것. 모델이 나오면 바로 돌려 지표를 볼 수 있다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>추론 게이트웨이가 맡는 일은?</span></summary><div class="answer">모델 사이 라우팅, 모델별 지출 측정과 예산 배정, 모든 호출 기록. 업체 하나가 멈추면 다른 업체로 돌리는 장애 대비도 된다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>메타 하네스가 있으면 팀에 무엇이 좋은가?</span></summary><div class="answer">하네스 설정을 한곳에 정의하므로 아래 하네스를 바꿔도 설정을 옮겨 갈 수 있다. 설정은 팀의 지식 베이스와 연결된다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>새 세션이 20만 토큰으로 시작한 원인과 대응은?</span></summary><div class="answer">다들 MCP 서버와 지식 베이스를 마구 붙였다. MCP 도구 검색, MCP를 감싼 CLI, 캐시 설정 조정, 시스템 프롬프트 내용을 지식 베이스로 옮기기로 줄였다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>팀마다 지출을 보여 주고 한도를 직접 정하게 하자 무슨 일이 생겼나?</span></summary><div class="answer">많은 팀이 적당한 한도를 스스로 정했다. 보이게 하고 권한을 주면 사람들은 대체로 알아서 관리한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>기성 제품 대신 직접 만드는 세 가지 이유는?</span></summary><div class="answer">기성 도구가 사내 인프라에서 잘 돌지 않는다. 업체에 묶이면 그 업체의 속도로만 움직인다. 자기 팀이 앞서 있다고 본다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>Slack 지원 봇을 다른 모델로 다시 평가하기 어려운 이유와 대응은?</span></summary><div class="answer">도구 결과가 그때의 Slack 상태에 기대 있어 지금 돌리면 결과가 달라진다. 도구 호출마다 시점 복원 신뢰도를 기록하고, MCP 앞 프록시로 스냅샷에 연결해 다시 돌린다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>에이전트를 여러 팀이 같이 쓰려 할 때 권하는 방식은?</span></summary><div class="answer">기능을 합친 큰 에이전트 하나 대신, 잘하는 일 하나에 맞춘 작은 에이전트를 여럿 두고 에이전트 게이트웨이로 서로 부르게 한다. 그래야 측정하고 손보기 쉽다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 업무로 만든 평가 문제 묶음(골든 셋)을 미리 준비한다<span class="how">확인: 새 모델이 나온 날 바로 돌려 볼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>모델 호출을 게이트웨이 하나로 모은다<span class="how">확인: 업체가 멈추면 설정만 바꿔 다른 업체로 돌릴 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>모든 모델 호출과 도구 호출을 기록해 평가 데이터로 쓴다<span class="how">OpenTelemetry 같은 표준 형식으로 남기면 평가 시스템으로 옮기기 쉽다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>새 세션의 기본 컨텍스트 크기를 잰다<span class="how">확인: 아무것도 안 한 세션이 몇 토큰으로 시작하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>MCP 도구를 처음부터 다 싣지 않는다<span class="how">도구 검색으로 필요할 때 불러오거나, 자주 쓰는 MCP는 CLI로 감싼다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>팀별 AI 지출을 보여 주고, 알림과 한도를 팀이 정하게 한다<span class="how">확인: 각 팀이 지난달 지출을 바로 볼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>새 모델의 평가 결과와 권장 사용법을 사내에 공유한다<span class="how">"평가했다, 이 정도다, 이렇게 써라, 이걸 권한다" 네 가지를 담는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>커진 에이전트는 쪼갠다<span class="how">확인: 에이전트 하나가 맡은 일을 한 문장으로 말할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>평가를 다시 돌릴 때 도구 결과가 그 시점 상태인지 표시한다<span class="how">도구마다 시점 복원이 쉬운지, 어려운지 기록해 둔다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>마켓 메이커</td><td>Market maker. 사려는 사람과 팔려는 사람이 언제든 거래할 수 있도록 가격을 내고 거래를 받아 주는 회사</td></tr>
+              <tr><td>손익 (P&amp;L)</td><td>Profit and Loss. 일정 기간 동안 번 돈과 잃은 돈</td></tr>
+              <tr><td>퀀트</td><td>수학과 통계 모델로 거래 전략을 만드는 사람</td></tr>
+              <tr><td>백테스트</td><td>과거 데이터로 전략이나 모델을 돌려 보는 검증</td></tr>
+              <tr><td>프런티어 모델</td><td>가장 앞선 성능을 내는 최신 대형 모델</td></tr>
+              <tr><td>골든 셋</td><td>Golden set. 정답을 알고 있는 평가용 문제 묶음</td></tr>
+              <tr><td>포워드 디플로이</td><td>Forward deploy. 엔지니어가 사용자 팀에 직접 가서 함께 일하는 방식</td></tr>
+              <tr><td>온프레미스</td><td>On-prem. 외부 클라우드 대신 회사가 직접 가진 서버에서 돌리는 것</td></tr>
+              <tr><td>무보존 계약</td><td>Zero data retention. 모델 업체가 받은 데이터를 저장하지 않기로 한 약속</td></tr>
+              <tr><td>DMZ</td><td>네트워크에서 다른 구역과 분리해 둔 구역</td></tr>
+              <tr><td>추론 게이트웨이</td><td>Inference gateway. 모든 모델 호출이 지나는 관문. 라우팅, 비용 측정, 기록을 맡는다</td></tr>
+              <tr><td>에이전트 게이트웨이</td><td>Agent gateway. 회사의 모든 에이전트를 한 장부에 올려 서로 찾고 부르게 하는 관문</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>메타 하네스</td><td>Meta harness. 여러 하네스 위에서 팀 설정을 한곳에 정의하는 층</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. AI가 외부 도구와 데이터에 접속하는 표준 규약</td></tr>
+              <tr><td>MCP 도구 검색</td><td>도구 설명을 처음부터 다 싣지 않고, 필요할 때 찾아서 불러오는 방식</td></tr>
+              <tr><td>CLI</td><td>Command-line interface. 명령줄에서 실행하는 도구</td></tr>
+              <tr><td>컨텍스트</td><td>모델이 한 번에 읽는 입력 전체. 토큰 수로 잰다</td></tr>
+              <tr><td>프롬프트 캐시</td><td>앞부분이 같은 입력을 재사용해 비용과 시간을 줄이는 장치. 앞부분이 바뀌면 깨진다</td></tr>
+              <tr><td>모델 라우팅</td><td>Model routing. 요청마다 알맞은 모델로 보내는 것</td></tr>
+              <tr><td>지식 베이스</td><td>Knowledge base. 에이전트가 필요할 때 찾아 읽는 정리된 자료 모음</td></tr>
+              <tr><td>벡터 검색</td><td>글을 숫자 벡터로 바꿔 뜻이 비슷한 것을 찾는 검색</td></tr>
+              <tr><td>그래프 데이터베이스</td><td>항목과 항목 사이의 관계를 중심으로 저장하는 데이터베이스</td></tr>
+              <tr><td>OpenTelemetry (OTel)</td><td>프로그램의 실행 기록(로그, 트레이스)을 남기는 업계 표준</td></tr>
+              <tr><td>시점 조회</td><td>Point in time. 과거 특정 시점의 데이터 상태로 조회하거나 되살리는 것</td></tr>
+              <tr><td>스냅샷</td><td>특정 시점의 상태를 그대로 떠 둔 것</td></tr>
+              <tr><td>프록시</td><td>호출을 중간에서 받아 대신 전달하거나 바꿔 주는 장치</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>Optiver: 마켓 메이커, 거래 규모</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>몇 시간 만에 보이는 손익</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>빠른 피드백과 비싼 기회 비용</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>서비스 회사와 다른 경제 구조</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>플랫폼 원칙: 빠르게, 모듈로, 모든 층에서 측정</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>셀프서비스와 좋은 기본값, 현장 파견</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>안전과 사내 운영</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>플랫폼 구조도: 모델, 추론 게이트웨이</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>에이전트 플랫폼과 에이전트 게이트웨이</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>사용자 화면: 웹, 워크벤치, 개인 비서</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>새 모델 당일 사용: 골든 셋 평가</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>게이트웨이 등록과 하네스 업데이트</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>24시간 지원과 사내 안내</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>모델과 하네스 중립, 격리 구역</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>메타 하네스와 지식 수집</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>숫자 없는 AI 지출 그래프</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>새 세션 20만 토큰 문제</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>MCP 도구 검색, CLI, 캐시 조정</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>지출 공개와 팀별 한도</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>오픈소스 모델과 모델 라우팅</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>지식 베이스는 과소평가됐다</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>사용자가 있는 곳으로: 웹 포털</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>에이전트 멀티플레이어, Slack 클라이언트</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>마무리</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>질문 1: 지식 베이스</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>질문 2: 기성 제품 대신 직접 만드는 이유</td></tr>
+              <tr><td><span class="ts">19:10</span></td><td>질문 3: 평가와 도구 호출 재현</td></tr>
+              <tr><td><span class="ts">21:30</span></td><td>질문 4: 커지는 에이전트 나누기</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'aGIUg8zKI8A:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

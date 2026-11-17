@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>음성 에이전트 평가 루프</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#speakers">발표자와 출발점</a></li>
+      <li><a href="#call">확인 전화 한 통의 구조</a></li>
+      <li><a href="#rules">질문 하나가 규칙을 깬다</a></li>
+      <li><a href="#sheet">구글 시트의 한계</a></li>
+      <li><a href="#judge">LLM 심판과 지표</a></li>
+      <li><a href="#agreement">일치율 33%에서 92%로</a></li>
+      <li><a href="#loop">한 번 출시가 아니라 루프</a></li>
+      <li><a href="#metrics">지표를 정의하는 법</a></li>
+      <li><a href="#monitor">감시, 분류, 전달</a></li>
+      <li><a href="#simulate">고친 것을 시뮬레이션으로 증명</a></li>
+      <li><a href="#selfheal">자가 치유 루프와 사람의 승인</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-31 · 17분 · 영어 발표 한글 정리</span>
+      <h1>질문 하나로 규칙이 깨지는 음성 AI</h1>
+      <p class="lead">대출처럼 규제가 강한 분야에서는 음성 에이전트의 질문 하나가 법 위반이 된다. Upstart는 모든 통화를 LLM 심판과 사람이 함께 채점하고, 그 결과로 심판과 에이전트를 계속 고치는 루프를 만들었다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=3osCbSufv8g" target="_blank" rel="noopener">Voice AI Where One Wrong Question Breaks the Rules</a></span>
+        <span>발표: Shiv Indap (Upstart 음성 AI 리드), Brooke Hopkins (Coval 창업자)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 "Koval", "Kowal", "Cobal"로 들린 회사 이름은 영상 제목에 따라 Coval로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>대출 상담에서 에이전트가 실수하면 고객 불만으로 끝나지 않는다. <strong>규제 위반</strong>이 될 수 있다.</li>
+        <li>Upstart의 확인 전화는 질문이 세 개뿐이다. 그래도 <strong>고객의 답에 따라 물어야 할 것과 물으면 안 되는 것</strong>이 바뀐다.</li>
+        <li>통화가 끝나면 <strong>LLM 심판</strong>이 채점하고, <strong>사람이 그 채점을 다시 검토</strong>한다.</li>
+        <li>처음에 심판과 사람의 판단은 <strong>33%만 일치</strong>했다. 암묵지를 글로 옮기고, 사람끼리의 기준을 맞추고, 심판을 고쳐 <strong>92%</strong>까지 올렸다.</li>
+        <li>한 번 통과시키는 출시 관문으로는 부족하다. <strong>감시 → 실패 분류 → 사람 검토 → 수정 → 재시뮬레이션</strong>이 계속 돌아야 한다.</li>
+        <li>평가는 곧 <strong>제품 정의</strong>다. 시간을 가장 많이 쓸 곳은 "에이전트가 무엇을 하고 무엇을 하면 안 되는가"를 정하는 일이다.</li>
+        <li>자동으로 고치는 루프를 만들어도 변경은 <strong>피처 플래그 뒤에 두고 사람이 승인</strong>한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="speakers">
+        <header><span class="num">01</span><h2>발표자와 출발점 <span class="ts">00:00</span></h2></header>
+        <p><strong>Brooke Hopkins</strong>는 음성 에이전트 평가 도구를 만드는 Coval의 창업자다. 그 전에는 Waymo에서 평가 인프라 팀을 이끌었다. 시뮬레이션을 띄우고 돌리는 개발 도구를 맡은 팀이다.</p>
+        <p>Brooke Hopkins는 자율주행차와 음성 에이전트가 비슷하다고 본다. 둘 다 A에서 B까지 믿을 만하게 가야 한다. 그 사이에 생길 수 있는 모든 경로를 다뤄야 한다. 여러 모델이 함께 움직여 바깥 세상에 반응해야 한다는 점도 같다.</p>
+        <p><strong>Shiv Indap</strong>은 Upstart에서 음성 AI를 이끈다. Upstart는 대출을 주로 하는 핀테크 회사다. 하루에 수천 건의 통화를 처리한다.</p>
+        <div class="callout warn">
+          <span class="title">대출 분야가 특별한 이유 <span class="ts">01:30</span></span>
+          <span>대출은 규제가 강한 분야다. 에이전트가 실수하면 고객 경험 문제로 끝나지 않고 규제 문제가 될 수 있다. 그래서 Upstart는 에이전트를 내보낼 때 무엇보다 먼저 규정을 지키는지 확인한다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="call">
+        <header><span class="num">02</span><h2>확인 전화 한 통의 구조 <span class="ts">02:10</span></h2></header>
+        <p>Upstart가 자동화한 것은 <strong>확인 전화</strong><span class="en">verification call</span>다. 대출 신청자 대부분은 바로 심사 결과를 받는다. 나머지는 직접 전화해서 몇 가지 정보를 확인해야 한다.</p>
+
+        <figure class="chart" aria-label="Upstart 대출 신청자 중 즉시 심사 90%, 확인 전화가 필요한 신청자 10%">
+          <span class="chart-title">Upstart 대출 신청자의 심사 경로 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>즉시 심사 결과를 받는 신청자</span><span class="val">약 90</span></div>
+              <div class="track"><div class="fill" style="width:90%" title="즉시 심사: 약 90%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>확인 전화가 필요한 신청자</span><span class="val">약 10</span></div>
+              <div class="track"><div class="fill key" style="width:10%" title="확인 전화 필요: 약 10%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">음성 에이전트가 맡은 것은 아래쪽 10%의 통화다.</span>
+        </figure>
+
+        <p>통화 내용은 단순하다. 먼저 전화한 사람이 신청자 본인인지 확인한다. 남의 신청서 내용을 묻지 못하게 하기 위해서다. 그다음 세 가지를 묻는다.</p>
+        <ol class="plain">
+          <li>앞으로 3개월 동안 지금의 소득이 계속되는가</li>
+          <li>빌린 돈을 어디에 쓸 계획인가</li>
+          <li>갚아야 할 다른 의무가 있는가. 예: 위자료<span class="en">alimony</span>, 임금 압류<span class="en">wage garnishment</span></li>
+        </ol>
+      </section>
+
+      <!-- 3 -->
+      <section id="rules">
+        <header><span class="num">03</span><h2>질문 하나가 규칙을 깬다 <span class="ts">03:00</span></h2></header>
+        <p>단순해 보이는 통화에 규제가 끼어든다. 고객이 무슨 답을 하느냐에 따라 에이전트가 물어도 되는 것과 물으면 안 되는 것이 달라진다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>고객의 말</th><th>에이전트가 할 일</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>"의료비로 쓸 거예요"</td><td><strong>금액을 묻지 않는다</strong></td><td>규정상 금지돼 있다. 물으면 큰 문제가 된다</td></tr>
+              <tr><td>"졸업식 가는 여행에 쓸 거예요"</td><td><strong>누구의 졸업식인지 더 묻는다</strong></td><td>본인, 자녀, 다른 사람 중 누구냐에 따라 자금 용도가 달라진다</td></tr>
+              <tr><td>"제 대출 언제 나와요?"</td><td><strong>정중하게 답을 피한다</strong></td><td>이 통화의 범위 밖이다. "영업일 기준 3일 안"처럼 말할 수도 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>마지막 줄은 Upstart 컴플라이언스 팀이 특히 강조한 점이다. 에이전트는 <strong>맡은 일만 해야 한다.</strong> 신청자는 진행 상황이나 돈이 언제 들어오는지 궁금해하지만, 에이전트는 그 질문에 답하지 않고 넘어가야 한다.</p>
+        <p>영상 제목 "질문 하나가 규칙을 깬다"는 이 상황을 가리킨다. 첫 번째 줄에서 금액을 한 번 물으면 그 통화는 규정 위반이 된다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="sheet">
+        <header><span class="num">04</span><h2>구글 시트의 한계 <span class="ts">04:10</span></h2></header>
+        <p>출시 직후 Upstart는 <strong>모든 통화를 사람이 검토</strong>했다. 처음 도구는 구글 시트였다. 통화를 검토하는 운영팀이 시트에 결과를 적었다.</p>
+        <p>몇 주 만에 열이 5개에서 10개, 15개로 늘었다. 여러 사람이 제각각 열을 추가하고 아무 내용이나 넣었다. 검토 과정 전체가 엉망이 됐다.</p>
+        <p>결국 필요한 것은 <strong>에이전트와 성능 지표를 함께 개선할 수 있는 데이터</strong>였다. 그러려면 구조가 잡힌 사람 검토 과정이 있어야 했다. Upstart는 Coval과 함께 이 과정을 만들었다.</p>
+        <p class="note">Coval은 공동 발표자 Brooke Hopkins의 회사다. 이 발표의 해법 대부분이 Coval 제품 기능으로 소개되므로, 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="judge">
+        <header><span class="num">05</span><h2>LLM 심판과 지표 <span class="ts">05:30</span></h2></header>
+        <p>여기서 말하는 지표는 <strong>통화가 끝난 뒤 자동으로 도는 LLM 심판</strong><span class="en">LLM as a judge</span>이다. LLM 심판은 다른 LLM의 결과를 기준에 따라 채점하는 LLM이다.</p>
+        <p>가장 중요한 기준은 "컴플라이언스 요구사항을 지켰는가"다. 심판은 예/아니오로 답하고 이유를 붙인다. 그다음 <strong>사람이 그 심판의 결과를 검토</strong>한다. 심판이 제대로 일하는지 확인하기 위해서다.</p>
+
+        <h3>지표는 줄여 가며 고른다 <span class="ts">06:10</span></h3>
+        <p>처음에는 통화 시간, 정확성, 명확성 등 많은 것을 쟀다. 시간이 지나며 정말 중요한 것만 남겼다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>남긴 지표</th><th>보는 것</th></tr></thead>
+            <tbody>
+              <tr><td>정확성 <span class="en">accuracy</span></td><td>에이전트가 맞는 정보를 말했나</td></tr>
+              <tr><td>명확성 <span class="en">clarity</span></td><td>고객이 알아듣기 쉬웠나</td></tr>
+              <tr><td>완결성 <span class="en">completeness</span></td><td>필요한 질문과 확인을 빠짐없이 했나</td></tr>
+              <tr><td>정책 준수 <span class="en">policy alignment</span></td><td>규정과 회사 정책에 맞았나</td></tr>
+              <tr><td>올바른 상위 전달 <span class="en">escalated correctly</span></td><td>사람에게 넘겨야 할 때 제대로 넘겼나</td></tr>
+              <tr><td>CSAT</td><td>고객 만족도 점수</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">"보는 것" 열은 지표 이름을 풀어 쓴 것이다. 발표에서는 이름만 나열했다.</p>
+        <div class="callout">
+          <span class="title">Shiv Indap의 조언</span>
+          <span>지표에 너무 정 붙이지 말 것. 처음엔 그럴듯해 보이는 지표로 시작한다. 상황이 바뀌면 버리고, 실제로 내 사용 사례에 영향을 주는 지표로 갈아탄다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="agreement">
+        <header><span class="num">06</span><h2>일치율 33%에서 92%로 <span class="ts">07:00</span></h2></header>
+        <p>컴플라이언스 위반 지표 하나를 따라가 보자. 흐름은 이렇다.</p>
+        <ol class="plain">
+          <li>통화가 끝나면 심판이 채점한다.</li>
+          <li>결과가 검토 대기열<span class="en">queue</span>에 들어간다.</li>
+          <li>사람이 심판의 판정을 보고 의견을 남긴다.</li>
+        </ol>
+        <p>목적은 심판의 판단이 그 분야 전문가의 판단과 맞는지 확인하는 것이다. 이 맞는 정도를 <strong>일치율</strong><span class="en">agreement rate</span>이라 한다.</p>
+
+        <figure class="chart" aria-label="컴플라이언스 지표에서 사람 검토자와 LLM 심판의 일치율: 출시 때 33%, 현재 92%">
+          <span class="chart-title">컴플라이언스 판정: 사람과 LLM 심판의 일치율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>출시 때</span><span class="val">33</span></div>
+              <div class="track"><div class="fill" style="width:33%" title="출시 때 일치율: 33%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>현재</span><span class="val">92</span></div>
+              <div class="track"><div class="fill key" style="width:92%" title="현재 일치율: 92%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">출시 때는 세 번 중 한 번만 사람과 심판의 판단이 같았다. 100%는 어렵지만 가깝게 갈 수는 있다는 것이 발표자의 설명이다.</span>
+        </figure>
+
+        <h3>격차를 줄인 세 가지 <span class="ts">08:00</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 에이전트 쪽</span>
+            <p>출시 때 사람들 머릿속에만 있던 <strong>암묵지</strong><span class="en">tribal knowledge</span>가 많았다. 에이전트에 반영되지 않은 규칙들이다. 이를 에이전트에 넣자 수치가 올랐다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 사람 쪽</span>
+            <p>검토하는 사람들끼리도 판단이 갈렸다. 글로 쓰이지 않은 기준이 많았기 때문이다. 이 기준도 글로 옮겼다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 심판 쪽</span>
+            <p>더 많은 사례를 보면서 <strong>심판 자체</strong>도 고쳐야 한다는 걸 알게 됐다. 이것이 다음으로 큰 상승을 만들었다.</p>
+          </div>
+        </div>
+        <p>심판이 틀린 이유가 심판에게만 있지 않았다는 점이 중요하다. 규칙이 에이전트에도, 사람에게도 제대로 적혀 있지 않았다.</p>
+        <p class="note">발표는 33%와 92%만 말했다. 세 단계가 각각 몇 점씩 올렸는지는 밝히지 않았다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="loop">
+        <header><span class="num">07</span><h2>한 번 출시가 아니라 루프 <span class="ts">08:50</span></h2></header>
+        <p>여기서부터 Brooke Hopkins가 이어 받는다. Upstart가 잘한 것은 <strong>에이전트를 계속 고치는 과정</strong>을 만든 것이다.</p>
+        <p>Brooke Hopkins가 보기에 많은 기업이 여기서 틀린다. 한 번 출시하기 위한 <strong>출시 관문</strong><span class="en">release gate</span>만 만든다. 그러면 나중에 모델이나 프롬프트, 그 아래 무엇이든 바꾸기가 아주 어려워진다.</p>
+        <div class="shift" aria-label="평가 방식의 이동">
+          <div><span class="tag">흔한 방식</span><b>한 번 통과시키는 출시 관문</b><span class="muted">출시는 되지만, 모델이나 프롬프트를 바꿀 때마다 다시 막힌다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Upstart 방식</span><b>계속 도는 개선 루프</b><span class="muted">통화 감시 → 지표 정의 → 실패 표시 → 에이전트 개선을 반복한다</span></div>
+        </div>
+        <blockquote>평가가 곧 제품 정의다.<cite>Brooke Hopkins의 말을 옮김 <span class="ts">09:50</span></cite></blockquote>
+        <p>그래서 시간을 가장 많이 써야 할 곳은 "내 제품이 무엇을 해야 하는가"를 정하는 일이다. 사람 검토도 평가에서 아주 중요한 부분이라고 Brooke Hopkins는 강조한다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="metrics">
+        <header><span class="num">08</span><h2>지표를 정의하는 법 <span class="ts">10:00</span></h2></header>
+        <p>Brooke Hopkins는 평가를 세 갈래로 나눈다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>갈래</th><th>묻는 것</th><th>이 발표의 예</th></tr></thead>
+            <tbody>
+              <tr><td>결과</td><td>목표 지점에 도달했나</td><td>확인 전화를 끝까지 마쳤나</td></tr>
+              <tr><td>과정</td><td>가는 길에 정해진 단계를 지켰나</td><td>본인 확인을 먼저 했나, 의료비 금액을 묻지 않았나</td></tr>
+              <tr><td>경험</td><td>대화의 질은 어땠나</td><td>명확성, CSAT</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">"이 발표의 예" 열은 앞 섹션의 Upstart 사례를 세 갈래에 맞춰 본 것이다. 발표에서 직접 짝지은 것은 아니다.</p>
+
+        <h3>사람의 라벨에서 시작한다 <span class="ts">10:20</span></h3>
+        <p>순서가 중요하다. 먼저 사람 검토자가 실제로 무엇을 신경 쓰며 라벨을 다는지 본다. 그걸 자동 평가로 바꾼다.</p>
+        <p>반대 순서는 피한다. 예를 들어 "단어 오류율<span class="en">word error rate</span>이 중요하다"에서 시작하면, 정작 그 지표를 보고 아무 조치도 하지 않게 된다.</p>
+        <p>지표를 만드는 수단은 세 가지다.</p>
+        <ul class="plain">
+          <li><strong>LLM 심판</strong>: 대화 내용을 기준에 따라 채점</li>
+          <li><strong>휴리스틱</strong><span class="en">heuristics</span>: 정해 둔 규칙으로 빠르게 판정</li>
+          <li><strong>오디오 처리</strong><span class="en">audio processing</span>: 음성 자체의 특징을 분석</li>
+        </ul>
+      </section>
+
+      <!-- 9 -->
+      <section id="monitor">
+        <header><span class="num">09</span><h2>감시, 분류, 전달 <span class="ts">10:50</span></h2></header>
+        <p>정의한 지표로 <strong>실시간 통화를 감시</strong>한다. 어떤 시스템도 대규모에서 100% 동작하지 않는다. Brooke Hopkins는 가용성 99.9999%를 내는 Google도 실패는 생긴다고 예를 든다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">알려진 실패</span>
+            <p>이미 아는 실패 패턴을 대규모로 찾는다.</p>
+            <ul>
+              <li>대출에 필요한 항목을 확인하지 않은 통화</li>
+              <li>말해야 할 문구를 틀리게 말한 통화</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">알려지지 않은 실패 <span class="ts">11:10</span></span>
+            <p>예상하지 못한 일<span class="en">unknown unknowns</span>을 찾는다.</p>
+            <ul>
+              <li>비슷한 통화끼리 묶는 군집 분석<span class="en">clustering</span></li>
+              <li>평소와 다른 패턴을 잡는 이상 탐지<span class="en">anomaly detection</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>사람은 중요한 통화만 본다 <span class="ts">11:20</span></h3>
+        <p>찾아낸 실패는 지표별 검토 대기열로 보낸다. 이제 검토자는 모든 통화를 보지 않는다. <strong>가장 중요한 통화만 본다.</strong></p>
+
+        <h3>실패마다 맡을 팀이 있다 <span class="ts">11:50</span></h3>
+        <p>들어오는 실패마다 반드시 누군가 조치하도록 운영 체계를 만든다. 이 단계가 아주 중요하다고 Brooke Hopkins는 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>실패 종류</th><th>보내는 곳</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>대본 이탈, 틀린 답</td><td>에이전트 팀</td><td>에이전트를 고친다</td></tr>
+              <tr><td>컴플라이언스 위반</td><td>컴플라이언스 팀</td><td>정해진 절차를 밟고 필요한 조치를 한다</td></tr>
+              <tr><td>그 밖의 문제</td><td>엔지니어링 팀 등</td><td>담당 영역에서 처리한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표 화면에는 "대본 이탈 또는 틀린 답 34%" 같은 숫자가 있었지만, 발표자가 지어낸 숫자라고 직접 밝혔다. 그래서 차트로 그리지 않았다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="simulate">
+        <header><span class="num">10</span><h2>고친 것을 시뮬레이션으로 증명 <span class="ts">12:30</span></h2></header>
+        <p>실제 실패 목록이 생기면 엔지니어가 고칠 방법을 찾는다. 발표에서는 현장에 있던 Steven(추정)을 그 역할로 언급했다. 그다음 고친 버전을 <strong>다시 시뮬레이션</strong>해서 정말 문제가 사라졌는지 본다.</p>
+        <p>Coval의 시뮬레이션은 <strong>음성 대 음성 평가</strong><span class="en">voice-to-voice evaluation</span>다. 시뮬레이터가 실제로 에이전트에게 전화를 건다. 그리고 이런 조건을 시험한다.</p>
+        <ul class="plain">
+          <li>여러 가지 배경 소음</li>
+          <li>여러 가지 억양</li>
+          <li>음성 품질</li>
+          <li>말 끊기<span class="en">interruptions</span></li>
+        </ul>
+        <div class="callout">
+          <span class="title">왜 프로덕션에서 확인하지 않나</span>
+          <span>컴플라이언스 위반이나 나쁜 사용자 경험을 발견했는데, 고쳤는지 보려고 다시 실제 고객에게 내보내면 고객이 또 피해를 볼 수 있다. 그래서 <strong>시프트 레프트</strong><span class="en">shift left</span>를 한다. DevOps 용어로, 문제를 개발 흐름의 더 앞 단계에서 잡는다는 뜻이다. 실패는 최대한 시뮬레이션에서 찾는다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="selfheal">
+        <header><span class="num">11</span><h2>자가 치유 루프와 사람의 승인 <span class="ts">13:30</span></h2></header>
+        <p>여기까지가 한 바퀴다. 다시 정리하면 이렇다.</p>
+        <ol class="plain">
+          <li>제품 정의를 바탕으로 지표를 정한다.</li>
+          <li>모든 실시간 통화를 감시하고 채점한다.</li>
+          <li>실패를 찾아 사람 검토로 보낸다.</li>
+          <li>실패들에서 패턴을 찾아 엔지니어링 작업의 우선순위를 정한다.</li>
+          <li>고친 것을 시뮬레이션으로 증명한다.</li>
+        </ol>
+
+        <h3>자가 치유 루프 <span class="ts">14:00</span></h3>
+        <p>Brooke Hopkins가 가장 기대하는 부분은 <strong>자가 치유 루프</strong><span class="en">self-healing loop</span>다. 에이전트가 평가 결과를 읽고 고칠 곳을 찾는다. 강화학습<span class="en">RL</span> 파이프라인이나 파인튜닝한 LLM으로 시스템을 자동으로 더 좋게 만들 수도 있다. 그 개선은 시뮬레이션으로 증명한다.</p>
+
+        <h3>사람의 라벨이 두 방향으로 쓰인다 <span class="ts">14:40</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">심판이 틀렸다고 라벨을 달면</span>
+            <p>그 라벨로 <strong>지표를 사람의 판단에 맞춘다.</strong> 심판이 더 정확해진다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">진짜 실패라고 라벨을 달면</span>
+            <p>그 사례로 <strong>에이전트를 고친다.</strong> 자동 개선의 재료가 된다.</p>
+          </div>
+        </div>
+
+        <h3>자동이어도 사람이 서명한다 <span class="ts">15:40</span></h3>
+        <p>Shiv Indap은 "자가 치유"가 사람이 완전히 빠진다는 뜻이 아니라고 못 박는다.</p>
+        <ul class="plain">
+          <li>모든 변경은 <strong>피처 플래그</strong><span class="en">feature flag</span> 뒤에 둔다. 켜고 끌 수 있는 스위치 뒤에 숨겨 두고 내보낸다는 뜻이다.</li>
+          <li>핀테크에서는 변경을 누군가 지켜보고 승인해야 한다.</li>
+          <li>보통은 엔지니어가 승인한다.</li>
+          <li>컴플라이언스와 관련된 변경이면 컴플라이언스 팀이 에이전트의 동작을 승인한다.</li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="conclusion">
+        <header><span class="num">12</span><h2>결론 <span class="ts">15:00</span></h2></header>
+        <p>Shiv Indap의 정리는 이렇다.</p>
+        <ul class="plain">
+          <li><strong>평가를 건너뛰지 말 것.</strong> 평가는 통화를 감시하고 채점한다.</li>
+          <li>평가는 <strong>어떤 통화를 사람이 봐야 하는지</strong>도 정해 준다. 사람은 하루 수천 건을 다 볼 수 없다.</li>
+          <li>사람 검토자의 주석은 LLM 심판을 개선한다.</li>
+          <li>모은 데이터는 결국 에이전트도 개선한다.</li>
+          <li>이 방식은 Upstart가 규제를 지키면서 에이전트를 안전하게 내보내고 성능도 함께 올리는 기본 설계도가 됐다.</li>
+        </ul>
+        <p>Brooke Hopkins는 이렇게 덧붙인다. 탄탄한 평가가 좋은 제품을 정의한다. 특히 규제 산업에서는 확신을 주는 평가 없이는 원하는 애플리케이션을 배포할 수조차 없다. <span class="ts">16:10</span></p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>규제 산업에서 음성 에이전트의 실수는 고객 불만이 아니라 <strong>규제 위반</strong>이 될 수 있다.</li>
+          <li>질문 세 개짜리 통화도 고객의 답에 따라 <strong>물어야 할 것과 물으면 안 되는 것</strong>이 바뀐다.</li>
+          <li>에이전트는 <strong>맡은 일만</strong> 한다. 범위 밖 질문은 정중하게 피한다.</li>
+          <li>구글 시트로 하는 검토는 금방 무너진다. <strong>구조가 잡힌 사람 검토 과정</strong>이 필요하다.</li>
+          <li>통화가 끝나면 LLM 심판이 채점하고, <strong>사람이 그 심판을 검토</strong>한다.</li>
+          <li>지표는 많이 시작해 줄여 간다. <strong>지표에 집착하지 않는다.</strong></li>
+          <li>사람과 심판의 일치율은 <strong>33% → 92%</strong>. 암묵지를 에이전트에 넣고, 사람끼리 기준을 맞추고, 심판을 고쳤다.</li>
+          <li>한 번 통과시키는 출시 관문 대신 <strong>계속 도는 개선 루프</strong>를 만든다. 평가는 곧 제품 정의다.</li>
+          <li>알려진 실패와 알려지지 않은 실패를 찾아 <strong>맡을 팀으로 보내고</strong>, 고친 것은 <strong>시뮬레이션으로 증명</strong>한다.</li>
+          <li>자동으로 고치더라도 변경은 <strong>피처 플래그 뒤에 두고 사람이 승인</strong>한다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>대출 분야에서 음성 에이전트의 실수가 특히 위험한 이유는?</span></summary><div class="answer">대출은 규제가 강한 분야라서, 실수가 고객 경험 문제로 끝나지 않고 규제 위반이 될 수 있다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Upstart의 확인 전화에서 세 질문보다 먼저 하는 일은?</span></summary><div class="answer">전화한 사람이 신청자 본인인지 확인한다. 남의 신청서 내용을 묻지 못하게 하기 위해서다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>고객이 "의료비로 쓸 거예요"라고 하면 에이전트가 하면 안 되는 일은?</span></summary><div class="answer">금액을 묻는 것. 규정상 금지돼 있다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>"졸업식 여행"이라는 답에 더 물어야 하는 이유는?</span></summary><div class="answer">누구의 졸업식인지(본인, 자녀, 다른 사람)에 따라 자금 용도가 달라지기 때문이다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>신청자가 "돈이 언제 들어와요?"라고 물으면?</span></summary><div class="answer">정중하게 답을 피한다. 이 통화의 범위 밖이고, "3영업일 안"처럼 말할 수도 없다. 컴플라이언스 팀은 맡은 일만 하라고 강조했다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>LLM 심판의 결과를 사람이 다시 검토하는 이유는?</span></summary><div class="answer">심판의 판단이 그 분야 전문가의 판단과 맞는지 확인하기 위해서다. 맞는 정도가 일치율이다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>일치율을 33%에서 92%로 올린 세 가지는?</span></summary><div class="answer">에이전트에 빠져 있던 암묵지를 넣었다. 검토자끼리 갈리던 기준을 글로 맞췄다. 심판 자체를 고쳤다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Brooke Hopkins가 말하는 기업들의 흔한 실수는?</span></summary><div class="answer">한 번 출시하기 위한 관문만 만드는 것. 그러면 나중에 모델이나 프롬프트를 바꾸기가 아주 어려워진다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>지표를 만들 때 "단어 오류율"에서 시작하면 안 되는 이유는?</span></summary><div class="answer">실제로 조치로 이어지지 않는 지표일 수 있다. 사람 검토자가 실제로 신경 쓰는 것에서 출발해 자동 평가로 바꿔야 한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>알려지지 않은 실패를 찾는 두 방법은?</span></summary><div class="answer">비슷한 통화를 묶는 군집 분석과, 평소와 다른 패턴을 잡는 이상 탐지.</div></details>
+          <details><summary><span class="qn">Q11</span><span>고친 에이전트를 프로덕션이 아니라 시뮬레이션으로 확인하는 이유는?</span></summary><div class="answer">고쳤는지 보려고 실제 고객에게 내보내면 고객이 다시 피해를 볼 수 있다. 실패를 앞 단계에서 잡는 시프트 레프트다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>"자가 치유 루프"에서도 사람이 맡는 일은?</span></summary><div class="answer">변경을 피처 플래그 뒤에 두고 승인한다. 보통은 엔지니어가, 컴플라이언스 관련 변경이면 컴플라이언스 팀이 승인한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트가 해야 할 일과 하면 안 되는 일을 글로 쓴다<span class="how">"이 답이 나오면 이건 묻지 않는다" 같은 조건부 규칙까지 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트가 답하지 않고 넘길 범위 밖 질문 목록을 만든다<span class="how">확인: 범위 밖 질문을 받았을 때 정중하게 피하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>사람 검토 결과를 정해진 형식으로 모은다<span class="how">누구나 열을 추가할 수 있는 시트는 피한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>LLM 심판의 판정을 사람이 검토하고 일치율을 잰다<span class="how">확인: 지표마다 일치율 숫자가 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>일치율이 낮으면 에이전트, 사람, 심판 세 쪽을 모두 의심한다<span class="how">암묵지가 에이전트에 빠졌나, 검토자끼리 기준이 다른가, 심판이 틀렸나</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>지표를 정기적으로 다시 보고, 조치로 이어지지 않는 지표는 버린다<span class="how">사람 검토자가 실제로 신경 쓰는 것에서 출발한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>실패 종류마다 맡을 팀과 대기열을 정한다<span class="how">확인: 들어온 실패가 조치 없이 쌓이지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>고친 버전은 실제 고객 전에 시뮬레이션으로 확인한다<span class="how">음성이라면 배경 소음, 억양, 말 끊기까지 시험한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>자동 수정도 피처 플래그 뒤에 두고 승인자를 정한다<span class="how">규정 관련 변경은 컴플라이언스 담당이 승인한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>음성 에이전트</td><td>Voice agent. 전화나 음성으로 사람과 대화하며 일을 처리하는 AI</td></tr>
+              <tr><td>확인 전화</td><td>Verification call. 대출 신청 정보를 전화로 확인하는 절차</td></tr>
+              <tr><td>컴플라이언스</td><td>Compliance. 법과 규정, 내부 정책을 지키는 것. 또는 그걸 맡은 팀</td></tr>
+              <tr><td>평가 (eval)</td><td>모델이나 시스템의 결과 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>LLM 심판</td><td>LLM as a judge. 다른 LLM의 결과를 기준에 따라 채점하는 LLM</td></tr>
+              <tr><td>일치율</td><td>Agreement rate. 사람 검토자와 LLM 심판의 판정이 같은 비율</td></tr>
+              <tr><td>암묵지</td><td>Tribal knowledge. 글로 적히지 않고 사람들 머릿속에만 있는 규칙과 노하우</td></tr>
+              <tr><td>CSAT</td><td>Customer satisfaction score. 고객 만족도 점수</td></tr>
+              <tr><td>상위 전달</td><td>Escalation. 에이전트가 처리할 수 없는 일을 사람 상담원 등에게 넘기는 것</td></tr>
+              <tr><td>휴리스틱</td><td>Heuristic. 정해 둔 간단한 규칙으로 빠르게 판정하는 방법</td></tr>
+              <tr><td>단어 오류율</td><td>Word error rate. 음성 인식 결과에서 틀린 단어의 비율</td></tr>
+              <tr><td>출시 관문</td><td>Release gate. 출시 전에 통과해야 하는 검사</td></tr>
+              <tr><td>알려지지 않은 미지</td><td>Unknown unknowns. 있을 거라고 예상조차 못 한 문제</td></tr>
+              <tr><td>군집 분석</td><td>Clustering. 비슷한 것끼리 자동으로 묶는 분석</td></tr>
+              <tr><td>이상 탐지</td><td>Anomaly detection. 평소 패턴에서 벗어난 것을 찾아내는 방법</td></tr>
+              <tr><td>음성 대 음성 평가</td><td>Voice-to-voice evaluation. 시뮬레이터가 실제로 음성으로 에이전트와 통화하며 시험하는 방식</td></tr>
+              <tr><td>시프트 레프트</td><td>Shift left. 문제를 개발 흐름의 더 앞 단계에서 잡는 것</td></tr>
+              <tr><td>자가 치유 루프</td><td>Self-healing loop. 평가 결과를 보고 시스템이 스스로 고칠 곳을 찾아 개선하는 반복 과정</td></tr>
+              <tr><td>강화학습 (RL)</td><td>Reinforcement learning. 결과에 대한 보상 신호로 모델을 학습시키는 방법</td></tr>
+              <tr><td>파인튜닝</td><td>Fine-tuning. 이미 학습된 모델을 특정 데이터로 추가 학습시키는 것</td></tr>
+              <tr><td>피처 플래그</td><td>Feature flag. 코드를 배포한 뒤에도 기능을 켜고 끌 수 있게 하는 스위치</td></tr>
+              <tr><td>식스 나인</td><td>Six nines. 가용성 99.9999%. 1년에 약 30초만 멈추는 수준</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>Brooke Hopkins 소개: Coval, Waymo, 자율주행과 음성 에이전트</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>Shiv Indap 소개: Upstart, 하루 수천 건의 통화</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>대출은 규제 분야: 실수는 규제 문제</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>확인 전화: 90%는 즉시 심사, 10%는 전화</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>세 가지 질문과 본인 확인</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>의료비 금액 금지, 졸업식 후속 질문</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>맡은 일만 하기: 진행 상황 질문 피하기</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>모든 통화를 사람이 검토, 구글 시트의 한계</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>구조가 잡힌 사람 검토 과정</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>LLM 심판: 컴플라이언스 예/아니오와 이유</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>지표 고르기, 지표에 집착하지 않기</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>컴플라이언스 지표의 검토 흐름</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>일치율 33%</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>암묵지, 검토자 간 불일치, 심판 개선 → 92%</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>Brooke Hopkins: 계속 개선하는 루프</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>출시 관문만 만드는 실수</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>평가는 곧 제품 정의</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>평가의 세 갈래, 사람 라벨에서 시작하기</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>지표 수단: LLM 심판, 휴리스틱, 오디오 처리</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>실시간 감시: 알려진 실패</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>알려지지 않은 실패: 군집 분석, 이상 탐지</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>검토 대기열: 중요한 통화만 사람이 본다</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>실패를 맡을 팀으로 보내기</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>수정과 재시뮬레이션</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>음성 대 음성 시뮬레이션: 소음, 억양, 말 끊기</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>시프트 레프트</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>루프 한 바퀴 정리</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>자가 치유 루프: 에이전트, RL, 파인튜닝</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>사람 라벨의 두 쓰임: 지표 맞추기, 에이전트 고치기</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>Shiv Indap의 결론</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>피처 플래그와 사람의 승인</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>Brooke Hopkins: 규제 산업일수록 탄탄한 평가</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '3osCbSufv8g:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

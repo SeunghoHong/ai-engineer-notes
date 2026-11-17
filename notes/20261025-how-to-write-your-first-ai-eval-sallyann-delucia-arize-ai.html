@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>첫 AI 평가 만들기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- code block (judge prompt example) ---------- */
+pre {
+  margin: 0; padding: 14px 16px; overflow-x: auto;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: var(--step--1); line-height: 1.6; white-space: pre-wrap;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#vibes">감으로는 확인할 수 없다</a></li>
+      <li><a href="#not-unit-test">평가는 단위 테스트와 다르다</a></li>
+      <li><a href="#types">평가의 종류</a></li>
+      <li><a href="#explore">실습 준비와 데이터 둘러보기</a></li>
+      <li><a href="#traces">트레이스 읽는 법</a></li>
+      <li><a href="#define">"좋다"를 구체적으로 적기</a></li>
+      <li><a href="#criteria">평가 기준 6가지 적기</a></li>
+      <li><a href="#dataset">데이터셋 만들기</a></li>
+      <li><a href="#playground">플레이그라운드에서 판정자 만들기</a></li>
+      <li><a href="#next">그다음 단계</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-25 · 35분 · 영어 발표 한글 정리</span>
+      <h1>첫 AI 평가를 쓰는 법</h1>
+      <p class="lead">AI 에이전트가 잘 동작하는지 감으로 판단하면 금방 한계가 온다. 이 워크숍은 "좋은 답"을 구체적인 기준으로 적고, 그 기준을 LLM 판정 프롬프트로 바꿔 첫 평가를 만드는 과정을 따라간다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=gv4w23xYj-0" target="_blank" rel="noopener">How to Write Your First AI Eval</a></span>
+        <span>발표: SallyAnn DeLucia (Arize AI 제품 총괄, Arize의 AI 에이전트 Alex 개발 담당)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 알려진 이름으로 고쳤다(LangGraph, OpenInference, GPT-4.1 mini, ROUGE·BLEU, app.arize.com). 슬라이드 화면은 자막에 없어서, 화면에만 있던 내용은 빠져 있을 수 있다. 실습은 발표자 회사의 제품인 Arize 위에서 진행됐다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>프롬프트를 고치고 <strong>"나아진 것 같다"는 감</strong>으로 배포하면, 무엇이 고쳐지고 무엇이 깨졌는지 아무도 증명하지 못한다.</li>
+        <li>AI 평가는 단위 테스트와 다르다. <strong>맞는 답이 여러 개</strong>이고, 에이전트의 로직은 실행이 끝난 뒤 <strong>트레이스</strong>로만 보인다.</li>
+        <li>평가 방식은 여러 가지다. 이 워크숍은 <strong>LLM 판정자</strong>를 다룬다. 다른 LLM에게 결과를 채점하게 하는 방식이다.</li>
+        <li>첫 단계는 <strong>"좋다"를 구체적으로 적는 것</strong>이다. "도움이 된다" 대신 "요청한 날 수와 같다", "예산 안에 있다"처럼 쓴다.</li>
+        <li><strong>평가 하나에는 품질 하나만</strong> 맡긴다. 몇 개로 시작해 실제 데이터를 보며 늘린다. 발표자 팀의 에이전트 Alex에는 지금 평가 32개가 돈다.</li>
+        <li>만드는 순서는 셋이다. 판정할 <strong>스팬을 데이터셋에 담고</strong>, 기준을 <strong>판정 프롬프트로 옮기고</strong>, 플레이그라운드에서 <strong>돌려 보며 고친다</strong>.</li>
+        <li>그다음은 <strong>사람의 판정과 맞춰 보기</strong>와 <strong>운영 중에 계속 돌리기</strong>다. 시작은 트레이스 20개, 판정자 하나면 된다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="vibes">
+        <header><span class="num">01</span><h2>감으로는 확인할 수 없다 <span class="ts">02:10</span></h2></header>
+        <p>발표자는 이 문제를 "바이브 문제" <span class="en">vibes problem</span>라고 부른다. 결과 몇 개를 훑어보고 느낌으로 좋고 나쁨을 정하는 방식이다. 이 방식은 규모가 커지면 버티지 못한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시점</th><th>일어나는 일</th></tr></thead>
+            <tbody>
+              <tr><td>월요일</td><td>프롬프트를 고쳐 배포한다. 전체적으로 나아진 느낌이다</td></tr>
+              <tr><td>화요일</td><td>또 고쳐 배포한다. 확인할 방법은 없지만 괜찮아 보인다</td></tr>
+              <tr><td>일주일 뒤</td><td>고쳤다고 생각한 사용 사례가 다시 깨져 있다</td></tr>
+              <tr><td>그다음 주</td><td>문제가 점점 커진다. 고쳐졌는지 깨졌는지 증명할 근거가 없다. 남은 건 느낌뿐이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>평가가 없으면 못 하는 일 <span class="ts">02:40</span></h3>
+        <ul class="plain">
+          <li>프롬프트를 바꿨을 때 <strong>회귀</strong> <span class="en">regression</span>를 잡는다. 회귀는 원래 되던 것이 새 변경 때문에 망가지는 것이다.</li>
+          <li>프롬프트끼리, 모델 버전끼리 <strong>객관적으로 비교</strong>한다.</li>
+          <li>새 모델이 <strong>내 사용 사례에서</strong> 정말 나은지 안다.</li>
+          <li>CI에 <strong>품질 관문</strong> <span class="en">quality gate</span>을 둔다. CI는 코드를 합칠 때마다 자동으로 검사하는 과정이다. 품질 관문은 기준을 못 넘으면 배포를 막는 장치다.</li>
+        </ul>
+      </section>
+
+      <!-- 2 -->
+      <section id="not-unit-test">
+        <header><span class="num">02</span><h2>평가는 단위 테스트와 다르다 <span class="ts">03:00</span></h2></header>
+        <p>발표자가 자주 받는 질문은 "평가는 그냥 단위 테스트 아닌가"이다. 발표자의 답은 "비슷해 보여도 다르다"이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>단위 테스트</th><th>AI 평가</th></tr></thead>
+            <tbody>
+              <tr><td>정답</td><td>입력 하나에 맞는 출력 하나</td><td>맞는 출력이 여러 개</td></tr>
+              <tr><td>로직</td><td>코드를 읽으면 다 보인다</td><td>미리 읽을 수 없다. 실행 뒤 트레이스로 드러난다</td></tr>
+              <tr><td>판단 기준</td><td>값이 기대와 같은가</td><td>여러 기준을 함께 본다. 예: 하루 단위 일정, 예산 내역</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>트레이스는 AI의 로그이고, 평가는 실제 테스트다.<cite>발표자의 표현을 옮김</cite></blockquote>
+
+        <h3>에이전트는 더 어렵다 <span class="ts">04:10</span></h3>
+        <p>트레이스 <span class="en">trace</span>는 에이전트가 답을 내기까지 거친 모든 단계를 모은 기록이다. 그 안의 단계 하나하나를 스팬 <span class="en">span</span>이라고 부른다.</p>
+        <p>발표의 예시 트레이스에는 여러 단계가 섞여 있다. 조사 에이전트가 도구를 부르고, 다른 에이전트가 지식 베이스에서 자료를 찾는다. LLM 호출도 여러 번 얽혀 있다. 단위 테스트 하나로는 이 복잡함을 담을 수 없다.</p>
+        <p>그래서 발표자는 평가를 하려면 먼저 트레이스가 있어야 한다고 말한다. 다른 말로 관측성 <span class="en">observability</span>이 먼저다. 관측성은 시스템 안에서 무슨 일이 일어났는지 밖에서 볼 수 있게 기록해 두는 능력이다.</p>
+        <p class="note">발표자는 관측·평가 도구를 파는 Arize의 제품 총괄이다. "평가에는 관측성이 먼저 필요하다"는 주장은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="types">
+        <header><span class="num">03</span><h2>평가의 종류 <span class="ts">05:10</span></h2></header>
+        <p>이 워크숍은 LLM 판정자 <span class="en">LLM as a judge</span>를 다룬다. 별도의 LLM에게 에이전트 결과의 한 측면을 채점하게 하는 방식이다. 질문 답변의 정확성, 요약 품질, 관련성 같은 것을 본다.</p>
+        <p>LLM 판정자는 레이블과 설명을 함께 돌려준다. 레이블 <span class="en">label</span>은 "맞음", "틀림" 같은 판정 결과다. 설명 <span class="en">explanation</span>은 그 판정을 내린 이유다. 설명이 있으면 레이블을 그대로 믿지 않고 판단 과정을 확인할 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>종류</th><th>방식</th><th>잘 맞는 곳</th><th>주로 쓰는 단계</th></tr></thead>
+            <tbody>
+              <tr><td>LLM 판정자</td><td>다른 LLM이 채점한다. 레이블과 설명을 준다</td><td>질문 답변, 요약, 관련성</td><td>개발·운영</td></tr>
+              <tr><td>결정 모델 <span class="en">decision model</span></td><td>질문 하나에 확률과 레이블(참/거짓 등)만 준다. 설명은 없다. 싸고 빠르다 <span class="ts">05:40</span></td><td>예/아니오로 답할 수 있는 판정</td><td>개발·운영</td></tr>
+              <tr><td>코드</td><td>프로그램으로 정해진 규칙을 검사한다. 같은 입력이면 늘 같은 결과다 <span class="ts">06:10</span></td><td>특정 단어 포함 여부, JSON 형식, ROUGE·BLEU 점수</td><td>개발·운영</td></tr>
+              <tr><td>어노테이션 <span class="en">annotation</span></td><td>사람이 정답을 붙인 골든 데이터셋과 비교한다. 정답을 합성해 만들 때도 있다 <span class="ts">06:30</span></td><td>기준 정답이 필요한 비교</td><td>개발·운영</td></tr>
+              <tr><td>에이전트 판정자 <span class="en">agent as a judge</span></td><td>에이전트 하나가 다른 에이전트를 평가한다. 발표자 말로는 최근 6개월 사이에 나왔다 <span class="ts">06:40</span></td><td>아주 복잡한 성공 기준</td><td>주로 운영</td></tr>
+              <tr><td>사용자 피드백</td><td>실제 사용자의 반응을 모은다</td><td>운영 중 체감 품질</td><td>주로 운영</td></tr>
+              <tr><td>비즈니스 지표</td><td>매출, 전환 같은 사업 숫자를 본다</td><td>운영 중 성과</td><td>주로 운영</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">단계 구분은 발표자가 "앞의 네 가지"는 개발과 운영 모두에, "끝의 세 가지"는 주로 운영에 쓴다고 한 말을, 말한 순서대로 나눈 것이다. 슬라이드를 볼 수 없어 이 나눔은 확인하지 못했다. 결정 모델은 발표자가 "아주 새로운 것"이라고 소개했다. 발표자는 OpenAI가 지난주 결정 모델 API를 냈다고 말했는데, 이 노트에서 확인하지는 않았다.</p>
+        <div class="callout">
+          <span class="title">개발에서 쓴 평가를 운영까지 가져간다 <span class="ts">07:00</span></span>
+          <span>앞의 네 가지는 개발과 운영 모두에 쓸 수 있다. 개발 단계에서만 쓰고 버릴 평가에 공을 들이지 말라는 뜻이다. 같은 평가가 사용 사례와 함께 자라야 품질을 일관되게 잴 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="explore">
+        <header><span class="num">04</span><h2>실습 준비와 데이터 둘러보기 <span class="ts">07:30</span></h2></header>
+        <p>실습은 Arize의 데모 프로젝트에서 한다. 발표자는 진행 방법을 Notion 한 장짜리 문서로 정리해 QR 코드로 나눠 줬다.</p>
+        <ol class="plain">
+          <li><code>app.arize.com</code>에서 Arize AX에 로그인한다. 계정이 없으면 무료로 만든다.</li>
+          <li>Settings의 AI Providers에 모델 제공자의 API 키를 넣는다. Anthropic, OpenAI, Gemini 중 아무거나 된다. 직접 운영하는 엔드포인트도 된다. <span class="ts">08:10</span></li>
+          <li>Test integration 버튼으로 키가 동작하는지 확인한다.</li>
+          <li>Traces 메뉴에서 데모 프로젝트를 연다. 예전 데모가 보여도 실습에는 문제없다. 시간 범위를 넓히면 데이터가 더 보인다. <span class="ts">09:30</span></li>
+        </ol>
+
+        <h3>데모: 여행 계획 에이전트 <span class="ts">10:10</span></h3>
+        <p>이 에이전트는 사용자의 여행 요청을 받는다. 필요하면 후속 질문을 하고, 도구를 부르고, 여행 계획을 돌려준다. 사용자 요청에는 목적지, 기간, 예산, 여행 스타일이 들어 있다.</p>
+        <div class="callout">
+          <span class="title">제품 관점에서 "좋은 답"</span>
+          <span>사용자가 한 후속 질문에 답하고, 여행 날 수와 예산을 지킨다. 발표자가 이 에이전트에 대해 내린 정의다.</span>
+        </div>
+
+        <h3>트레이스를 보며 적어 볼 것 <span class="ts">10:50</span></h3>
+        <ul class="plain">
+          <li>사용자는 무엇을 요청했나</li>
+          <li>에이전트는 무엇을 했고, 어떤 도구를 불렀나</li>
+          <li>최종 답은 무엇이었나</li>
+          <li>이 답을 실제 사용자에게 보여 줄 수 있나</li>
+        </ul>
+        <p>이때 제품 담당자나 엔지니어처럼 이 에이전트에 이해관계가 있는 사람의 눈으로 본다. 그리고 무엇을 재고 싶은지 메모해 둔다. <span class="ts">13:30</span></p>
+
+        <div class="card">
+          <span class="tag">발표자가 연 트레이스 하나 <span class="ts">11:20</span></span>
+          <ul>
+            <li>요청: 체코 프라하, 3일, 예산 800달러</li>
+            <li>추가 요청: 관광지 느낌이 덜한 현지 분위기</li>
+            <li>결과: 1일 차부터 3일 차까지 자세한 일정</li>
+            <li>추가 데이터는 attributes 탭에 있다</li>
+            <li>특정 단계의 데이터는 그 스팬을 눌러 입력과 출력으로 본다. 예: OpenAI에 보낸 요청</li>
+          </ul>
+          <p class="verdict">발표자는 이때 <b>데이터가 어디에 있는지</b> 봐 두라고 했다. 평가에 어떤 데이터가 필요한지 나중에 정해야 하기 때문이다.</p>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="traces">
+        <header><span class="num">05</span><h2>트레이스 읽는 법 <span class="ts">14:00</span></h2></header>
+        <p>트레이스는 위에서 아래로 한 단계씩 읽는다. 발표자는 스팬을 "작업 단위" <span class="en">unit of work</span>로 생각하라고 한다. 각 스팬은 아이콘으로 종류를 구분한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>스팬</th><th>하는 일</th><th>여행 에이전트에서</th></tr></thead>
+            <tbody>
+              <tr><td>루트 스팬 <span class="en">root span</span></td><td>맨 위에 있다. 위에 다른 스팬이 없다(parent ID가 null). 보통 입력과 최종 출력이 여기에 있다</td><td>사용자 요청과 최종 일정</td></tr>
+              <tr><td>에이전트 스팬</td><td>큰 에이전트를 대신해 일부 일을 맡은 하위 에이전트</td><td>조사 에이전트</td></tr>
+              <tr><td>도구 스팬</td><td>외부 데이터를 가져온다</td><td>날씨, 명소 같은 필수 정보</td></tr>
+              <tr><td>LLM 스팬</td><td>모델 호출의 입력과 출력을 담는다</td><td>도구가 가져온 정보를 요약해 다음 단계에 넘긴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 데모는 멀티 에이전트 시스템 <span class="en">multi-agent system</span>이다. 여러 에이전트가 큰 에이전트를 대신해 각자 다른 일을 맡는다. <span class="ts">14:50</span></p>
+
+        <h3>현장 질문 3가지 <span class="ts">16:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>발표자의 답</th></tr></thead>
+            <tbody>
+              <tr><td>LLM 스팬이 왜 두 개인가</td><td>첫 번째 LLM 호출이 쓸 도구를 골랐다. 두 번째 호출은 도구가 가져온 기온, 목적지 정보를 요약했다. 계측 방식 때문에 이렇게 나뉘어 보이기도 한다. 트레이스를 내려갔다 다시 올라와야 이해되는 경우가 있다.</td></tr>
+              <tr><td>루트가 모든 결정을 내리나 <span class="ts">17:30</span></td><td>에이전트 구조에 따라 다르다. 감독 에이전트 <span class="en">supervisor</span>가 하위 에이전트에게 계획을 주는 구조가 있다. LLM 하나가 도구를 들고 한 단계씩 나아가는 구조도 있다. 이 데모는 LangGraph로 만들었고, 감독 없이 역할별 에이전트 몇 개로 나뉘어 있다.</td></tr>
+              <tr><td>어떤 프레임워크를 지원하나 <span class="ts">18:10</span></td><td>특정 프레임워크를 가리지 않는다. Arize의 트레이싱 패키지 OpenInference에 프레임워크별 자동 계측기 <span class="en">auto-instrumentor</span>가 여러 개 있다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="define">
+        <header><span class="num">06</span><h2>"좋다"를 구체적으로 적기 <span class="ts">19:00</span></h2></header>
+        <p>평가를 만드는 첫 단계는 "좋다"가 무슨 뜻인지 정하는 것이다. 발표자는 이 단계를 많은 사람이 어려워한다고 했다. 요령은 좋은 답의 모습을 아주 구체적인 기준으로 적는 것이다.</p>
+        <div class="shift" aria-label="모호한 기준에서 구체적인 기준으로">
+          <div><span class="tag">모호한 기준</span><b>도움이 된다, 정확하다, 좋은 답이다</b><span class="muted">무엇을 보고 판정할지 알 수 없다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">구체적인 기준</span><b>후속 질문에 답한다, 요청한 날 수와 같다, 합계가 예산 안이다</b><span class="muted">답 하나를 보고 바로 맞다 틀리다를 정할 수 있다</span></div>
+        </div>
+
+        <h3>평가 하나에 품질 하나 <span class="ts">19:50</span></h3>
+        <p>LLM 판정자는 한 번에 기준 하나만 볼 때 잘한다. 발표자는 이를 보여 주는 연구가 많다고 했다.</p>
+        <p>예외도 있다. 결정 모델과 에이전트 판정자는 평가 하나에 기준 여러 개를 담아도 비교적 잘 버틴다.</p>
+        <p>그래서 LLM 판정자는 기준 하나로 평가 하나를 만든다. 필요한 기준이 더 있으면 평가를 하나씩 늘린다.</p>
+
+        <h3>작게 시작해 실제 데이터로 늘린다 <span class="ts">20:30</span></h3>
+        <p>평가는 한 번 만들고 끝나는 게 아니다. 계속 고쳐 가는 일이다. 처음엔 몇 개만 적어서 만들고, 시간이 지나며 더한다.</p>
+        <p>발표자가 Arize의 AI 에이전트 Alex에 처음 붙인 평가는 단순했다. 질문 답변 정확성, 사용자 불만, 그리고 탈옥과 유해성 같은 안전 평가였다. 지금 Alex에는 평가 32개가 돈다.</p>
+        <figure class="chart" aria-label="Alex의 평가 개수: 처음 이름을 든 평가 4개, 지금 32개">
+          <span class="chart-title">Alex에 붙은 평가 개수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>처음 (발표자가 이름을 든 것)</span><span class="val">4</span></div>
+              <div class="track"><div class="fill" style="width:12.5%" title="처음: 4개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>지금</span><span class="val">32</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="지금: 32개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>16</span><span>32</span></div>
+          <span class="caption">처음 값은 발표자가 이름을 든 평가 4개(질문 답변 정확성, 사용자 불만, 탈옥, 유해성)를 센 것이다. 발표자가 정확한 개수를 말하지는 않았다.</span>
+        </figure>
+        <p>사용자가 늘면 실제 운영 데이터가 쌓인다. 그 데이터를 근거로 성공을 정의하는 데 무엇이 더 필요한지 보고 평가를 더한다.</p>
+
+        <h3>범용 평가냐, 맞춤 평가냐 <span class="ts">21:10</span></h3>
+        <p>대체로 내 사용 사례에 맞춘 평가가 낫다. 하지만 평가가 아예 없는 것보다는 범용 평가라도 있는 게 낫다.</p>
+        <p>Arize의 평가 허브 <span class="en">eval hub</span>에는 기본 템플릿이 있다. 질문 답변 정확성, 환각, 세션 일관성 <span class="en">session coherence</span> 같은 것이다. 환각 <span class="en">hallucination</span>은 모델이 사실이 아닌 내용을 그럴듯하게 지어내는 것이다. 이런 템플릿은 시작용으로 좋고, 조직 안에서 함께 쓰기에도 좋다. 핵심은 템플릿을 내 사용 사례에 맞게 고치고, 점점 더 구체적인 평가를 만드는 것이다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="criteria">
+        <header><span class="num">07</span><h2>평가 기준 6가지 적기 <span class="ts">22:00</span></h2></header>
+        <p>발표자는 옆 사람과 짝을 지어 아래 여섯 가지를 적게 했다. 이 메모가 다음 단계에서 판정 프롬프트가 된다. 구체적일수록 평가가 좋아진다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>적을 내용</th></tr></thead>
+            <tbody>
+              <tr><td>1. 과제</td><td>이 평가가 어떤 상황을 보는가</td></tr>
+              <tr><td>2. 성공</td><td>성공은 어떤 모습인가 (한 줄)</td></tr>
+              <tr><td>3. 실패</td><td>실패는 어떤 모습인가 (한 줄)</td></tr>
+              <tr><td>4. 판정 대상</td><td>판정자가 정확히 무엇을 보고 판단하는가</td></tr>
+              <tr><td>5. 합격 조건</td><td>합격하는 답의 모습을 bullet 세 개로</td></tr>
+              <tr><td>6. 불합격 조건</td><td>불합격하는 답의 모습을 bullet 세 개로</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">발표 슬라이드의 예 <span class="ts">24:00</span></span>
+            <ul>
+              <li><strong>과제</strong>: 사용자가 여행에 대해 후속 질문을 보낸다</li>
+              <li><strong>성공</strong>: 이 여행의 정보를 써서 후속 질문에 바로 답한다</li>
+              <li><strong>실패</strong>: 일반적인 예산 이야기로 빠진다</li>
+            </ul>
+            <p class="verdict">합격·불합격 bullet은 슬라이드에만 있었고 자막에는 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">예시: 합격·불합격 bullet</span>
+            <p><strong>합격</strong></p>
+            <ul>
+              <li>후속 질문에 첫 문장부터 직접 답한다</li>
+              <li>답에 이 여행의 목적지, 기간, 예산을 쓴다</li>
+              <li>질문 범위를 벗어난 내용을 늘어놓지 않는다</li>
+            </ul>
+            <p><strong>불합격</strong></p>
+            <ul>
+              <li>질문과 상관없는 일반적인 예산 조언으로 빠진다</li>
+              <li>어느 여행에나 맞는 답을 한다</li>
+              <li>질문에 답하지 않고 일정 전체를 다시 보여 준다</li>
+            </ul>
+            <p class="verdict">이 노트가 만든 <b>예시</b>다. 모두 "후속 질문에 답하는가"라는 품질 하나만 본다.</p>
+          </div>
+        </div>
+        <p>한 줄짜리 성공·실패만으로는 부족하다. 이 메모로 LLM 판정 프롬프트를 쓰기 때문이다. LLM이 기준을 이해하려면 bullet 수준으로 구체적이어야 한다.</p>
+        <div class="callout">
+          <span class="title">동료에게 설명하듯 쓴다</span>
+          <span>발표자는 기준을 쓸 때 동료나 이해관계자에게 "성공은 이런 모습이다"라고 설명하듯 쓰라고 했다.</span>
+        </div>
+
+        <h3>현장 질문: 트레이스의 데이터는 직접 만들어야 하나 <span class="ts">23:00</span></h3>
+        <p>계측 <span class="en">instrumentation</span>은 실행 기록이 남도록 코드에 장치를 다는 일이다. Arize의 기본 계측은 트레이싱 모범 사례를 미리 담고 있다. <code>input.value</code>나 LLM에 보낸 입력 메시지 같은 공통 속성은 자동으로 남는다.</p>
+        <p>내 사용 사례에 맞는 정보가 더 필요하면 수동 계측으로 바꾼다. 자동과 수동을 섞는 하이브리드 방식도 있다.</p>
+        <p>발표자는 직접 트레이스를 보낼 때 코딩 에이전트에게 계측을 맡기라고 권했다. 시작 페이지의 명령 하나가 Arize의 스킬 <span class="en">skills</span>을 불러온다(자막에는 "MPX evals"로 들림, npx 명령으로 추정). 에이전트가 계측 방법을 찾고, 사람은 방향만 잡아 준다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="dataset">
+        <header><span class="num">08</span><h2>데이터셋 만들기 <span class="ts">25:10</span></h2></header>
+        <p>판정자를 만들기 전에, 판정할 스팬을 골라 데이터셋 <span class="en">dataset</span>에 담는다. 무엇을 평가하느냐에 따라 담을 스팬이 다르다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>평가하려는 것</th><th>담을 스팬</th><th>고르는 법</th></tr></thead>
+            <tbody>
+              <tr><td>요청한 내용이 일정에 반영됐나</td><td>루트 스팬</td><td>parent ID가 null인 스팬으로 거르거나, 기본 트레이스 목록에서 고른다</td></tr>
+              <tr><td>도구 호출이 맞는 정보를 가져왔나</td><td>도구 스팬</td><td>스팬 이름으로 거른다. 예: 필수 정보를 가져오는 도구</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 필터가 데이터를 고르는 가장 좋은 방법이라고 했다. 필터로 스팬을 추리고, 골라서 새 데이터셋에 추가한다. 스팬 목록 화면에서 바로 골라도 된다. <span class="ts">25:50</span></p>
+      </section>
+
+      <!-- 9 -->
+      <section id="playground">
+        <header><span class="num">09</span><h2>플레이그라운드에서 판정자 만들기 <span class="ts">27:20</span></h2></header>
+        <p>판정 프롬프트는 프롬프트 플레이그라운드 <span class="en">prompt playground</span>에서 쓰고 바로 돌려 본다. 발표자가 가장 좋아하는 곳이라고 했다. Arize에는 플레이그라운드가 두 종류 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>종류</th><th>쓰임</th></tr></thead>
+            <tbody>
+              <tr><td>프롬프트 플레이그라운드</td><td>평가 프롬프트나 에이전트의 LLM 프롬프트를 시험한다. 이번 실습에서 쓴다</td></tr>
+              <tr><td>에이전트 플레이그라운드</td><td>에이전트 전체를 처음부터 끝까지 시험한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>만드는 순서</h3>
+        <ol class="plain">
+          <li>새 플레이그라운드를 만들고 이름을 붙인다.</li>
+          <li>평가 허브에서 만든 평가가 있으면 드롭다운에서 불러온다. 처음이면 빈 평가 <span class="en">blank eval</span>로 시작한다. <span class="ts">28:00</span></li>
+          <li>적어 둔 기준을 프롬프트로 옮긴다. bullet은 대부분 그대로 붙여 넣으면 된다.</li>
+          <li>매개변수 <span class="en">params</span>에서 레이블, 최적화 방향, 설명 여부를 정한다. <span class="ts">30:00</span></li>
+          <li>데이터셋을 불러오고, 프롬프트의 변수를 데이터에 연결한다. <span class="ts">30:50</span></li>
+          <li>모델을 골라 돌린다. 발표자는 GPT-4.1 mini를 썼다. <span class="ts">31:10</span></li>
+          <li>판정과 설명을 읽는다. 동의하지 않는 판정이 있으면 프롬프트를 고쳐 다시 돌린다.</li>
+          <li>괜찮아지면 save evaluator로 저장한다. 저장한 판정자는 플랫폼 전체에서 쓸 수 있다. <span class="ts">31:40</span></li>
+        </ol>
+
+        <h3>판정 프롬프트의 구조 <span class="ts">28:50</span></h3>
+        <ol class="plain">
+          <li><strong>역할</strong>: 판정자가 할 일을 먼저 말한다. 발표자의 예는 "어시스턴트의 출력이 입력에 담긴 요청 사항을 정확히 반영하는지 평가한다"였다.</li>
+          <li><strong>데이터</strong>: 판정할 입력과 출력을 변수로 넣는다.</li>
+          <li><strong>확인 항목</strong>: 앞에서 적은 합격·불합격 bullet을 넣는다.</li>
+          <li><strong>판정 규칙</strong>: 발표자의 예는 "출력이 입력과 맞을 때만 correct, 목적지나 숙소 종류 등이 틀리면 incorrect"였다.</li>
+        </ol>
+        <p class="note">아래는 발표자가 설명한 구조대로 이 노트가 쓴 예시다. 발표 화면의 실제 프롬프트가 아니다. 변수 이름도 예시다.</p>
+        <pre><code>너는 여행 계획 어시스턴트의 출력을 평가한다.
+출력이 사용자의 요청 사항을 정확히 반영하는지 판단한다.
+
+[사용자 요청]
+{input}
+
+[어시스턴트 출력]
+{output}
+
+확인할 것:
+- 목적지가 요청과 같다
+- 일정의 날 수가 요청과 같다
+- 숙소 종류와 여행 스타일이 요청과 맞는다
+
+출력이 요청과 모두 맞을 때만 "correct"로 판정한다.
+목적지, 날 수, 숙소 종류 등 하나라도 틀리면 "incorrect"로 판정한다.
+판정 이유를 먼저 쓰고, 마지막에 레이블 하나만 답한다.</code></pre>
+        <div class="callout">
+          <span class="title">변수 매핑 <span class="ts">29:10</span></span>
+          <span>프롬프트에 데이터 속성의 정확한 이름을 쓰지 않아도 된다. 변수 매핑 <span class="en">variable mapping</span>으로 프롬프트의 변수를 실제 데이터에 연결한다. 데이터셋과 트레이스가 같은 값을 다른 이름으로 부를 때 쓸모가 있다. 평가를 하나하나 고치는 대신, 그 평가를 쓰는 작업 쪽에서 연결만 바꾸면 된다.</span>
+        </div>
+
+        <h3>판정 결과의 형식 <span class="ts">30:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>설정</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>레이블</td><td>판정자가 고를 수 있는 답. 판정자는 그중 하나만 돌려준다. 예: correct / incorrect. 값을 더 둘 수도 있다. 예: partially correct(일부만 맞음), not applicable(해당 없음)</td></tr>
+              <tr><td>최적화 방향</td><td>어느 쪽이 좋은 결과인지 정한다. correct가 좋은 쪽인지, 점수가 낮을수록 좋은지</td></tr>
+              <tr><td>설명</td><td>판정 이유를 함께 받을지 정한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 Alex에서 "일부만 맞음"을 따로 아는 게 중요한 경우가 있어서, 값이 셋인 레이블을 쓴다고 했다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="next">
+        <header><span class="num">10</span><h2>그다음 단계 <span class="ts">32:10</span></h2></header>
+        <p>발표자는 첫 평가를 손으로 만든 뒤에는 Arize 안의 AI 에이전트 Alex에게 도움을 받으라고 권했다. Alex가 플레이그라운드를 돌리고, 결과를 보고, 프롬프트를 고치는 일을 반복할 수 있다고 한다.</p>
+        <p>이번 워크숍은 계측하고 평가를 쓰는 단계에 집중했다. 그 뒤에는 평가 결과가 개선의 신호가 된다. 발표자는 Arize의 관리형 에이전트가 이 신호와 트레이스를 보고 문제를 찾고 수정까지 한다고 설명했다. <span class="ts">32:30</span></p>
+        <p class="note">Alex와 관리형 에이전트에 대한 설명은 발표자 회사의 제품 소개다. 그 점을 감안해 읽자.</p>
+
+        <h3>좋은 팀이 다음에 하는 일 <span class="ts">33:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>정렬 <span class="en">alignment</span></td><td>데이터셋의 예시에 사람이 직접 판정을 붙인다. 판정자를 돌려 사람의 판정과 맞는지 본다</td></tr>
+              <tr><td>온라인 평가 <span class="en">online eval</span></td><td>판정자를 운영 트레이스에 계속 돌린다. 트레이스가 들어올 때마다 모든 평가가 자동으로 붙고, 그 결과로 애플리케이션을 지켜본다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>모든 이해관계자가 평가한다 <span class="ts">33:20</span></h3>
+        <p>평가는 한 직군만의 일이 아니다. 에이전트에 이해관계가 있는 사람을 모두 불러, 각자 자기 목표에 맞는 성공을 정의하게 한다. 발표자가 든 사람은 제품, 엔지니어링, 고객 지원, 도메인 전문가, 보안 담당이다.</p>
+
+        <h3>지표와 평가는 함께 쓴다 <span class="ts">34:00</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">지표 · metric</span>
+            <p>뭔가 고장 났을 <strong>수도 있다</strong>고 알려 준다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">평가 · eval</span>
+            <p><strong>어떤 식으로</strong> 실패했는지 알려 준다. 이것을 실패 유형 <span class="en">failure mode</span>이라고 한다.</p>
+          </div>
+        </div>
+
+        <h3>해 볼 만한 실험 <span class="ts">34:10</span></h3>
+        <p>LLM 판정자를 결정 모델용 질문으로 바꿔 본다. 그리고 두 판정자의 성능을 비교해 어느 쪽이 나은지 본다.</p>
+        <div class="callout">
+          <span class="title">작게 시작하기 <span class="ts">34:20</span></span>
+          <span>트레이스 20개 정도, 차원 하나, 판정자 하나로 시작한다. 판정 설명을 읽고 고친다. 그다음에 평가를 늘린다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>감으로 배포하면 회귀를 잡지 못하고, 무엇이 나아졌는지 증명하지 못한다.</li>
+          <li>AI 평가는 단위 테스트와 다르다. <strong>맞는 답이 여럿</strong>이고, 로직은 실행 뒤 트레이스로 드러난다.</li>
+          <li>트레이스는 에이전트가 거친 모든 단계의 기록이다. 스팬은 그 안의 작업 단위이고, 루트 스팬에 보통 입력과 최종 출력이 있다.</li>
+          <li>평가 방식에는 LLM 판정자, 결정 모델, 코드, 어노테이션, 에이전트 판정자, 사용자 피드백, 비즈니스 지표가 있다.</li>
+          <li>LLM 판정자는 레이블과 <strong>설명</strong>을 준다. 설명을 읽어야 판정을 믿을지 정할 수 있다.</li>
+          <li>"도움이 된다" 대신 <strong>"요청한 날 수와 같다"처럼 구체적으로</strong> 쓴다.</li>
+          <li>LLM 판정자 하나에는 <strong>품질 하나만</strong> 맡긴다. 작게 시작해 실제 데이터를 보며 늘린다. Alex는 지금 32개다.</li>
+          <li>과제, 성공, 실패, 판정 대상, 합격 bullet 3개, 불합격 bullet 3개를 적으면 그게 판정 프롬프트가 된다.</li>
+          <li>판정할 스팬을 데이터셋에 담고, 플레이그라운드에서 돌려 보며 프롬프트를 고친다. 이름 차이는 변수 매핑으로 맞춘다.</li>
+          <li>다음은 <strong>정렬</strong>과 <strong>온라인 평가</strong>다. 지표는 고장 신호를, 평가는 실패 유형을 알려 준다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>평가가 없으면 못 하는 일 네 가지는?</span></summary><div class="answer">프롬프트를 바꿨을 때 회귀를 잡는 일, 프롬프트와 모델을 객관적으로 비교하는 일, 새 모델이 내 사용 사례에 나은지 아는 일, CI에 품질 관문을 두는 일.</div></details>
+          <details><summary><span class="qn">Q2</span><span>AI 평가가 단위 테스트와 다른 점 두 가지는?</span></summary><div class="answer">맞는 출력이 여러 개다. 그리고 로직을 미리 읽을 수 없고, 실행 뒤 트레이스로만 볼 수 있다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>루트 스팬은 어떻게 알아보고, 보통 무엇이 들어 있나?</span></summary><div class="answer">위에 다른 스팬이 없는 맨 위 스팬이다(parent ID가 null). 보통 사용자 입력과 최종 출력이 들어 있다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>LLM 판정자와 결정 모델의 차이는?</span></summary><div class="answer">LLM 판정자는 레이블과 설명을 준다. 결정 모델은 확률과 레이블만 주고 설명이 없다. 대신 싸고 빠르다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>코드 기반 평가가 잘 맞는 경우의 예는?</span></summary><div class="answer">결과가 늘 같은 규칙 검사다. 출력에 특정 단어가 있는지, JSON 형식인지 보는 것. ROUGE·BLEU 점수도 여기에 든다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>여행 에이전트에서 "좋은 답"을 구체적인 기준으로 바꾸면?</span></summary><div class="answer">사용자의 후속 질문에 답한다. 요청한 날 수와 일정이 같다. 비용 합계가 말한 예산 안에 있다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>LLM 판정자에게 품질 하나만 맡기라는 이유와 그 예외는?</span></summary><div class="answer">LLM 판정자는 한 번에 기준 하나를 볼 때 잘한다(발표자가 인용한 연구). 결정 모델과 에이전트 판정자는 기준 여러 개를 담아도 비교적 잘 버틴다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>판정자를 만들기 전에 적어야 할 여섯 가지는?</span></summary><div class="answer">과제, 성공, 실패, 판정 대상, 합격 조건 bullet 세 개, 불합격 조건 bullet 세 개.</div></details>
+          <details><summary><span class="qn">Q9</span><span>"요청이 일정에 반영됐나"와 "도구가 맞는 정보를 가져왔나"를 평가할 때, 데이터셋에 각각 무엇을 담나?</span></summary><div class="answer">앞의 것은 루트 스팬, 뒤의 것은 도구 스팬을 담는다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>변수 매핑을 쓰면 무엇이 좋은가?</span></summary><div class="answer">프롬프트에 데이터의 정확한 이름을 쓰지 않아도 된다. 데이터셋과 트레이스가 같은 값을 다른 이름으로 불러도, 평가를 고치지 않고 연결만 바꾸면 된다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>정렬과 온라인 평가는 각각 무엇인가?</span></summary><div class="answer">정렬은 사람이 붙인 판정과 판정자의 결과가 맞는지 비교하는 일이다. 온라인 평가는 판정자를 운영 트레이스에 계속 돌려 애플리케이션을 지켜보는 일이다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>지표와 평가는 각각 무엇을 알려 주나?</span></summary><div class="answer">지표는 뭔가 고장 났을 수도 있다고 알려 준다. 평가는 어떤 식으로 실패했는지, 곧 실패 유형을 알려 준다. 둘 다 쓴다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>감으로만 판단하고 있는 변경을 찾는다<span class="how">최근 프롬프트·모델 변경 중 결과를 숫자로 확인하지 못한 것</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트의 트레이스를 남긴다<span class="how">확인: 루트 스팬에 사용자 입력과 최종 출력이 남는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>트레이스 몇 개를 열어 요청, 도구 호출, 답을 적어 본다<span class="how">"이 답을 사용자에게 보여 줄 수 있나"를 함께 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>"좋다"를 구체적인 기준으로 적는다<span class="how">"도움이 된다" 같은 말이 남아 있으면 다시 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>LLM 판정자 하나에 품질 하나만 담는다<span class="how">프롬프트에 기준이 여러 개 섞였으면 판정자를 나눈다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>과제, 성공, 실패, 판정 대상, 합격 3개, 불합격 3개를 적는다<span class="how">동료에게 설명하듯 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>판정할 스팬 20개 정도로 데이터셋을 만들고 판정자를 돌린다<span class="how">설명을 읽고, 동의하지 않는 판정이 있으면 프롬프트를 고친다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>사람이 붙인 판정과 판정자 결과를 비교한다<span class="how">잘 맞으면 운영 트레이스에 계속 돌린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>제품, 엔지니어링, 지원, 보안 담당에게 각자의 성공 기준을 받는다<span class="how">기준마다 평가를 하나씩 늘린다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>평가 (eval)</td><td>AI 시스템의 결과 품질을 재는 테스트</td></tr>
+              <tr><td>바이브 체크</td><td>Vibe check. 결과 몇 개를 보고 느낌으로 좋고 나쁨을 정하는 것</td></tr>
+              <tr><td>회귀</td><td>Regression. 새 변경 때문에 원래 되던 기능이 망가지는 것</td></tr>
+              <tr><td>품질 관문</td><td>Quality gate. 기준을 못 넘으면 배포를 막는 장치</td></tr>
+              <tr><td>CI</td><td>Continuous integration. 코드를 합칠 때마다 자동으로 빌드하고 검사하는 과정</td></tr>
+              <tr><td>관측성</td><td>Observability. 시스템 안에서 일어난 일을 밖에서 볼 수 있게 기록해 두는 능력</td></tr>
+              <tr><td>트레이스</td><td>Trace. 에이전트가 답을 내기까지 거친 모든 단계의 기록</td></tr>
+              <tr><td>스팬</td><td>Span. 트레이스 안의 작업 단위 하나</td></tr>
+              <tr><td>루트 스팬</td><td>Root span. 트레이스 맨 위의 스팬. 보통 입력과 최종 출력이 있다</td></tr>
+              <tr><td>계측</td><td>Instrumentation. 실행 기록이 남도록 코드에 장치를 다는 일</td></tr>
+              <tr><td>LLM 판정자</td><td>LLM as a judge. 다른 LLM에게 결과를 채점하게 하는 평가 방식</td></tr>
+              <tr><td>결정 모델</td><td>Decision model. 질문 하나에 확률과 레이블만 주는 판정 모델. 설명은 없다</td></tr>
+              <tr><td>에이전트 판정자</td><td>Agent as a judge. 에이전트 하나가 다른 에이전트를 평가하는 방식</td></tr>
+              <tr><td>어노테이션</td><td>Annotation. 사람이 데이터에 정답이나 판정을 붙이는 일</td></tr>
+              <tr><td>골든 데이터셋</td><td>Golden dataset. 정답이 붙어 있어 기준으로 쓰는 데이터 묶음</td></tr>
+              <tr><td>ROUGE · BLEU</td><td>모델 출력과 기준 문장이 단어를 얼마나 겹치게 쓰는지 재는 점수</td></tr>
+              <tr><td>레이블</td><td>Label. 판정자가 내는 판정 값. 예: correct, incorrect</td></tr>
+              <tr><td>멀티 에이전트 시스템</td><td>여러 에이전트가 일을 나눠 맡는 구조</td></tr>
+              <tr><td>감독 에이전트</td><td>Supervisor. 하위 에이전트에게 계획을 주고 지휘하는 에이전트</td></tr>
+              <tr><td>프롬프트 플레이그라운드</td><td>프롬프트를 쓰고 데이터에 바로 돌려 보는 화면</td></tr>
+              <tr><td>변수 매핑</td><td>Variable mapping. 프롬프트의 변수를 실제 데이터 필드에 연결하는 것</td></tr>
+              <tr><td>정렬</td><td>Alignment. 판정자의 결과가 사람의 판정과 맞는지 맞춰 보는 일</td></tr>
+              <tr><td>온라인 평가</td><td>Online eval. 운영 중 들어오는 트레이스에 평가를 계속 돌리는 것</td></tr>
+              <tr><td>실패 유형</td><td>Failure mode. 시스템이 실패하는 구체적인 방식</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 오늘의 목표</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>진행 순서</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>바이브 문제</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>평가가 없으면 못 하는 일</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>평가는 단위 테스트인가</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>트레이스는 로그, 평가는 테스트</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>에이전트가 평가를 더 어렵게 만드는 이유</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>평가의 종류: LLM 판정자</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>결정 모델</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>코드, 어노테이션, 에이전트 판정자, 사용자 피드백, 비즈니스 지표</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>개발과 운영에 걸쳐 쓰는 평가</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>실습 준비: Arize 로그인</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>AI 제공자 API 키 등록</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>데모 프로젝트 찾기</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>여행 계획 에이전트 소개</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>트레이스 둘러보기 과제</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>프라하 3일 여행 트레이스</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>이해관계자의 눈으로 보기</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>트레이스 읽는 법: 루트 스팬과 스팬</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>멀티 에이전트, 스팬 종류</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>질문: LLM 스팬이 두 개인 이유</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>질문: 에이전트 구조</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>질문: 지원 프레임워크</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>"좋다"를 구체적으로 정의하기</td></tr>
+              <tr><td><span class="ts">19:50</span></td><td>평가 하나에 품질 하나</td></tr>
+              <tr><td><span class="ts">20:30</span></td><td>Alex: 단순한 시작에서 평가 32개로</td></tr>
+              <tr><td><span class="ts">21:10</span></td><td>범용 평가와 맞춤 평가</td></tr>
+              <tr><td><span class="ts">22:00</span></td><td>기준 6가지 적기 과제</td></tr>
+              <tr><td><span class="ts">23:00</span></td><td>질문: 트레이스 데이터와 계측</td></tr>
+              <tr><td><span class="ts">24:00</span></td><td>기준 예시와 bullet이 필요한 이유</td></tr>
+              <tr><td><span class="ts">25:10</span></td><td>데이터셋에 스팬 담기</td></tr>
+              <tr><td><span class="ts">27:20</span></td><td>프롬프트 플레이그라운드</td></tr>
+              <tr><td><span class="ts">28:50</span></td><td>판정 프롬프트 쓰기</td></tr>
+              <tr><td><span class="ts">29:10</span></td><td>변수 매핑</td></tr>
+              <tr><td><span class="ts">30:00</span></td><td>레이블, 최적화 방향, 설명</td></tr>
+              <tr><td><span class="ts">30:50</span></td><td>데이터셋 불러와 판정자 돌리기</td></tr>
+              <tr><td><span class="ts">31:40</span></td><td>판정자 저장</td></tr>
+              <tr><td><span class="ts">32:10</span></td><td>Alex의 도움, 남은 개선 루프</td></tr>
+              <tr><td><span class="ts">33:00</span></td><td>정렬과 온라인 평가</td></tr>
+              <tr><td><span class="ts">33:20</span></td><td>모든 이해관계자가 평가한다</td></tr>
+              <tr><td><span class="ts">34:00</span></td><td>지표와 평가의 차이</td></tr>
+              <tr><td><span class="ts">34:10</span></td><td>결정 판정자와 비교해 보기</td></tr>
+              <tr><td><span class="ts">34:20</span></td><td>작게 시작하기: 트레이스 20개</td></tr>
+              <tr><td><span class="ts">34:30</span></td><td>참고 자료와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'gv4w23xYj-0:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

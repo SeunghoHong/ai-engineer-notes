@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>추론 엔진 해부</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- process stack (this note only) ---------- */
+.stack { display: grid; gap: 8px; max-width: 68ch; }
+.stack > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; display: grid; gap: 4px; }
+.stack > div.hot { border-color: var(--accent); }
+.stack .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.stack .hot .tag { color: var(--accent); }
+.stack .inner { margin-left: 24px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#why">왜 추론 엔진인가</a></li>
+      <li><a href="#workloads">세 가지 워크로드</a></li>
+      <li><a href="#prefill-decode">프리필과 디코드, 그리고 지표</a></li>
+      <li><a href="#architecture">서버와 엔진의 구조</a></li>
+      <li><a href="#scheduler">진짜 병목은 스케줄러다</a></li>
+      <li><a href="#request-life">요청 하나의 일생</a></li>
+      <li><a href="#why-python">왜 멀티프로세스, 왜 파이썬</a></li>
+      <li><a href="#inside-forward">포워드 패스 안쪽: 커널과 백엔드</a></li>
+      <li><a href="#kv-cache">기법 1: KV 캐시와 접두사 공유</a></li>
+      <li><a href="#cuda-graph">기법 2: CPU가 GPU를 막지 않게</a></li>
+      <li><a href="#speculative">기법 3: 투기적 디코딩</a></li>
+      <li><a href="#observability">관측성과 디버깅</a></li>
+      <li><a href="#learn-more">더 공부하려면</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 시스템에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-06 · 60분 · 영어 발표 한글 정리</span>
+      <h1>추론 엔진은 안에서 무엇을 하나</h1>
+      <p class="lead">토큰이 들어가고 토큰이 나온다. 그 사이에서 vLLM이나 SGLang 같은 추론 엔진은 GPU를 한순간도 놀리지 않으려고 싸운다. 이 발표는 엔진의 구조를 바깥 껍질부터 커널까지 한 겹씩 벗겨 보고, 성능을 좌우하는 세 가지 기법과 운영에서 꼭 필요한 관측성을 설명한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=woIYJYd_etI" target="_blank" rel="noopener">What Is an Inference Engine, Anyway?</a></span>
+        <span>발표: Charles Frye (Modal)</span>
+      </div>
+      <p class="note">영어 워크숍의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 경우에만 알려진 이름으로 바로잡았고, 불확실한 곳은 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>학습은 비용, 추론은 수익이다.</strong> 모델 가중치를 팔아서 돈을 번 회사는 거의 없다. 토큰을 만들어 주는 서비스에는 사람들이 돈을 낸다.</li>
+        <li>워크로드는 셋으로 나뉜다. <strong>챗봇 플러스</strong>, <strong>백그라운드 에이전트</strong>, <strong>데이터 처리기</strong>. 접두사 재사용률, 출력 길이, 지연 허용치가 서로 다르다.</li>
+        <li>엔진 안에서 요청 하나는 <strong>프리필</strong>(입력 처리)과 <strong>디코드</strong>(출력 생성)라는 성격이 다른 두 작업으로 쪼개진다.</li>
+        <li>엔진은 통신하는 여러 프로세스로 짜여 있다. 서버 IO, 토크나이저와 디토크나이저, <strong>스케줄러</strong>, 그리고 GPU를 모는 <strong>모델 러너</strong>.</li>
+        <li>GPU가 가장 비싸고 빠르지만, <strong>진짜 병목은 호스트 쪽의 단일 스레드 스케줄러</strong>다. GPU 작업보다 빠르게 다음 일을 정해 줘야 한다.</li>
+        <li>GPU 커널 성능은 엔진 간 차이가 거의 없다. 외부 커널 라이브러리를 가져다 쓰기 때문이다. 차이는 <strong>GPU를 얼마나 방해하지 않느냐</strong>에서 난다.</li>
+        <li>핵심 기법 셋: <strong>KV 캐시</strong>와 접두사 공유, <strong>CUDA 그래프</strong>로 커널 발사 비용 줄이기, <strong>투기적 디코딩</strong>으로 디코드를 작은 프리필로 바꾸기.</li>
+        <li>운영에서는 <strong>생각보다 더 많이 로깅하라.</strong> 토큰 ID까지 남기고, 실제 배포본에 평가 스크립트를 돌린다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="why">
+        <header><span class="num">01</span><h2>왜 추론 엔진인가 <span class="ts">01:00</span></h2></header>
+        <p>추론 엔진 <span class="en">inference engine</span>은 토큰을 받아 토큰을 내놓는 소프트웨어다. 겉보기엔 단순하다. 발표자는 PyTorch와 Hugging Face Transformers로 한두 시간이면 비슷한 것을 만들 수 있다고 말한다. 어려운 것은 <strong>좋은 토큰 경제성</strong>으로 돌리는 일이다. 즉, 토큰 한 개를 싸고 빠르게 만들어야 한다. 그 요구가 엔진의 구조 전체를 결정한다.</p>
+        <p>발표자가 꼽는 오픈소스 엔진은 SGLang, vLLM, TensorRT-LLM이다. 많은 회사가 비슷한 것을 자체 개발하기도 한다.</p>
+
+        <h3>학습은 비용 센터, 추론은 수익 센터 <span class="ts">03:30</span></h3>
+        <p>발표자는 swyx(Sean Wang)의 트윗을 인용한다. 연구가 아니라 추론 엔진 같은 "지루한" AI 인프라를 하는 사람들이 드디어 큰돈을 벌고 있다는 내용이다. 발표자의 해석은 이렇다.</p>
+        <ul class="plain">
+          <li><strong>가중치를 직접 파는 사업은 거의 성립하지 않았다.</strong> 그래서 학습 시스템은 스스로 돈을 벌지 못한다.</li>
+          <li><strong>모델이 있으면 추론에는 돈을 낸다.</strong> 맥락을 넣어 새 토큰이나 소프트웨어를 받는 서비스에는 수요가 있다.</li>
+          <li>소수의 <strong>모델 파운드리</strong>가 기반 모델을 만들고, 많은 <strong>추론 엔지니어</strong>가 그것을 배포하고 맞춤화하는 구조가 자리 잡았다.</li>
+          <li>학습 쪽에도 추론이 들어왔다. 사후 학습 <span class="en">post-training</span>은 모델에서 샘플을 뽑아야 하므로 같은 기술과 같은 고민이 쓰인다.</li>
+          <li>엔지니어 입장에서 추론은 아직 새롭다. 애플리케이션 구조부터 선형대수, 하드웨어와 전자까지 스택 전체를 넘나든다.</li>
+        </ul>
+        <p class="note">발표자는 Modal에서 수백에서 수천 대 GPU 규모의 추론 배포를 돕고 있다. 발표 말미에 Modal의 새 제품(Modal Endpoints)과 채용을 소개하고, 중간에 콜드 스타트 해법으로 자사 블로그 글 "Truly Serverless GPUs"를 언급한다. 발표 내용 자체는 엔진 일반론이지만, 배포 플랫폼 관련 대목은 그 점을 감안해 읽자.</p>
+        <p>발표자가 만든 작품 하나가 예시로 등장한다. 카메라가 본 것을 비전 언어 모델(Qwen 계열)에 넣어 미술관 설명판처럼 묘사하는 설치물이다. SGLang으로 서빙하고 Modal에서 돌아간다. 가장 낮은 지연과 가장 높은 처리량 사이 중간쯤에 있는 응용이라고 소개한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="workloads">
+        <header><span class="num">02</span><h2>세 가지 워크로드 <span class="ts">08:10</span></h2></header>
+        <p>발표자는 추론 엔진 위에 올라오는 일을 세 유형으로 나눈다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">챗봇 플러스 <span class="en">chatbot+</span></span>
+            <p>추론의 원조 킬러 앱. ChatGPT나 Claude Code처럼 사람이 반대편에서 기다리며 맥락을 추가한다. "플러스"는 도구 호출로 외부 시스템과도 상호작용한다는 뜻이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">백그라운드 에이전트 <span class="en">background agent</span></span>
+            <p>Claude Code와 비슷한 일을 하지만 사람의 직접 응답 없이 뒤에서 돈다. Devin, Ramp Inspect, OpenClaw가 예다. 비코딩 사례도 하나 언급됐지만 자막이 뭉개져 이름을 확정할 수 없다(추정).</p>
+          </div>
+          <div class="card">
+            <span class="tag">데이터 처리기 <span class="en">data processor</span></span>
+            <p>비교적 작은 모델로 PDF 같은 비정형 데이터를 구조화된 데이터로 바꾼다. 데이터베이스에 넣을 만한 것을 뽑아낸다. Reducto, 영상에서 전사를 뽑는 Fathom이 예다.</p>
+          </div>
+        </div>
+
+        <h3>워크로드별 성격 <span class="ts">12:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>유형</th><th>접두사 재사용</th><th>출력(디코드) 길이</th><th>지연 허용치</th><th>중요한 것</th></tr></thead>
+            <tbody>
+              <tr><td>챗봇 플러스</td><td>높음</td><td>짧음 (수십~수백 토큰)</td><td>매우 빡빡함. 사람은 몇백 ms 안에 뭔가 봐야 한다</td><td>첫 토큰 지연, 토큰 간 지연</td></tr>
+              <tr><td>백그라운드 에이전트</td><td>높음</td><td>중간 이상</td><td>느슨함. PR 하나에 몇 분, 품질이 좋으면 몇 시간도 허용</td><td>네트워크 ms 단위에 덜 민감</td></tr>
+              <tr><td>데이터 처리기</td><td>낮음 (문서마다 다름, 시스템 프롬프트는 입력에 비해 작음)</td><td>매우 짧음 (구조화 결과는 원문보다 짧다)</td><td>느슨함</td><td>총 처리량. 백필 작업을 빠르게 훑는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표는 클라우드 배포에 초점을 맞춘다. 지금 추론 대부분이 거기서 일어나기 때문이다. 다만 몇 년 안에 많은 엔진이 개인 기기에서 돌게 될 것이라고 덧붙인다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="prefill-decode">
+        <header><span class="num">03</span><h2>프리필과 디코드, 그리고 지표 <span class="ts">10:10</span></h2></header>
+        <p>클라이언트가 토큰을 보내면 서버의 엔진이 두 단계로 처리한다.</p>
+        <ol class="plain">
+          <li><strong>프리필</strong> <span class="en">prefill</span>: 입력 토큰 전체를 모델에 한 번 통과시킨다. 포워드 패스 한 번이다.</li>
+          <li><strong>디코드</strong> <span class="en">decode</span>: 출력 토큰을 한 번에 하나(또는 몇 개)씩 만든다. 여러 번 반복한다.</li>
+          <li>끝나면 사용자에게 돌려주거나, 도구 호출을 만들어 외부 시스템과 상호작용한다.</li>
+        </ol>
+
+        <h3>워크로드를 정의하는 지표 <span class="ts">10:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>뜻</th><th>누가 좌우하나</th></tr></thead>
+            <tbody>
+              <tr><td>초당 쿼리 수 <span class="en">QPS</span></td><td>들어오는 요청과 처리하는 요청의 속도. 엔진 복제본 하나가 감당하는 QPS로 생각하는 편이 낫다</td><td>사용자. 총수요는 통제 밖</td></tr>
+              <tr><td>쿼리당 토큰 수</td><td>입력(프리필)과 출력(디코드) 토큰 수</td><td>입력은 사용자, 출력 길이는 <strong>모델</strong>이 정한다. 언제 멈출지는 결정론적으로 통제할 수 없다. 그래서 벤치마크로 재야 한다</td></tr>
+              <tr><td>KV 캐시 재사용률</td><td>프리필에서 만든 중간 결과를 다음 요청이 얼마나 다시 쓰는가</td><td>대체로 사용자. 다만 워크로드별로 꽤 고정된 패턴이 있다</td></tr>
+              <tr><td>지연 예산 <span class="en">SLO</span></td><td>첫 토큰까지 시간 <span class="en">TTFT</span>과 출력 토큰당 시간 <span class="en">TPOT / inter-token latency</span></td><td>애플리케이션. 엔진이 지켜야 할 주 제약</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <span class="title">하나의 워크로드처럼 보이지만 안에서는 둘이다 <span class="ts">14:20</span></span>
+          <span>사용자 눈에는 요청 하나지만, 엔진 안에서는 프리필 작업과 디코드 작업이 반쯤 독립적으로 돌며 다른 코드 경로를 탄다. 디코드는 사용자당 산술량이 훨씬 적고, 프리필은 요청당 연산이 훨씬 많다. 즉 <strong>산술 강도</strong> <span class="en">arithmetic intensity</span>가 다르다. 엔진을 설정하고 기능을 더하는 일은 결국 이 둘을 어떻게 섞어 돌릴지 정하는 일이다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="architecture">
+        <header><span class="num">04</span><h2>서버와 엔진의 구조 <span class="ts">15:40</span></h2></header>
+        <p>추론 서버 <span class="en">inference server</span>의 일은 HTTP 또는 gRPC 요청을 받아 응답으로 바꾸는 것이다. 발표자의 도표는 어느 화살표 경로를 따라가도 같은 결과가 나오게 그려져 있다. 한 겹씩 들어가면 이렇게 나뉜다.</p>
+        <ol class="plain">
+          <li><strong>전처리</strong>: 유니코드 문자열, PNG, MP4, WebRTC 스트림 같은 사람 친화적 표현을 토큰 묶음으로 바꾸고 GPU 위의 텐서로 올린다.</li>
+          <li><strong>추론</strong>: 가장 단순하게 보면 항목 K개짜리 텐서를 받아 K+1개짜리 텐서를 돌려준다. 학습 데이터로 배운 대로 다음 항목을 예측한다. 이것이 핵심이고 나머지는 이를 감싸는 껍질이다.</li>
+          <li><strong>후처리</strong>: 디토크나이저가 새 텐서를 토큰 공간으로, 다시 사람과 외부 시스템이 읽는 표현으로 바꾼다.</li>
+        </ol>
+        <p>HTTP 서빙은 여기서 어려운 부분이 아니다. 복제본 하나가 다루는 요청은 많아야 수천 개 수준이고, 범용 하드웨어가 거뜬히 처리한다. 흥미로운 일은 모두 그 아래층에서 벌어진다.</p>
+
+        <h3>SGLang 기준 프로세스 구성 <span class="ts">21:00</span></h3>
+        <div class="stack" aria-label="추론 엔진의 프로세스 구성">
+          <div><span class="tag">서버 IO 프로세스</span><span>바깥세상과 HTTP/gRPC로 통신한다. 전처리와 후처리 프로세스에 일을 넘긴다.</span></div>
+          <div><span class="tag">토크나이저 / 디토크나이저 프로세스</span><span>SGLang은 토크나이저 여러 개, 디토크나이저 하나를 둔다. 입력 토큰이 출력 토큰보다 훨씬 빠른 속도로 들어오기 때문이다.</span></div>
+          <div class="hot"><span class="tag">스케줄러 프로세스</span><span>GPU에서 돌릴 일을 정의하고 순서를 정한다. 큐잉을 담당한다. 의미상 단일 스레드다.</span></div>
+          <div class="hot"><span class="tag">모델 러너 프로세스 (1개 이상)</span><span>GPU에 밀착해 실제 추론을 수행한다. 옛날부터 ML을 한 사람에게 익숙한 PyTorch 코드가 대부분 여기 있다.</span></div>
+        </div>
+        <p class="note">vLLM은 조금 다르다. 발표자에 따르면 vLLM에서는 토크나이저와 디토크나이저가 같은 프로세스(엔진 매니저) 안에 산다.</p>
+
+        <h3>청중 질문: 서버와 엔진은 뭐가 다른가, vLLM은 어디인가 <span class="ts">18:30</span></h3>
+        <p>서버는 핵심 연산 주위에 입출력을 감싼 것이다. vLLM은 둘 다 가지고 있다. HTTP/gRPC 서버로 동작하고, 엔진 층은 SDK 형태로도 쓸 수 있다. 대부분의 배포는 요청 하나에 응답 하나를 돌려주는 서버 형태다.</p>
+
+        <h3>청중 질문: 이 워크로드는 상태가 있나 <span class="ts">19:50</span></h3>
+        <blockquote>성능을 신경 쓰지 않으면 무상태다. 성능을 신경 쓰는 순간 상태가 생기는데, 그게 거의 모든 경우다.<cite>발표자의 답을 옮김</cite></blockquote>
+        <p>쌓이는 상태는 KV 캐시다. 이전 요청에서 계산한 것을 세션 개념에 붙여 둔다. 그런데 세션이 무엇인지 정의하는 일은 엔진 바깥에 있다. 엔진 복제본은 자기 KV 캐시를 추적할 뿐이고, NVIDIA Dynamo나 llm-d 같은 바깥 층이 세션을 다룬다. 발표자는 여기에 까다로운 문제가 많지만 이번 발표 범위 밖이라고 했다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="scheduler">
+        <header><span class="num">05</span><h2>진짜 병목은 스케줄러다 <span class="ts">21:50</span></h2></header>
+        <p>GPU는 가장 비싸고, 초당 페타플롭 규모의 일을 한다. 그래서 마이크로초를 깎는 성능 공학은 모델 포워드 패스에 집중된다. 그런데 발표자가 강조하는 반전이 있다.</p>
+        <div class="callout">
+          <span class="title">스케줄러는 GPU의 문지기다</span>
+          <span>누군가는 GPU에서 돌 일을 정의하고 자원을 관리해야 한다. 그 일은 동시성이 까다로워서 <strong>의미상 단일 스레드</strong>로 설계되고, 실제 구현도 단일 스레드다. GPU보다 훨씬 적은 연산을 하는데도 GPU로 가는 길목을 막을 수 있다. 그래서 엔진 설계와 운영에서 두 번째로 공을 들여야 할 곳이다.</span>
+        </div>
+
+        <h3>청중 질문: 스케줄러를 병렬로 돌리면 되지 않나 <span class="ts">23:30</span></h3>
+        <p>발표자의 답은 "아직 그 단계는 아니다"이다. 이유는 둘이다.</p>
+        <ul class="plain">
+          <li>GPU 자원에 락과 조정을 넣으면 복잡도가 얻는 이득보다 훨씬 크게 늘어난다.</li>
+          <li>스케줄러를 마이크로초 단위로 줄여도, 다음 일은 어차피 GPU의 이전 작업이 끝나야 시작한다. 그 작업은 보통 수십에서 수백 ms 걸린다.</li>
+        </ul>
+        <p>결론은 <strong>호스트 쪽이 GPU 쪽보다 빠르기만 하면 된다</strong>는 것이다. 지금은 파이썬으로도 대체로 가능하다. 다만 GPU가 빨라지고 GPU당 작업량이 줄수록 스케줄러의 압박은 커진다. 이 이야기는 07절에서 이어진다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="request-life">
+        <header><span class="num">06</span><h2>요청 하나의 일생 <span class="ts">25:00</span></h2></header>
+        <ol class="plain">
+          <li>서버가 바깥에서 입력을 받는다.</li>
+          <li>토크나이저로 보내 전처리한다.</li>
+          <li>스케줄러가 이 요청이 자원을 얼마나 쓸지, 지금 자원이 얼마나 남았는지 판단한다.</li>
+          <li>스케줄러가 핵심 루프를 돈다. 요청들을 <strong>배치</strong>로 묶어 모델 러너에 보내고, 토큰과 토큰별 확률분포(로짓)를 돌려받는다. 이것을 계속 반복한다.</li>
+          <li>토큰이 준비되는 대로 디토크나이저로 넘겨 응답으로 바꾸고 서버로 돌려보낸다.</li>
+        </ol>
+        <p>왜 배치로 묶나. GPU를 비롯한 대부분의 가속기는 여러 요청을 한꺼번에 처리할 때 효율이 좋다. 발표자의 비유는 데이터베이스다. 어차피 테이블 전체를 순차 스캔할 거라면, 그 테이블을 읽는 쿼리 서너 개를 모아 한 번에 처리하는 편이 낫다. 비싼 것은 테이블을 읽는 일이기 때문이다. 추론에서도 비싼 것은 모델 가중치를 읽는 일이다.</p>
+        <p>발표자는 이 구조가 데이터베이스, 파일 시스템, 웹 서버 내부보다 <strong>단순하다</strong>고 말한다. 분야가 새롭기도 하지만, 가운데에 최고 속도로 돌려야 할 핵심 하나가 있고 나머지는 그걸 돕는 구조이기 때문이다.</p>
+
+        <h3>청중 질문 묶음: 토크나이저 <span class="ts">27:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>발표자의 답</th></tr></thead>
+            <tbody>
+              <tr><td>토크나이저와 디토크나이저가 서로 통신하나</td><td>SGLang에서는 직접 통신하지 않는다. 같은 매핑 체계(보통 Hugging Face의 tokenizers 라이브러리)를 쓰기만 하면 된다. 토큰화가 디토큰화보다 어렵다</td></tr>
+              <tr><td>토크나이저는 병렬인데 왜 입력이 길면 첫 토큰이 느려지나</td><td>긴 입력은 핵심 루프에서 처리 시간이 길다. 일정 크기를 넘으면 입력 길이에 거의 선형이다. 10만 토큰은 1만 토큰의 대략 10배다. 입력을 여러 배치로 쪼개 돌리면 큐 대기를 여러 번 겪을 수도 있다. "첫 토큰"은 첫 출력 토큰을 뜻하지 토큰화 완료가 아니다</td></tr>
+              <tr><td>지연 중 토크나이저 몫은 얼마나 되나</td><td>워크로드에 따라 다르다. 발표자가 인용한 Crusoe(추정)의 자료에 따르면 모델이 약 200억 파라미터 이상이면 토크나이저는 병목으로 보이지 않는다. 작은 모델에 매우 긴 입력을 넣을 때는 병목이 될 수 있다. 토크나이저는 ms 이하 규모이고 요청당 한 번만 돈다. 디코드는 초당 1,000토큰이면 토큰당 1ms, 느리면 10~20ms 이상이 매 토큰 든다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자의 여담: 사람들은 KV 캐싱은 늘 말하지만 토크나이저 캐싱은 아무도 말하지 않는다. 할 수 있는데도 그렇다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="why-python">
+        <header><span class="num">07</span><h2>왜 멀티프로세스, 왜 파이썬 <span class="ts">33:00</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>답</th></tr></thead>
+            <tbody>
+              <tr><td>왜 여러 프로세스인가</td><td>서버 IO, 토큰화, 디토큰화, 각 모델 러너가 서로 독립된 제어 흐름을 갖게 하려고. 토크나이저는 웹 서버 기준으로 꽤 연산이 무겁다. 모델 러너는 웹 서버가 네트워크 카드에 일을 떠넘기듯 GPU에 일을 떠넘기므로 자기 이벤트 루프를 갖는 편이 깔끔하다. 프로세스 간 통신량도 한 스레드에 몰아넣어야 할 만큼 많지 않다</td></tr>
+              <tr><td>왜 스레드가 아니라 프로세스인가</td><td>파이썬은 프로세스당 단일 스레드다. 전역 인터프리터 락 <span class="en">GIL</span> 때문에 같은 프로세스의 스레드들이 자주 서로를 막는다. 최근 바뀌기 시작했지만 호환성과 성능 작업이 아직 많이 남았다</td></tr>
+              <tr><td>그럼 왜 파이썬인가</td><td>가속기 지원이 탁월하다. 연구자에게 쓰기 쉬운 언어라서이기도 하지만, 더 깊은 이유는 파이썬이 C/C++ 상호운용을 핵심 설계 원칙으로 지켜 왔기 때문이다. 똑같이 편한 JavaScript보다 가속 코드와 대화하기 쉽다</td></tr>
+              <tr><td>Rust로 다시 쓰면 안 되나</td><td>모델 러너는 GPU에 지시만 내린다. GPU에서 도는 코드는 이미 컴파일 언어로 극한까지 최적화돼 있고, CUDA 그래프 같은 기법이 호스트 쪽 일을 거의 다 GPU로 밀어낸다. 그래서 러너를 다시 쓸 이익은 작다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">다시 쓸 만한 곳은 스케줄러다 <span class="ts">35:50</span></span>
+          <span>스케줄러는 GPU 작업보다 빠르기만 하면 되지만, GPU가 빨라지고 GPU당 일이 줄수록 압박이 커진다. 호스트 쪽에만 있고, 적은 수의 GPU 자원을 다루며, 모델이나 PyTorch를 몰라도 된다. 엔진별로 얇게 다시 쓸 수 있다. 발표자는 엔진의 반복 개발 속도가 조금 느려지는 지금, 앞으로 큰 재작성 대상이 될 것으로 본다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="inside-forward">
+        <header><span class="num">08</span><h2>포워드 패스 안쪽: 커널과 백엔드 <span class="ts">36:40</span></h2></header>
+        <p>이제 안에서 밖으로 나가며 본다. 모델 포워드 패스 주위는 네 겹이다.</p>
+        <div class="stack" aria-label="모델 포워드 패스 주위의 네 겹">
+          <div class="hot"><span class="tag">1. 커널 <span class="en">kernels</span></span><span>모델 구조의 각 연산을 GPU에서 실행하는 코드. 엔진이 직접 다 구현하지 않고 <strong>백엔드</strong>라는 외부 커널 라이브러리에서 가져다 쓴다. 그래서 엔진 간 순수 GPU 성능 차이는 작다. 차이는 "GPU를 얼마나 방해하지 않느냐"에서 난다. SGLang의 트리 어텐션처럼 엔진 고유 커널도 조금 있지만, 쓸모 있으면 결국 공용 라이브러리로 들어간다.</span></div>
+          <div><span class="tag">2. 모델 포워드 패스 코드</span><span>어떤 커널을 어떤 순서로 부를지 정하는 제어 흐름. 엔진마다, 모델 구조마다 따로 구현한다. Transformers의 참조 구현은 최적화가 부족하다. SGLang과 vLLM 모두 Transformers 구현을 바로 쓰면서 커널 융합 같은 자동 최적화를 조금 해 주는 경로가 생겼지만, 많이 쓰는 모델은 여전히 손으로 쓴 경로를 탄다.</span></div>
+          <div><span class="tag">3. 배치 구성 <span class="en">batch construction</span></span><span>포워드 패스에 넣을 입력을 고른다. 엔진별 차별점이 가장 많이 들어가는 곳이다. 프리필 큐와 디코드 큐를 따로 둘지, 하나로 섞을지, 순수 프리필·순수 디코드·혼합을 동적으로 바꿀지 결정한다.</span></div>
+          <div><span class="tag">4. 토큰화 / 디토큰화</span><span>대체로 지루하고 외부 라이브러리가 해결했다. 예외는 멀티모달이다. 이미지 토큰화는 유니코드 바이트 토큰화보다 어렵고, 영상은 ffmpeg로 프레임을 뽑아 텐서로 바꾸는 과정이 필요하다. 트레이스를 보면 아직 최적화 여지가 많다.</span></div>
+        </div>
+        <div class="callout">
+          <span class="title">발표자의 운영 철학: 큐는 문제다 <span class="ts">39:20</span></span>
+          <span>이상적인 추론 서버에는 큐잉이 없다. 큐가 자라게 두지 말고 가능한 한 빨리 비워야 한다. 엔진이 큐를 다룰 수는 있어야 하지만, 운영자 입장에서 큐가 쌓이는 것은 배포를 잘못했다는 신호다.</span>
+        </div>
+
+        <h3>어텐션 커널과 MLP 커널 <span class="ts">41:20</span></h3>
+        <p>요즘 언어 모델은 층을 반복한다. 층마다 토큰 사이를 넘나드는 계산을 하고, 그다음 토큰별로 표현을 풍부하게 하는 계산을 한 뒤 합친다. 이 둘이 빠른 커널의 두 부류에 대응한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>계산</th><th>무엇인가</th><th>발표자가 든 백엔드</th></tr></thead>
+            <tbody>
+              <tr><td>토큰 간 계산</td><td>어텐션 또는 선형 어텐션</td><td>FlashAttention(Tri Dao 등), FlashInfer(NVIDIA), CUTLASS(NVIDIA), Triton 구현(OpenAI의 커널 작성 언어), TensorRT-LLM에서 분리된 커널</td></tr>
+              <tr><td>토큰별 계산</td><td>MLP 층. 가장 큰 행렬 곱 <span class="en">GEMM</span>이 여기 있다. 밀집 MLP이거나, 토큰마다 작은 네트워크를 골라 보내는 희소 전문가 혼합 <span class="en">MoE</span></td><td>밀집: DeepSeek의 DeepGEMM(SGLang 기본에 가까움), vLLM의 양자화 백엔드 Marlin과 bitsandbytes. MoE: 토큰을 어디로 보내고 어떻게 모을지 다루는 all-to-all 통신 커널(DeepSeek의 DeepEP, 추정)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>MoE에서 라우팅과 행렬 곱을 따로 하면 성능 손해가 날 수 있다. 그래서 하나의 거대 커널 <span class="en">megakernel</span>로 합치기도 한다. 발표자는 DeepSeek V4 구조가 그렇게 한다고 말했다.</p>
+        <p class="note">설정 방식의 차이: SGLang은 시작 시 설정으로 이런 선택지를 눈앞에 내밀되 기본값을 잘 잡아 둔다. vLLM은 기본값에 더 기대고 환경 변수로 바꾸는 쪽이다. 발표자는 "며칠마다 바뀌는 이야기"라고 단서를 달았다.</p>
+
+        <h3>청중 질문: 요청이 아주 많으면 누가 얼마나를 정하나 <span class="ts">44:40</span></h3>
+        <p>커널보다 훨씬 위, 배치 구성과 스케줄러 층의 일이다. 스케줄러는 <strong>이미 KV 캐시가 할당된 요청을 우선</strong>한다. 다시 계산하지 않아도 되기 때문이다. 공간이 모자라 캐시를 쫓아내야 하면 CPU 메모리로, 그다음 디스크로 보낸다. 발표자는 이것을 운영체제의 스왑에 비유한다. 디스크 스왑이 가능해도 그 순간 맥북은 못 쓰게 된다. KV 캐시가 널뛰는 상태는 엔진의 실패 상태이고, 이 기능은 서빙 문제가 생겼을 때 완전히 죽지 않게 해 주는 안전장치일 뿐이다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="kv-cache">
+        <header><span class="num">09</span><h2>기법 1: KV 캐시와 접두사 공유 <span class="ts">46:50</span></h2></header>
+        <p>어텐션은 입력 길이에 대해 제곱으로 비싸다. 적어도 인기 있는 모든 구조에서 핵심 부분이 그렇다. 해법은 한 번 계산한 것을 저장해 두는 것이다. 저장 공간을 선형으로 쓰는 대신 계산을 선형으로 줄인다. 이것이 KV 캐시다.</p>
+        <ul class="plain">
+          <li><strong>GPU 메모리가 한계다.</strong> 다른 곳에 저장했다가 다시 가져오는 것이 다시 계산하는 것보다 느릴 때가 많다. GPU는 빠르다. 그래서 GPU 메모리를 아껴 써야 한다.</li>
+          <li><strong>요청들은 접두사를 공유한다.</strong> 발표자의 예는 십계명이다. 모두 "Thou shalt not"으로 시작하니 거기까지는 계산을 재사용할 수 있다. 토큰 하나라도 달라지면 그 뒤로는 공유할 수 없다. 그래서 트리 모양이 된다. 수만 토큰짜리 시스템 프롬프트를 쓰는 에이전트라면 사용자 간 공유 이득이 크다.</li>
+          <li><strong>해법은 페이지 또는 래딕스 구조의 캐시다.</strong> 운영체제의 페이지 캐시처럼 저장해 두고, 어텐션 커널에 넘길 때 텐서를 즉석에서 재구성한다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">이 문제는 엔진에서 커널로 옮겨 갔다</span>
+          <span>예전에는 페이지 캐시를 텐서로 재구성하는 일이 엔진의 정체성이었다. 지금은 FlashAttention 4 같은 어텐션 커널이 그 일을 흡수했다. 발표자는 자기 팀이 작업한 페이지 크기 1짜리 래딕스 형태를 예로 들었다. 이제 엔진의 몫은 <strong>KV 캐시 용량 관리와 배치 레이아웃</strong>이다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="cuda-graph">
+        <header><span class="num">10</span><h2>기법 2: CPU가 GPU를 막지 않게 <span class="ts">49:10</span></h2></header>
+        <p>원하는 상태는 이렇다. 매 순간 GPU에서는 어떤 커널이 돌고 있고, CPU는 다음에 무엇을 돌릴지 정하되 GPU의 진행을 절대 막지 않는다. 그런데 호스트와 디바이스 사이의 동기화를 실수로 넣기는 아주 쉽다. 정보는 오가야 한다. GPU가 직접 HTTP 응답을 보낼 수는 없으니 CPU 일은 필요하다. 다만 그 일이 GPU를 기다리게 하면 안 된다.</p>
+        <div class="shift" aria-label="커널 발사 방식의 변화">
+          <div><span class="tag">CUDA 그래프 전</span><b>커널마다 CPU가 결정</b><span class="muted">무엇을, 어떻게, 어느 포인터에 돌릴지 커널 하나마다 CPU 작업이 붙는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">CUDA 그래프 후</span><b>그래프 하나를 한 번에 발사</b><span class="muted">포워드 패스의 커널 전체를 추적해 DAG 하나로 만든다. CPU는 어느 그래프를 쏠지만 정한다</span></div>
+        </div>
+        <p>CUDA 그래프 캡처 <span class="en">CUDA graph capture</span>는 포워드 패스에서 실행되는 모든 커널을 추적해 "이 커널이 이 포인터의 데이터를 바꾸면, 그다음 저 커널이 그 결과와 다른 포인터의 데이터를 섞는다"는 식의 의존 그래프로 만든다. 발표자가 보여 준 Perfetto 트레이스에서는 그래프 하나가 발사되면 그 안의 커널들이 CPU 개입 없이 줄줄이 돈다. 덕분에 모델 포워드 패스 부분에 대해서는 꽤 안심할 수 있다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="speculative">
+        <header><span class="num">11</span><h2>기법 3: 투기적 디코딩 <span class="ts">50:50</span></h2></header>
+        <p>디코드는 순차적이다. 토큰 하나를 만들 때마다 모델 파라미터 전부(MoE면 활성 파라미터 전부)를 메모리에서 읽어야 한다. 기본 설정에서는 토큰마다 반복한다. 사용자들을 위해 토큰당 100GB에서 1TB를 읽는데, 토큰을 몇 ms마다 내놓고 싶다면 메모리 대역폭이 초당 페타바이트 규모가 된다. 달성하기 매우 어렵다.</p>
+        <p class="note">계산을 따라가 보면 1TB를 2ms마다 읽을 때 초당 500TB, 즉 0.5PB/s다. 발표자의 "페타바이트 규모"는 자릿수 수준의 어림이고 틀린 말은 아니다.</p>
+
+        <h3>원리</h3>
+        <ol class="plain">
+          <li>작은 <strong>추측 모델</strong> <span class="en">speculator</span>이 다음 토큰 몇 개를 미리 찍는다.</li>
+          <li><strong>목표 모델</strong> <span class="en">target model</span>이 그 후보들을 한꺼번에 채점한다. 병렬이다.</li>
+          <li>올바른 샘플링 기법(기각 샘플링 <span class="en">rejection sampling</span>)을 쓰면 순차로 돌렸을 때와 수치상 같은 출력이 보장된다.</li>
+        </ol>
+        <p>발표자의 표현을 빌리면 <strong>디코드를 작은 프리필로 바꾸는 것</strong>이다. 추측 모델이 연속으로 맞히는 토큰 수가 늘수록 디코드 처리량이 거의 선형으로 오른다.</p>
+
+        <figure class="chart" aria-label="개선 폭 비교: 일반 최적화는 5%와 10%, 추측 모델 개선은 2배, 4배, 8배">
+          <span class="chart-title">개선 폭 비교 (기준선 = 100, 발표자가 든 숫자 기준)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>일반 성능 최적화 한 건 (+5%)</span><span class="val">105</span></div>
+              <div class="track"><div class="fill" style="width:13.1%" title="일반 최적화 +5%: 105"></div><div class="baseline" style="left:12.5%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>일반 성능 최적화 한 건 (+10%)</span><span class="val">110</span></div>
+              <div class="track"><div class="fill" style="width:13.75%" title="일반 최적화 +10%: 110"></div><div class="baseline" style="left:12.5%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>더 좋은 추측 모델 (2배)</span><span class="val">200</span></div>
+              <div class="track"><div class="fill key" style="width:25%" title="추측 모델 2배: 200"></div><div class="baseline" style="left:12.5%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>더 좋은 추측 모델 (4배)</span><span class="val">400</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="추측 모델 4배: 400"></div><div class="baseline" style="left:12.5%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>더 좋은 추측 모델 (8배)</span><span class="val">800</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="추측 모델 8배: 800"></div><div class="baseline" style="left:12.5%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 기준선 (100)</span><span>800</span></div>
+          <span class="caption">발표자는 다른 최적화를 "인치 싸움"이라 부른다. 퍼센트 몇 점을 얻으려고 어려운 성능 공학을 매번 해야 한다. 반면 추측 모델은 데이터와 연산을 더 넣어 학습시키면 배수 단위 속도 향상이 기준선 위에 얹힌다.</span>
+        </figure>
+
+        <p>이 기법 덕분에 Groq의 LPU나 Cerebras 같은 새 가속기로 가지 않고도 NVIDIA 하드웨어에서 꽤 큰 모델을 초당 1,000토큰 수준으로 돌릴 수 있게 됐다고 발표자는 말한다. 알고리즘 세부는 Modal 블로그에 최근 글을 썼다며 넘어갔다.</p>
+
+        <h3>건너뛴 주제: 병렬화 <span class="ts">53:20</span></h3>
+        <p>시간 관계로 발표자가 생략한 부분이다. 요점만 남겼다. 작업을 여러 가속기에 나누려면 병렬화를 지원하는 좋은 커널이 필요하다. 엔진 쪽에서는 모델 포워드 패스 코드가 그 주위의 <strong>통신</strong>을 모두 담당해야 하는데, 문제 대부분이 그 통신에서 생긴다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="observability">
+        <header><span class="num">12</span><h2>관측성과 디버깅 <span class="ts">53:50</span></h2></header>
+        <p>추론 서비스에도 버그가 있다. 발표자는 세 종류로 나눈다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>버그 종류</th><th>내용</th><th>누구 책임</th></tr></thead>
+            <tbody>
+              <tr><td>애플리케이션 버그</td><td>모델이 엉뚱하게 행동한다</td><td>앱 개발자. 하지만 엔진 대시보드에 나타나기도 한다</td></tr>
+              <tr><td>모델 품질 버그</td><td>추론이 정확한가. 성능 최적화를 넣었을 때 모델 동작이 안 바뀌었다고 보장했는가. 가장 흔한 사례는 모델 출시 직후의 토크나이저와 채팅 템플릿 버그다. 몇 주면 잡히지만 늘 경계해야 한다</td><td>엔진</td></tr>
+              <tr><td>성능 버그</td><td>가장 나쁜 것은 시간이 지나며 생기는 회귀다. 복제본을 오래 돌릴 때만 나타나는 저하가 있다. 이기종 클라우드에서는 복제본 간 성능 차이도 조사해야 한다</td><td>엔진</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>로그만으로 디버깅할 수 있게 <span class="ts">55:10</span></h3>
+        <p>목표는 개발 서버를 따로 띄우지 않고 로그만으로 원인을 찾는 것이다.</p>
+        <ul class="plain">
+          <li><strong>모델 품질</strong>: 실제 배포본에 평가 벤치마크 스크립트를 쏜다. SGLang과 vLLM에 스크립트가 있고 외부 벤치마크 도구도 있다. 숫자를 내고 트레이스를 남긴다. 프로덕션에서도 트레이스를 남기고, 사용자의 정확성 피드백을 그 요청까지 거슬러 연결한다.</li>
+          <li><strong>토크나이저 버그</strong>: 엔진이 <strong>토큰 ID를 로그에 남기도록</strong> 설정한다. 발표자의 핵심 팁이다.</li>
+          <li><strong>성능 버그</strong>: 어디서든 나타난다. 필요하다고 생각하는 것보다 더 많은 지표를 기록한다. 어떤 상관관계가 버그를 쉽게 드러낼지 미리 알 수 없다.</li>
+        </ul>
+
+        <h3>대시보드 읽는 법 <span class="ts">56:20</span></h3>
+        <p>발표자는 자기 미술 설치물의 Modal 엔드포인트 대시보드를 보여 줬다. 복제본 세 개를 띄우고 부하를 올렸을 때의 모습이다.</p>
+        <ol class="plain">
+          <li>트래픽이 급증한다.</li>
+          <li>프리필 쪽에 큐가 생겨 첫 토큰 지연이 올라간다. 앞선 작업이 끝나야 프리필에 들어간다.</li>
+          <li>GPU 경합으로 디코드가 조금 느려지다가 많이 느려진다. 토큰 간 지연이 오른다.</li>
+          <li>부하 증가를 감지해 복제본을 추가로 띄운다. 새 복제본이 요청을 나눠 받으면 큐가 기준선으로 돌아온다.</li>
+        </ol>
+        <p>발표자는 많은 경우 혼잡과 큐잉의 해법은 자원을 더 띄우는 것이라고 정리한다. 더 깊이 들어가야 하면 Nsight Systems나 torch profiler로 엔진 전체를 본다. 모든 프로세스와 GPU 작업을 한눈에 보고 "이 GPU만 전부 느리다" 같은 문제를 찾는다. 발표자가 든 실제 사례의 원인은 NUMA 인식 문제였다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="learn-more">
+        <header><span class="num">13</span><h2>더 공부하려면 <span class="ts">58:10</span></h2></header>
+        <ul class="plain">
+          <li><strong>mini-SGLang과 nano-vLLM</strong>: 두 팀이 만든 엔진 구조의 단순 구현. 사람에게도 좋고, 코드 전체가 컨텍스트 창에 들어가서 에이전트에게는 더 좋다.</li>
+          <li><strong>Aleksa Gordić의 vLLM 해설 글</strong>: 발표자가 추천한 블로그 워크스루.</li>
+          <li><strong>노트북으로 직접 돌려 보기</strong>, 그리고 코딩 에이전트를 코드베이스에 붙여 질문하기.</li>
+          <li><strong>DeepWiki</strong>(Cognition): SGLang과 vLLM을 포함한 저장소들을 크롤링해 구조 도표와 위키 페이지를 만들고 에이전트에게 질문할 수 있다. 자기 에이전트 셋업과 함께 쓰면 좋다.</li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>추론 엔진은 토큰을 받아 토큰을 내놓는다. 만들기는 쉽고, <strong>싸고 빠르게</strong> 만들기가 어렵다. 그 요구가 구조를 결정한다.</li>
+          <li><strong>학습은 비용, 추론은 수익.</strong> 가중치 판매는 사업이 되지 않았고, 토큰 생성 서비스에는 돈이 모인다.</li>
+          <li>워크로드는 챗봇 플러스, 백그라운드 에이전트, 데이터 처리기. 접두사 재사용, 출력 길이, 지연 허용치가 다르다.</li>
+          <li>요청 하나는 <strong>프리필</strong>과 <strong>디코드</strong>로 갈라진다. 산술 강도가 달라 다른 코드 경로를 탄다.</li>
+          <li>엔진은 서버 IO, 토크나이저/디토크나이저, 스케줄러, 모델 러너 프로세스로 짜인다. 파이썬의 GIL 때문에 스레드가 아니라 프로세스다.</li>
+          <li>GPU가 가장 비싸지만 <strong>병목은 단일 스레드 스케줄러</strong>다. 호스트가 GPU보다 빠르기만 하면 되고, 앞으로 Rust 재작성의 주 대상이다.</li>
+          <li>커널은 외부 백엔드에서 가져다 쓴다. 엔진 차이는 <strong>GPU를 얼마나 방해하지 않느냐</strong>와 배치 구성에서 난다.</li>
+          <li><strong>KV 캐시</strong>는 제곱 계산을 선형 저장으로 바꾼다. 접두사 공유가 핵심이고, 페이지 재구성은 이제 커널의 일이다. 엔진은 용량과 레이아웃을 맡는다.</li>
+          <li><strong>CUDA 그래프</strong>로 커널 발사를 한 번에 하고, <strong>투기적 디코딩</strong>으로 디코드를 작은 프리필로 바꿔 배수 단위 속도를 얻는다.</li>
+          <li>운영의 답은 관측성이다. 토큰 ID를 로그에 남기고, 실제 배포본에 평가를 돌리고, 필요 이상으로 지표를 기록한다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 "학습은 비용 센터, 추론은 수익 센터"라고 말한 근거는?</span></summary><div class="answer">모델 가중치를 직접 팔아 사업을 성립시킨 경우가 거의 없다. 반면 토큰을 만들어 주는 서비스에는 사람들이 돈을 낸다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>세 가지 워크로드 중 접두사 재사용이 낮고 처리량이 중요한 것은?</span></summary><div class="answer">데이터 처리기. 문서마다 입력이 다르고 시스템 프롬프트는 상대적으로 작다. 출력은 짧고, 백필 작업을 빨리 훑는 총 처리량이 중요하다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>프리필과 디코드의 근본 차이는?</span></summary><div class="answer">프리필은 입력 전체를 한 번에 처리해 요청당 연산이 많다. 디코드는 토큰을 하나씩 만들어 사용자당 산술량이 훨씬 적다. 산술 강도가 달라서 코드 경로도 다르다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>쿼리당 출력 토큰 수를 운영자가 통제할 수 없는 이유는?</span></summary><div class="answer">언제 생성을 멈출지는 모델이 정한다. 입력 길이는 사용자가, 출력 길이는 모델이 좌우하므로 벤치마크로 측정해야 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>"상태가 있는 워크로드인가"라는 질문에 발표자는 뭐라고 답했나?</span></summary><div class="answer">성능을 신경 쓰지 않으면 무상태, 신경 쓰면 상태가 있다. 그 상태는 KV 캐시이고, 세션 정의는 NVIDIA Dynamo나 llm-d 같은 엔진 바깥 층의 일이다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>GPU가 아니라 스케줄러가 병목이 되는 이유는?</span></summary><div class="answer">누군가 GPU의 일을 정의하고 자원을 관리해야 하는데, 그 일은 동시성이 까다로워 단일 스레드로 설계된다. 연산량은 적지만 GPU로 가는 길목이라 느려지면 GPU가 논다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>스레드 대신 프로세스를 쓰는 이유와 그럼에도 파이썬을 쓰는 이유는?</span></summary><div class="answer">파이썬의 GIL 때문에 같은 프로세스 안의 스레드가 서로를 막는다. 그래도 파이썬을 쓰는 이유는 C/C++ 상호운용을 핵심 원칙으로 지켜 와 가속기와 대화하기 가장 쉽기 때문이다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>엔진 간 순수 GPU 성능 차이가 작은 이유는?</span></summary><div class="answer">커널을 직접 다 구현하지 않고 FlashAttention, FlashInfer, DeepGEMM 같은 외부 백엔드 라이브러리를 공유해 쓰기 때문이다. 차이는 GPU를 얼마나 방해하지 않느냐와 배치 구성에서 난다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>KV 캐시가 트리 모양이 되는 이유는?</span></summary><div class="answer">요청들이 같은 접두사를 공유하는 동안은 계산을 재사용할 수 있지만, 토큰 하나라도 달라지면 그 지점부터 갈라지기 때문이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>CUDA 그래프 캡처가 줄이는 비용은?</span></summary><div class="answer">커널 하나마다 CPU가 무엇을 어디에 돌릴지 정하는 작업. 포워드 패스 전체를 의존 그래프 하나로 만들어 CPU는 어느 그래프를 쏠지만 정한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>투기적 디코딩이 "디코드를 작은 프리필로 바꾼다"는 말의 뜻은?</span></summary><div class="answer">추측 모델이 미리 찍은 토큰 여러 개를 목표 모델이 한 번의 포워드 패스로 병렬 채점한다. 순차 생성이 병렬 검증으로 바뀌고, 기각 샘플링으로 출력 분포는 같게 유지된다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>토크나이저 버그를 잡기 위한 발표자의 핵심 팁은?</span></summary><div class="answer">엔진이 토큰 ID를 로그에 남기도록 설정한다. 모델 출시 직후에는 토크나이저와 채팅 템플릿 버그가 흔하다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 시스템에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 워크로드가 셋 중 어디에 가까운지 정한다<span class="how">접두사 재사용률, 출력 길이, 지연 허용치 세 축으로 적어 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>복제본 하나당 QPS와 쿼리당 입출력 토큰 분포를 벤치마크로 잰다<span class="how">출력 길이는 모델이 정하므로 추정하지 말고 측정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>첫 토큰 지연과 토큰 간 지연을 따로 대시보드에 올린다<span class="how">확인: 트래픽 급증 때 어느 쪽이 먼저 오르는지 보이는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>큐 길이와 KV 캐시 적중률, 축출 횟수를 지표로 남긴다<span class="how">큐가 자라거나 캐시가 CPU/디스크로 밀리면 배포가 부족하다는 신호로 다룬다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>긴 시스템 프롬프트가 있다면 접두사 공유가 실제로 일어나는지 확인한다<span class="how">같은 접두사 요청이 같은 복제본으로 가는지 라우팅 층을 점검한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>디코드가 느리면 투기적 디코딩을 켜 보고 속도와 출력 일치를 확인한다<span class="how">확인: 기준선 대비 배수 단위 개선이 나오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>엔진이 토큰 ID를 로그에 남기도록 설정한다<span class="how">새 모델을 올린 첫 몇 주는 토크나이저와 채팅 템플릿을 의심한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>실제 배포본에 평가 스크립트를 주기적으로 쏘고 결과와 트레이스를 보관한다<span class="how">최적화를 적용할 때마다 모델 동작이 그대로인지 비교한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>복제본 간 성능 차이와 장시간 가동 후 저하를 모니터링한다<span class="how">깊이 봐야 하면 Nsight Systems나 torch profiler로 프로세스 전체를 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>mini-SGLang 또는 nano-vLLM을 노트북에서 돌려 본다<span class="how">코딩 에이전트에 코드베이스를 붙여 요청의 일생을 따라가 본다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>추론 엔진</td><td>Inference engine. 토큰을 받아 모델을 돌려 토큰을 내놓는 핵심 소프트웨어. 스케줄러와 모델 러너를 포함한다</td></tr>
+              <tr><td>추론 서버</td><td>Inference server. 엔진 주위에 HTTP/gRPC 입출력을 감싼 것</td></tr>
+              <tr><td>프리필</td><td>Prefill. 입력 토큰 전체를 한 번에 처리하는 단계</td></tr>
+              <tr><td>디코드</td><td>Decode. 출력 토큰을 하나씩 순차로 만드는 단계</td></tr>
+              <tr><td>TTFT</td><td>Time to first token. 요청 후 첫 출력 토큰까지 걸리는 시간</td></tr>
+              <tr><td>TPOT / 토큰 간 지연</td><td>Time per output token, inter-token latency. 출력 토큰 하나를 만드는 데 걸리는 시간</td></tr>
+              <tr><td>SLO</td><td>Service level objective. 지켜야 할 지연이나 가용성 목표</td></tr>
+              <tr><td>KV 캐시</td><td>어텐션 계산의 중간 결과(키와 값)를 저장해 다시 계산하지 않게 하는 메모리</td></tr>
+              <tr><td>접두사 공유</td><td>Prefix sharing. 같은 앞부분을 가진 요청들이 그 부분의 KV 캐시를 함께 쓰는 것</td></tr>
+              <tr><td>페이지드 / 래딕스 캐시</td><td>운영체제 페이지 캐시처럼 KV 캐시를 블록 단위로 관리하거나, 접두사 트리 구조로 관리하는 방식</td></tr>
+              <tr><td>스케줄러</td><td>어떤 요청을 언제 묶어 GPU에 보낼지 정하는 프로세스. 큐잉도 담당한다</td></tr>
+              <tr><td>모델 러너</td><td>Model runner. GPU에 붙어 실제 포워드 패스를 실행하는 프로세스</td></tr>
+              <tr><td>배치</td><td>Batch. 여러 요청을 묶어 한 번에 처리하는 단위</td></tr>
+              <tr><td>로짓</td><td>Logits. 다음 토큰 후보 각각에 대한 모델의 점수. 확률분포로 바뀐다</td></tr>
+              <tr><td>산술 강도</td><td>Arithmetic intensity. 메모리에서 읽은 데이터 양 대비 수행하는 연산량</td></tr>
+              <tr><td>커널</td><td>Kernel. GPU에서 실행되는 연산 단위 프로그램</td></tr>
+              <tr><td>백엔드</td><td>Backend. 엔진이 가져다 쓰는 외부 커널 라이브러리</td></tr>
+              <tr><td>GEMM</td><td>General matrix multiply. 범용 행렬 곱. MLP 층의 중심 연산</td></tr>
+              <tr><td>MLP</td><td>Multilayer perceptron. 토큰별로 표현을 변환하는 신경망 층</td></tr>
+              <tr><td>MoE</td><td>Mixture of experts. 토큰마다 여러 작은 네트워크(전문가) 중 일부만 골라 보내는 희소 구조</td></tr>
+              <tr><td>메가커널</td><td>Megakernel. 여러 단계를 하나의 큰 GPU 커널로 합친 것</td></tr>
+              <tr><td>CUDA 그래프</td><td>CUDA graph. 커널들의 의존 관계를 그래프 하나로 캡처해 한 번에 발사하는 기법</td></tr>
+              <tr><td>호스트-디바이스 동기화</td><td>CPU(호스트)가 GPU(디바이스) 작업이 끝나기를 기다리는 것. 실수로 넣으면 GPU가 논다</td></tr>
+              <tr><td>투기적 디코딩</td><td>Speculative decoding. 작은 모델이 토큰을 미리 찍고 큰 모델이 병렬로 검증하는 기법</td></tr>
+              <tr><td>기각 샘플링</td><td>Rejection sampling. 추측 토큰을 받아들이거나 버려 원래 모델과 같은 출력 분포를 보장하는 방법</td></tr>
+              <tr><td>GIL</td><td>Global interpreter lock. 파이썬에서 한 프로세스의 스레드가 동시에 바이트코드를 실행하지 못하게 하는 락</td></tr>
+              <tr><td>NUMA</td><td>Non-uniform memory access. CPU 소켓마다 가까운 메모리와 먼 메모리가 있어 접근 속도가 다른 구조</td></tr>
+              <tr><td>Perfetto / Nsight Systems / torch profiler</td><td>프로세스와 GPU 작업의 시간 흐름을 기록하고 시각화하는 프로파일링 도구</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>워크숍 안내. 질문은 중간에 자유롭게</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>발표 목표. 토큰이 들어가고 나오는 사이에 무슨 일이 있나</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>구조 미리 보기: 통신하는 프로세스들</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>왜 추론인가. 학습은 비용, 추론은 수익</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>발표자 소개, 미술 설치물 예시</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>세 가지 워크로드</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>프리필과 디코드</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>지표: QPS, 토큰 수, 캐시 재사용, 지연 예산</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>워크로드별 성격 비교</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>하나처럼 보이지만 둘인 워크로드</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>서버와 엔진의 구조</td></tr>
+              <tr><td><span class="ts">18:30</span></td><td>질문: 서버 vs 엔진, vLLM의 위치</td></tr>
+              <tr><td><span class="ts">19:50</span></td><td>질문: 상태가 있나. KV 캐시와 세션</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>SGLang 프로세스 구성</td></tr>
+              <tr><td><span class="ts">21:50</span></td><td>스케줄러가 병목이다</td></tr>
+              <tr><td><span class="ts">23:30</span></td><td>질문: 스케줄러를 병렬로?</td></tr>
+              <tr><td><span class="ts">25:00</span></td><td>요청 하나의 일생, 배치 비유</td></tr>
+              <tr><td><span class="ts">27:00</span></td><td>질문 묶음: 토크나이저와 디토크나이저</td></tr>
+              <tr><td><span class="ts">29:20</span></td><td>질문: 긴 입력과 첫 토큰 지연</td></tr>
+              <tr><td><span class="ts">31:20</span></td><td>질문: 토크나이저 vs 핵심 루프 지연 비중</td></tr>
+              <tr><td><span class="ts">33:00</span></td><td>왜 멀티프로세스, 왜 파이썬, 왜 Rust가 아닌가</td></tr>
+              <tr><td><span class="ts">35:50</span></td><td>Rust 재작성 대상은 스케줄러</td></tr>
+              <tr><td><span class="ts">36:40</span></td><td>포워드 패스 주위의 네 겹</td></tr>
+              <tr><td><span class="ts">39:20</span></td><td>큐는 문제다</td></tr>
+              <tr><td><span class="ts">41:20</span></td><td>어텐션 커널과 MLP 커널의 백엔드들</td></tr>
+              <tr><td><span class="ts">44:00</span></td><td>SGLang과 vLLM의 설정 방식 차이</td></tr>
+              <tr><td><span class="ts">44:40</span></td><td>질문: 대량 동시 요청과 KV 캐시 축출</td></tr>
+              <tr><td><span class="ts">46:20</span></td><td>질문: 서버리스와 콜드 스타트</td></tr>
+              <tr><td><span class="ts">46:50</span></td><td>기법 1: KV 캐시와 접두사 공유</td></tr>
+              <tr><td><span class="ts">49:10</span></td><td>기법 2: 호스트-디바이스 동기화와 CUDA 그래프</td></tr>
+              <tr><td><span class="ts">50:50</span></td><td>기법 3: 투기적 디코딩</td></tr>
+              <tr><td><span class="ts">53:20</span></td><td>병렬화 (건너뜀)</td></tr>
+              <tr><td><span class="ts">53:50</span></td><td>관측성: 세 가지 버그</td></tr>
+              <tr><td><span class="ts">55:10</span></td><td>로그만으로 디버깅하기, 토큰 ID 로깅</td></tr>
+              <tr><td><span class="ts">56:20</span></td><td>대시보드 읽기, 자동 확장</td></tr>
+              <tr><td><span class="ts">57:50</span></td><td>프로파일러, NUMA 사례</td></tr>
+              <tr><td><span class="ts">58:10</span></td><td>더 공부하려면</td></tr>
+              <tr><td><span class="ts">59:10</span></td><td>마무리와 Modal 소개</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'woIYJYd_etI:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

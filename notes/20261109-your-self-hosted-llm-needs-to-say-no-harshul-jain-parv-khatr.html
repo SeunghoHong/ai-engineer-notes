@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LLM 승인 제어 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#inference">추론은 한 토큰씩</a></li>
+      <li><a href="#ceiling">배포마다 한계가 있다</a></li>
+      <li><a href="#incidents">큰 회사도 입구에서 막혔다</a></li>
+      <li><a href="#missing">빠진 단계: 승인</a></li>
+      <li><a href="#commitment">"예"는 약속이다</a></li>
+      <li><a href="#why-us">왜 우리 문제인가</a></li>
+      <li><a href="#where">승인을 둘 자리</a></li>
+      <li><a href="#signals">정책이 보는 여덟 신호</a></li>
+      <li><a href="#admit">승인: 200 다음에 할 일</a></li>
+      <li><a href="#defer-reject">보류와 거절</a></li>
+      <li><a href="#cost">개수는 비용이 아니다</a></li>
+      <li><a href="#choices">정책의 네 가지 선택</a></li>
+      <li><a href="#papers">논문 네 편과 고르는 순서</a></li>
+      <li><a href="#benchmark">정책을 증명하는 벤치마크</a></li>
+      <li><a href="#admitperf">admitperf 도구</a></li>
+      <li><a href="#results">실제 GPU 결과</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-09 · 52분 · 영어 발표 한글 정리</span>
+      <h1>직접 띄운 LLM은 거절할 줄 알아야 한다</h1>
+      <p class="lead">코딩 에이전트는 몇 초 만에 호출 수십 개를 쏟아낸다. 직접 띄운 LLM을 지키려면 요청이 GPU 메모리를 잡기 전에 입구에서 들일지, 미룰지, 거절할지 정하고, 그 정책이 통하는지 숫자로 증명해야 한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=ntVpbyDTYaQ" target="_blank" rel="noopener">Your Self-Hosted LLM Needs to Say No</a></span>
+        <span>발표: Harshul Jain (Audible 시니어 소프트웨어 엔지니어, ML·AI 인프라 담당), Parv Khatri (SAP 시니어 소프트웨어 개발자, 클라우드 앱·LLM 인프라 담당)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 사례는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고, 확실하지 않은 이름에는 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>LLM은 답을 한 토큰씩 쓰고, <strong>답이 얼마나 길지 미리 모른다.</strong> 받아들인 요청은 끝날 때까지 KV 캐시 메모리를 계속 키운다.</li>
+        <li>그래서 승인은 <strong>요청이 끝날 때까지 이어지는 약속</strong>이다. 그런데 지금 스택의 어느 층도 "이 요청을 받을 자리가 있나"를 묻지 않는다.</li>
+        <li>엔진 바로 앞 입구에 승인 층을 둔다. 요청 쪽 신호와 엔진 쪽 신호를 함께 보고 <strong>승인(200), 보류(503 + Retry-After), 거절(429·529)</strong> 중 하나를 고른다.</li>
+        <li>클라이언트도 협조해야 한다. <strong>첫 토큰부터 타임아웃을 재고, 포기하면 연결을 끊고, Retry-After와 지터를 지킨다.</strong></li>
+        <li>요청 수를 세는 것은 비용을 재는 것이 아니다. 정책은 <strong>단위, 신호, 규칙, 행동</strong>을 고르는 일이다. 코딩 에이전트에 딱 맞는 기존 논문은 없었다.</li>
+        <li>정책은 <strong>거절한 요청까지 분모에 넣는 굿풋</strong>으로 잰다. 그러지 않으면 95%를 거절해도 100점이 나온다.</li>
+        <li>발표자들의 실험에서 큐 대기 상한 정책은 P95 첫 토큰 시간을 <strong>약 2.5초에서 1초로</strong> 줄였다. KV 캐시는 0.5%만 찼다. KV 기준 정책이었다면 아무것도 막지 못했다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="inference">
+        <header><span class="num">01</span><h2>추론은 한 토큰씩 <span class="ts">02:20</span></h2></header>
+        <p>추론<span class="en">inference</span>은 누군가 모델에 프롬프트를 보내고 답을 받는 순간이다. 오늘 다루는 일은 모두 이때 일어난다.</p>
+        <ol class="plain">
+          <li>사용자 프롬프트가 들어온다. 예: "실패하는 테스트를 고쳐 줘".</li>
+          <li>GPU에서 도는 모델이 답을 토큰<span class="en">token</span> 하나씩 쓴다. 토큰은 대략 단어 하나다.</li>
+          <li>다음 토큰은 앞에서 쓴 토큰들을 보고 고른다. 그래서 한꺼번에 쓸 수 없다.</li>
+          <li>만든 토큰은 사용자에게 흘려보낸다. 프롬프트와 답을 합친 것이 요청 하나다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">기억할 점</span>
+          <span>모델은 답이 얼마나 길어질지 모른다. 마지막 토큰을 쓰는 순간에야 안다. 이 사실이 뒤에서 계속 문제가 된다.</span>
+        </div>
+
+        <h3>요청이 지나는 길 <span class="ts">04:00</span></h3>
+        <p>모델이 인터넷에 바로 노출되지는 않는다. 요청은 짧은 파이프라인을 거친다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>앱·에이전트</td><td>요청을 만든다</td></tr>
+              <tr><td>API 게이트웨이</td><td>API 키를 확인하고 요청 수를 센다</td></tr>
+              <tr><td>라우터</td><td>레플리카<span class="en">replica</span>를 고른다. 레플리카는 모델을 띄운 실행 사본 하나다</td></tr>
+              <tr><td>추론 엔진</td><td>모델 가중치를 GPU에 올리고 실제로 답을 만든다. 예: vLLM, SGLang, TensorRT-LLM</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>엔진은 여러 요청을 한 배치<span class="en">batch</span>로 묶어 GPU를 쉬지 않게 한다. 요청마다 KV 캐시<span class="en">KV cache</span>도 둔다. KV 캐시는 답을 쓰는 동안 요청이 쌓아 가는 메모리다. 답이 길수록 커진다.</p>
+        <p>각 상자는 무언가를 결정한다. 그런데 결정 하나가 빠져 있다. 그것이 이 발표의 주제다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="ceiling">
+        <header><span class="num">02</span><h2>배포마다 한계가 있다 <span class="ts">05:10</span></h2></header>
+        <p>배포마다 감당할 수 있는 한계가 있다. 이 한계는 서로 당기는 세 목표에서 나온다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>목표</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>품질</td><td>모델이 얼마나 크고 정확한가</td></tr>
+              <tr><td>지연 <span class="en">latency</span></td><td>첫 토큰과 그 뒤 토큰들이 얼마나 빨리 나오는가</td></tr>
+              <tr><td>처리량 <span class="en">throughput</span></td><td>GPU가 동시에 몇 개의 요청을 처리하는가</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>"좋고, 빠르고, 싸게 중 둘만 고른다"는 말처럼 셋을 다 가질 수는 없다. 제품마다 둘을 고른다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>제품</th><th>고르는 둘</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>대화형 채팅</td><td>품질 + 지연</td><td>품질이 떨어지거나 느리면 사용자가 바로 느낀다</td></tr>
+              <tr><td>비동기 에이전트</td><td>처리량 + 품질</td><td>품질이 낮으면 일을 다시 해야 한다. 백그라운드 작업은 다시 하는 비용이 크다</td></tr>
+              <tr><td>자동 완성 같은 대량 실시간 시스템</td><td>지연 + 처리량</td><td>비싼 모델이 필요 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>무엇을 포기하든 SLO<span class="en">service level objective</span>를 지키며 견딜 수 있는 최대 부하는 남는다. SLO는 지키기로 한 서비스 수준 목표다. 발표의 예시 배포에서는 그 한계가 동시에 8개다. 평소에는 이 한계를 느낄 일이 없다. 그런데 2초 안에 요청 40개가 몰려오면 이야기가 달라진다. <span class="ts">06:40</span></p>
+
+        <figure class="chart" aria-label="예시 배포의 동시 처리 한계 8개와 2초 안에 몰려든 요청 40개 비교">
+          <span class="chart-title">예시 배포: 견딜 수 있는 양과 몰려온 양 (요청 수)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>2초 안에 몰려든 요청</span><span class="val">40</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="2초 안에 몰려든 요청: 40개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>SLO를 지키며 동시에 처리할 수 있는 요청</span><span class="val">8</span></div>
+              <div class="track"><div class="fill" style="width:20%" title="동시 처리 한계: 8개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>20</span><span>40</span></div>
+          <span class="caption">발표의 예시 숫자다. 8은 한 번에 처리하는 수이고, 40은 2초 동안 도착한 수다.</span>
+        </figure>
+      </section>
+
+      <!-- 3 -->
+      <section id="incidents">
+        <header><span class="num">03</span><h2>큰 회사도 입구에서 막혔다 <span class="ts">07:10</span></h2></header>
+        <p>가상의 이야기가 아니다. 발표자는 2년 간격으로 나온 공개 장애 보고서<span class="en">postmortem</span> 두 건을 인용했다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">OpenAI · 2023-11-08</span>
+            <p>하루 종일 평소보다 트래픽이 많았다. 라우팅 서버의 메모리가 바닥나 헬스 체크에 실패했다. 레플리카를 더 붙였다가 되돌려야 했다. 빠져나온 방법은 들어오는 트래픽을 끊고 천천히 다시 늘리는 것이었다.</p>
+            <p class="verdict"><b>후속 조치</b>: 우아하게 부하 덜어내기<span class="en">graceful load shedding</span></p>
+          </div>
+          <div class="card">
+            <span class="tag">Anthropic · 2026-01-21</span>
+            <p>Sonnet 4.5가 먼저 느려졌다. 이어서 약 90분에 걸쳐 에러를 냈다. 밝힌 원인은 단순했다. 수요에 비해 컴퓨팅이 부족했다.</p>
+            <p class="verdict"><b>후속 조치</b>: 용량 한계를 더 일찍 알아채기</p>
+          </div>
+        </div>
+        <p>두 회사 모두 "더 빠른 엔진이 필요하다"고 하지 않았다. 같은 말을 다르게 했을 뿐이다. <strong>어떤 요청을 들일지 더 일찍 정하라.</strong> 두 후속 조치를 거꾸로 따라가면 같은 곳에 닿는다. 바로 입구다.</p>
+        <p class="note">발표자는 다른 장애 사례를 발표 자료 부록에 모아 두었다고 했다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="missing">
+        <header><span class="num">04</span><h2>빠진 단계: 승인 <span class="ts">08:50</span></h2></header>
+        <p>빠진 단계를 채우면 파이프라인은 <strong>클라이언트 → 승인 → 큐 → 라우터 → 엔진</strong>이 된다. 클라이언트가 엔진이나 큐에 바로 닿지 않는다. 그 사이에 승인 단계가 있다.</p>
+        <p>승인 제어<span class="en">admission control</span>는 요청이 GPU 메모리를 조금이라도 잡기 전에 내리는 결정이다. 답은 세 가지뿐이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>답</th><th>뜻</th><th>응답</th></tr></thead>
+            <tbody>
+              <tr><td>승인 <span class="en">admit</span></td><td>지금 시작한다</td><td><code>200</code></td></tr>
+              <tr><td>보류 <span class="en">defer</span></td><td>받아는 두되 기다리게 한다</td><td><code>503</code> + <code>Retry-After</code></td></tr>
+              <tr><td>거절 <span class="en">reject</span></td><td>지금은 안 된다</td><td><code>429</code> 또는 <code>529</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">응답 코드는 발표 2부에서 나온 내용을 여기에 미리 모은 것이다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="commitment">
+        <header><span class="num">05</span><h2>"예"는 약속이다 <span class="ts">10:00</span></h2></header>
+        <p>왜 엔진보다 앞에서 정해야 할까. 추론의 두 단계를 보면 알 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th><th>메모리</th></tr></thead>
+            <tbody>
+              <tr><td>프리필 <span class="en">prefill</span></td><td>엔진이 프롬프트 전체를 읽고 KV 캐시를 만든다</td><td>프롬프트 길이만큼 잡는다</td></tr>
+              <tr><td>디코드 <span class="en">decode</span></td><td>답을 토큰 하나씩 쓴다</td><td>토큰마다 조금씩 늘어난다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 메모리는 요청이 끝날 때까지 잡혀 있다. 그래서 "예"는 한순간이 아니다. <strong>요청이 사는 내내 이어지는 약속</strong>이다.</p>
+        <div class="callout">
+          <span class="title">요청 A, B, C 예시</span>
+          <span>짧은 답을 낼 요청 A를 들였다. 이어서 긴 답을 낼 요청 B를 들였다. 이제 짧은 요청 C가 왔다. B가 메모리를 얼마나 오래 잡을지 모르니 C가 언제 끝날지도 모른다. C를 받아야 할까? 받으면 SLO를 놓칠 수 있다. 승인 하나하나에 비용이 붙는다.</span>
+        </div>
+
+        <h3>메모리가 차면 <span class="ts">11:30</span></h3>
+        <p>돌아가는 요청마다 캐시가 자라니 전체 메모리 사용량은 계속 오른다. 메모리가 가득 차면 엔진은 셋 중 하나로 덜어낸다.</p>
+        <ul class="plain">
+          <li><strong>축출</strong><span class="en">evict</span>: 요청의 캐시를 버린다.</li>
+          <li><strong>스왑</strong><span class="en">swap</span>: 요청을 대기 상태로 옮긴다.</li>
+          <li><strong>에러</strong>: 처리할 수 없다고 응답한다.</li>
+        </ul>
+        <p>셋 다 처리를 늦추고 SLO를 놓치게 만든다. 이미 해 둔 계산도 버리게 된다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="why-us">
+        <header><span class="num">06</span><h2>왜 우리 문제인가 <span class="ts">12:30</span></h2></header>
+        <p>OpenAI나 Anthropic 같은 곳은 자기 추론 인프라를 직접 운영한다. 그럼 왜 우리가 신경 써야 할까.</p>
+        <ul class="plain">
+          <li>개인정보 때문에 모델을 직접 띄우려는 팀이 있다.</li>
+          <li>비용 때문에 자기 GPU에서 돌리려는 팀도 있다.</li>
+          <li>이런 팀은 한정된 GPU를 지켜야 한다. 그러려면 어떤 요청을 처리할지 스스로 잘 골라야 한다.</li>
+        </ul>
+
+        <h3>트래픽이 바뀌었다 <span class="ts">13:20</span></h3>
+        <div class="shift" aria-label="트래픽의 변화">
+          <div><span class="tag">예전</span><b>사람이 채팅한다</b><span class="muted">한 번에 요청 하나. 몇 초 읽은 뒤 다음 요청. 답도 천천히 온다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">지금</span><b>코딩 에이전트가 호출한다</b><span class="muted">호출 수십 개에 재시도, 멈춤, 되돌리기 호출까지 한꺼번에 온다.</span></div>
+        </div>
+        <p>에이전트에게 "테스트 하나 고쳐 줘"라고 하면 파일 14개쯤을 읽고 테스트 10개쯤을 돌린다. 이것을 합치면 요청 하나가 LLM 호출 40~50개가 된다. 어떤 호출은 오래 걸리고 어떤 호출은 짧다. 클러스터는 이 가운데 무엇을 받고 무엇을 거절할지 잘 골라야 한다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="where">
+        <header><span class="num">07</span><h2>승인을 둘 자리 <span class="ts">16:10</span></h2></header>
+        <p>2부는 Parv Khatri가 맡았다. 질문은 셋이다. 결정은 스택 어디에 두나. 좋은 판단을 하려면 무엇을 봐야 하나. 클라이언트에게 무엇을 돌려주나.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>보는 것</th><th>정하는 것</th><th>"자리가 있나?"에 대한 답</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트</td><td>자기 호출</td><td>언제 다시 시도할지</td><td>내 일이 아니다</td></tr>
+              <tr><td>API 게이트웨이</td><td>API 키, 요청 수</td><td>키별 요청 한도</td><td>볼 수 없다</td></tr>
+              <tr><td>라우터</td><td>어떤 레플리카가 건강한지</td><td>어느 레플리카로 보낼지</td><td>내 일이 아니다</td></tr>
+              <tr><td>추론 엔진</td><td>KV 캐시, 현재 배치</td><td>실행 순서, 무엇을 내보낼지</td><td>이미 받은 뒤에야 안다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>모든 층이 무언가를 결정한다. 하지만 승인 상자는 비어 있다.</p>
+
+        <h3>결정을 둘 수 있는 세 시점 <span class="ts">17:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시점</th><th>정책이 보는 것</th><th>드는 비용</th></tr></thead>
+            <tbody>
+              <tr><td>입구 <span class="en">ingress</span></td><td>엔진 바로 앞. 요청 자체와 엔진이 내보내는 지표</td><td>프록시나 게이트웨이만 있으면 된다. 엔진은 그대로 둔다</td></tr>
+              <tr><td>큐 경계</td><td>엔진 스케줄러가 다음 배치를 고를 때의 상태</td><td>엔진 스케줄러를 고쳐야 한다</td></tr>
+              <tr><td>디코드 중</td><td>답을 쓰는 도중의 상태. 요청을 멈추거나 캐시를 회수한다</td><td>엔진 스케줄러를 고쳐야 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>뒤의 두 시점은 더 많이 본다. 대신 엔진 스케줄러를 고쳐야 한다. 그러면 vLLM이나 SGLang의 수정본을 따로 들고, 원본이 바뀔 때마다 계속 맞춰야 한다. <strong>입구만이 엔진을 받은 그대로 쓸 수 있다.</strong> 발표는 여기서부터 입구만 다룬다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="signals">
+        <header><span class="num">08</span><h2>정책이 보는 여덟 신호 <span class="ts">18:40</span></h2></header>
+        <p>입구의 정책은 함수 하나로 생각하면 된다. 요청에 대해 아는 것과 시스템의 현재 상태를 받아 세 답 중 하나를 돌려준다.</p>
+        <div class="callout">
+          <span class="title">정책의 모양 (예시 표기)</span>
+          <span><code>결정(요청, 시스템 상태) → 승인 | 보류(대기 시간) | 거절(이유 코드)</code></span>
+          <span>정책이 승인하기 전까지 요청은 GPU 메모리를 전혀 잡지 않는다. 비용이 0이다.</span>
+        </div>
+
+        <h3>두 시야가 동시에 필요하다 <span class="ts">19:40</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">요청 쪽</span>
+            <ul>
+              <li>입력 길이</li>
+              <li>보낸 클라이언트나 테넌트<span class="en">tenant</span></li>
+              <li>속한 에이전트 세션</li>
+              <li>마감 시간<span class="en">deadline</span></li>
+            </ul>
+            <p class="verdict">게이트웨이가 보는 쪽</p>
+          </div>
+          <div class="card">
+            <span class="tag">엔진 쪽</span>
+            <ul>
+              <li>KV 캐시가 얼마나 찼나</li>
+              <li>큐에서 가장 오래 기다린 요청의 대기 시간</li>
+              <li>프롬프트가 이미 캐시에 있는 비율</li>
+              <li>레플리카 풀마다의 부하</li>
+            </ul>
+            <p class="verdict">엔진이 보는 쪽</p>
+          </div>
+        </div>
+        <p>양쪽을 다 보는 층은 없다. <strong>그래서 승인은 독립된 층이어야 한다.</strong></p>
+
+        <h3>신호를 규칙으로 바꾸기 <span class="ts">20:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>쪽</th><th>조건</th><th>답</th></tr></thead>
+            <tbody>
+              <tr><td>요청</td><td>입력이 남은 메모리에 비해 너무 크다</td><td>보류</td></tr>
+              <tr><td>요청</td><td>클라이언트나 테넌트가 자기 몫을 넘었다</td><td>거절 <code>429</code></td></tr>
+              <tr><td>요청</td><td>한 에이전트 세션이 동시에 너무 많은 호출을 띄웠다</td><td>보류</td></tr>
+              <tr><td>요청</td><td>기다리면 어차피 마감을 놓친다</td><td>거절</td></tr>
+              <tr><td>엔진</td><td>KV 캐시가 상한선<span class="en">high-water mark</span> 아래다</td><td>승인</td></tr>
+              <tr><td>엔진</td><td>가장 오래 기다린 요청이 목표 시간을 넘겼다</td><td>보류</td></tr>
+              <tr><td>엔진</td><td>프롬프트가 이미 캐시에 있다</td><td>먼저 승인 (처리 비용이 싸다)</td></tr>
+              <tr><td>엔진</td><td>모든 풀이 꽉 찼다</td><td>거절 <code>529</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">경험칙: 초 단위로 바뀌는 신호를 쓴다</span>
+          <span>예를 들어 큐 대기 시간을 쓴다. 1분 평균은 쓰지 않는다. 에이전트가 2초에 호출 40개를 보내면 1분 평균은 알아채지도 못한다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="admit">
+        <header><span class="num">09</span><h2>승인: 200 다음에 할 일 <span class="ts">22:00</span></h2></header>
+        <p>세 답을 하나씩, 서버가 보내는 것과 에이전트가 할 일로 나눠 본다. 먼저 승인이다.</p>
+        <p>승인하면 서버는 <code>200</code>을 보내고 응답 스트림을 시작한다. 이때 엔진 안에서 세 가지가 일어난다.</p>
+        <ol class="plain">
+          <li>프롬프트 전체에 대한 KV 캐시를 잡는다.</li>
+          <li>요청이 실행 중인 배치에 들어간다. 다른 요청과 함께 한 단계에 토큰 하나씩 디코드한다.</li>
+          <li>요청이 끝나거나 클라이언트가 연결을 끊을 때까지 메모리를 잡고 있는다.</li>
+        </ol>
+        <p>1부에서 본 약속이 HTTP 응답 모양으로 나타난 것이다. 그래서 <strong>승인 결정은 200을 보내기 전에 내려야 한다.</strong> 보낸 뒤에는 늦다.</p>
+
+        <h3>에이전트가 200을 받으면 <span class="ts">22:50</span></h3>
+        <p>상태 코드가 아니라 스트림을 본다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>할 일</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>타임아웃은 첫 토큰이 도착할 때부터 잰다</td><td>부하가 크면 프리필만으로 몇 초가 걸린다</td></tr>
+              <tr><td>포기하면 연결을 실제로 닫는다</td><td>서버는 요청이 끝나거나 연결이 끊겨야 KV 캐시를 푼다. 타임아웃 뒤에도 연결을 열어 둔 에이전트는 계속 GPU 메모리를 잡고 있다</td></tr>
+              <tr><td>스트림이 중간에 끊길 때를 대비한다</td><td>이때는 알려 주는 상태 코드가 없다. 받은 부분 답으로 계속할지, 다시 시도할지 정해야 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>"200은 시작하겠다는 약속이지, 끝내겠다는 약속이 아니다."<cite>Parv Khatri의 말을 옮김</cite></blockquote>
+      </section>
+
+      <!-- 10 -->
+      <section id="defer-reject">
+        <header><span class="num">10</span><h2>보류와 거절 <span class="ts">24:00</span></h2></header>
+        <h3>보류: 503 + Retry-After</h3>
+        <p>보류는 "아직은 안 된다"는 뜻이다. 서버는 <code>503</code>과 <code>Retry-After</code> 헤더를 보낸다. 헤더에는 몇 초 뒤에 다시 오라는 숫자가 들어 있다.</p>
+        <p>이 숫자는 정책이 엔진 상태를 보고 정한다. 예를 들어 지금 도는 배치가 끝나 캐시가 충분히 비기까지 걸리는 시간이다.</p>
+        <p>보류는 용량이 곧 돌아올 때 쓴다. 꾸준한 추세가 아니라 잠깐 몰린 것일 때다. 예를 들어 큐 대기 시간은 오르지만 시스템이 포화되지는 않은 경우다. 용량이 금방 돌아오지 않는다면 보류는 문제를 뒤로 미룰 뿐이다. 그때는 솔직하게 거절한다.</p>
+        <p>에이전트 쪽 대응은 간단하다. <strong>Retry-After만큼 기다리고, 작은 무작위 지연을 더한 뒤 다시 시도한다.</strong> 이 무작위 지연을 지터<span class="en">jitter</span>라고 한다. 지터가 있으면 클라이언트들이 정확히 같은 순간에 돌아오지 않는다. <span class="ts">24:50</span></p>
+        <div class="callout warn">
+          <span class="title">Retry-After가 없으면</span>
+          <span>에이전트마다 기다릴 시간을 제멋대로 고른다. 대개 0초를 고른다. 그래서 모두 한꺼번에 돌아온다. 호출 40개가 80개가 되는 이유다. Retry-After와 지터가 있으면 재시도가 서버가 요청한 시간대에 고르게 퍼진다.</span>
+        </div>
+
+        <h3>거절: 429와 529 <span class="ts">25:50</span></h3>
+        <p>거절 코드가 둘인 이유는 거절하는 이유가 둘이기 때문이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>코드</th><th>뜻</th><th>문제의 주인</th><th>에이전트의 대응</th></tr></thead>
+            <tbody>
+              <tr><td><code>429</code><br>Too Many Requests</td><td>이 클라이언트나 세션이 자기 몫보다 많이 쓴다. 정책이 본 것은 클라이언트별 부하, 동시 호출 수, 할당량 같은 것이다</td><td>호출자</td><td>자기 부하를 줄인다. 동시에 띄우는 호출 수에 상한을 둔다</td></tr>
+              <tr><td><code>529</code><br>Overloaded</td><td>제공자 전체가 과부하다. 모든 레플리카가 찼다. 지금은 누구도 못 들어온다</td><td>풀</td><td>더 세게 재시도하면 더 나빠진다. 더 오래 기다리거나, 다른 모델이나 제공자로 바꾸거나, 작업을 나중으로 미룬다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자에 따르면 529는 Anthropic이 쓰는 코드다.</p>
+        <div class="callout">
+          <span class="title">두 경우 모두 <span class="ts">26:40</span></span>
+          <span>재시도 예산<span class="en">retry budget</span>을 둔다. 지터를 섞은 지수 백오프<span class="en">exponential backoff</span>를 쓴다. 실패할 때마다 더 오래 기다린다는 뜻이다. 몇 번 실패하면 사용자에게 상황을 알린다. 거절을 전속력으로 다시 시도하면 3절에서 본 장애 보고서와 같은 일이 생긴다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="cost">
+        <header><span class="num">11</span><h2>개수는 비용이 아니다 <span class="ts">28:20</span></h2></header>
+        <p>3부는 Harshul Jain이 맡았다. 승인 층에 판단력을 넣는 방법이다. 먼저 대부분의 팀이 이미 하는 것, 요청 수 세기부터 본다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방법</th><th>하는 일</th><th>한계</th></tr></thead>
+            <tbody>
+              <tr><td>게이트웨이 요청 한도 <span class="en">rate limit</span></td><td>API 키마다 미리 정한 허용량을 준다</td><td>테넌트끼리는 공정해진다. 하지만 GPU 부하에 따라 바뀌지 않아서 GPU를 지키지 못한다</td></tr>
+              <tr><td>프록시의 고정 동시 요청 상한</td><td>레플리카마다 처리 중인 요청 수를 센다</td><td>짧은 grep 호출과 긴 계획 호출을 똑같이 하나로 센다. 실제 GPU 용량은 배치마다 바뀐다. 실제로는 요청이 대부분 큐에 쌓이고, 클라이언트 타임아웃이 거절을 대신하게 된다</td></tr>
+              <tr><td>비용 기반 정책 <span class="en">cost-aware</span></td><td>엔진의 실시간 상태로 요청마다 KV 메모리와 토큰 비용을 추정한다</td><td>요청이 메모리를 잡기 전에 거절할 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>앞의 두 방법은 호출 40개가 싼지 비싼지 모른다. 짧게 말하면 <strong>개수는 비용이 아니다.</strong></p>
+      </section>
+
+      <!-- 12 -->
+      <section id="choices">
+        <header><span class="num">12</span><h2>정책의 네 가지 선택 <span class="ts">29:50</span></h2></header>
+        <p>정책을 만드는 일은 네 가지를 차례로 고르는 일이다. 앞의 선택이 뒤의 선택을 제한한다. 예를 들어 마감 신호는 요청에 마감 시간이 실려 있어야만 쓸 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>선택</th><th>질문</th><th>예</th></tr></thead>
+            <tbody>
+              <tr><td>단위 <span class="en">unit</span></td><td>무엇을 들이나</td><td>요청 하나, 에이전트 세션, 테넌트</td></tr>
+              <tr><td>신호 <span class="en">signal</span></td><td>무엇을 보나</td><td>KV 사용률, 큐 깊이, 마감 여유. 시스템이 바빠지면 실제로 움직이는 값이어야 한다</td></tr>
+              <tr><td>규칙 <span class="en">rule</span></td><td>신호를 어떻게 결정으로 바꾸나</td><td>마이크로초가 걸리는 단순 임계값부터 몇 초가 걸리는 최적화기까지</td></tr>
+              <tr><td>행동 <span class="en">action</span></td><td>결정으로 무엇을 하나</td><td>승인, 보류, 거절</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>단위: 요청이냐 세션이냐 <span class="ts">31:30</span></h3>
+        <p>에이전트 작업 두 개가 각각 호출 20개를 보낸다. 자리는 그중 절반쯤만 있다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">요청 단위로 들이면</span>
+            <p>두 작업 모두 절반쯤 들어간다. 둘 다 못 들어간 호출을 기다리느라 끝나지 못한다.</p>
+            <p class="verdict"><b>결과</b>: 용량은 다 썼는데 끝난 일이 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">세션 단위로 들이면</span>
+            <p>세션 A는 호출을 모두 받아 끝낸다. 세션 B는 "나중에 다시 오라"는 분명한 답을 받는다.</p>
+            <p class="verdict"><b>결과</b>: 적어도 하나는 끝난다.</p>
+          </div>
+        </div>
+        <p>발표자는 이 그림이 설명용이지만 논리는 맞다고 했다. 앞의 호출 40개도 사실은 세션 하나다. 코딩 에이전트는 세션을 보내는데, 발표된 정책 대부분은 요청 하나만 들인다.</p>
+
+        <h3>신호: 막으려는 문제에 따라 고른다 <span class="ts">32:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>막으려는 문제</th><th>볼 신호</th></tr></thead>
+            <tbody>
+              <tr><td>캐시가 넘치는 것</td><td>KV 사용률 <span class="en">KV pressure</span></td></tr>
+              <tr><td>버린 계산을 다시 하는 낭비</td><td>KV 사용률 + 캐시 적중률. 캐시가 가득 차도 재사용되고 있으면 괜찮다</td></tr>
+              <tr><td>긴 대기</td><td>큐 깊이</td></tr>
+              <tr><td>지연 목표를 놓치는 것</td><td>마감 여유 <span class="en">deadline slack</span>. 요청이 SLO를 지킬 수 있는지</td></tr>
+              <tr><td>긴 답변</td><td>출력 길이 예측</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          <span class="title">신호가 안 통하는 때</span>
+          <span>KV 사용률은 캐시가 아예 차지 않으면 쓸모가 없다. 이 내용은 16절의 실제 실험에서 다시 나온다.</span>
+        </div>
+
+        <h3>규칙: 네 가지와 결정 비용 <span class="ts">34:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>규칙</th><th>방식</th><th>예</th><th>결정 1회 비용</th></tr></thead>
+            <tbody>
+              <tr><td>임계값 <span class="en">threshold</span></td><td>숫자 하나를 한계 하나와 비교한다</td><td>Fluid Weight(추정), 2026년</td><td>수십 마이크로초</td></tr>
+              <tr><td>이중 게이트 <span class="en">dual gate</span></td><td>신호 두 개가 동의해야 움직인다</td><td>Concur(추정): KV 사용률과 캐시 적중을 함께 본다</td><td>100마이크로초 미만</td></tr>
+              <tr><td>최적화기 <span class="en">optimizer</span></td><td>모든 큐를 한 번에 놓고 큰 계획 문제를 푼다</td><td>QLM</td><td>약 5초</td></tr>
+              <tr><td>형식적 상한 <span class="en">formal bound</span></td><td>최악의 경우를 계산해 마감을 지킬 수 있는지 본다</td><td>Kronos(추정): 첫 토큰 시간을 쓴다</td><td>마이크로초 수준</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <figure class="chart" aria-label="결정 1회에 걸리는 시간 비교: 최적화기 5초, 에이전트가 호출 40개를 보내는 시간 2초, 이중 게이트 0.0001초 미만">
+          <span class="chart-title">결정이 끝나기 전에 무슨 일이 생기나 (초)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>최적화기(QLM) 결정 1회</span><span class="val">약 5</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="최적화기 결정 1회: 약 5초"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>에이전트가 호출 40개를 다 보내는 시간</span><span class="val">2</span></div>
+              <div class="track"><div class="fill key" style="width:40%" title="호출 40개가 몰리는 시간: 2초"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>이중 게이트 결정 1회</span><span class="val">&lt; 0.0001</span></div>
+              <div class="track"><div class="fill" style="width:0.002%" title="이중 게이트 결정 1회: 100마이크로초 미만"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>2.5</span><span>5</span></div>
+          <span class="caption">막대는 실제 비율로 그렸다. 이중 게이트 막대는 5초의 5만분의 1이라 보이지 않는다. 임계값과 형식적 상한은 이보다도 짧다.</span>
+        </figure>
+        <p>에이전트는 2초에 호출 40개를 보낸다. 5초 걸리는 결정은 상황이 다 끝난 뒤에야 나온다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="papers">
+        <header><span class="num">13</span><h2>논문 네 편과 고르는 순서 <span class="ts">35:30</span></h2></header>
+        <p>네 논문이 고른 조합과 결과다. 수치는 발표자가 인용한 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>논문</th><th>단위</th><th>신호·규칙</th><th>보고된 결과</th><th>단서</th></tr></thead>
+            <tbody>
+              <tr><td>Fluid Weight(추정)</td><td>요청</td><td>KV 사용률 임계값</td><td>10~25% 개선</td><td></td></tr>
+              <tr><td>Concur(추정)</td><td>에이전트</td><td>KV 사용률 + 캐시 적중 이중 게이트</td><td>SGLang 대비 처리량 최대 4배</td><td>오프라인에서만 시험했다</td></tr>
+              <tr><td>QLM</td><td>요청</td><td>전체 플릿<span class="en">fleet</span>에 걸친 최적화</td><td>40~90% 향상</td><td>결정 1회 약 5초</td></tr>
+              <tr><td>Kronos(추정)</td><td>요청</td><td>마감 여유에 대한 형식적 상한</td><td>마감 놓침 99% → 0%</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">순위표로 읽지 않는다</span>
+          <span>논문마다 모델, 엔진, 워크로드가 다르다. 숫자를 나란히 비교할 수 없다.</span>
+        </div>
+        <p>이 자리에서 중요한 질문은 하나다. 이 중에 코딩 에이전트에 맞는 것이 있나? 발표자의 답은 "없다"다. <span class="ts">36:40</span></p>
+        <p>발표자들은 논문을 두 축에 놓았다. 한 축은 무엇을 최적화하는지(마감 또는 처리량)다. 다른 축은 무엇을 들이는지(요청 하나 또는 에이전트 세션)다. 코딩 에이전트에 필요한 정책은 세 조건을 다 채워야 한다.</p>
+        <ul class="plain">
+          <li>세션 단위로 들인다.</li>
+          <li>실제 트래픽에서 온라인으로 돈다.</li>
+          <li>손대지 않은 엔진에서 돈다.</li>
+        </ul>
+        <p>여기에 깔끔하게 들어가는 논문은 없다. Concur(추정)는 엔진을 고칠 필요가 없지만 오프라인에서만 시험했다. 그러니 가장 가까운 것을 골라 직접 만들어야 한다.</p>
+
+        <h3>고르는 순서 <span class="ts">37:30</span></h3>
+        <ol class="plain">
+          <li><strong>요청에 마감 시간이 있나?</strong> 있으면 마감에 대한 형식적 상한을 둔다. 결정은 마이크로초 수준이다.</li>
+          <li><strong>마감이 없다면, 최대 부하에서 KV 캐시가 차나?</strong> 차면 이중 게이트(KV 사용률 + 프롬프트 앞부분 캐시 재사용)나 KV 임계값을 쓴다.</li>
+          <li><strong>차지 않는다면</strong> 큐 임계값을 쓴다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="benchmark">
+        <header><span class="num">14</span><h2>정책을 증명하는 벤치마크 <span class="ts">38:50</span></h2></header>
+        <p>4부는 다시 Parv Khatri가 맡았다. 기존 정책을 가져오든 직접 만들든, 실제로 통하는지 증명해야 한다. 재료는 넷이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>재료</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>클러스터</td><td>승인 제어 없이 버티는 용량을 먼저 잰다. 이후 모든 부하는 이 숫자의 배수로 말한다</td></tr>
+              <tr><td>정책</td><td>어떤 신호를 읽고, 한계는 얼마이고, 거절할 때 무엇을 하는지</td></tr>
+              <tr><td>트레이스 <span class="en">trace</span></td><td>실제 트래픽 기록. 코딩 에이전트 트래픽을 용량의 0.5배에서 2배까지 올려 가며 다시 재생한다</td></tr>
+              <tr><td>점수</td><td>같은 트레이스를 정책이 있을 때와 없을 때 두 번 돌려 비교한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>점수: 승인 기준 굿풋 <span class="ts">40:20</span></h3>
+        <p>대부분이 점수에서 틀린다. 발표자들은 승인 기준 굿풋<span class="en">goodput under admission</span>을 권한다.</p>
+        <div class="callout">
+          <span class="title">굿풋 = SLO를 지킨 요청 수 ÷ 도착한 모든 요청 수</span>
+          <span>분모에는 거절한 요청도 넣는다. SLO를 지켰다는 것은 첫 토큰이 제때 나왔고, 토큰 사이에서 너무 오래 멈추지 않았다는 뜻이다.</span>
+        </div>
+        <p>분모가 왜 중요할까. 트래픽의 95%를 거절하고, 남은 5%를 완벽하게 처리했다고 해 보자.</p>
+        <figure class="chart" aria-label="95%를 거절하고 5%를 완벽히 처리했을 때: 받은 요청만 센 SLO 달성률 100%, 굿풋 5%">
+          <span class="chart-title">같은 결과, 두 가지 점수 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>받은 요청만 센 SLO 달성률</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="받은 요청만 센 SLO 달성률: 100%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>굿풋 (도착한 모든 요청 기준)</span><span class="val">5</span></div>
+              <div class="track"><div class="fill key" style="width:5%" title="굿풋: 5%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표의 사고 실험이다. 받은 요청만 세면 부하 덜어내기가 공짜처럼 보이지만 공짜가 아니다.</span>
+        </figure>
+
+        <h3>워크로드를 실제처럼 <span class="ts">41:30</span></h3>
+        <ul class="plain">
+          <li>에이전트 트레이스를 그대로 재생한다. 호출이 여러 갈래로 퍼지는 팬아웃<span class="en">fan-out</span>, 재시도, 세션이 살아 있어야 한다. 균일한 무작위 도착은 쓰지 않는다.</li>
+          <li>부하는 측정한 용량의 배수로 말한다. 0.5배에서 2배까지 훑는다.</li>
+          <li>마감 시간은 부하가 없을 때 지연의 배수로 정한다.</li>
+          <li><strong>용량을 넘기지 않는 벤치마크는 정책을 시험하지 않는다.</strong> 정책이 거절할 일이 없기 때문이다.</li>
+        </ul>
+
+        <h3>결과에 밝혀야 할 일곱 가지 <span class="ts">42:20</span></h3>
+        <ol class="plain">
+          <li>부하를 측정한 용량의 배수로 적었나</li>
+          <li>마감 시간을 부하 없는 지연에 대한 상대값으로 정했나</li>
+          <li>정책이 읽는 신호가 실행 중에 실제로 살아 있었나 <span class="en">signal liveness</span></li>
+          <li>몇 번 반복했고 결과가 얼마나 흔들렸나. 운 좋은 한 번이 아닌가</li>
+          <li>각 파라미터의 출처. 이 환경에서 맞췄나, 다른 데서 빌려 왔나, 기본값인가</li>
+          <li>거절한 요청을 굿풋 분모에 넣었나</li>
+          <li>전체 구성. 모델, 엔진, 버전, 하드웨어, 워크로드, SLO, 비교 기준</li>
+        </ol>
+        <p>발표자들은 평가 방식을 바꾸라는 것이 아니라 무엇을 했는지 밝히라는 것이라고 했다. 논문을 읽을 때와 자기 정책을 벤치마크할 때 체크리스트로 쓴다.</p>
+        <p class="note">발표자에 따르면 신호가 살아 있었는지를 보고한 논문은 하나도 없었다.</p>
+      </section>
+
+      <!-- 15 -->
+      <section id="admitperf">
+        <header><span class="num">15</span><h2>admitperf 도구 <span class="ts">43:50</span></h2></header>
+        <p>일곱 가지를 손으로 다 챙기기는 힘들다. 그래서 발표자들은 이를 기본으로 기록하는 도구 admitperf(추정)를 만들었다. 저장소 하나에 두 가지가 들어 있다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">운영용</span>
+            <p>vLLM이나 SGLang 앞에 두는 라이브러리다. 요청마다 승인, 보류, 거절을 정한다. 7절에서 본 입구 층이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">벤치마크용</span>
+            <p>실제 GPU의 실제 엔진에 어떤 정책이든 돌려 보고, 그 정책의 비용을 보고하는 하네스다.</p>
+          </div>
+        </div>
+        <p>두 쪽 모두 같은 함수 <code>policy.decide</code>를 부른다. <strong>벤치마크한 정책이 곧 배포하는 정책이다.</strong></p>
+        <p>만든 이유도 밝혔다. 발표자들이 살펴본 논문 16편 가운데 비교 기준, 엔진, 워크로드, SLO를 똑같이 쓴 두 편이 없었다. 이 도구는 정책끼리 나란히 비교할 수 있게 해 준다.</p>
+
+        <h3>다섯 명령 <span class="ts">45:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>명령</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td><code>infra up</code></td><td>실제 GPU에 vLLM을 띄운다</td></tr>
+              <tr><td><code>infra smoke</code></td><td>정말 응답하는지 확인한다</td></tr>
+              <tr><td><code>bench run</code></td><td>모든 정책을 여러 번씩 돌린다</td></tr>
+              <tr><td><code>bench compare</code></td><td>어느 정책이 얼마나 이겼는지 알려 준다</td></tr>
+              <tr><td><code>infra down</code></td><td>모두 내려 비용을 멈춘다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">명령 이름은 자막을 바탕으로 짐작한 것이다(추정).</p>
+        <p>띄우기와 벤치마크는 일부러 나눴다. 모델을 올리는 데 몇 분이 걸린다. 정책마다 다시 띄우면 고정해야 할 배포 자체가 바뀐다. <strong>배포는 상수, 정책은 변수다.</strong></p>
+
+        <h3>정책은 읽을 신호를 선언한다 <span class="ts">46:10</span></h3>
+        <p>예를 들어 KV 캐시 임계값 정책은 "KV 사용 비율<span class="en">KV used fraction</span>이 필요하다"고 선언한다. 엔진이 이 신호를 내지 못하면 실행은 시작 단계에서 에러로 멈춘다.</p>
+        <div class="callout warn">
+          <span class="title">이 확인이 없으면</span>
+          <span>없는 신호는 0으로 읽힌다. 늘 0을 보는 KV 임계값 정책은 모든 요청을 승인한다. 정책이 조용히 "승인 제어 없음"이 되는데, 결과는 멀쩡해 보인다. 신호를 못 보는 정책은 조용히 말고 시끄럽게 실패해야 한다.</span>
+        </div>
+        <p>모든 결정은 그때 본 상태와 함께 기록된다. <span class="ts">47:10</span> 실행마다 열어 볼 수 있는 폴더가 남는다. 폴더에는 manifest, summary, decisions, outcomes JSON 파일 네 개가 들어 있다.</p>
+        <p class="note">admitperf(추정)와 LLM Inference at Scale 핸드북은 발표자들이 직접 만든 오픈소스다. "맞는 정책이 없으니 직접 만들고 이 도구로 검증하라"는 흐름은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 16 -->
+      <section id="results">
+        <header><span class="num">16</span><h2>실제 GPU 결과 <span class="ts">47:40</span></h2></header>
+        <p>발표자들이 실제 GPU에서 낸 결과다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>설정</th></tr></thead>
+            <tbody>
+              <tr><td>모델</td><td>Qwen2.5 0.5B (파라미터 5억 개)</td></tr>
+              <tr><td>GPU</td><td>A10</td></tr>
+              <tr><td>엔진</td><td>동시에 4개 시퀀스까지 처리</td></tr>
+              <tr><td>부하</td><td>초당 약 14개 요청</td></tr>
+              <tr><td>반복</td><td>2회</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">자막에서 총 요청 개수 부분은 알아듣기 어려워 뺐다.</p>
+
+        <figure class="chart" aria-label="P95 첫 토큰 시간: 승인 제어 없음 약 2.5초, 큐 대기 최대 2개 정책 약 1초">
+          <span class="chart-title">P95 첫 토큰 시간 (초, 낮을수록 좋다)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>승인 제어 없음</span><span class="val">약 2.5</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="승인 제어 없음: 약 2.5초"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>큐 대기 최대 2개 정책</span><span class="val">약 1.0</span></div>
+              <div class="track"><div class="fill key" style="width:40%" title="큐 대기 최대 2개 정책: 약 1초"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>1.25</span><span>2.5</span></div>
+          <span class="caption">큐 정책은 요청의 63%를 승인했고 굿풋은 같았다. 승인 제어가 없을 때는 반복마다 약 0.7초씩 흔들렸다.</span>
+        </figure>
+        <p>승인 제어가 없을 때 P95 첫 토큰 시간<span class="en">TTFT</span>은 약 2.5초였다. P95는 요청의 95%가 그 값보다 빨랐다는 뜻이다. 이 값은 반복마다 약 0.7초씩 위아래로 흔들렸다.</p>
+        <p>큐에서 기다리는 요청을 최대 2개로 묶은 정책은 요청의 63%를 승인했다. 37%를 덜어낸 것이다. P95는 약 1초로 2.5배 좋아졌다. 굿풋은 그대로였다.</p>
+
+        <h3>임계값보다 신호가 중요하다 <span class="ts">49:00</span></h3>
+        <p>발표자가 가장 좋아한다고 한 결과다. 같은 실행에서 KV 캐시 사용률은 최고 0.5%였다. 반면 큐는 24개까지 쌓였다.</p>
+        <p>작은 모델에 짧은 시퀀스 4개였기 때문에 KV 캐시가 상대적으로 너무 컸다. 캐시는 찰 일이 없었다. 압력은 모두 큐에 나타났다.</p>
+        <div class="callout warn">
+          <span class="title">KV 압력 정책이었다면</span>
+          <span>평평한 선만 보고 모든 요청을 승인했을 것이다. 12절의 "KV 사용률은 캐시가 차지 않으면 쓸모없다"가 실제로 일어난 사례다.</span>
+        </div>
+
+        <h3>GPU 없이 써 보기 <span class="ts">49:40</span></h3>
+        <ul class="plain">
+          <li>작은 가짜 엔진이 들어 있다. admitperf(추정)가 쓰는 엔드포인트 세 개를 흉내 내고, 부하가 걸리면 실제 엔진처럼 바빠진다. 노트북에서 전체 흐름을 시험할 수 있다.</li>
+          <li>직접 만든 정책을 별도 패키지로 두면 저장소를 고치지 않아도 자동으로 찾아 쓴다.</li>
+          <li>새 정책, 워크로드, 엔진 어댑터, 지표 기여를 받는다.</li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="conclusion">
+        <header><span class="num">17</span><h2>결론 <span class="ts">50:20</span></h2></header>
+        <p>발표자가 슬라이드 하나만 기억한다면 이것이라고 꼽은 내용이다.</p>
+        <ul class="plain">
+          <li>추론 클러스터에는 <strong>일찍 "아니오"라고 말하는 장치</strong>가 필요하다. 입구에서, 요청이 GPU에 들어가 메모리를 잡기 전에 말해야 한다.</li>
+          <li>승인 정책이 돌려주는 에러 코드(503, 429, 529)를 <strong>클라이언트가 제대로 처리해야 한다.</strong></li>
+        </ul>
+        <p>발표자들은 LLM Inference at Scale 핸드북을 쓰며 연구를 조사하다가 빈틈을 발견했다고 했다. 그래서 admitperf(추정)를 만들었다. 목표는 정책을 만들고, 벤치마크하고, 그 정책이 클러스터를 안정적으로 지킨다는 확신을 얻는 것이다.</p>
+      </section>
+
+      <!-- 18 -->
+      <section id="recap">
+        <header><span class="num">18</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>LLM은 답을 한 토큰씩 쓰고 길이를 미리 모른다. 받아들인 요청의 KV 캐시는 끝날 때까지 자란다.</li>
+          <li>그래서 승인은 요청이 끝날 때까지의 약속이다. 결정은 <strong>GPU 메모리를 잡기 전에</strong> 내려야 한다.</li>
+          <li>지금 스택의 어느 층도 "자리가 있나"를 묻지 않는다. 게이트웨이는 요청만, 엔진은 메모리만 본다.</li>
+          <li>엔진을 고치지 않으려면 승인 층을 <strong>입구</strong>에 둔다.</li>
+          <li>답은 셋이다. 승인 <code>200</code>, 보류 <code>503</code> + Retry-After, 거절 <code>429</code>(호출자 문제)·<code>529</code>(풀 문제).</li>
+          <li>신호는 <strong>초 단위로 바뀌는 것</strong>을 쓴다. 1분 평균은 2초짜리 몰림을 못 본다.</li>
+          <li>클라이언트는 첫 토큰부터 타임아웃을 재고, 포기하면 연결을 끊고, Retry-After와 지터를 지킨다.</li>
+          <li><strong>개수는 비용이 아니다.</strong> 정책은 단위, 신호, 규칙, 행동을 고르는 일이고, 코딩 에이전트에는 세션 단위가 맞다.</li>
+          <li>점수는 <strong>거절한 요청까지 분모에 넣는 굿풋</strong>으로 잰다. 부하는 용량의 2배까지 올린다.</li>
+          <li>실험에서 KV 캐시는 0.5%만 찼고 큐는 24개까지 쌓였다. <strong>신호 선택이 임계값보다 중요하다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 19 -->
+      <section id="quiz">
+        <header><span class="num">19</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>모델이 답의 길이를 미리 모르는 것이 승인에 왜 문제인가?</span></summary><div class="answer">요청을 들이는 순간, 그 요청이 KV 캐시를 얼마나 크게, 얼마나 오래 잡을지 알 수 없다. 긴 답은 메모리를 계속 키우고 다른 요청의 처리 시간까지 흔든다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>승인 제어의 세 가지 답과 각각의 응답 코드는?</span></summary><div class="answer">승인은 200, 보류는 503과 Retry-After 헤더, 거절은 429(호출자가 몫을 넘음) 또는 529(전체 풀 과부하).</div></details>
+          <details><summary><span class="qn">Q3</span><span>"예"가 한순간이 아니라 약속인 이유는?</span></summary><div class="answer">프리필에서 KV 캐시를 만들고, 디코드하는 동안 토큰마다 캐시가 커진다. 이 메모리는 요청이 끝나거나 클라이언트가 연결을 끊을 때까지 풀리지 않는다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>게이트웨이와 엔진이 승인 결정을 대신할 수 없는 이유는?</span></summary><div class="answer">게이트웨이는 요청 쪽(키, 요청 수)만 보고 GPU 상태를 못 본다. 엔진은 메모리를 보지만 이미 요청을 받은 뒤에야 안다. 두 시야를 함께 가진 층이 없다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>승인 결정을 큐 경계나 디코드 중이 아니라 입구에 두는 이유는?</span></summary><div class="answer">입구는 엔진을 받은 그대로 쓸 수 있다. 다른 두 시점은 엔진 스케줄러를 고쳐야 해서, vLLM이나 SGLang의 수정본을 원본이 바뀔 때마다 계속 맞춰야 한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>정책 신호로 1분 평균 대신 큐 대기 시간 같은 값을 쓰는 이유는?</span></summary><div class="answer">에이전트는 2초 만에 호출 40개를 보낸다. 1분 평균은 이런 짧은 몰림을 알아채지 못한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>에이전트가 타임아웃 뒤에도 연결을 열어 두면 무슨 일이 생기나?</span></summary><div class="answer">서버는 연결이 끊기거나 요청이 끝나야 KV 캐시를 푼다. 그래서 포기한 요청이 계속 GPU 메모리를 잡고 있게 된다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Retry-After와 지터가 없으면 재시도는 어떻게 되나?</span></summary><div class="answer">에이전트마다 대기 시간을 제멋대로 고르는데 대개 0초다. 모두 한꺼번에 돌아와 호출 40개가 80개가 된다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>429와 529를 받았을 때 에이전트의 대응은 어떻게 다른가?</span></summary><div class="answer">429는 호출자 문제라 동시 호출 수에 상한을 둬 자기 부하를 줄인다. 529는 풀 전체 문제라 세게 재시도하면 악화된다. 더 오래 기다리거나, 다른 제공자로 바꾸거나, 작업을 미룬다. 둘 다 재시도 예산과 지터 섞인 지수 백오프를 쓴다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>프록시의 고정 동시 요청 상한이 GPU를 지키지 못하는 이유는?</span></summary><div class="answer">짧은 grep 호출과 긴 계획 호출을 똑같이 하나로 센다. 실제 GPU 용량은 배치마다 바뀐다. 결국 요청은 큐에 쌓이고 클라이언트 타임아웃이 거절을 대신한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>호출 20개짜리 작업 두 개에 자리가 절반만 있을 때, 요청 단위와 세션 단위 승인의 결과는?</span></summary><div class="answer">요청 단위면 두 작업 모두 절반만 들어가 둘 다 끝나지 못한다. 세션 단위면 A는 끝나고 B는 "나중에 오라"는 분명한 답을 받는다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>굿풋의 분모에 거절한 요청을 넣어야 하는 이유는?</span></summary><div class="answer">넣지 않으면 95%를 거절하고 5%만 완벽히 처리해도 SLO 달성률이 100%로 나온다. 도착한 모든 요청을 분모에 넣으면 5%로, 실제 성과가 드러난다.</div></details>
+          <details><summary><span class="qn">Q13</span><span>발표자들의 실험에서 KV 압력 정책이 실패했을 이유는?</span></summary><div class="answer">작은 모델과 짧은 시퀀스 때문에 KV 캐시가 최고 0.5%만 찼다. 압력은 모두 큐(24개)에 나타났다. KV 신호는 평평한 선이라 정책이 모든 요청을 승인했을 것이다.</div></details>
+          <details><summary><span class="qn">Q14</span><span>admitperf(추정)가 정책에게 읽을 신호를 선언하게 하는 이유는?</span></summary><div class="answer">없는 신호가 0으로 읽히면, 임계값 정책이 모든 요청을 승인해 조용히 "승인 제어 없음"이 된다. 결과는 멀쩡해 보인다. 선언한 신호를 엔진이 못 내면 시작 단계에서 에러로 멈추게 해 이를 막는다.</div></details>
+        </div>
+      </section>
+
+      <!-- 20 -->
+      <section id="apply">
+        <header><span class="num">20</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>엔진 앞 입구에 승인 단계를 둔다<span class="how">확인: 요청이 GPU 메모리를 잡기 전에 승인, 보류, 거절이 정해지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>최대 부하에서 어떤 신호가 실제로 움직이는지 잰다<span class="how">KV 캐시 사용률과 큐 대기 시간을 함께 기록한다. 캐시가 안 차면 KV 기준 정책은 쓰지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>초 단위로 바뀌는 신호를 쓴다<span class="how">1분 평균 대신 가장 오래 기다린 요청의 대기 시간</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>정책이 신호를 못 읽으면 시작 단계에서 실패하게 한다<span class="how">확인: 없는 신호가 조용히 0으로 읽히지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>보류에는 503과 Retry-After를, 거절에는 429와 529를 나눠 쓴다<span class="how">Retry-After 값은 엔진 상태(배치가 끝나 캐시가 비는 시점)에서 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>에이전트 클라이언트의 타임아웃을 첫 토큰부터 잰다<span class="how">포기하면 연결을 실제로 닫는지도 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>재시도에 Retry-After, 지터, 지수 백오프, 재시도 예산을 넣는다<span class="how">몇 번 실패하면 사용자에게 알린다. 429를 받으면 동시 호출 수 상한을 낮춘다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>승인 단위를 세션으로 할지 검토한다<span class="how">확인: 부하가 클 때 에이전트 작업이 끝까지 가는가, 아니면 모두 절반에서 멈추는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>정책을 굿풋으로 잰다<span class="how">거절한 요청을 분모에 넣고, 실제 에이전트 트레이스로 용량의 0.5배에서 2배까지 올린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>벤치마크 결과에 일곱 가지를 적는다<span class="how">부하 배수, 마감 기준, 신호 생존, 반복과 편차, 파라미터 출처, 굿풋 분모, 전체 구성</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 21 -->
+      <section id="glossary">
+        <header><span class="num">21</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>추론</td><td>Inference. 프롬프트를 받아 모델이 답을 만드는 일</td></tr>
+              <tr><td>토큰</td><td>Token. 모델이 한 번에 쓰는 글 조각. 대략 단어 하나</td></tr>
+              <tr><td>추론 엔진</td><td>모델을 GPU에 올려 실제로 답을 만드는 소프트웨어. vLLM, SGLang, TensorRT-LLM 등</td></tr>
+              <tr><td>레플리카</td><td>Replica. 같은 모델을 띄운 실행 사본 하나</td></tr>
+              <tr><td>배치</td><td>Batch. GPU를 쉬지 않게 하려고 함께 처리하는 요청 묶음</td></tr>
+              <tr><td>KV 캐시</td><td>요청이 답을 쓰는 동안 쌓아 가는 메모리. 답이 길수록 커진다</td></tr>
+              <tr><td>프리필 / 디코드</td><td>Prefill: 프롬프트를 읽고 캐시를 만드는 단계. Decode: 답을 토큰 하나씩 쓰는 단계</td></tr>
+              <tr><td>SLO</td><td>Service Level Objective. 지키기로 한 서비스 수준 목표</td></tr>
+              <tr><td>TTFT</td><td>Time To First Token. 요청을 보낸 뒤 첫 토큰이 오기까지 걸린 시간</td></tr>
+              <tr><td>P95</td><td>요청의 95%가 이 값보다 빨랐다는 뜻의 지연 지표</td></tr>
+              <tr><td>승인 제어</td><td>Admission control. 자원을 쓰기 전에 요청을 들일지, 미룰지, 거절할지 정하는 일</td></tr>
+              <tr><td>입구</td><td>Ingress. 엔진 바로 앞, 요청이 들어오는 지점</td></tr>
+              <tr><td>테넌트</td><td>Tenant. 자원을 나눠 쓰는 고객이나 팀 단위</td></tr>
+              <tr><td>상한선</td><td>High-water mark. 넘으면 조치를 시작하는 사용량 기준</td></tr>
+              <tr><td>캐시 적중률</td><td>이미 처리한 프롬프트 앞부분을 다시 쓸 수 있었던 비율</td></tr>
+              <tr><td>마감 여유</td><td>Deadline slack. 요청이 마감과 SLO를 지킬 수 있을 만큼 시간이 남았는가</td></tr>
+              <tr><td>Retry-After</td><td>몇 초 뒤에 다시 오라고 알려 주는 HTTP 응답 헤더</td></tr>
+              <tr><td>지터</td><td>Jitter. 재시도 시점에 더하는 작은 무작위 지연</td></tr>
+              <tr><td>지수 백오프</td><td>Exponential backoff. 실패할 때마다 대기 시간을 늘려 가며 재시도하는 방식</td></tr>
+              <tr><td>재시도 예산</td><td>Retry budget. 재시도 횟수나 양에 두는 상한</td></tr>
+              <tr><td>부하 덜어내기</td><td>Load shedding. 과부하 때 일부 요청을 일부러 받지 않아 전체를 지키는 일</td></tr>
+              <tr><td>굿풋</td><td>Goodput. 목표를 지킨 유효 처리량. 이 발표에서는 SLO를 지킨 요청 ÷ 도착한 모든 요청</td></tr>
+              <tr><td>트레이스</td><td>Trace. 실제 트래픽을 기록한 것. 벤치마크에서 다시 재생한다</td></tr>
+              <tr><td>팬아웃</td><td>Fan-out. 요청 하나가 여러 하위 호출로 퍼지는 것</td></tr>
+              <tr><td>수정본 유지</td><td>Fork. 원본 소프트웨어를 고친 별도 사본을 두는 것. 원본이 바뀔 때마다 따라가야 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 22 -->
+      <section id="timeline">
+        <header><span class="num">22</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개: Harshul Jain, Parv Khatri</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>발표 순서: 동기, 승인 제어, 전략, 벤치마크</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>추론이란: 토큰을 하나씩 쓴다</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>요청이 지나는 길, 추론 엔진, KV 캐시</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>품질, 지연, 처리량 중 둘 고르기</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>SLO와 최대 부하: 8개 대 40개</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>OpenAI, Anthropic 장애 사례</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>빠진 단계: 승인과 세 가지 답</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>프리필과 디코드, "예"의 비용</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>메모리가 차면 생기는 일</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>왜 직접 띄우는 팀의 문제인가</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>코딩 에이전트가 바꾼 트래픽</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>2부: 승인 제어</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>각 층이 보는 것</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>결정을 둘 세 시점, 입구 선택</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>정책은 함수다</td></tr>
+              <tr><td><span class="ts">19:40</span></td><td>요청 쪽과 엔진 쪽 두 시야</td></tr>
+              <tr><td><span class="ts">20:30</span></td><td>여덟 신호를 규칙으로</td></tr>
+              <tr><td><span class="ts">22:00</span></td><td>승인(200)과 엔진 안에서 일어나는 일</td></tr>
+              <tr><td><span class="ts">22:50</span></td><td>클라이언트의 200 처리</td></tr>
+              <tr><td><span class="ts">24:00</span></td><td>보류(503 + Retry-After)</td></tr>
+              <tr><td><span class="ts">24:50</span></td><td>지터와 40 → 80 재시도</td></tr>
+              <tr><td><span class="ts">25:50</span></td><td>거절(429, 529)</td></tr>
+              <tr><td><span class="ts">26:40</span></td><td>거절에 대한 에이전트의 대응</td></tr>
+              <tr><td><span class="ts">27:40</span></td><td>3부: 전략</td></tr>
+              <tr><td><span class="ts">28:20</span></td><td>요청 수 세기의 한계, 비용 기반 정책</td></tr>
+              <tr><td><span class="ts">29:50</span></td><td>정책의 네 가지 선택</td></tr>
+              <tr><td><span class="ts">31:30</span></td><td>단위: 요청 대 세션</td></tr>
+              <tr><td><span class="ts">32:30</span></td><td>신호 고르기</td></tr>
+              <tr><td><span class="ts">34:00</span></td><td>규칙 네 가지와 결정 비용</td></tr>
+              <tr><td><span class="ts">35:30</span></td><td>논문 네 편의 선택과 결과</td></tr>
+              <tr><td><span class="ts">36:40</span></td><td>코딩 에이전트에 맞는 정책은 없다</td></tr>
+              <tr><td><span class="ts">37:30</span></td><td>고르는 순서(결정 트리)</td></tr>
+              <tr><td><span class="ts">38:50</span></td><td>4부: 벤치마크 재료 네 가지</td></tr>
+              <tr><td><span class="ts">40:20</span></td><td>승인 기준 굿풋, 95% 거절 사고 실험</td></tr>
+              <tr><td><span class="ts">41:30</span></td><td>워크로드 만들기</td></tr>
+              <tr><td><span class="ts">42:20</span></td><td>결과에 밝혀야 할 일곱 가지</td></tr>
+              <tr><td><span class="ts">43:50</span></td><td>admitperf(추정): 라이브러리 + 하네스</td></tr>
+              <tr><td><span class="ts">45:10</span></td><td>다섯 명령, 띄우기와 벤치마크 분리</td></tr>
+              <tr><td><span class="ts">46:10</span></td><td>정책의 신호 선언</td></tr>
+              <tr><td><span class="ts">47:10</span></td><td>결정 기록과 실행 폴더</td></tr>
+              <tr><td><span class="ts">47:40</span></td><td>실제 GPU 결과: P95 2.5초 → 1초</td></tr>
+              <tr><td><span class="ts">49:00</span></td><td>신호가 임계값보다 중요하다</td></tr>
+              <tr><td><span class="ts">49:40</span></td><td>GPU 없이 써 보기, 기여 안내</td></tr>
+              <tr><td><span class="ts">50:20</span></td><td>결론: 입구에서 일찍 거절하라</td></tr>
+              <tr><td><span class="ts">51:10</span></td><td>마무리, 프로젝트 소개</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'ntVpbyDTYaQ:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

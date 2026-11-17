@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>추측 디코딩 손익 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#phases">답변은 두 단계로 만들어진다</a></li>
+      <li><a href="#idea">작은 모델이 먼저 쓰고, 큰 모델이 확인한다</a></li>
+      <li><a href="#cost">공짜가 아니다: 메모리 비용</a></li>
+      <li><a href="#draft">초안 모델 고르는 기준</a></li>
+      <li><a href="#setup">데모 환경: Blackwell 한 장에 서버 두 개</a></li>
+      <li><a href="#workloads">이득을 보는 작업, 못 보는 작업</a></li>
+      <li><a href="#demo">데모 결과: 채택률이 갈림길</a></li>
+      <li><a href="#context">긴 입력에서는 효과가 작다</a></li>
+      <li><a href="#decide">켤까 말까, 네 가지 질문</a></li>
+      <li><a href="#qa">질의응답: 도구와 자료</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 서비스에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-06 · 15분 · 영어 발표 한글 정리</span>
+      <h1>추측 디코딩, 내 서비스에 켤 가치가 있나</h1>
+      <p class="lead">큰 모델이 토큰을 하나씩 쓰는 대신, 작은 모델이 몇 개를 먼저 쓰고 큰 모델이 한 번에 확인한다. 결과는 같고 속도는 빨라진다. 하지만 메모리를 더 먹고, 작업 종류에 따라 이득이 크게 갈린다. 발표자는 vLLM과 NVIDIA Blackwell GPU 한 장으로 직접 재 본 결과를 바탕으로 판단 기준을 정리한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=XTpyNrEgJQ4" target="_blank" rel="noopener">Is Speculative Decoding Worth It? Profiling vLLM on NVIDIA Blackwell</a></span>
+        <span>발표: Sheila (추정, 자막 기준) · Akamai 개발자 애드보킷</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 알려진 이름으로 바로잡았고, 불확실한 곳은 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>LLM 답변은 <strong>입력을 읽는 단계</strong>와 <strong>토큰을 하나씩 쓰는 단계</strong>로 나뉜다. 추측 디코딩은 뒤쪽만 빠르게 한다.</li>
+        <li>작은 <strong>초안 모델</strong>이 토큰 3~5개를 먼저 쓰고, 큰 <strong>목표 모델</strong>이 한 번의 계산으로 받아들이거나 거절한다. 거절된 자리는 목표 모델이 다시 쓴다. <strong>출력 품질은 목표 모델과 같다.</strong></li>
+        <li>공짜가 아니다. 모델이 둘이니 <strong>초안 모델 가중치와 두 모델의 KV 캐시</strong>만큼 GPU 메모리가 더 든다.</li>
+        <li>초안 모델은 목표 모델보다 <strong>10~50배 작고</strong>, <strong>같은 토크나이저</strong>를 쓰고, 되도록 같은 모델 가족이어야 한다.</li>
+        <li>데모에서 구조화된 출력은 <strong>1.6배 빨라졋고 채택률이 높았다.</strong> 창의적인 글쓰기는 온도가 높아 채택률이 낮았다.</li>
+        <li>RAG처럼 <strong>입력이 길고 출력이 짧은 작업</strong>은 시간이 입력 읽기에 몰려 있어 효과가 작다.</li>
+        <li>판단 기준 네 가지: <strong>구조화된 작업인가, 남는 GPU 메모리가 있나, 창의적 작업인가, 동시 요청이 많은가.</strong> 동시 요청이 많아 GPU가 이미 바쁘면 켜지 않는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="phases">
+        <header><span class="num">01</span><h2>답변은 두 단계로 만들어진다 <span class="ts">00:30</span></h2></header>
+        <p>LLM에 질문을 던지면 내부에서는 두 단계가 돌아간다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1단계 · 입력 읽기 <span class="en">prefill</span></span>
+            <p>모델이 프롬프트의 입력 토큰을 모두 처리하고 <strong>KV 캐시</strong> <span class="en">KV cache</span>를 만든다. KV 캐시는 이 요청을 처리하는 동안 모델이 쓰는 작업 기억이다.</p>
+            <p class="verdict">요청마다 <b>한 번만</b> 일어난다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2단계 · 토큰 생성 <span class="en">decode</span></span>
+            <p>모델이 실제로 답을 쓴다. 다음 토큰은 앞의 모든 토큰에 의존하므로 <strong>한 번에 하나씩</strong> 만든다. 이렇게 앞 결과를 보고 다음을 만드는 방식을 자기회귀 <span class="en">autoregressive</span>라고 부른다.</p>
+            <p class="verdict">토큰 수만큼 <b>반복</b>된다.</p>
+          </div>
+        </div>
+        <p>Llama 70B 같은 큰 모델을 서비스에 쓰면 답 하나에 모델 전체를 통과하는 계산, 즉 순전파 <span class="en">forward pass</span>가 수백 번 필요할 수 있다. 계산 비용이 크고 사용자가 느끼는 지연도 커진다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="idea">
+        <header><span class="num">02</span><h2>작은 모델이 먼저 쓰고, 큰 모델이 확인한다 <span class="ts">01:30</span></h2></header>
+        <p>질문은 이것이다. 토큰을 하나씩 쓰는 일을 꼭 큰 모델이 해야 하나. 작은 모델이 몇 개를 먼저 추측하게 하면 어떨까.</p>
+        <ol class="plain">
+          <li><strong>초안 모델</strong> <span class="en">draft model</span>이 다음 토큰을 몇 개 먼저 쓴다. 발표자는 한 번에 3~5개로 설정한다고 했다. 이것도 자기회귀지만 모델이 작아서 빠르고 싸다.</li>
+          <li><strong>목표 모델</strong> <span class="en">target model</span>이 그 후보들을 <strong>한 번의 순전파</strong>로 검증한다. 맞으면 받아들이고 틀리면 거절한다.</li>
+          <li>거절된 자리부터는 목표 모델이 토큰을 다시 계산한다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">출력은 바뀌지 않는다</span>
+          <span>정확도를 책임지는 쪽은 여전히 목표 모델이다. 초안 모델이 무엇을 제안했든 목표 모델이 검증하므로 최종 출력은 목표 모델이 혼자 쓴 것과 같다. 빨라지기만 하고 품질은 그대로다.</span>
+        </div>
+        <p>이것이 추측 디코딩 <span class="en">speculative decoding</span>이다. 발표자는 추론 비용을 크게 아낄 수 있다고 말한다. 다만 조건이 있다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="cost">
+        <header><span class="num">03</span><h2>공짜가 아니다: 메모리 비용 <span class="ts">02:40</span></h2></header>
+        <p>모델을 두 개 띄우니 GPU 메모리를 더 쓴다.</p>
+        <ul class="plain">
+          <li><strong>초안 모델의 가중치.</strong> 작은 모델이라 크지는 않다.</li>
+          <li><strong>두 모델의 KV 캐시.</strong> 초안 모델과 목표 모델이 각자 작업 기억을 가져야 하므로 추가 공간이 필요하다.</li>
+        </ul>
+        <p>그래서 추측 디코딩은 <strong>GPU에 남는 공간이 있을 때</strong> 고려한다. 동시 요청이 많은 서비스라면 GPU가 이미 요청을 처리하느라 꽉 차 있을 것이다. 그때 모델을 하나 더 얹는 것은 맞지 않는다. 반대로 GPU가 놀고 있다면 시도할 가치가 있다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="draft">
+        <header><span class="num">04</span><h2>초안 모델 고르는 기준 <span class="ts">03:20</span></h2></header>
+        <p>초안 모델을 고를 때 저울에 올리는 것은 두 가지다. <strong>목표 모델과 얼마나 비슷하게 맞추는가</strong>, 그리고 <strong>얼마나 빠른가</strong>. 둘 다 좋을 수는 없으니 균형을 잡는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>조건</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>10~50배 작다</td><td>목표 모델 비용의 일부만 들어야 추측하는 의미가 있다</td></tr>
+              <tr><td>같은 토크나이저</td><td>토큰을 자르는 단위가 같아야 초안을 바로 검증할 수 있다. 다르면 두 토크나이저 사이를 직접 변환해야 한다</td></tr>
+              <tr><td>되도록 같은 모델 가족</td><td>같은 가족이면 토크나이저가 같고, 출력 성향도 비슷해 채택률이 오른다</td></tr>
+              <tr><td>비용과 정확도의 균형</td><td>너무 작으면 채택률이 떨어지고, 너무 크면 속도 이득이 사라진다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="setup">
+        <header><span class="num">05</span><h2>데모 환경: Blackwell 한 장에 서버 두 개 <span class="ts">04:00</span></h2></header>
+        <p>발표자는 NVIDIA Blackwell GPU 한 장만 쓸 수 있었다. 그 한 장에 <strong>기준 서버</strong>(목표 모델만)와 <strong>추측 디코딩 서버</strong>(목표 모델 + 초안 모델)를 동시에 띄워 비교하려 했다. 그래서 두 서버가 GPU를 나눠 써도 들어갈 만큼 작은 목표 모델을 골랐다.</p>
+
+        <figure class="chart" aria-label="모델 가중치 메모리 비교: 목표 모델 약 16 GB, 초안 모델 약 2.5 GB">
+          <span class="chart-title">모델 가중치가 차지하는 GPU 메모리 (GB)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>목표 모델 (기준 서버)</span><span class="val">약 16</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="목표 모델 가중치: 약 16 GB"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>초안 모델</span><span class="val">약 2.5</span></div>
+              <div class="track"><div class="fill key" style="width:15.6%" title="초안 모델 가중치: 약 2.5 GB"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>8</span><span>16</span></div>
+          <span class="caption">발표자가 말한 수치. 둘을 더해도 GPU에 KV 캐시를 둘 공간이 넉넉히 남는다고 설명했다.</span>
+        </figure>
+
+        <p class="note">자막에는 두 모델의 이름이 나오지 않는다. 16비트 가중치는 파라미터 하나에 2바이트를 쓰므로 16 GB는 약 80억 파라미터, 2.5 GB는 약 12억 파라미터 규모에 해당한다. 이 환산은 노트 작성자의 계산이며 발표에는 없다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="workloads">
+        <header><span class="num">06</span><h2>이득을 보는 작업, 못 보는 작업 <span class="ts">05:30</span></h2></header>
+        <p>추측 디코딩의 목표는 작은 모델이 큰 모델의 다음 토큰을 <strong>거의 똑같이 맞추는 것</strong>이다. 그러니 다음 토큰이 예측하기 쉬운 작업일수록 이득이 크다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">이득이 큰 쪽 · 구조화된 출력</span>
+            <ul>
+              <li>코드 생성</li>
+              <li>JSON 쓰기</li>
+              <li>SQL 쿼리 만들기</li>
+            </ul>
+            <p class="verdict">문법과 형식이 정해져 있어 <b>다음 토큰의 선택지가 좁다.</b> 작은 모델도 잘 맞춘다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">이득이 작은 쪽 · 창의적 출력</span>
+            <ul>
+              <li>시 쓰기</li>
+              <li>브레인스토밍</li>
+              <li>온도를 높게 둔 자유 생성</li>
+            </ul>
+            <p class="verdict">다음 토큰이 될 수 있는 후보가 많다. 작은 모델의 추측이 <b>자주 거절된다.</b></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="demo">
+        <header><span class="num">07</span><h2>데모 결과: 채택률이 갈림길 <span class="ts">09:00</span></h2></header>
+        <p>데모는 두 탭으로 되어 있다. 각 탭에서 버튼을 누르면 기준 서버와 추측 디코딩 서버가 같은 요청을 동시에 처리한다. 발표 중 서버가 멈춰 vLLM 서버를 다시 띄우는 데 2분 가까이 걸렸고 <span class="ts">07:00</span>, 그 뒤 정상 동작했다.</p>
+
+        <h3>구조화된 출력 <span class="ts">09:10</span></h3>
+        <figure class="chart" aria-label="생성 속도 비교: 기준 서버 1.0배, 추측 디코딩 1.6배">
+          <span class="chart-title">구조화된 출력에서의 생성 속도 (기준 서버 = 1.0)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>기준 서버 (목표 모델만)</span><span class="val">1.0</span></div>
+              <div class="track"><div class="fill" style="width:62.5%" title="기준 서버: 1.0배"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>추측 디코딩</span><span class="val">1.6</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="추측 디코딩: 1.6배"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>0.8</span><span>1.6</span></div>
+          <span class="caption">발표자가 데모 화면에서 읽은 수치. 초당 생성 토큰 수도 함께 올라 처리량이 좋아졌다고 말했다. 정확한 토큰 수는 자막에 없다.</span>
+        </figure>
+        <p>발표자가 가장 눈여겨보라고 한 지표는 <strong>채택률</strong> <span class="en">acceptance rate</span>이다. 초안 모델이 만든 토큰 가운데 목표 모델이 받아들인 비율이다. 구조화된 출력에서는 이 값이 높았고, 그래서 속도 이득이 나왔다.</p>
+
+        <h3>창의적 출력 <span class="ts">10:00</span></h3>
+        <p>두 번째 탭에서도 추측 디코딩 쪽이 빨랐지만 <strong>채택률이 눈에 띄게 낮았다.</strong> 이유는 두 가지다. 온도 <span class="en">temperature</span>를 높게 설정했고, 작업 자체가 다음 토큰의 변화 폭이 큰 창의적 작업이었다. 초안 모델의 추측이 자주 거절되면 목표 모델이 다시 쓰는 일이 늘어 이득이 줄어든다.</p>
+        <div class="callout">
+          <span class="title">채택률을 보는 이유</span>
+          <span>속도 배수는 환경에 따라 달라진다. 채택률은 "내 작업이 추측 디코딩에 맞는가"를 가장 직접 보여주는 숫자다. 채택률이 낮으면 초안 모델이 헛일을 하고 있다는 뜻이다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="context">
+        <header><span class="num">08</span><h2>긴 입력에서는 효과가 작다 <span class="ts">10:50</span></h2></header>
+        <p>추측 디코딩은 <strong>토큰을 쓰는 단계</strong>를 빠르게 한다. <strong>입력을 읽는 단계</strong>는 전혀 건드리지 않는다.</p>
+        <p>그래서 모델에 긴 맥락을 넣어야 하는 작업은 이득이 작다. 검색 증강 생성 <span class="en">RAG</span>이나 문서 여러 개 분석이 그렇다. 이런 작업은 KV 캐시를 만드는 데 시간을 많이 쓴다. 특히 <strong>입력은 길고 출력은 짧은 질의</strong>라면 전체 시간의 대부분이 입력 읽기에 있어 추측 디코딩이 손댈 부분이 거의 없다.</p>
+        <div class="shift" aria-label="추측 디코딩이 영향을 주는 단계">
+          <div><span class="tag">입력 읽기 (prefill)</span><b>그대로</b><span class="muted">KV 캐시 생성. 입력이 길수록 여기에 시간이 쏠린다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">토큰 생성 (decode)</span><b>빨라진다</b><span class="muted">출력이 길고 예측하기 쉬울수록 이득이 크다</span></div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="decide">
+        <header><span class="num">09</span><h2>켤까 말까, 네 가지 질문 <span class="ts">11:40</span></h2></header>
+        <p>발표자가 정리한 핵심은 "내 애플리케이션이 무엇을 하는가"를 먼저 따지는 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>켜는 쪽</th><th>끄는 쪽</th></tr></thead>
+            <tbody>
+              <tr><td>출력이 구조화되어 있나</td><td>코드, JSON, SQL</td><td>시, 브레인스토밍, 높은 온도</td></tr>
+              <tr><td>GPU 메모리가 남나</td><td>초안 모델과 추가 KV 캐시를 둘 공간이 있다</td><td>이미 꽉 차 있다</td></tr>
+              <tr><td>동시 요청이 많은가</td><td>작은 배치, 적은 동시 요청</td><td>높은 동시성으로 GPU가 바쁘다</td></tr>
+              <tr><td>입력과 출력의 비율은</td><td>출력이 길다</td><td>RAG처럼 입력이 길고 출력이 짧다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자가 직접 꼽은 질문은 구조화 여부, VRAM 여유, 창의적 작업 여부, 동시성 네 가지다. 입력과 출력의 비율은 앞 섹션의 내용을 노트에서 한 줄로 더한 것이다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="qa">
+        <header><span class="num">10</span><h2>질의응답: 도구와 자료 <span class="ts">12:40</span></h2></header>
+        <h3>추천 도구</h3>
+        <p>발표자는 서빙 엔진 <strong>vLLM</strong>으로 구현했고, 시작하기에는 vLLM 문서가 충분히 좋다고 했다. 이 발표에서 다룬 초안 모델 방식은 추측 디코딩 가운데 <strong>가장 단순한 형태</strong>다. n-gram, Medusa, EAGLE 같은 방식은 밑에 깔린 구조가 더 복잡하다.</p>
+        <h3>읽을 자료</h3>
+        <ul class="plain">
+          <li>이 주제를 다룬 글이 많지 않다. 검색하면 처음에 나오는 General Compute(추정, 자막 기준) 블로그가 더 자세히 설명한다.</li>
+          <li>연구 논문은 두 편이 있다. 하나는 Google이 냈고, 다른 하나의 회사 이름은 발표자가 자리에서 떠올리지 못했다.</li>
+          <li>발표자는 블로그 글이나 짧은 영상을 만들 계획이라고 했다.</li>
+        </ul>
+        <h3>Akamai 자료 <span class="ts">14:10</span></h3>
+        <p>이 실험을 재현하는 방법은 Akamai 개발자 GitHub에 올라와 있다고 했다. 발표자는 추론 최적화를 맡고 있고, 다른 동료들은 AI 에이전트 구축, 관리형 Kubernetes, Akamai Functions 활용을 다룬다. Discord 채널도 만들고 있다.</p>
+        <p class="note">발표자는 Akamai 소속이며 마지막 부분은 자사 GitHub와 Discord 소개다. 추측 디코딩 자체의 설명은 특정 회사 제품에 기대지 않지만, 재현 자료 안내는 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>LLM 답변은 <strong>입력 읽기(prefill)</strong>와 <strong>토큰 생성(decode)</strong> 두 단계다. 토큰 생성은 한 번에 하나씩이라 느리다.</li>
+          <li>추측 디코딩은 <strong>초안 모델이 3~5개를 먼저 쓰고 목표 모델이 한 번에 검증</strong>한다. 거절된 자리는 목표 모델이 다시 쓴다.</li>
+          <li><strong>출력 품질은 목표 모델과 같다.</strong> 빨라지기만 한다.</li>
+          <li>비용은 메모리다. <strong>초안 모델 가중치와 두 모델의 KV 캐시</strong>가 추가로 든다.</li>
+          <li>초안 모델은 <strong>10~50배 작고, 같은 토크나이저, 되도록 같은 가족</strong>이어야 한다.</li>
+          <li>데모 환경은 Blackwell 한 장. 목표 모델 가중치 약 16 GB, 초안 모델 약 2.5 GB.</li>
+          <li>구조화된 출력(코드, JSON, SQL)은 <strong>1.6배</strong> 빨라졌고 채택률이 높았다.</li>
+          <li>창의적 출력과 높은 온도는 <strong>채택률이 낮다.</strong> 채택률이 추측 디코딩 적합성을 보여주는 핵심 지표다.</li>
+          <li>입력이 길고 출력이 짧은 RAG 류 작업은 <strong>효과가 작다.</strong> 추측 디코딩은 입력 읽기를 빠르게 하지 않는다.</li>
+          <li>동시 요청이 많아 GPU가 이미 바쁘면 켜지 않는다. <strong>GPU가 남을 때, 작은 배치일 때</strong> 시도한다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>LLM이 답을 만드는 두 단계는 무엇이고, 각각 몇 번 일어나나?</span></summary><div class="answer">입력 읽기(prefill)는 프롬프트를 처리해 KV 캐시를 만들며 요청마다 한 번 일어난다. 토큰 생성(decode)은 토큰을 하나씩 쓰며 출력 토큰 수만큼 반복된다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>추측 디코딩에서 초안 모델과 목표 모델은 각각 무엇을 하나?</span></summary><div class="answer">초안 모델이 다음 토큰 3~5개를 먼저 쓴다. 목표 모델이 그 후보를 한 번의 순전파로 검증해 받아들이거나 거절하고, 거절된 자리부터 다시 쓴다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>추측 디코딩을 켜면 출력 품질이 떨어지나?</span></summary><div class="answer">아니다. 최종 출력을 결정하는 쪽은 목표 모델이다. 초안 모델의 제안은 모두 목표 모델이 검증하므로 출력은 목표 모델이 혼자 쓴 것과 같다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>추측 디코딩의 숨은 비용은 무엇인가?</span></summary><div class="answer">GPU 메모리. 초안 모델의 가중치와, 초안 모델과 목표 모델 각각의 KV 캐시를 둘 공간이 추가로 필요하다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>초안 모델을 고르는 세 가지 조건은?</span></summary><div class="answer">목표 모델보다 10~50배 작아야 하고, 같은 토크나이저를 써야 하며, 되도록 같은 모델 가족이어야 한다. 그 안에서 비용과 정확도의 균형을 잡는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>데모에서 목표 모델과 초안 모델의 가중치 메모리는 각각 얼마였나?</span></summary><div class="answer">목표 모델 약 16 GB, 초안 모델 약 2.5 GB. Blackwell GPU 한 장에 두 서버를 함께 띄우고도 KV 캐시 공간이 넉넉히 남았다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>채택률이란 무엇이고 왜 중요한가?</span></summary><div class="answer">초안 모델이 만든 토큰 가운데 목표 모델이 받아들인 비율이다. 채택률이 높아야 속도 이득이 나오고, 낮으면 초안 모델이 헛일을 하는 셈이다. 내 작업이 추측 디코딩에 맞는지 가장 직접 보여주는 지표다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>구조화된 출력 데모에서 속도는 몇 배 빨라졋나? 창의적 출력에서는 무엇이 달랐나?</span></summary><div class="answer">구조화된 출력은 1.6배 빨라졋고 채택률이 높았다. 창의적 출력은 온도가 높고 다음 토큰 후보가 많아 채택률이 눈에 띄게 낮았다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>RAG처럼 입력이 긴 작업에서 추측 디코딩 효과가 작은 이유는?</span></summary><div class="answer">추측 디코딩은 토큰 생성 단계만 빠르게 한다. 입력이 길고 출력이 짧으면 시간의 대부분이 KV 캐시를 만드는 입력 읽기 단계에 있어 손댈 부분이 거의 없다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>동시 요청이 많은 서비스에서 추측 디코딩을 권하지 않는 이유는?</span></summary><div class="answer">GPU가 이미 요청 처리로 꽉 차 있어 초안 모델과 추가 KV 캐시를 둘 공간이 없다. GPU가 남고 배치가 작을 때 이득이 있다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>발표자가 쓴 서빙 엔진과, 이 발표에서 다룬 방식보다 복잡한 추측 디코딩 방식 세 가지는?</span></summary><div class="answer">vLLM을 썼다. 초안 모델 방식은 가장 단순한 형태이고, n-gram, Medusa, EAGLE은 밑에 깔린 구조가 더 복잡하다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 서비스에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 서비스의 주된 출력이 구조화된 형식인지 확인한다<span class="how">코드, JSON, SQL이면 후보. 시, 브레인스토밍, 높은 온도가 주력이면 보류</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>요청별 입력 길이와 출력 길이의 비율을 잰다<span class="how">입력이 길고 출력이 짧은 RAG 류라면 시간이 입력 읽기에 몰려 이득이 작다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>피크 시간대 GPU 메모리 여유를 확인한다<span class="how">초안 모델 가중치와 두 모델의 KV 캐시가 들어갈 공간이 있어야 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>동시 요청 수와 배치 크기를 확인한다<span class="how">GPU가 이미 바쁘면 켜지 않는다. 작은 배치일 때 효과가 있다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>목표 모델과 같은 가족, 같은 토크나이저인 10~50배 작은 초안 모델을 고른다<span class="how">토크나이저가 다르면 변환 작업이 추가된다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>기준 서버와 추측 디코딩 서버를 같은 요청으로 나란히 돌린다<span class="how">vLLM 문서를 따라 설정한다. 초안 토큰 수는 3~5개에서 시작한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>채택률, 초당 토큰 수, 응답 시간을 작업 종류별로 기록한다<span class="how">확인: 채택률이 낮은 작업은 이득이 없거나 손해일 수 있다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>이득이 확인된 작업에만 켜고, 나머지는 기준 설정을 유지한다<span class="how">작업 종류가 섞여 있으면 라우팅으로 나누는 것도 검토한다. 이 항목은 노트의 제안이다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>추측 디코딩</td><td>Speculative decoding. 작은 모델이 토큰 몇 개를 먼저 쓰고 큰 모델이 한 번에 검증해 생성 속도를 올리는 기법</td></tr>
+              <tr><td>입력 읽기 (prefill)</td><td>프롬프트의 입력 토큰을 모두 처리해 KV 캐시를 만드는 단계. 요청마다 한 번</td></tr>
+              <tr><td>토큰 생성 (decode)</td><td>모델이 답을 토큰 하나씩 써 나가는 단계. 출력 길이만큼 반복</td></tr>
+              <tr><td>KV 캐시</td><td>KV cache. 앞서 처리한 토큰의 중간 계산 결과를 저장한 것. 요청을 처리하는 동안 모델의 작업 기억 역할을 한다</td></tr>
+              <tr><td>자기회귀</td><td>Autoregressive. 앞에 만든 결과를 입력으로 삼아 다음을 만드는 방식. 그래서 토큰을 한 번에 하나씩 쓴다</td></tr>
+              <tr><td>순전파</td><td>Forward pass. 입력이 모델 전체를 한 번 통과해 출력을 내는 계산</td></tr>
+              <tr><td>초안 모델</td><td>Draft model. 다음 토큰 후보를 먼저 추측하는 작은 모델</td></tr>
+              <tr><td>목표 모델</td><td>Target model. 실제로 서비스하려는 큰 모델. 초안을 검증하고 최종 출력을 결정한다</td></tr>
+              <tr><td>채택률</td><td>Acceptance rate. 초안 모델이 만든 토큰 가운데 목표 모델이 받아들인 비율</td></tr>
+              <tr><td>토크나이저</td><td>Tokenizer. 글을 모델이 처리하는 단위인 토큰으로 자르는 규칙</td></tr>
+              <tr><td>온도</td><td>Temperature. 생성의 무작위성을 조절하는 값. 높을수록 다양한 토큰이 나오고 예측하기 어려워진다</td></tr>
+              <tr><td>동시성</td><td>Concurrency. 같은 시간에 처리하는 요청의 수</td></tr>
+              <tr><td>배치 크기</td><td>Batch size. 한 번의 계산에 묶어 처리하는 요청의 수</td></tr>
+              <tr><td>처리량</td><td>Throughput. 단위 시간에 만들어 내는 토큰 수</td></tr>
+              <tr><td>VRAM</td><td>GPU에 달린 메모리. 모델 가중치와 KV 캐시가 여기에 올라간다</td></tr>
+              <tr><td>RAG</td><td>검색 증강 생성. 질문과 관련된 문서를 찾아 프롬프트에 붙여 넣는 방식. 입력이 길어진다</td></tr>
+              <tr><td>vLLM</td><td>LLM을 서비스하기 위한 오픈소스 서빙 엔진. 추측 디코딩을 설정으로 켤 수 있다</td></tr>
+              <tr><td>n-gram, Medusa, EAGLE</td><td>초안 모델 대신 다른 구조로 토큰을 추측하는 추측 디코딩 변형들. 발표자는 더 복잡한 방식이라고만 소개했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개와 주제</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>답변의 두 단계: 입력 읽기와 토큰 생성</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>Llama 70B 예시: 순전파 수백 번의 비용</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>추측 디코딩의 아이디어</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>초안 토큰 3~5개, 목표 모델의 승인과 거절</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>비용: 두 모델의 가중치와 KV 캐시</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>GPU가 남을 때만 고려한다</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>초안 모델 고르기: 정확도와 속도의 균형</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>데모 환경: Blackwell 한 장, 가중치 16 GB와 2.5 GB</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>초안 모델 조건: 10~50배 작게, 같은 토크나이저, 같은 가족</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>이득이 큰 작업과 작은 작업</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>데모 시작, 서버 멈춤</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>vLLM 서버 재시작</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>구조화된 출력: 1.6배, 높은 채택률</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>창의적 출력: 낮은 채택률</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>긴 입력과 RAG에서는 효과가 작다</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>판단 기준 정리</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>질의응답: vLLM, n-gram, Medusa, EAGLE</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>읽을 자료: 블로그와 논문 두 편</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>Akamai GitHub와 Discord 소개</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'XTpyNrEgJQ4:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

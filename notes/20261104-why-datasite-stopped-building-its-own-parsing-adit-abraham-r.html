@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>파싱을 사기로 한 이유</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#dataroom">Datasite와 데이터룸</a></li>
+      <li><a href="#homegrown">직접 만든 파싱 파이프라인</a></li>
+      <li><a href="#ingest">데이터룸 5만 5천 개를 AI에</a></li>
+      <li><a href="#edge">파싱은 전부 예외 처리다</a></li>
+      <li><a href="#focus">핵심 엔지니어를 어디에 쓰나</a></li>
+      <li><a href="#sale">Datasite에 회사를 판 이유</a></li>
+      <li><a href="#data">아무도 못 가진 데이터</a></li>
+      <li><a href="#barbell">바벨 효과와 2억 달러</a></li>
+      <li><a href="#friction">남은 마찰: 모델 고르기</a></li>
+      <li><a href="#pipeline">문서 처리 흐름</a></li>
+      <li><a href="#bench">VDR Bench: 자체 평가</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 대담 · 2026-11-04 · 20분 · 영어 대담 한글 정리</span>
+      <h1>Datasite는 왜 파싱을 직접 만들지 않나</h1>
+      <p class="lead">M&amp;A 거래 문서를 보관하는 Datasite는 문서 파싱을 직접 만들다가 외부 도구로 바꿨다. 파싱은 끝없는 예외 처리라서 직접 붙잡고 있을 일이 아니다. 귀한 엔지니어는 매출을 만드는 일에 써야 한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=0PqGT2L6cZM" target="_blank" rel="noopener">Why Datasite Stopped Building Its Own Parsing</a></span>
+        <span>대담: Adit Abraham (Reducto 공동 창업자·CEO, 진행), Raj Bakhru (Datasite 글로벌 CTO, BlueFlame 창업자)</span>
+      </div>
+      <p class="note">영어 대담의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고(Datasite, turbopuffer, graph RAG 등), 확실하지 않은 것은 (추정)으로 표시했다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>Datasite는 회사를 사고팔 때 거래 문서를 모아 두는 <strong>가상 데이터룸</strong> 회사다. Adit이 인용한 수치로, 1억 달러가 넘는 거래의 약 60%가 이곳을 거친다.</li>
+        <li>Raj가 세운 스타트업 BlueFlame은 처음에 <strong>파싱을 직접 만들었다.</strong> 돈을 아끼려 했고, 한동안은 잘 돌았다.</li>
+        <li>문제는 <strong>끝없는 예외 처리</strong>였다. 차트 범례 색, 엑셀 병합 셀, 특이한 파일 형식마다 오답이 나왔고 지원 시간이 쌓였다.</li>
+        <li>그래서 파싱을 Reducto에 맡겼다. 판단 기준은 <strong>"핵심 엔지니어를 어디에 쓸 것인가"</strong>다.</li>
+        <li>매출 약 10억 달러에서 연 20% 크려면 첫해에만 2억 달러를 새로 벌어야 한다. 엔지니어 250명을 <strong>매출 과제 다섯 개</strong>에 몰고, 그 아래층은 최대한 외부에 맡긴다.</li>
+        <li>BlueFlame이 Datasite에 팔린 핵심 이유는 <strong>독점 데이터</strong>다. 데이터룸 문서와 Grata의 비상장 기업 정보는 다른 AI 회사가 가질 수 없다.</li>
+        <li>품질은 자체 평가 VDR Bench로 잰다. 범용 AI 제품보다 점수가 높아야 한다. Raj는 그 차이가 대부분 <strong>추출 단계</strong>에서 나온다고 본다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="dataroom">
+        <header><span class="num">01</span><h2>Datasite와 데이터룸 <span class="ts">00:10</span></h2></header>
+        <p>이 영상은 발표가 아니라 대담이다. 문서 파싱 회사 Reducto의 공동 창업자 Adit Abraham이 묻고, Datasite의 글로벌 CTO Raj Bakhru가 답한다. 끝에 청중 질문 두 개를 받는다.</p>
+
+        <h3>데이터룸이란 <span class="ts">02:20</span></h3>
+        <p>회사를 팔 때 오가는 거래 문서를 모아 두는 온라인 공간이 데이터룸이다. 정식 이름은 가상 데이터룸 <span class="en">Virtual Data Room, VDR</span>이다. 주로 투자은행이 자료를 올리고, 사모펀드가 그 자료를 검토한다.</p>
+        <p>이곳의 문서는 세상에서 가장 민감한 자료에 속한다. 공개되지 않은 중요 정보 <span class="en">MNPI</span>가 그대로 들어 있다. 그래서 데이터룸의 벽은 높다.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Datasite의 규모</th><th>값 (발표자가 인용)</th></tr></thead>
+            <tbody>
+              <tr><td>1억 달러 넘는 거래 중 Datasite를 거치는 비율</td><td>약 60% (Adit이 말하고 Raj가 확인)</td></tr>
+              <tr><td>한 해 처리하는 토큰</td><td>1조 개 이상</td></tr>
+              <tr><td>보관 문서</td><td>수십억 페이지</td></tr>
+              <tr><td>월간 활성 사용자</td><td>50만 명 이상</td></tr>
+              <tr><td>한 해 새로 열리는 데이터룸</td><td>약 5만 5천 개</td></tr>
+              <tr><td>사용자</td><td>주요 은행, 사모펀드, 실사 업체 대부분</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>정리하면 Datasite는 거대한 <strong>비정형 데이터</strong> <span class="en">unstructured data</span> 더미를 가진 회사다. 표나 DB처럼 정리되지 않은 문서 형태의 데이터라는 뜻이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="homegrown">
+        <header><span class="num">02</span><h2>직접 만든 파싱 파이프라인 <span class="ts">01:10</span></h2></header>
+        <p>Raj는 평생 개발자로 일했다.</p>
+        <ul class="plain">
+          <li>Goldman Sachs, Highbridge, Kepos Capital에서 퀀트 펀드의 리서치·트레이딩 시스템을 만들었다.</li>
+          <li>보안 회사를 창업해 사모펀드가 투자한 회사에 팔았다. 그 뒤 그 회사의 M&amp;A와 전략을 맡았다.</li>
+          <li>M&amp;A 분야의 <strong>버티컬 AI</strong> <span class="en">vertical AI</span> 회사 BlueFlame을 세웠다. 한 산업에 맞춘 AI 제품이다. 비정형 데이터에 AI가 줄 영향이 클 거라고 봤다.</li>
+          <li>1년에서 1년 반쯤 만들었을 때 Datasite가 인수했다. 당시 팀은 약 50명이었다.</li>
+        </ul>
+        <p>BlueFlame은 작은 스타트업이었다. 한 푼이라도 아끼려고 파싱, 문서 처리, <strong>수집 파이프라인</strong> <span class="en">ingestion pipeline</span>을 직접 만들었다. 수집 파이프라인은 들어온 문서를 처리해 검색할 수 있는 저장소에 넣기까지의 흐름이다. 팀도 좋았고, 한동안은 잘 돌았다.</p>
+        <p>그러다 한계에 부딪혔다. Reducto와는 Datasite에 인수되기 전부터 함께 일하기 시작했다. Datasite에 합류할 무렵에는 이미 Reducto로 옮긴 뒤였다. 직접 만든 도구로는 같은 수준의 품질, 속도, recall, 비용을 낼 수 없다고 판단했다.</p>
+        <div class="shift" aria-label="파싱 방식의 변화">
+          <div><span class="tag">BlueFlame 초기</span><b>파싱을 직접 만든다</b><span class="muted">돈을 아끼려고. 한동안은 잘 됐다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Datasite 합류 무렵</span><b>파싱을 Reducto에 맡긴다</b><span class="muted">품질, 속도, recall, 비용에서 따라갈 수 없다고 봤다</span></div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="ingest">
+        <header><span class="num">03</span><h2>데이터룸 5만 5천 개를 AI에 <span class="ts">03:00</span></h2></header>
+        <p>사용자들은 매일 AI 기능을 요구했다. 이사회도 같은 생각이었다. 그래서 Datasite가 BlueFlame 팀에 처음 맡긴 일은 모든 데이터룸에 AI를 넣는 것이었다.</p>
+        <p>목표는 한 해 5만 5천 개 데이터룸을 파싱해 <strong>벡터 데이터베이스</strong> <span class="en">vector database</span>에 넣는 것이었다. 그 위에 <strong>graph RAG</strong> 플랫폼을 올려, 사용자가 데이터룸에 던지는 질문에 대규모로 답하려 했다. 빨리 만들어야 했다.</p>
+
+        <h3>보안이라는 벽 <span class="ts">04:00</span></h3>
+        <ul class="plain">
+          <li>Datasite는 그때까지 고객 문서를 자기 Azure 환경 밖으로 꺼낸 적이 없었다.</li>
+          <li>고객이 지켜야 하는 규제 요건이 Datasite에도 그대로 넘어온다.</li>
+          <li>ISO 인증 같은 기존 인증도 유지해야 했다.</li>
+        </ul>
+        <p>그래서 Reducto 팀과 오래 논의했다. 문서가 계속 보호된다는 확신을 모두가 가질 때까지 방법을 맞췄다. 최종 구조는 <a href="#pipeline">10장</a>에 있다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="edge">
+        <header><span class="num">04</span><h2>파싱은 전부 예외 처리다 <span class="ts">04:50</span></h2></header>
+        <p>Reducto를 고른 이유는 두 가지다. 하나는 빨리 움직여야 했다는 것이다. 다른 하나는 벤치마크다. 데이터 사이언스 팀이 직접 만든 추출·파싱·수집 도구를 Reducto와 비교했다.</p>
+        <blockquote>전부 예외 처리다. 말 그대로 모든 게 예외 상황이다.<cite>Raj Bakhru의 말을 옮김 · 05:00</cite></blockquote>
+        <p>대형 사모펀드 고객들은 RAG 플랫폼이 틀린 답을 낸 사례를 보내왔다. 팀이 파고들면 원인은 대개 문서 형식의 작은 차이였다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>사례</th><th>무슨 일이 있었나</th></tr></thead>
+            <tbody>
+              <tr><td>파이 차트 <span class="ts">05:20</span></td><td>범례의 파란색 농도가 조각 색과 딱 맞지 않았다. 세계 최고 수준의 비전 모델도 잘못 읽었다. 같은 데이터를 막대 차트로 주면 그 모델이 맞혔다.</td></tr>
+              <tr><td>엑셀 병합 셀 <span class="ts">05:40</span></td><td>금융 스프레드시트는 사람이 봐도 이해하기 어렵다. 병합된 셀까지 섞이면 모델이 구조를 제대로 읽기 어렵다.</td></tr>
+              <tr><td>특이한 파일 형식 <span class="ts">07:00</span></td><td>XLSB(바이너리 엑셀), 매크로가 든 파일, 템플릿 파일. Raj의 표현으로 "끝이 없다".</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>결국 이런 <strong>엣지 케이스</strong> <span class="en">edge case</span>를 처리하는 지원 업무에 엄청난 시간이 들었다. 엣지 케이스는 흔하지 않은 입력이라 평소 잘 되던 처리가 깨지는 경우다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="focus">
+        <header><span class="num">05</span><h2>핵심 엔지니어를 어디에 쓰나 <span class="ts">06:10</span></h2></header>
+        <p>Raj가 <strong>살지 만들지</strong> <span class="en">buy vs build</span>를 정하는 기준은 하나다. 수가 적은 우수 엔지니어에게 무슨 일을 시킬 것인가.</p>
+        <p>답은 분명했다. 이미 남이 풀어 둔 추출 문제의 지원 업무는 아니다. 바퀴를 다시 발명할 이유가 없다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Reducto에 맡긴 것</span>
+            <ul>
+              <li>문서 파싱과 내용 추출</li>
+              <li>파일 형식마다 나오는 예외 처리</li>
+              <li>그 예외에서 생기는 지원 업무</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">팀이 집중한 것</span>
+            <ul>
+              <li>고객이 원하는 에이전트</li>
+              <li>인터페이스와 RAG 플랫폼</li>
+              <li>graph RAG 구축. Reducto의 파싱 결과를 재료로 썼다</li>
+            </ul>
+            <p class="verdict">한마디로 <b>매출을 만드는 문제</b>에 사람을 둔다.</p>
+          </div>
+        </div>
+        <p class="note">이 대담은 Reducto CEO가 진행했고, Raj는 Reducto 고객이다. Reducto에 대한 평가는 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="sale">
+        <header><span class="num">06</span><h2>Datasite에 회사를 판 이유 <span class="ts">07:50</span></h2></header>
+        <p>Adit은 Datasite 합류 전 이야기를 물었다. Raj의 답은 이렇다.</p>
+        <ol class="plain">
+          <li>앞선 보안 스타트업은 1년 만에 팔았다. 이번에는 빨리 팔지 말고 끝까지 가서 유니콘이 되자고 다짐했다.</li>
+          <li>두 번째 창업이라 믿는 사람들을 데려올 수 있었다. 서로 소리를 질러도 친구로 남는 사이였다.</li>
+          <li>상당 부분 자기 돈으로 시작했다. 그래서 비용에 지나치게 민감한 결정도 내렸다.</li>
+          <li>첫 VC 라운드가 거의 끝났다. 의향서 <span class="en">LOI</span>와 <strong>텀시트</strong> <span class="en">term sheet</span>에 서명했고, 최종 서명까지 일주일 남았었다. <span class="ts">08:50</span></li>
+          <li>라운드에 자리가 남아 Datasite에 500만 달러를 넣겠냐고 물었다. 데모를 본 Datasite는 회사를 통째로 사겠다고 했다. 사무실 미팅 뒤 그날 저녁 식사 자리에서 나온 제안이다. <span class="ts">09:20</span></li>
+        </ol>
+
+        <h3>제안을 받아들인 이유 <span class="ts">09:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>이유</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>자본 경쟁</td><td>버티컬 AI 경쟁사들은 이미 수억 달러를 모았다. 따라가려면 같은 규모를 모아야 했다. 그만큼 지분이 크게 <strong>희석</strong> <span class="en">dilution</span>된다.</td></tr>
+              <tr><td>프런티어 모델</td><td>대형 모델 회사가 금융 시장에 직접 들어온다는 소문이 돌았다. Claude for Financial Services와 OpenAI의 금융 버전은 아직 정식 발표 전이었다. 이들과 맞서 버티기는 점점 어려워질 것으로 봤다.</td></tr>
+              <tr><td>새로운 데이터</td><td>차별화하려면 새로운 종류의 데이터가 필요했다. 데이터룸은 누구에게도 열린 적 없는 독점 데이터였다. 그 데이터에 접근하는 곳은 BlueFlame뿐일 것이었다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Raj는 인수가 약 1년 반 전이라고 했다. 그때는 Claude의 오피스 연동(자막 "Cloud and Office Suite", 추정)도, 에이전트 코딩도 지금만큼 퍼지지 않았다고 회상한다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="data">
+        <header><span class="num">07</span><h2>아무도 못 가진 데이터 <span class="ts">10:40</span></h2></header>
+        <p>Datasite에 들어가면서 BlueFlame은 독점 데이터 두 가지를 얻었다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">가상 데이터룸 (VDR)</span>
+            <p>은행과 사모펀드가 실제 거래 때 올린 문서다. 이전까지 누구에게도 열린 적이 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Grata <span class="ts">10:50</span></span>
+            <p>Datasite가 가진 비상장 기업 데이터베이스다.</p>
+            <ul>
+              <li>비상장 기업 약 2천만 곳</li>
+              <li>거래 기록과 연락처</li>
+              <li>투자 대상 발굴, 영업, <strong>오리지네이션</strong> <span class="en">origination</span>에 쓰인다</li>
+            </ul>
+            <p class="verdict">대표 질문: "우리 포트폴리오 회사에 붙여 살 만한 회사는 어디인가?"</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">데이터를 모델 가까이 두면 <span class="ts">11:40</span></span>
+          <span>지난 1년 반 동안 엔지니어링 팀, 데이터, 제품을 합쳤다. 벤치마크해 보니 데이터를 모델 가까이 두자 토큰 비용과 실행 시간이 줄고 품질이 올랐다고 Raj는 말한다.</span>
+        </div>
+        <p class="note">Raj는 Datasite의 CTO다. 독점 데이터의 가치에 대한 설명은 자기 회사 자산에 대한 주장이라는 점을 감안하자.</p>
+
+        <h3>커진 규모, 바뀐 수요 <span class="ts">12:10</span></h3>
+        <ul class="plain">
+          <li>Raj의 기억으로, 합류 후 1년 반 동안 Datasite 매출은 약 40% 늘었다.</li>
+          <li>플랫폼에 올라오는 문서도 빠르게 는다.</li>
+          <li>사용자는 이제 문서에 질문만 하지 않는다. 에이전트가 문서를 여러 번 오가며 실사 분석을 한다.</li>
+          <li>PowerPoint 자료와 <strong>IC 메모</strong> <span class="en">Investment Committee memo</span>까지 만든다.</li>
+        </ul>
+        <p>이 모든 처리에는 규모가 필요하다. 수집과 처리 단계를 Reducto가 맡는다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="barbell">
+        <header><span class="num">08</span><h2>바벨 효과와 2억 달러 <span class="ts">13:10</span></h2></header>
+        <p>Adit은 무엇을 안에서 만들고 무엇을 밖에서 사는지 물었다. Raj는 Datasite가 벤더를 많이 쓰고, 벤더에 돈도 많이 쓴다고 답했다. 의도한 결정이다.</p>
+        <p>이유는 좋은 엔지니어가 귀하기 때문이다. 지금은 모두가 최상위 엔지니어를 뽑으려 한다. AI 코딩 때문이다.</p>
+
+        <h3>AI 코딩의 바벨 효과 <span class="ts">13:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>AI 코딩으로 생긴 변화 (Raj의 관찰)</th></tr></thead>
+            <tbody>
+              <tr><td>최상위</td><td>코드베이스를 머릿속에 정확히 그리고 공학 원리를 깊이 안다. 원래도 10배였는데, 거기서 또 10배가 됐다.</td></tr>
+              <tr><td>중간</td><td>그저 그렇다.</td></tr>
+              <tr><td>주니어</td><td>크게 이득이다. 없는 문서를 찾아 헤맬 필요가 없다. LLM이 그때그때 설명을 만들어 준다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>양 끝이 이득을 보고 가운데는 덜 보는 모양이라 <strong>바벨 효과</strong> <span class="en">barbell effect</span>라고 부른다. 그래서 Datasite는 아주 강한 사람과 아주 주니어인 사람을 뽑아 키운다. 이 사람들을 지원 업무나 이미 풀린 문제에 두지 않는다.</p>
+
+        <h3>연 20% 성장의 무게 <span class="ts">14:40</span></h3>
+        <p>Datasite 매출은 정확히 10억 달러는 아니지만 그 언저리다. 이사회 목표는 연 20% 성장이다. 그러려면 해마다 약 2억 달러를 새로 벌어야 한다고 Raj는 말한다.</p>
+        <p>그 돈은 새 AI 제품을 내고, 토큰 사용 흐름을 잡고 <span class="en">getting on top of token flow</span>, 고객에게 주는 기능을 넓히는 데서 나온다. 바퀴를 다시 발명하는 일은 여기에 방해만 된다.</p>
+
+        <figure class="chart" aria-label="연 20% 성장에 필요한 새 매출: 1년째 200, 2년째 240, 3년째 288 (백만 달러, 지금 매출 1,000 기준)">
+          <span class="chart-title">연 20%씩 크려면 해마다 새로 벌어야 하는 매출 (백만 달러, 지금 매출 약 1,000 기준)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>1년째 · 발표의 숫자</span><span class="val">200</span></div>
+              <div class="track"><div class="fill key" style="width:66.7%" title="1년째: 2억 달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>2년째 · 예시 계산</span><span class="val">240</span></div>
+              <div class="track"><div class="fill" style="width:80%" title="2년째: 2.4억 달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>3년째 · 예시 계산</span><span class="val">288</span></div>
+              <div class="track"><div class="fill" style="width:96%" title="3년째: 2.88억 달러"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>150</span><span>300</span></div>
+          <span class="caption">발표에 나온 숫자는 1년째의 200뿐이다. 2·3년째는 같은 20%를 복리로 계산한 예시다.</span>
+        </figure>
+        <p class="note">20% × 약 10억 달러 = 약 2억 달러로, 첫해 계산은 맞다. 다만 발표의 "매년 2억 달러"는 단순화한 표현이다. 매출이 커지면 20%가 가리키는 금액도 커진다. 2년째에는 2.4억 달러, 3년째에는 약 2.9억 달러가 필요하다. 아래층을 외부에 맡기려는 압력은 해마다 커진다는 뜻이다.</p>
+
+        <h3>250명을 다섯 과제에 <span class="ts">15:20</span></h3>
+        <p>Datasite 엔지니어는 약 250명이다. 회사의 핵심 과제는 다섯 개다. 모두 매출을 만드는 과제로, 새 제품, 기존 도구 통합, 새 과금 모델 같은 것이다.</p>
+        <div class="shift" aria-label="엔지니어 배치 원칙">
+          <div><span class="tag">피하려는 배치</span><b>아래층에도 사람을 둔다</b><span class="muted">파싱, 이미 나와 있는 기능의 개선, 그 지원 업무</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Raj의 배치</span><b>250명을 매출 과제 5개에 나눈다</b><span class="muted">아래층에는 최대한 적게 두고, 가능하면 전부 외부에 맡긴다</span></div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="friction">
+        <header><span class="num">09</span><h2>남은 마찰: 모델 고르기 <span class="ts">16:00</span></h2></header>
+        <p>Adit은 지금 어디에서 마찰을 느끼는지 물었다. Raj는 모델이 원하는 대로 움직이게 하는 일이 여전히 어렵다고 답했다.</p>
+        <ul class="plain">
+          <li>Reducto 이전에는 차트 종류, 문서 종류마다 맞는 모델을 고르느라 시간을 많이 버렸다. 그 일은 상당 부분 사라졌다.</li>
+          <li>지금은 에이전트 쪽에서 같은 문제를 겪는다. 어떤 싼 모델은 <strong>툴 호출</strong> <span class="en">tool call</span>을 남발하는데 Opus 5.5(추정)는 그러지 않는다. <span class="ts">16:20</span></li>
+          <li>그래도 싼 모델이 훨씬 싸서 그쪽으로 옮기고 싶다. 그래서 왜 그런 차이가 나는지 벤치마크로 파고든다.</li>
+        </ul>
+        <p class="note">자막에는 "Opus 55"와 "61 Soul"로 나온다. 앞은 Opus 5.5로 추정했다. 뒤는 어떤 모델인지 확정할 수 없어 "싼 모델"로 적었다.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>최적화 기준</th><th>Raj의 설명 <span class="ts">16:40</span></th></tr></thead>
+            <tbody>
+              <tr><td>품질</td><td>최우선이다. 금융 사용자는 가장 좋은 답을 위해서라면 얼마든 낸다.</td></tr>
+              <tr><td>비용</td><td>품질을 지키는 선에서 줄인다.</td></tr>
+              <tr><td>속도</td><td>품질을 지키는 선에서 줄인다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="pipeline">
+        <header><span class="num">10</span><h2>문서 처리 흐름 <span class="ts">17:00</span></h2></header>
+        <p>첫 청중 질문은 Datasite와 Reducto가 어떻게 연결되는지였다. Raj가 설명한 흐름은 이렇다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>순서</th><th>단계</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>문서 유입</td><td>은행이 큰 자료를 한꺼번에 올린다. 예고 없이 최대 1테라바이트가 들어올 수 있다.</td></tr>
+              <tr><td>2</td><td>수집 파이프라인</td><td>들어온 문서를 모두 받아 Reducto로 넘긴다.</td></tr>
+              <tr><td>3</td><td>파싱 (Reducto)</td><td>Datasite 환경 안에서 돈다. 수십억 페이지 전체가 대상이다.</td></tr>
+              <tr><td>4</td><td>벡터 DB (turbopuffer)</td><td>파싱 결과를 받아 저장한다.</td></tr>
+              <tr><td>5</td><td>graph RAG</td><td>그 위에 graph RAG를 쌓는다. 질의는 자체 Python 코드(자막 "Prop Python code", 추정)로 실행한다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Reducto가 Datasite 환경 안에서 돈다는 점이 중요하다. 문서를 자기 환경 밖으로 내보내지 않던 <a href="#ingest">3장</a>의 보안 조건을 이렇게 맞춘 것으로 보인다(추론).</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="bench">
+        <header><span class="num">11</span><h2>VDR Bench: 자체 평가 <span class="ts">18:40</span></h2></header>
+        <p>두 번째 질문자는 셀사이드 쪽에 있는 Datasite 고객이다. 거래 파일을 에이전트에 열어 주고 싶은데, MNPI라서 Reducto 같은 도구에 넣기 전에 익명화하고 싶다고 했다. 이어서 Datasite가 만든 자체 <strong>평가</strong> <span class="en">eval</span>를 어떻게 만들었는지 물었다. <span class="ts">17:40</span></p>
+        <p class="note">익명화 질문에는 답이 나오지 않았다. 답은 평가 이야기로 넘어갔다.</p>
+        <p>Datasite에는 자체 평가가 여럿 있다. 파싱과 가장 관련 깊은 것이 VDR Bench다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>재료</td><td>흔한 형태의 가상 데이터룸 하나. 문서 수백 개가 들어 있다.</td></tr>
+              <tr><td>질문</td><td>정답을 미리 아는 질문 수백 개</td></tr>
+              <tr><td>실행 시점</td><td>거의 무엇이든 바꿀 때마다</td></tr>
+              <tr><td>통과 기준</td><td>같은 파일을 Claude Projects나 OpenAI의 Projects에 넣었을 때보다 점수가 높아야 한다 <span class="ts">19:00</span></td></tr>
+              <tr><td>공개 여부</td><td>아직 비공개. 오픈소스로 풀거나 OpenAI와 논문을 함께 쓰는 방안을 검토 중</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Datasite가 이 점수에서 앞서는 이유의 큰 부분이 파싱이다. 데이터 사이언스 팀 측정으로는 Reducto 파싱 덕분에 <strong>recall</strong>이 22% 좋아졌다. recall은 찾아야 할 정보 중 실제로 찾아낸 비율이다. <span class="ts">19:10</span></p>
+        <p class="note">22%가 상대 개선인지 퍼센트포인트 차이인지, 무엇과 비교했는지는 말하지 않았다. 발표자가 Reducto 고객이고 Reducto CEO가 진행하는 자리라는 점도 감안하자.</p>
+        <blockquote>많은 사람이 답하는 쪽에 할 일이 몰려 있다고 생각한다. 실제로는 대부분의 일이 추출 쪽에 있다. 그걸 제대로 하면 나머지는 따라온다.<cite>Raj Bakhru의 말을 옮김 · 19:20</cite></blockquote>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>Datasite는 M&amp;A 거래 문서를 보관하는 가상 데이터룸 회사다. 수십억 페이지의 민감한 비정형 문서를 가졌다.</li>
+          <li>BlueFlame은 돈을 아끼려고 파싱을 직접 만들었고, 한동안 잘 돌았다.</li>
+          <li><strong>파싱은 전부 예외 처리다.</strong> 차트 범례 색, 병합 셀, 특이한 파일 형식마다 오답이 나왔다.</li>
+          <li>예외 처리 지원에 시간이 쌓이자 파싱을 Reducto에 맡겼다. 자체 벤치마크에서 품질, 속도, recall, 비용이 앞섰다고 한다.</li>
+          <li>판단 기준은 <strong>핵심 엔지니어를 어디에 쓰나</strong>다. 이미 풀린 문제와 지원 업무에는 두지 않는다.</li>
+          <li>BlueFlame이 Datasite에 간 이유는 자본 경쟁, 프런티어 모델의 금융 진출, 그리고 <strong>독점 데이터</strong>다.</li>
+          <li>데이터를 모델 가까이 두면 토큰 비용과 실행 시간이 줄고 품질이 오른다고 했다.</li>
+          <li>AI 코딩은 최상위와 주니어에게 큰 이득을 준다(바벨 효과). 연 20% 성장에는 첫해 약 2억 달러가 필요해, 250명을 매출 과제 다섯 개에 몬다.</li>
+          <li>모델 선택은 비용, 속도, 품질의 균형이다. 금융에서는 <strong>품질이 먼저</strong>다.</li>
+          <li>품질은 정답이 있는 자체 평가(VDR Bench)로 변경마다 잰다. <strong>대부분의 일은 추출 쪽에 있다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>가상 데이터룸은 무엇이고, 누가 주로 쓰나?</span></summary><div class="answer">회사를 사고팔 때 거래 문서를 모아 두는 온라인 공간이다. 주로 투자은행이 자료를 올리고 사모펀드가 검토한다. 공개되지 않은 중요 정보(MNPI)가 들어 있어 아주 민감하다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>BlueFlame이 처음에 파싱을 직접 만든 이유는?</span></summary><div class="answer">작은 스타트업이라 한 푼이라도 아끼려고 했다. 자기 돈으로 시작해 비용에 특히 민감했다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>파이 차트 사례가 보여 주는 문제는?</span></summary><div class="answer">범례 색이 조금 어긋나자 최고 수준의 비전 모델도 잘못 읽었다. 같은 데이터를 막대 차트로 주면 맞혔다. 문서 형식의 작은 차이가 답을 바꾼다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>스프레드시트에서 나온 예외 사례 두세 가지는?</span></summary><div class="answer">병합된 셀, XLSB(바이너리 엑셀) 파일, 매크로가 든 파일, 템플릿 파일.</div></details>
+          <details><summary><span class="qn">Q5</span><span>Raj가 "살지 만들지"를 정하는 기준은?</span></summary><div class="answer">수가 적은 우수 엔지니어를 무엇에 쓸 것인가. 이미 풀린 문제와 그 지원 업무가 아니라, 매출을 만드는 문제에 둔다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>BlueFlame이 VC 투자 대신 인수를 받아들인 이유 세 가지는?</span></summary><div class="answer">경쟁하려면 수억 달러를 모아야 해 지분이 크게 희석된다. 프런티어 모델 회사들이 금융 시장으로 들어오고 있었다. 차별화하려면 남이 못 가진 데이터가 필요했고, Datasite의 데이터룸이 바로 그것이었다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>Grata는 무엇이고, 어떤 질문에 쓰이나?</span></summary><div class="answer">Datasite가 가진 비상장 기업 데이터베이스다. 약 2천만 곳의 거래 기록과 연락처가 있다. "우리 포트폴리오 회사에 붙여 살 만한 회사는?" 같은 질문에 쓰인다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Raj가 말한 AI 코딩의 바벨 효과란?</span></summary><div class="answer">최상위 엔지니어와 주니어가 크게 이득을 보고 중간층은 그저 그렇다. 그래서 아주 강한 사람과 아주 주니어인 사람을 뽑아 키운다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>"매년 2억 달러"는 어떻게 나온 숫자이고, 어떤 점을 보완해야 하나?</span></summary><div class="answer">매출 약 10억 달러에 연 20% 성장 목표를 곱한 값이다. 첫해는 맞다. 매출이 커지면 같은 20%도 2년째 2.4억 달러, 3년째 약 2.9억 달러로 커진다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>Raj가 꼽은 세 가지 최적화 기준과 우선순위는?</span></summary><div class="answer">비용, 속도, 품질. 금융 사용자는 가장 좋은 답에 얼마든 내므로 품질이 먼저다. 품질을 지키면서 나머지 둘을 줄인다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>Datasite의 문서 처리 흐름을 순서대로 말하면?</span></summary><div class="answer">문서 유입 → 수집 파이프라인 → Datasite 환경 안에서 Reducto 파싱 → turbopuffer 벡터 DB → graph RAG와 질의 실행.</div></details>
+          <details><summary><span class="qn">Q12</span><span>VDR Bench의 구성과 통과 기준은?</span></summary><div class="answer">문서 수백 개짜리 데이터룸 하나와 정답이 있는 질문 수백 개로 이뤄진다. 거의 모든 변경마다 돌린다. 같은 파일을 Claude Projects나 OpenAI의 Projects에 넣었을 때보다 점수가 높아야 한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">대담 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>엔지니어가 지금 무엇에 시간을 쓰는지 적고, 매출과 바로 이어지지 않는 아래층 작업을 표시한다<span class="how">Raj의 기준: 이미 풀린 문제와 그 지원 업무에 핵심 인력을 두지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>직접 만든 문서 처리의 오류 사례를 모아 유형별로 센다<span class="how">차트, 병합 셀, 파일 형식 등. 확인: 지원에 한 달 몇 시간이 드는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>외부 도구로 바꾸기 전에 자체 도구와 같은 데이터로 벤치마크한다<span class="how">품질, 속도, recall, 비용 네 가지를 함께 잰다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>우리 도메인 문서로 정답이 있는 평가 세트를 만든다<span class="how">VDR Bench처럼 실제와 비슷한 문서 묶음과 정답 질문 수백 개</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>모델, 프롬프트, 파이프라인 중 무엇을 바꾸든 평가 세트를 돌린다<span class="how">확인: 변경마다 점수 기록이 남는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>같은 파일을 범용 AI 제품에 넣은 결과를 기준선으로 둔다<span class="how">확인: 우리 시스템이 그 기준선보다 나은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>답 생성보다 추출 품질부터 점검한다<span class="how">확인: 찾아야 할 내용을 얼마나 찾아내는가(recall)</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>민감한 문서라면 외부 도구를 우리 환경 안에서 돌릴 수 있는지 먼저 확인한다<span class="how">규제 요건과 기존 인증을 함께 따진다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>싼 모델로 옮길 때 비용만 보지 않는다<span class="how">툴 호출 횟수 같은 에이전트 행동과 품질을 함께 비교한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>파싱</td><td>Parsing. 문서에서 글, 표, 차트 내용을 꺼내 기계가 다룰 수 있는 구조로 바꾸는 일</td></tr>
+              <tr><td>수집 파이프라인</td><td>Ingestion pipeline. 들어온 문서를 처리해 검색할 수 있는 저장소에 넣기까지의 흐름</td></tr>
+              <tr><td>가상 데이터룸</td><td>Virtual Data Room, VDR. 회사를 사고팔 때 거래 문서를 모아 두고 정해진 사람에게만 보여 주는 온라인 공간</td></tr>
+              <tr><td>MNPI</td><td>Material Non-Public Information. 공개되지 않았고 투자 판단에 큰 영향을 주는 정보</td></tr>
+              <tr><td>비정형 데이터</td><td>Unstructured data. 표나 DB처럼 정리되지 않은 문서, 이미지 같은 데이터</td></tr>
+              <tr><td>버티컬 AI</td><td>Vertical AI. 특정 산업 하나에 맞춰 만든 AI 제품</td></tr>
+              <tr><td>엣지 케이스</td><td>Edge case. 흔하지 않은 입력이나 상황. 평소 잘 되던 처리가 여기서 깨진다</td></tr>
+              <tr><td>살지 만들지</td><td>Buy vs build. 기능을 외부에서 살지 직접 만들지 정하는 판단</td></tr>
+              <tr><td>벡터 데이터베이스</td><td>Vector database. 글의 의미를 숫자 목록으로 바꿔 저장하고, 비슷한 의미를 빠르게 찾는 DB</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 관련 문서를 먼저 찾아 모델에게 함께 주고 답하게 하는 방식</td></tr>
+              <tr><td>graph RAG</td><td>문서 속 대상과 관계를 그래프로 엮어 두고, 그 연결을 따라 찾는 RAG</td></tr>
+              <tr><td>recall</td><td>재현율. 찾아야 할 정보 중 실제로 찾아낸 비율</td></tr>
+              <tr><td>평가 (eval)</td><td>정답이 있는 질문 묶음으로 시스템의 결과 품질을 재는 테스트</td></tr>
+              <tr><td>툴 호출</td><td>Tool call. 모델이 검색, 계산 같은 외부 도구를 부르는 것</td></tr>
+              <tr><td>바벨 효과</td><td>Barbell effect. 양 끝이 이득을 보고 가운데는 덜 보는 분포</td></tr>
+              <tr><td>희석</td><td>Dilution. 투자를 더 받을수록 기존 주주의 지분 비율이 줄어드는 것</td></tr>
+              <tr><td>텀시트</td><td>Term sheet. 투자의 핵심 조건을 적은 사전 합의 문서</td></tr>
+              <tr><td>오리지네이션</td><td>Origination. 투자하거나 인수할 회사를 찾아 거래를 만드는 일</td></tr>
+              <tr><td>IC 메모</td><td>Investment Committee memo. 사모펀드 투자위원회에 올리는 투자 검토 문서</td></tr>
+              <tr><td>셀사이드</td><td>Sell side. 회사를 파는 쪽과 그쪽을 돕는 자문사</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>Adit이 Raj와 Datasite를 소개: 거래 60%, 토큰 1조 개</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>Raj의 경력: 퀀트 시스템, 보안 회사 매각, BlueFlame 창업</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>BlueFlame이 직접 만든 파싱·수집 파이프라인</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>Datasite 인수, 데이터룸이란</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>월간 사용자 50만 명, Reducto로 옮긴 이유</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>데이터룸 5만 5천 개를 벡터 DB와 graph RAG로</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>보안과 규제 조건</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>자체 도구 벤치마크: 전부 예외 처리</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>파이 차트 범례 색 사례</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>엑셀 병합 셀과 금융 스프레드시트</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>살지 만들지: 엔지니어를 어디에 쓰나</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>XLSB, 매크로, 템플릿 파일</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>Adit: Datasite 합류 전 이야기</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>두 번째 창업, 자기 돈으로 시작</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>첫 VC 라운드와 저녁 식사 자리의 인수 제안</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>인수를 받아들인 이유: 자본, 프런티어 모델</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>독점 데이터: 데이터룸</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>Grata: 비상장 기업 2천만 곳</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>데이터를 모델 가까이: 비용, 시간, 품질</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>매출 약 40% 성장과 바뀐 AI 수요</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>Adit: 안에서 만들 것과 밖에서 살 것</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>벤더를 많이 쓰는 건 의도된 결정</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>AI 코딩과 바벨 효과</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>연 20% 성장 = 연 2억 달러</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>엔지니어 250명, 핵심 과제 5개</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>Adit: 지금의 마찰은?</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>툴 호출을 남발하는 싼 모델</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>비용, 속도, 품질. 품질이 먼저</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>Q&amp;A: Datasite와 Reducto의 연결 구조</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>Q&amp;A: 익명화와 자체 평가 질문</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>VDR Bench</td></tr>
+              <tr><td><span class="ts">19:10</span></td><td>범용 AI 제품보다 높아야 한다, recall 22% 개선</td></tr>
+              <tr><td><span class="ts">19:20</span></td><td>대부분의 일은 추출 쪽에 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '0PqGT2L6cZM:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

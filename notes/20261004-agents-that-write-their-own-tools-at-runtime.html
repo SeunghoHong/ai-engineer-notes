@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>도구를 만드는 에이전트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- code example ---------- */
+pre {
+  margin: 0; padding: 14px 16px; overflow-x: auto; max-width: 100%;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.6;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#runtime">실행 중에 만든다는 것</a></li>
+      <li><a href="#demo-tools">데모: 빈 에이전트</a></li>
+      <li><a href="#strands">메타 툴링과 Strands</a></li>
+      <li><a href="#ingredients">재료: 프롬프트와 도구 셋</a></li>
+      <li><a href="#why">운영 중에 막힌 요청</a></li>
+      <li><a href="#patterns">에이전트를 만드는 에이전트</a></li>
+      <li><a href="#demo-agents">데모: 하와이 여행</a></li>
+      <li><a href="#healing">스스로 고치는 코드</a></li>
+      <li><a href="#evals">평가 8가지</a></li>
+      <li><a href="#guardrails">가드레일 4가지</a></li>
+      <li><a href="#journey">Strands가 걸어온 길</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-04 · 21분 · 영어 발표 한글 정리</span>
+      <h1>실행 중에 스스로 도구를 만드는 에이전트</h1>
+      <p class="lead">도구가 하나도 없는 에이전트도 파일 편집, 셸, 도구 불러오기 세 가지만 주면 필요한 도구와 하위 에이전트를 실행 중에 직접 만들어 쓴다. 스스로 코드를 쓰고 지울 수 있는 만큼 평가와 가드레일이 함께 있어야 한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=33Oct2hqGnk" target="_blank" rel="noopener">Agents That Write Their Own Tools at Runtime</a></span>
+        <span>발표: Sandhya Subramani (AWS)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 알려진 이름으로 바로잡았다(Strand → Strands Agents, claw code → Claude Code, matter tooling → meta tooling, hotel → OTel). <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>코딩 도구가 도구를 만드는 건 새롭지 않다. 새로운 건 <strong>운영 중인 에이전트가 멈추지 않고</strong> 필요한 도구를 직접 만들어 바로 쓰는 것이다.</li>
+        <li>이 방식을 <strong>메타 툴링</strong>이라 부른다. 시스템 프롬프트에 좋은 도구의 모양을 적고, 도구는 <strong>편집기, 셸, 도구 불러오기</strong> 세 개만 준다.</li>
+        <li>데모에서 도구가 0개인 에이전트가 계산기와 글자 수 세기 도구를 그 자리에서 만들어 썼다. <strong>재시작은 없었다.</strong></li>
+        <li>같은 방식으로 <strong>하위 에이전트</strong>도 만든다. 하와이 여행 요청에 항공, 활동, 일정 에이전트 셋을 만들어 불렀다.</li>
+        <li>에러가 나면 자기 도구와 에이전트를 고치는 <strong>자기 치유</strong>로 이어진다고 발표자는 말한다. 이 부분은 시연하지 않았다.</li>
+        <li>스스로 코드를 쓰고 지울 수 있으니 <strong>평가 8가지</strong>와 <strong>가드레일 4가지</strong>가 필요하다. 첫째는 생성된 코드가 도는 환경의 격리다.</li>
+        <li>발표자에 따르면 Strands는 도구 만들기, 에이전트 만들기를 거쳐 <strong>자기 소스 코드 고치기</strong>까지 왔다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="runtime">
+        <header><span class="num">01</span><h2>실행 중에 만든다는 것 <span class="ts">00:00</span></h2></header>
+        <p>Claude Code나 Cursor 같은 코딩 도구도 도구를 직접 쓴다. 발표자는 그 점을 먼저 인정하고 질문을 바꾼다. 실행 중에 자기 코드를 고치는 에이전트는 몇이나 되나.</p>
+        <p>운영 중인 서비스에서 무언가 실패하면 보통은 사람이 나선다. 발표자가 바라는 건 에이전트가 문제를 스스로 알아채고, 필요한 도구나 에이전트를 직접 써서 고치는 것이다.</p>
+        <div class="shift" aria-label="고치는 방식의 변화">
+          <div><span class="tag">지금까지</span><b>개발 중에 도구를 만든다</b><span class="muted">운영 중 에러가 나면 서비스를 내리고, 코딩 도구로 고친 뒤 다시 올린다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이 발표</span><b>실행 중에 도구를 만든다</b><span class="muted">에이전트가 에러를 알아채고 필요한 도구를 직접 써서, 멈추지 않고 고친다</span></div>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="demo-tools">
+        <header><span class="num">02</span><h2>데모: 빈 에이전트가 도구를 만든다 <span class="ts">01:30</span></h2></header>
+        <p>발표자는 데모부터 보여 줬다. <code>agents.py</code>에는 시스템 프롬프트와 도구 3개만 있다. 도구를 담는 tools 폴더는 비어 있다. 이대로라면 이 에이전트가 혼자 할 수 있는 일은 없다.</p>
+        <ol class="plain">
+          <li>에이전트를 실행해 둔다. 이후의 일은 모두 이 실행 안에서 일어난다. <span class="ts">02:10</span></li>
+          <li>"복잡한 수식을 계산해 줘"라고 한다. 에이전트는 수학 계산기 <span class="en">math calculator</span> 도구를 만든다. 최솟값, 최댓값 같은 기능이 여럿 들어 있다. <span class="ts">02:20</span></li>
+          <li>어떤 수의 제곱을 묻는다. 에이전트는 방금 만든 도구를 불러 답한다. 다시 실행하지 않았다. <span class="ts">03:10</span></li>
+          <li>"내 단어의 글자 수를 세 줘"라고 엉뚱한 요청을 한다. 에이전트는 먼저 가진 도구로 되는지 확인한다. 맞는 게 없자 글자 수 세기 <span class="en">character counter</span> 도구를 새로 만든다. <span class="ts">03:40</span></li>
+          <li>아무렇게나 친 문자열에 28자라고 답한다. 발표자는 검증하려고 세 글자를 넣어 다시 확인한다. <span class="ts">04:20</span></li>
+        </ol>
+        <div class="callout">
+          <span class="title">데모에서 볼 점</span>
+          <span>만든 도구를 재시작 없이 바로 쓴다. 새로 만들기 전에 기존 도구로 되는지 먼저 확인한다. 사용자는 "도구를 만들어"라고 말하지 않았다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="strands">
+        <header><span class="num">03</span><h2>메타 툴링과 Strands Agents <span class="ts">05:00</span></h2></header>
+        <p>발표자는 이 방식을 메타 툴링 <span class="en">meta tooling</span>이라 부른다. 도구를 만드는 도구를 에이전트에게 준다는 뜻이다.</p>
+        <p>구현에는 Strands Agents를 썼다. AWS가 만들어 오픈소스로 공개하고 관리하는 에이전트 하네스 <span class="en">agentic harness</span>다. 하네스는 모델을 감싸 도구와 실행 흐름을 정해 주는 틀이다.</p>
+
+        <h3>발표자가 꼽은 Strands의 특징 <span class="ts">06:10</span></h3>
+        <ul class="plain">
+          <li>모델을 바꿔 끼운다. 더 좋은 모델이 나와도 시스템 프롬프트와 구조는 그대로 두고 모델만 바꾼다.</li>
+          <li>그래서 같은 구조에서 모델끼리 성능을 비교하기 쉽다.</li>
+          <li>MCP와 A2A를 지원한다. 여러 모델 제공자를 쓸 수 있다.</li>
+          <li>AWS가 관리하는 기본 도구와 커뮤니티가 쓴 도구가 있다.</li>
+        </ul>
+
+        <h3>다섯 줄로 시작하기 <span class="ts">06:40</span></h3>
+        <p>가장 단순한 에이전트는 <code>Agent</code>와 <code>shell</code> 도구를 불러와 만든다. 셸이 첫 도구인 이유는 에이전트가 자기 위치를 알아야 하기 때문이다. 어느 폴더에서 무엇을 실행 중인지, 코드가 어디 있는지 알게 된다. 이 상태로 "무엇을 할 수 있니?"라고 물으면 자기 환경을 살펴보고 답한다.</p>
+        <p class="note">발표자는 AWS 소속이고, Strands는 AWS가 만들어 관리하는 프레임워크다. 프레임워크의 장점에 대한 설명은 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="ingredients">
+        <header><span class="num">04</span><h2>재료: 시스템 프롬프트 하나, 도구 셋 <span class="ts">07:30</span></h2></header>
+        <p>메타 툴링에 필요한 건 시스템 프롬프트 하나와 도구 세 개다. 에이전트 설정은 한 줄이면 된다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>재료</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>시스템 프롬프트</td><td>좋은 도구가 어떻게 생겼는지, 어디에 저장하는지 알려 준다</td></tr>
+              <tr><td><code>editor</code></td><td>도구 파일을 쓰고 고친다</td></tr>
+              <tr><td><code>shell</code></td><td>지금 어디서 실행 중인지, 폴더에 무엇이 있는지 보여 준다</td></tr>
+              <tr><td><code>load_tool</code></td><td>새로 생긴 도구 파일을 실행 중에 불러와 바로 쓰게 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>실행 중에 불러오기 <span class="ts">08:10</span></h3>
+        <p>처음에는 에이전트 설정의 <code>load_tools_from_directory=True</code>가 이 일을 했다. 도구 폴더에 새로 생긴 파일을 실행 중에 바로 쓰게 하는 옵션이다. 나중에 Strands 팀은 이 기능을 도구 하나로 떼어 냈다. 그게 <code>load_tool</code>이다.</p>
+
+        <h3>시스템 프롬프트에 적는 것 <span class="ts">08:40</span></h3>
+        <ul class="plain">
+          <li><strong>역할</strong>: 실행 중에 직접 도구를 만들어 쓰는 메타 툴링 에이전트라고 알려 준다.</li>
+          <li><strong>도구 템플릿</strong>: 도구 파일의 생김새를 보여 준다. <code>@tool</code> 데코레이터 <span class="en">decorator</span>를 붙여야 도구로 인식된다.</li>
+          <li><strong>도구 명세</strong> <span class="en">tool spec</span>: 도구가 갖춰야 할 형식을 적는다.</li>
+          <li><strong>규칙</strong>: 파일을 어디에 쓸지 정한다. 만들기 전에 같은 도구가 있는지 확인하고, 없을 때만 새로 쓴다.</li>
+        </ul>
+
+        <p class="note">예시 코드: 발표 설명을 바탕으로 다시 쓴 것이다. 발표 화면의 코드와 같지 않다. 실제 이름과 인자는 Strands 문서로 확인한다.</p>
+<pre><code># 예시: 메타 툴링 에이전트 설정
+from strands import Agent
+from strands_tools import editor, shell, load_tool
+
+SYSTEM_PROMPT = """You are a meta-tooling agent that creates and uses custom tools at runtime.
+Tool template: every tool is a Python function with the @tool decorator.
+Save new tools in ./tools/.
+Before writing a tool, check whether one already exists. Write a new one only if it does not."""
+
+agent = Agent(system_prompt=SYSTEM_PROMPT, tools=[editor, shell, load_tool])</code></pre>
+<pre><code># 예시: 에이전트가 써 넣을 법한 도구 파일 tools/character_counter.py
+from strands import tool
+
+@tool
+def character_counter(text: str) -&gt; int:
+    """Count the number of characters in text."""
+    return len(text)</code></pre>
+      </section>
+
+      <!-- 5 -->
+      <section id="why">
+        <header><span class="num">05</span><h2>왜 쓰나: 운영 중에 막힌 요청 <span class="ts">09:50</span></h2></header>
+        <p>발표자가 든 예는 국내선 항공권 예약 앱이다. 한 사용자가 인도에서 홍콩 가는 표를 원한다. 에이전트는 그런 일을 하도록 만들어지지 않았다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">보통의 대응</span>
+            <ul>
+              <li>에이전트가 포기하거나 에러를 낸다</li>
+              <li>엔지니어링 팀에 넘긴다</li>
+              <li>고쳐서 돌아오기까지 2주가 걸린다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">메타 툴링</span>
+            <ul>
+              <li>에이전트가 무엇이 모자란지 알아챈다</li>
+              <li>필요한 도구를 직접 만든다</li>
+              <li>그 자리에서 요청을 처리한다</li>
+            </ul>
+          </div>
+        </div>
+        <p class="note">2주는 발표자가 든 가상의 예다.</p>
+        <div class="callout">
+          <span class="title">남는 질문</span>
+          <span>즉석에서 만든 도구로 항공권을 예약해도 괜찮을까. 발표 후반의 평가와 가드레일이 이 질문에 대한 발표자의 답이다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="patterns">
+        <header><span class="num">06</span><h2>에이전트를 만드는 에이전트 <span class="ts">10:40</span></h2></header>
+        <p>도구를 쓰는 에이전트는 하위 에이전트 <span class="en">sub-agent</span>도 쓸 수 있다. 하위 에이전트는 큰 일을 나눠 맡는 작은 에이전트다. 발표자는 에이전트를 엮는 패턴을 셋으로 나눈다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>패턴</th><th>발표자의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>스웜 <span class="en">swarm</span></td><td>하위 에이전트들이 병렬로 함께 일한다. 일을 나눠 각자 한 부분씩 맡는다</td></tr>
+              <tr><td>그래프 <span class="en">graph</span></td><td>한 에이전트의 결과가 다음 에이전트로 넘어간다. 이렇게 일을 넘기는 것을 핸드오프 <span class="en">handoff</span>라 한다</td></tr>
+              <tr><td>워크플로 <span class="en">workflow</span></td><td>둘을 섞는다. 병렬 그룹, 노드, 그래프가 한 흐름 안에 함께 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 구조는 사람이 짤 수도 있다. 발표자의 요점은 <strong>에이전트가 직접 짤 수도 있다</strong>는 것이다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="demo-agents">
+        <header><span class="num">07</span><h2>데모: 하와이 여행 계획 <span class="ts">11:50</span></h2></header>
+        <p>두 번째 데모도 구조는 같다. 도구 3개에 설정 한 줄이다. 에이전트 폴더는 거의 비어 있다. 달라진 건 시스템 프롬프트다. 도구 템플릿 자리에 에이전트 템플릿을 넣었다. 일을 하위 에이전트 2~4개로 나누라고 했고, 스웜 같은 복잡한 구조는 쓰지 않게 했다.</p>
+        <ol class="plain">
+          <li>"하와이에 가는데 일정 짜 줘"라고만 한다. 에이전트를 만들라는 말은 없다. 실제 고객도 문제만 말하고 알아서 풀어 주길 바란다. <span class="ts">12:40</span></li>
+          <li>에이전트가 항공, 활동, 일정 하위 에이전트 셋을 만든다. 편집기 도구를 세 번 부른다. <span class="ts">13:10</span></li>
+          <li>만든 에이전트들을 불러 주요 공항, 좋은 해변, 할 일을 알려 준다. <span class="ts">14:00</span></li>
+        </ol>
+        <div class="callout">
+          <span class="title">한계: 실시간 정보 <span class="ts">13:30</span></span>
+          <span>이 데모는 실시간 정보를 못 가져온다. 실제 API에 접근하는 도구를 주지 않았기 때문이다. 발표자는 그런 도구가 있으면 날씨를 물었을 때 최신 날씨를 가져오는 도구를 직접 쓸 거라고 말한다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="healing">
+        <header><span class="num">08</span><h2>고장 나면 스스로 고친다 <span class="ts">14:20</span></h2></header>
+        <p>발표자는 에이전트 시스템을 만드는 데서 멈추지 말자고 한다. 자기 치유 <span class="en">self-healing</span> 코드도 생각해야 한다. 에이전트가 자기 코드를 살펴 버그를 찾고 고치는 것이다.</p>
+        <p>발표자가 긴 세션에서 겪은 일을 들려준다. 청중이 엉뚱한 요청을 하면 에이전트가 망가진다. 에러가 쏟아지고 말이 끝없이 길어진다. 발표자는 최대 토큰을 정해 둬야겠다고 덧붙였다. <span class="ts">14:40</span></p>
+        <p>그래도 에이전트는 자기가 에러를 내고 있다는 걸 알아챈다. 그리고 문제가 된 도구나 에이전트를 직접 고친다. 요구가 바뀌어도 같다. "하와이 말고 다른 곳으로"라고 하면 에이전트 정의를 고친다. <span class="ts">15:00</span></p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">시연으로 보여 준 것</span>
+            <ul>
+              <li>빈 폴더에서 도구를 만든다</li>
+              <li>만든 도구를 재시작 없이 쓴다</li>
+              <li>기존 도구가 있는지 먼저 확인한다</li>
+              <li>하위 에이전트 셋을 만들어 부른다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">말로만 설명한 것</span>
+            <ul>
+              <li>에러를 알아채고 스스로 고친다</li>
+              <li>운영 환경에 배포해 쓴다</li>
+              <li>평가와 샌드박스를 적용한다</li>
+              <li>Python 버전이 TypeScript 버전을 썼다</li>
+            </ul>
+          </div>
+        </div>
+        <p class="note">발표 시간이 짧아 자기 치유는 시연하지 않았다. 이 방식이 실제로 얼마나 안정적인지는 이 발표만으로 판단하기 어렵다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="evals">
+        <header><span class="num">09</span><h2>평가: 무엇을 확인해야 믿을 수 있나 <span class="ts">15:20</span></h2></header>
+        <blockquote>큰 힘에는 큰 책임이, 아니 더 큰 책임이 따른다.<cite>발표자의 표현을 옮김</cite></blockquote>
+        <p>에이전트가 스스로 움직이니 평가 <span class="en">eval</span>가 필요하다. 평가는 결과 품질을 재는 테스트 묶음이다. 발표자는 Strands에 평가가 8가지 들어 있다고 말한다. 수준별로 나누면 이렇다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>확인할 것</th><th>수준</th><th>발표 속 예</th></tr></thead>
+            <tbody>
+              <tr><td>1. 목표를 이뤘나</td><td>세션 전체</td><td>"항공권 예약해 줘"라고 했으면 실제로 예약됐나</td></tr>
+              <tr><td>2. 도움이 되는 답인가</td><td>한 번의 응답</td><td>"잔액이 얼마야?"에 "500달러"처럼 기대한 형태로 답했나</td></tr>
+              <tr><td>3. 지어내지 않았나</td><td>한 번의 응답</td><td>그 500달러가 실제 잔액인가</td></tr>
+              <tr><td>4. 맞는 도구를 골랐나</td><td>도구 사용</td><td>답에 이르기까지 엉뚱한 도구를 쓰지 않았나</td></tr>
+              <tr><td>5. 맞는 인자를 넣었나</td><td>도구 사용</td><td>계좌 ID가 정말 123인가</td></tr>
+              <tr><td>6. 전체 결과가 원하는 대로인가</td><td>멀티 에이전트</td><td>최종 결과와 응답이 의도와 맞나</td></tr>
+              <tr><td>7. 순서가 맞나</td><td>멀티 에이전트</td><td>도구와 하위 에이전트를 맞는 순서로 불렀나</td></tr>
+              <tr><td>8. 주고받은 메시지가 괜찮나</td><td>멀티 에이전트</td><td>에이전트끼리 오간 메시지의 품질</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 여덟 가지를 모으면 세션 안의 대화를 처음부터 끝까지 들여다볼 수 있다. 그래야 에이전트를 믿고 권한을 줄 수 있다.</p>
+        <p class="note">발표자는 "8가지"라고 했지만 항목을 빠르게 말로 이어 갔다. 위 번호는 정리하며 발표 설명을 여덟 개로 나눠 본 것이다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="guardrails">
+        <header><span class="num">10</span><h2>가드레일: 망가뜨리지 않게 <span class="ts">17:00</span></h2></header>
+        <p>평가만으로는 부족하다. 도구와 에이전트를 만들 수 있으면 고치고 지울 수도 있다. 공들여 만든 코드와 데이터를 지우게 둘 수는 없다. 그래서 가드레일 <span class="en">guardrail</span>이 필요하다. 가드레일은 에이전트가 하면 안 되는 일을 막는 제한 장치다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>가드레일</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>1. 실행 환경 격리</td><td>에이전트를 컨테이너 하나에 가두는 흔한 샌드박스와 다르다. 생성된 코드가 실행되는 환경 자체를 격리한다. 그래야 다른 실행 환경을 건드리지 않고, 엉뚱한 곳에 쓰거나 지우지 않는다. 발표자에 따르면 Strands가 몇 주 전 이 기능을 냈다. <span class="ts">17:20</span></td></tr>
+              <tr><td>2. 도구와 권한 제한</td><td>에이전트가 쓸 수 있는 도구와 권한을 좁힌다</td></tr>
+              <tr><td>3. 접근 제한</td><td>누가 에이전트에게 물을 수 있는지, 어떤 종류의 질문을 받을지 정한다</td></tr>
+              <tr><td>4. 관측</td><td>평가 결과, OTel, 텔레메트리 데이터를 모아 둔다. 관측 가능성 <span class="en">observability</span>이 있어야 이 시스템을 믿을 수 있다고 말할 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 네 가지라고 했지만 도구, 권한, 접근, 관측을 한 문장에 이어 말했다. 위 묶음은 정리하며 나눈 것이다.</p>
+        <div class="callout warn">
+          <span class="title">만들 수 있으면 지울 수도 있다</span>
+          <span>도구를 만드는 권한은 코드를 고치고 지우는 권한이기도 하다. 에이전트가 쓴 코드는 사람 검토 없이 바로 실행된다. 그래서 그 코드가 닿을 수 있는 범위를 먼저 좁혀야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="journey">
+        <header><span class="num">11</span><h2>Strands가 걸어온 길 <span class="ts">18:40</span></h2></header>
+        <p>발표자는 이 흐름을 자기 개선 <span class="en">self-improving</span>, 자기 진화 <span class="en">self-evolving</span> 에이전트의 시작으로 본다. Strands가 거쳐 온 단계는 셋이다. <span class="ts">19:10</span></p>
+        <ol class="plain">
+          <li>에이전트가 자기 도구를 만든다</li>
+          <li>에이전트가 하위 에이전트를 만든다</li>
+          <li>에이전트가 자기 소스 코드를 고친다</li>
+        </ol>
+        <p>발표자가 들려준 뒷이야기도 있다. Strands는 3년 전 AWS 내부용으로 시작했다. 쓸모가 커서 오픈소스로 공개했다. Python 버전을 먼저 만들었고, 그 Python 버전의 Strands가 TypeScript 버전을 스스로 썼다고 한다. <span class="ts">19:30</span></p>
+        <p class="note">3년 전 시작과 TypeScript 버전 작성은 모두 발표자의 말이다. 사람이 얼마나 개입했는지는 발표에서 설명하지 않았다. 발표자 회사의 제품 이야기이므로 감안해 읽자.</p>
+        <div class="callout">
+          <span class="title">발표자의 결론</span>
+          <span>평가, 가드레일, 관측이 갖춰지면 이런 시스템을 믿고 만들 수 있다. 고장 나면 실행 중에 고치고, 처음 배운 것보다 많은 일을 해내는 에이전트 시스템이다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>메타 툴링은 에이전트에게 <strong>도구를 만드는 도구</strong>를 주는 방식이다.</li>
+          <li>코딩 도구와의 차이는 시점이다. 개발 중이 아니라 <strong>실행 중에</strong> 도구를 만들고 재시작 없이 쓴다.</li>
+          <li>재료는 시스템 프롬프트 하나와 도구 셋, <code>editor</code>, <code>shell</code>, <code>load_tool</code>이다.</li>
+          <li>시스템 프롬프트에는 도구 템플릿, 도구 명세, 저장 위치, <strong>"있으면 재사용, 없을 때만 새로"</strong> 규칙을 적는다.</li>
+          <li><code>load_tool</code>이 새로 생긴 도구 파일을 실행 중에 불러온다. 처음엔 <code>load_tools_from_directory</code> 옵션이 그 일을 했다.</li>
+          <li>템플릿을 에이전트용으로 바꾸면 <strong>하위 에이전트</strong>를 만든다. 엮는 패턴은 스웜, 그래프, 워크플로다.</li>
+          <li>쓰임새는 운영 중 처음 보는 요청이다. 2주짜리 수정 대신 에이전트가 그 자리에서 해결한다.</li>
+          <li>자기 치유는 발표자가 설명했지만 <strong>시연하지는 않았다.</strong></li>
+          <li>평가 8가지는 세션 목표, 응답의 쓸모와 사실성, 도구 선택과 인자, 멀티 에이전트의 결과·순서·메시지를 본다.</li>
+          <li>가드레일 4가지는 <strong>실행 환경 격리</strong>, 도구·권한 제한, 접근 제한, 관측이다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 이 에이전트와 Claude Code 같은 코딩 도구의 차이는?</span></summary><div class="answer">실행 중에 도구를 만들어 재시작 없이 쓴다. 운영 중 에러가 나도 서비스를 내리지 않고 스스로 고치는 것을 목표로 한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>메타 툴링에 쓰는 도구 세 개와 각 역할은?</span></summary><div class="answer"><code>editor</code>는 도구 파일을 쓴다. <code>shell</code>은 실행 위치와 폴더 내용을 보여 준다. <code>load_tool</code>은 새 도구를 실행 중에 불러온다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>시스템 프롬프트에 무엇을 적나?</span></summary><div class="answer">메타 툴링 에이전트라는 역할, 도구 템플릿(<code>@tool</code> 데코레이터), 도구 명세, 저장 위치, 기존 도구를 먼저 확인하고 없을 때만 새로 쓰라는 규칙.</div></details>
+          <details><summary><span class="qn">Q4</span><span>데모에서 "글자 수를 세 줘"라고 했을 때 에이전트가 가장 먼저 한 일은?</span></summary><div class="answer">가진 도구로 할 수 있는지 확인했다. 맞는 도구가 없어서 글자 수 세기 도구를 새로 만들었다.</div></details>
+          <details><summary><span class="qn">Q5</span><span><code>load_tools_from_directory=True</code>와 <code>load_tool</code>은 어떤 관계인가?</span></summary><div class="answer">둘 다 폴더에 새로 생긴 도구를 실행 중에 쓰게 한다. 처음엔 에이전트 설정 옵션이었고, 나중에 같은 기능을 도구 하나로 만든 것이 <code>load_tool</code>이다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>국내선 예약 앱 예시가 보여 주려는 것은?</span></summary><div class="answer">처음 보는 요청(인도에서 홍콩 가는 표)에 막혔을 때, 팀에 넘겨 2주를 기다리는 대신 에이전트가 필요한 도구를 만들어 그 자리에서 해결할 수 있다는 것.</div></details>
+          <details><summary><span class="qn">Q7</span><span>스웜, 그래프, 워크플로는 어떻게 다른가?</span></summary><div class="answer">스웜은 하위 에이전트들이 일을 나눠 병렬로 함께 한다. 그래프는 한 에이전트의 결과를 다음 에이전트로 넘긴다. 워크플로는 둘을 섞는다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>하와이 데모에서 만든 하위 에이전트와 이 데모의 한계는?</span></summary><div class="answer">항공, 활동, 일정 에이전트 셋. 실제 API에 접근하는 도구가 없어 실시간 정보는 가져오지 못했다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>"잔액이 얼마야?" 예로 설명한 두 가지 평가는?</span></summary><div class="answer">답이 기대한 형태로 도움이 되는지, 그리고 그 값이 지어낸 게 아니라 실제 잔액인지.</div></details>
+          <details><summary><span class="qn">Q10</span><span>발표자가 말하는 실행 환경 격리는 흔한 샌드박스와 무엇이 다른가?</span></summary><div class="answer">에이전트를 컨테이너 하나에 가두는 게 아니라, 생성된 코드가 실행되는 환경 자체를 격리한다. 그래서 다른 환경을 건드리거나 엉뚱한 곳을 지우지 못한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>이 발표에서 시연하지 않고 말로만 설명한 것은?</span></summary><div class="answer">에러를 알아채고 스스로 고치는 자기 치유, 운영 환경 배포, 평가와 샌드박스 적용, Python 버전이 TypeScript 버전을 쓴 일.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 에이전트가 처음 보는 요청에 어디서 막히는지 찾는다<span class="how">운영 기록에서 "할 수 없다"로 끝난 대화를 모은다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>빈 도구 폴더와 도구 셋으로 메타 툴링을 로컬에서 돌려 본다<span class="how">계산기, 글자 수 세기처럼 결과를 바로 검증할 수 있는 요청으로 시작한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>시스템 프롬프트에 도구 템플릿과 "기존 도구 먼저 확인" 규칙을 넣는다<span class="how">확인: 같은 일을 하는 도구가 중복으로 생기지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>생성된 코드가 도는 실행 환경을 격리한다<span class="how">확인: 에이전트가 쓴 코드가 지정한 폴더와 환경 밖을 건드리지 못하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>도구, 권한, 접근 범위를 좁힌다<span class="how">누가 에이전트에게 물을 수 있는지, 어떤 질문을 받을지 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>평가를 수준별로 건다<span class="how">세션 목표, 응답의 사실성, 도구 선택과 인자, 멀티 에이전트의 순서와 메시지</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>관측 데이터를 모은다<span class="how">확인: 에이전트가 언제 어떤 도구를 만들고 불렀는지 OTel 트레이스로 남는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>최대 토큰 같은 실행 한도를 정한다<span class="how">발표자의 데모도 긴 세션에서 말이 길어지며 망가졌다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>메타 툴링</td><td>Meta tooling. 에이전트에게 도구를 만드는 도구를 줘서 필요한 도구를 스스로 만들게 하는 방식</td></tr>
+              <tr><td>런타임</td><td>Runtime. 프로그램이 실제로 실행 중인 때. 개발 단계와 구별한다</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>Strands Agents</td><td>AWS가 만들어 오픈소스로 공개한 에이전트 하네스</td></tr>
+              <tr><td>도구</td><td>Tool. 에이전트가 불러 쓸 수 있는 함수</td></tr>
+              <tr><td>데코레이터</td><td>Decorator. Python에서 함수 위에 <code>@이름</code>을 붙여 기능을 덧붙이는 문법. Strands는 <code>@tool</code>로 도구를 표시한다</td></tr>
+              <tr><td>하위 에이전트</td><td>Sub-agent. 큰 일을 나눠 맡는 작은 에이전트</td></tr>
+              <tr><td>핸드오프</td><td>Handoff. 한 에이전트가 다음 에이전트에게 일을 넘기는 것</td></tr>
+              <tr><td>자기 치유</td><td>Self-healing. 에러를 스스로 알아채고 고치는 것</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 모델을 외부 도구와 데이터에 연결하는 표준 규약</td></tr>
+              <tr><td>A2A</td><td>Agent2Agent. 에이전트끼리 통신하는 규약</td></tr>
+              <tr><td>평가 (eval)</td><td>모델이나 에이전트의 결과 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>트레이스</td><td>Trace. 요청 하나를 처리하며 거친 단계를 기록한 것</td></tr>
+              <tr><td>가드레일</td><td>Guardrail. 에이전트가 하면 안 되는 일을 막는 제한 장치</td></tr>
+              <tr><td>샌드박스</td><td>Sandbox. 바깥과 격리된 실행 환경</td></tr>
+              <tr><td>관측 가능성</td><td>Observability. 시스템 안에서 무슨 일이 일어나는지 기록으로 알 수 있는 정도</td></tr>
+              <tr><td>OTel</td><td>OpenTelemetry. 트레이스, 지표, 로그를 모으는 오픈 표준</td></tr>
+              <tr><td>텔레메트리</td><td>Telemetry. 실행 기록을 자동으로 모은 데이터</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>도입: 코딩 도구도 도구를 쓰는데 무엇이 다른가</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>운영 중 에러를 실행 중에 고치는 아이디어</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>데모 1 시작: 도구 없는 agents.py</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>계산 요청에 수학 계산기 도구 생성</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>만든 도구로 제곱 계산</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>글자 수 요청에 글자 수 세기 도구 생성</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>메타 툴링과 Strands Agents 소개</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>필요한 것: 편집기, 셸, 도구 불러오기</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>Strands: 모델 교체, MCP와 A2A</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>다섯 줄로 시작하기, 셸 도구</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>시스템 프롬프트: 좋은 도구의 모양</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>load_tools_from_directory에서 load_tool로</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>데모 코드 다시 보기</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>쓰임새: 국제선 항공권 예시</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>에이전트를 만드는 에이전트</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>패턴: 스웜, 그래프, 워크플로</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>데모 2 코드: 에이전트 템플릿</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>하와이 일정 요청</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>항공, 활동, 일정 하위 에이전트 생성</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>한계: 실시간 정보 없음</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>만든 에이전트 호출</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>자기 치유 코드</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>큰 힘, 더 큰 책임</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>평가 8가지</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>가드레일</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>실행 환경 샌드박스</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>도구·권한·접근 제한과 관측</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>자기 개선 에이전트</td></tr>
+              <tr><td><span class="ts">19:10</span></td><td>Strands의 길: 도구, 에이전트, 소스 코드</td></tr>
+              <tr><td><span class="ts">19:30</span></td><td>Python 버전이 TypeScript 버전을 썼다</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '33Oct2hqGnk:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

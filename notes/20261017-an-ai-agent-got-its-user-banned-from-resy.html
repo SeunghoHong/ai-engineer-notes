@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>의도 기반 인가 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#why">도구 호출마다 허가한다는 것</a></li>
+      <li><a href="#blockers">자율성을 막는 세 가지</a></li>
+      <li><a href="#transaction">사람이 아니라 거래를 인가한다</a></li>
+      <li><a href="#mission">기본 요소 1: 미션</a></li>
+      <li><a href="#policy">기본 요소 2: 정책과 의도의 교집합</a></li>
+      <li><a href="#commerce">에이전트 커머스에 적용하면</a></li>
+      <li><a href="#forensics">의도는 동기다: 사고 뒤의 조사</a></li>
+      <li><a href="#resy">Resy 사건과 예산</a></li>
+      <li><a href="#brains-hands">뇌와 손을 떼어 놓기</a></li>
+      <li><a href="#production">프로덕션 에이전트 전략</a></li>
+      <li><a href="#sensors">로봇에서 배우기: 의도 너머의 센서</a></li>
+      <li><a href="#audit-log">에이전트 손이 닿지 않는 로그</a></li>
+      <li><a href="#pdoom">마지막 질문: 파멸 확률</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 패널 · 2026-10-17 · 43분 · 영어 토론 한글 정리</span>
+      <h1>에이전트가 사용자를 Resy에서 쫓겨나게 한 날</h1>
+      <p class="lead">예약 에이전트가 시간당 200번 API를 두드려 주인의 계정을 정지시켰다. 악의는 없었다. 문제는 에이전트에게 "무엇을, 왜, 얼마나" 해도 되는지 알려 주는 장치가 없었다는 점이다. 이 패널은 OAuth 범위 대신 미션·의도·예산으로 도구 호출마다 판단하는 런타임 인가를 이야기한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=IavxrdVnwXM" target="_blank" rel="noopener">An AI Agent Got Its User Banned From Resy — Keycard, JPMorgan Chase &amp; AAuth</a></span>
+        <span>사회: Ally (Keycard 기술 스태프)</span>
+        <span>패널: Ian (Keycard CEO), Michael Davis (JPMorgan Chase 글로벌 수석 보안 아키텍트), Dick Hardt (AAuth 창립자, OAuth 공동 창시자)</span>
+      </div>
+      <p class="note">영어 패널 토론의 자동 자막을 바탕으로 한글로 정리했다. 수치와 사례는 모두 패널이 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 것만 알려진 이름으로 바로잡았고, 확실하지 않은 것은 들린 대로 쓰고 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">사회자와 Ian은 런타임 인가 제품을 만드는 Keycard 소속이고, Dick Hardt는 AAuth 프로토콜을 만들고 있다. 두 접근이 답이라고 말하는 대목은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>런타임 인가</strong>는 에이전트에게 넓은 상시 권한을 주지 않고 <strong>도구 호출 하나하나를 그때그때 허가</strong>하는 방식이다. "이 호출을 허용할까"는 단순한 질문이 아니라서 <strong>의도</strong>라는 추가 맥락이 필요하다.</li>
+        <li><strong>OAuth 범위는 너무 거칠다.</strong> 웹사이트끼리 통신하려고 만든 도구라, 무엇을 할지 미리 모르는 에이전트에는 맞지 않는다.</li>
+        <li>은행은 오래전에 <strong>사람을 인증하는 것에서 거래를 인가하는 것</strong>으로 옮겼다. 에이전트도 같은 길을 간다. 수표의 메모란이 의도, 금액과 날짜가 한도다.</li>
+        <li>기본 요소는 둘이다. <strong>미션</strong>은 사람이 에이전트에게 준 큰 목표이고 식별자가 모든 결정에 따라다닌다. <strong>정책</strong>은 넓은 금지 규칙에 과제별 의도를 겹쳐 <strong>교집합</strong>으로 허용 범위를 만든다.</li>
+        <li><strong>Resy 사건</strong>의 교훈: 에이전트는 될 때까지 시도한다. 끊기만 하는 속도 제한 대신 <strong>소비량을 계속 알려 주는 예산</strong>이 필요하다.</li>
+        <li><strong>뇌(모델)와 손(도구)을 떼어 놓고</strong> 자격 증명은 샌드박스 밖 출구 프록시에 둔다. 거기가 인가 경계이자 로그가 남는 곳이다.</li>
+        <li>결국 <strong>책임</strong>의 문제다. 기계는 책임질 수 없으니 누가 무엇을 왜 시켰는지 에이전트가 손댈 수 없는 로그로 남겨야 한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="why">
+        <header><span class="num">01</span><h2>도구 호출마다 허가한다는 것 <span class="ts">00:40</span></h2></header>
+        <p>기업들이 에이전트에게 더 많은 자율성을 주려 하면서 <strong>런타임 인가</strong> <span class="en">runtime authorization</span>에 기대고 있다. 에이전트에게 넓은 상시 권한을 쥐여 주면 언젠가 잘못 쓴다. 대신 도구 호출 한 번 한 번을 그 시점에 허가한다.</p>
+        <p>그런데 "이 호출을 허용할까"는 간단한 질문이 아니다. 사회자는 세 가지 이유를 들었다.</p>
+        <ul class="plain">
+          <li><strong>MCP 도구와 API가 거칠다.</strong> 한 도구가 너무 많은 일을 한다.</li>
+          <li><strong>사람은 완벽한 정책을 못 쓴다.</strong> 모든 경우를 미리 적을 수 없다.</li>
+          <li><strong>환경이 실행 중에 바뀐다.</strong> 시작할 때 맞았던 판단이 끝날 때는 틀릴 수 있다.</li>
+        </ul>
+        <p><strong>의도</strong> <span class="en">intent</span>는 이 판단에 쓸 추가 맥락이다. 사용자가 무엇을 하려는지 알면 같은 호출이라도 허용할지 말지를 더 잘 정할 수 있다.</p>
+        <div class="callout">
+          <span class="title">패널의 출발 질문</span>
+          <span>모델은 크게 좋아졌다. 컨텍스트 창은 커졌고, 시각 능력으로 자기 작업을 검증한다. 어떤 사람들은 AGI가 왔다고까지 말한다. 그렇다면 왜 팀들은 에이전트에게 자율성을 더 주지 못하고 있나.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="blockers">
+        <header><span class="num">02</span><h2>자율성을 막는 세 가지 <span class="ts">02:00</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Ian · 기업의 현실 <span class="ts">02:10</span></span>
+            <ul>
+              <li>금융권 같은 규제 산업은 언제나 <strong>보안이 먼저</strong>다. 혁신은 두세 번째다.</li>
+              <li>기업 안에는 서로 다른 신원 체계와 시스템이 <strong>작은 섬처럼</strong> 흩어져 있다. 에이전트가 그 사이를 다니며 권한을 요청할 길이 없다.</li>
+              <li>대부분 시스템의 권한이 거칠다. Salesforce는 오랫동안 OAuth 범위가 "API" 하나뿐이었다.</li>
+            </ul>
+            <p class="verdict">지금의 보안 체계는 <b>사람이 모든 결정을 내리고 소프트웨어가 정해진 대로만 움직이던 시절</b>에 설계됐다. 추론하며 될 때까지 다시 시도하는 상자는 상정하지 않았다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Dick Hardt · OAuth의 한계 <span class="ts">03:10</span></span>
+            <ul>
+              <li>에이전트 인가가 필요해지자 선반에 있던 도구인 <strong>OAuth</strong>를 집어 들었다. 그러나 OAuth는 이런 세계용이 아니다.</li>
+              <li>원래 목적은 "이 웹사이트가 저 웹사이트와 이야기하게 하기"였다. OAuth 2에서 범위 <span class="en">scope</span>가 생기기 전에는 전부 아니면 전무였다.</li>
+              <li>클라이언트를 미리 등록해야 하고, 브라우저와 리다이렉트가 있다고 가정한다.</li>
+            </ul>
+            <p class="verdict">에이전트는 <b>무엇을 할지 미리 알 수 없다.</b> 같은 에이전트의 인스턴스마다 필요한 것이 다르다. 기존 범위를 그대로 옮기면 너무 거칠다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Michael Davis · 잘하는 기업 <span class="ts">04:20</span></span>
+            <ul>
+              <li>잘하는 기업은 <strong>개발자를 온보딩하듯 에이전트를 온보딩</strong>한다. 첫날부터 커밋 권한을 주지 않는다.</li>
+              <li>성숙해질수록 권한을 단계적으로 늘린다.</li>
+              <li>"이 에이전트가 안전한가"는 에이전트의 말만으로 정하지 않는다. 주변 환경도 본다. 예: 샌드박스 안에서 돌고 있는가.</li>
+            </ul>
+            <p class="verdict">에이전트가 스스로 증명하는 것과 <b>환경이 말해 주는 것</b>을 합쳐 자율성 수준을 정한다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="transaction">
+        <header><span class="num">03</span><h2>사람이 아니라 거래를 인가한다 <span class="ts">05:10</span></h2></header>
+        <p>거친 권한의 예로 사회자는 Notion의 MCP 서버를 들었다. "이 페이지를 가져와"는 할 수 있다. 그러나 "이 페이지 안의 이 데이터베이스만 가져와"는 할 수 없다.</p>
+
+        <h3>은행이 먼저 겪은 일 <span class="ts">05:30</span></h3>
+        <p>Michael Davis는 금융권의 흉터에서 배우자고 했다. 은행은 오래전에 <strong>사람을 인증하고 인가하는 것에서 거래 자체를 인가하는 것</strong>으로 옮겼다. 그 거래는 언제 일어나나. 실행 시점이다.</p>
+        <div class="callout">
+          <span class="title">수표 비유</span>
+          <span>수표에는 메모란이 있었다. 이 돈을 왜 보내는지 적는 곳이다. 그것이 의도다. 그리고 수표 자체에 금액, 수취인, 날짜라는 한도가 있었다. 그 두 가지가 지금 에이전트의 런타임 인가에 그대로 쓰인다.</span>
+        </div>
+
+        <h3>결제는 범위가 아니다 <span class="ts">06:30</span></h3>
+        <p>Dick Hardt는 "결제할 수 있음"이라는 범위와 "이 상황에서 이 결제 한 건을 해도 되나"는 전혀 다르다고 했다. 판단하려면 주변 맥락이 다 필요하다. 왜 이 결제를 하나. 그 전에 무슨 일이 있었나. 5초 전에 같은 결제를 하지 않았나. 지금 이 호출이 맞아 보여도, 더 큰 임무 안에서는 틀릴 수 있다.</p>
+        <p>그래서 AAuth는 <strong>미션</strong> <span class="en">mission</span>이라는 개념을 만든다. 에이전트가 큰 그림에서 이루려는 것이고, 개별 결정은 모두 그 맥락 안에서 내린다.</p>
+
+        <h3>같은 사람, 다른 세션 <span class="ts">07:40</span></h3>
+        <p>Ian의 예시다. 한 세션에서는 "쇼핑 좀 도와줘"라고 하고, 다른 세션에서는 "프로덕션 버그 원인을 찾아줘"라고 한다. 둘은 가져야 할 권한도, 사람을 다시 불러야 하는 시점도 완전히 다르다. 사용자나 회사의 의도를 전달할 수단이 없으면 <strong>자율성에 도달할 수 없다.</strong></p>
+        <p>오전 발표들은 "에이전트로 사업을 돌리겠다"고 했다. 좋다. 그런데 에이전트가 권한이 거칠어서 스테이징 대신 프로덕션 데이터베이스를 지우는 첫 순간에는 어떻게 되나. Ian은 이런 사고를 "Pocket OS(추정) 식 사고"라고 불렀다. 그 문제를 풀기 전에는 사람이 자리를 비우고 규모를 키우는 진짜 자율성은 없다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="mission">
+        <header><span class="num">04</span><h2>기본 요소 1: 미션 <span class="ts">08:50</span></h2></header>
+        <p>미션은 누구의 의도인가. Dick Hardt의 답은 분명하다. 에이전트는 사람을 대신해 일한다. AAuth에서 "사람"은 조직이거나 개인이다. 에이전트는 그 사람의 이익을 위해 움직여야 한다. <strong>책임은 결국 그 사람에게 있고, 에이전트는 책임질 수 없기 때문이다.</strong></p>
+        <ul class="plain">
+          <li>미션은 사람이 에이전트에게 주는 것이다. 좋은 에이전트는 받자마자 움직이지 않고 사람과 조건을 <strong>협상</strong>한다.</li>
+          <li>코딩 에이전트에게 계획을 먼저 세우게 하던 때를 떠올리면 된다. 그 계획이 나중 인가 결정의 맥락이 된다.</li>
+          <li><strong>미션 식별자</strong>가 모든 호출에 따라다닌다. 그래서 나중에 "이 미션 안에서 어떤 일이 있었고 어떤 결정이 내려졌나"를 감사할 수 있다.</li>
+          <li>오늘은 에이전트 신원도, 미션 개념도 제대로 없다. 어느 인스턴스가 어떤 맥락에서 결정했는지 모른 채 일이 벌어진다.</li>
+        </ul>
+
+        <h3>협상 단계: CEO의 이메일 <span class="ts">10:50</span></h3>
+        <p>사회자가 물었다. 사용자가 "CEO의 이메일을 읽어 와"라고 하면 그 의도는 거부되나. Dick Hardt는 그래야 한다고 답하며 역할 분리를 설명했다.</p>
+        <div class="shift" aria-label="작업 에이전트와 감독 에이전트의 분리">
+          <div><span class="tag">작업 에이전트</span><b>실제 일을 한다</b><span class="muted">자기가 무엇을 해도 되는지는 정하지 못한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">감독 에이전트</span><b>무엇을 해도 되는지 정한다</b><span class="muted">일은 하지 않는다. 정책을 들고 작업 에이전트를 감독한다</span></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>요청</th><th>어디서 걸리나</th></tr></thead>
+            <tbody>
+              <tr><td>남의 이메일 읽기</td><td>애매하지 않다. <strong>결정론적 정책</strong>에 바로 걸린다. 이미 좋은 통제가 있다.</td></tr>
+              <tr><td>CEO 이메일을 외부로 전달하기</td><td>조금 애매하다. <strong>감독 에이전트</strong>로 올라가서 "좋지 않은 생각이다, 안 된다"는 판단을 받는다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="policy">
+        <header><span class="num">05</span><h2>기본 요소 2: 정책과 의도의 교집합 <span class="ts">12:00</span></h2></header>
+        <p>Ian은 <strong>동의 피로</strong> <span class="en">consent fatigue</span>에서 출발했다. 시스템을 얼마나 안전하게 만들 것인가와 사람을 얼마나 귀찮게 할 것인가는 늘 맞바꾸는 관계다. Keycard의 관점은 이렇다.</p>
+        <ol class="plain">
+          <li>먼저 <strong>넓은 결정론적 정책</strong>을 둔다. "절대 일어나면 안 되는 일"과 "항상 사람이 들어와야 하는 일"을 적는다.</li>
+          <li>그 다음이 문제다. 사람이 쓸 수 있는 정책과 <strong>특정 과제에서 실제로 원하는 정책</strong> 사이에 큰 틈이 있다. 사람은 그걸 다 쓸 수 없다.</li>
+          <li>그 틈을 <strong>의도</strong>로 메운다. 의도는 두 종류다.</li>
+        </ol>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">거래적 의도</span>
+            <p>사용자와 에이전트, 또는 에이전트와 에이전트 사이의 지금 이 순간의 목적.</p>
+            <p class="verdict">예: 지금 Claude Code로 하려는 일은 <b>스테이징의 버그를 고치는 것</b>이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">비즈니스 의도</span>
+            <p>조직이 이 에이전트를 만들거나 산 이유.</p>
+            <p class="verdict">예: Claude Code를 산 이유는 <b>개발자를 더 잘 일하게 하려고</b>다.</p>
+          </div>
+        </div>
+        <p>두 의도를 각각 에이전트가 움직일 수 있는 상자로 바꾸고, 그 <strong>교집합</strong>을 계산하면 "지금 실제로 할 수 있는 것"이 나온다. 그 뒤의 요령은 꼭 필요할 때가 아니면 사용자를 부르지 않는 것이다. 그게 도입 곡선을 가른다.</p>
+
+        <h3>서로 다른 곳에서 온 의도가 합쳐진다 <span class="ts">14:00</span></h3>
+        <p>Michael Davis는 교집합이라는 발상을 신원·접근 관리 분야에서 충분히 이야기하지 않은 새로운 것이라고 했다. 보통 권한은 한 곳에서 하나를 받는다. 의도 기반에서는 조직의 서로 다른 부서에서 온 의도가 따로 살다가 결정 시점에 합쳐진다.</p>
+        <ul class="plain">
+          <li>결정은 고정이 아니다. CEO 이메일도 맥락이 비서라면 읽어도 될 수 있다. 아니면 캘린더만 볼 수도 있다.</li>
+          <li>지금까지는 "앱이 무언가를 한다"는 한쪽만 봤다. 이제 주변 생태계 전체를 끌어들일 수 있다.</li>
+          <li>이 상태와 맥락을 유지하는 것이 런타임 인가의 효과를 완전히 바꾼다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">기업들은 이미 하고 있나 <span class="ts">15:10</span></span>
+          <span>아니다. 아직 아주 새롭다. 다만 Michael Davis는 개발자가 거래와 의도 단위로 생각하기 시작하면 조립 가능한 부품을 만들기 쉬워지고, 팀끼리 같은 말을 쓰게 되고, 상호운용이 쉬워진다고 본다. 의도는 여러 이벤트를 관통하고 미션은 몇 주씩 이어질 수 있어서 진단에도 쓸모가 있다.</span>
+        </div>
+        <p>사회자는 상호운용성이 기업에 특히 어렵다고 덧붙였다. 여러 클라우드, 여러 환경, 레거시 시스템을 거치는 동안 미션이 유지돼야 한다. Michael Davis는 웃으며 현실을 보탰다. 권한에는 읽기 전용이라고 적혀 있는데 실제로는 읽기·쓰기인 시스템이 아직 많다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="commerce">
+        <header><span class="num">06</span><h2>에이전트 커머스에 적용하면 <span class="ts">16:30</span></h2></header>
+        <p>사회자는 의도 기반 인가가 <strong>에이전트 커머스</strong>를 크게 열 수 있다고 본다. 사용자 쪽에서는 에이전트가 내 예산 안에서 맞는 물건을 사게 한다. 상인 쪽에서는 왜 이 구매가 일어나는지 알 수 있고, 이 에이전트를 사이트에 들여도 되는지 판단할 근거가 생긴다.</p>
+
+        <h3>고객을 알라에서 에이전트를 알라로 <span class="ts">17:00</span></h3>
+        <p>Michael Davis는 금융의 <strong>고객 확인</strong> <span class="en">KYC, Know Your Customer</span>이 <strong>에이전트 확인</strong> <span class="en">Know Your Agent</span>으로 확장된다고 했다. 사용자의 의도, 운영자의 의도, 처리자의 의도를 전에는 한데 모을 수 없었다. 커머스에는 규제 요건이라는 층이 더 얹히는데, 의도가 그 운영을 단순하게 만들어 에이전트가 더 많은 일을 맡게 해 줄 것이다.</p>
+
+        <h3>웹은 에이전트를 위해 만들어지지 않았다 <span class="ts">17:50</span></h3>
+        <p>Ian은 이것을 <strong>미등록 클라이언트</strong> 문제라고 불렀다. 로그인하지 않은 내가 Chrome으로 eBay에 가면 eBay는 나를 모른다. 게스트 결제는 어떻게 하나. 내가 사람인 건 어떻게 증명하나.</p>
+        <ul class="plain">
+          <li>웹은 스팸과 남용을 막으려고 CAPTCHA를 달았다. 사람만 풀 수 있다는 전제였다. 에이전트는 그걸 깼다.</li>
+          <li>Ian이 든 선례: 2~3년 전 Vercel이 스페인에서 차단됐다. Vercel의 모든 호스트가 같은 IP를 공유했는데, 그중 하나가 프리미어 리그 콘텐츠를 불법 송출했다. 스페인은 Vercel 전체를 막았다.</li>
+          <li>에이전트는 같은 문제를 훨씬 심하게 겪는다. <strong>처음 보는 미등록 트래픽이 문 앞에 왔을 때 들일지 말지</strong>를 정하는 것이 첫 번째 근본 문제다.</li>
+        </ul>
+        <p>Ian은 개인 에이전트 제품들(Muse, Instinct, Grockbot 등으로 들림, 추정)과 Sierra·Decagon 등이 참여한 개인 에이전트 프로토콜 발표를 언급하며, 이들이 풀려는 것이 바로 "모두가 올라탈 합의된 레일"이라고 했다. 자원 쪽은 어떤 에이전트를 믿을지 정하고, 반대쪽은 그 자원과 어떻게 대화할지 안다.</p>
+
+        <h3>닫힌 상자가 아니라 프로토콜 <span class="ts">19:50</span></h3>
+        <p>Dick Hardt는 개인 에이전트 프로토콜(발표에서 "Poppy"로 들림, 추정)을 좋아하지만 충분히 멀리 가지 못했다고 했다. 에이전트 신원을 조금 얹었을 뿐 에이전트 세계에 필요한 새 문제를 풀지 않는다. 표준이 필요한 이유는 분명하다.</p>
+        <ul class="plain">
+          <li>에이전트가 하는 일이 너무 많아져서 <strong>사람이 모든 것을 승인하는 방식은 이미 확장이 안 된다</strong>는 것이 드러났다.</li>
+          <li>그래서 내 정책을 들고 결정을 내리는 <strong>나의 감독 에이전트</strong>가 필요하고, 그것은 일하는 에이전트와 독립적이어야 한다.</li>
+          <li>프로토콜이 없으면 가드레일을 <strong>에이전트 벤더가</strong> 정한다. Dick Hardt는 그 통제권을 벤더에게 넘기고 싶지 않다고 했다. 감독을 다른 부품으로 빼내려면 부품끼리 맞물리는 프로토콜이 있어야 한다.</li>
+        </ul>
+        <blockquote>우리가 늘 해 왔던 방식대로 연합형 프로토콜을 만들 것인가, 아니면 소수의 큰 플레이어에게 우리를 묶어 둘 것인가.<cite>Ian의 질문을 옮김 <span class="ts">21:50</span></cite></blockquote>
+        <p>Ian은 OIDC와 TLS 같은 연합형 표준 덕에 넓은 웹과 상거래와 정보 흐름이 가능했고, 우리 모두의 일자리도 거기서 나왔다고 했다. 웹사이트는 각자 무엇을 허용할지 정하되, 그 위에서 돌아가는 표준은 연합형이어야 한다.</p>
+
+        <h3>심리적 소유권 <span class="ts">22:20</span></h3>
+        <p>Michael Davis는 이 모든 것이 잘 돼도 다음 숙제가 남는다고 했다. 바로 사람이다. 의도가 끼어들면 <strong>심리적 소유권</strong> <span class="en">psychological ownership</span>이 생긴다. 사람과 에이전트의 결과 사이에 연결이 생긴다는 뜻이다. OAuth 범위 하나 연결해 놓고 마법처럼 돌게 두면 무슨 일이 벌어지는지 모른다. 의도가 있으면 일이 틀어졌을 때 사람이 책임을 지기 쉬워진다. 진짜 돈이 오갈 때는 그래야 한다. Michael Davis는 기계는 책임질 수 없다는 내용으로 알려진 1979년 IBM 매뉴얼 사진을 언급했다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="forensics">
+        <header><span class="num">07</span><h2>의도는 동기다: 사고 뒤의 조사 <span class="ts">23:20</span></h2></header>
+        <p>사회자는 의도의 다른 이름이 <strong>동기</strong>라고 했다. 일이 잘못됐을 때 사용자가 나빴는지 에이전트가 나빴는지 가리고, 그에 맞게 대응하는 데 의도가 쓰인다.</p>
+        <p>Michael Davis의 표현을 빌리면, 의도를 동기로 바꾸면 <strong>진단</strong>이 <strong>포렌식</strong>으로 바뀐다. 폭주한 에이전트를 조사해 본 사람은 안다. 에이전트가 하려던 것과 사용자가 원했던 것을 구분하기가 아주 어렵다.</p>
+        <ul class="plain">
+          <li>의도 정보가 시스템을 관통해 <strong>변경 불가능하게</strong> 전파되면 조사를 크게 줄일 수 있다.</li>
+          <li>사람 실수였나, 에이전트 소프트웨어 오류였나를 빨리 가리고 <strong>피해 범위</strong> <span class="en">blast radius</span>에 맞게 대응한다.</li>
+          <li>금융에는 "금액을 잘못 보냈다"에 대한 분명한 처리 절차가 있다. 에이전트에는 아직 그런 것이 거의 없다. 의도가 그 절차를 만드는 바탕이 된다.</li>
+        </ul>
+      </section>
+
+      <!-- 8 -->
+      <section id="resy">
+        <header><span class="num">08</span><h2>Resy 사건과 예산 <span class="ts">24:50</span></h2></header>
+        <div class="callout warn">
+          <span class="title">무슨 일이 있었나</span>
+          <span>개인 에이전트(Instinct로 들림, 추정)가 사용자 대신 식당 예약 사이트 Resy에서 예약을 잡으려 했다. 에이전트는 몹시 열심이었다. <strong>시간당 API 호출 200번</strong>을 보냈고, 결국 사용자의 Resy 계정이 정지됐다. 의도는 좋았지만 행동이 틀린 경우다.</span>
+        </div>
+        <p>Dick Hardt는 이것이 소프트웨어의 성격이 완전히 달라졌음을 보여 준다고 했다. 정해진 대로 움직이는 소프트웨어가 200번 호출했다면 버그였고 고치면 됐다. 지금 에이전트는 "될 때까지 계속 시도"한다. 남용이라고 생각하지 않는다. <strong>얼마나 써도 되는지 알려 주는 신호가 아예 없었기 때문이다.</strong></p>
+        <p>그래서 AAuth는 <strong>예산</strong> <span class="en">budget</span>을 넣었다. 에이전트에게 주는 토큰에 시간 제한만 두는 것이 아니라, 자원을 얼마나 쓸 수 있는지도 함께 준다. 토큰이 만료되거나 예산이 바닥나면 접근이 끝난다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>전통적 속도 제한</th><th>AAuth 예산</th></tr></thead>
+            <tbody>
+              <tr><td>한도에 닿으면</td><td>그냥 끊는다</td><td>접근이 끝나고 감독 쪽으로 돌아간다</td></tr>
+              <tr><td>에이전트가 아는 것</td><td>왜 끊겼는지 모른다. 다음에 뭘 해야 할지도 모른다</td><td>얼마나 썼고 얼마나 남았는지 <strong>계속 피드백</strong>받는다</td></tr>
+              <tr><td>다음 단계</td><td>없다</td><td>감독이 예산을 더 줄지 말지 결정한다</td></tr>
+              <tr><td>에이전트의 행동</td><td>될 때까지 두드린다</td><td>사람처럼 "이 자원은 귀하니 아껴 쓰자"고 움직인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="brains-hands">
+        <header><span class="num">09</span><h2>뇌와 손을 떼어 놓기 <span class="ts">27:00</span></h2></header>
+        <p>사회자는 업계가 수렴하고 있는 <strong>뇌와 손</strong> <span class="en">brains and hands</span> 구조를 꺼냈다. 자격 증명과 접근 권한을 에이전트 자신에게서 떼어 놓는 구조다. 에이전트가 상시 권한이나 API 키를 쥐고 있지 않다. (무대의 울림 때문에 Dick Hardt가 질문을 듣지 못해 Ian이 대신 답했다.)</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">뇌</span>
+            <p>모델, 즉 LLM이다. 추론하고 목표를 끈질기게 좇는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">손</span>
+            <p>샌드박스 안에 넣어 둔 도구들이다. 샌드박스 안에 무엇이 있는지는 통제할 수 있다. 그래서 에이전트가 직접 API 접근 권한을 얻을 수 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">출구 프록시</span>
+            <p>샌드박스 밖에 둔다. 여기가 <strong>인가 경계</strong>다. 시스템 사이의 변환을 하고, AAuth 같은 프로토콜이 외부 세계와 이야기하는 자리이기도 하다.</p>
+          </div>
+        </div>
+        <p>Ian은 Pocket OS(추정) 사고를 다시 들었다. 에이전트가 디스크에서 아무 키나 찾아내 썼다. 에이전트는 깊이 목표 지향적이다. 그러니 안쪽에서는 마음껏 실험하고 엉뚱한 짓도 해 보게 두되, 바깥에 <strong>결정론적인 층</strong>을 둔다. Anthropic과 OpenAI를 비롯한 여러 연구소가 지금 이 모델을 쓰고 있다.</p>
+
+        <h3>뇌는 하나가 아니다 <span class="ts">29:20</span></h3>
+        <p>Michael Davis는 분리에 동의하면서 배울 것이 더 남았다고 했다. 뇌를 루프 밖이 아니라 <strong>루프 안에</strong> 넣기는 아주 쉽다. 예를 들어 메모리 시스템에 넣어 둔 맥락이 이후 모든 에이전트에 영향을 주면서, 손에게 하지 말아야 할 일을 시키도록 편향시킨다. 이런 것을 <strong>독성 조합</strong> <span class="en">toxic combination</span>이라고 부른다.</p>
+        <div class="callout">
+          <span class="title">잘 통한 방법: 도구를 동적으로 빼기</span>
+          <span>뇌와 손이 분리돼 있으면 쓸 수 있는 손을 상황에 따라 바꿀 수 있다. 에이전트가 이메일을 쓰러 가면, 그 이메일 도구가 일을 마치고 미션이 끝날 때까지 웹 검색을 포함한 모든 외부 송신 도구를 꺼 둔다. 끝나면 다시 켠다.</span>
+        </div>
+
+        <h3>보안 문제가 토큰 문제가 된다 <span class="ts">30:30</span></h3>
+        <p>Ian은 이 "괴짜 같은 인가 문제"가 실제 에이전트 엔지니어링 문제와 다시 만난다고 했다. MCP에 대한 큰 불만 중 하나가 <strong>컨텍스트 비대화</strong>였다. 의도 시스템은 알맞은 능력을 알맞은 때에만 준다. 에이전트는 엉뚱한 길에 시간을 쓰지 않고, 안 되는 일은 "못 하겠다"고 빨리 말한다. 보안만 좋아지는 것이 아니라 <strong>토큰도 덜 쓴다.</strong> 이 시대의 많은 부분은 에이전트를 올바른 방향으로 밀고 틀린 일을 못 하게 하는 데 달려 있다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="production">
+        <header><span class="num">10</span><h2>프로덕션 에이전트 전략 <span class="ts">31:20</span></h2></header>
+        <p>사회자는 프로덕션 에이전트에 필요한 것을 나열했다. 무엇이 돌고 있는지 발견하기, 에이전트의 능력 파악하기, 입력과 출력 검증하기, 에이전트 제약하기, 출구 프록시와 네트워크 규칙. 의도 기반 인가는 이 전체에서 어디에 놓이나.</p>
+
+        <h3>Michael Davis: 대화가 인증에서 인가로 <span class="ts">31:50</span></h3>
+        <ul class="plain">
+          <li>이제 질문이 "동적 인가를 어떻게 하나, 어떻게 검증하나, 사람을 언제 부르나"로 옮겨 갔다.</li>
+          <li>사람을 루프에 넣는 것은 여러모로 <strong>안티패턴</strong>에 가깝다. 피로해지기 때문이다. 그래도 중요할 때 부를 방법은 있어야 한다.</li>
+          <li>예전에 이런 것은 엔지니어링 논의가 아니었다. 엔지니어는 "토큰 받았으니 됐다"고 했다. 이제 엔지니어가 인가 과정에 참여하고, 그래서 위협 모델과 공격 표면을 보는 방식이 바뀐다.</li>
+          <li>인가 모델은 보안 문제뿐 아니라 <strong>에이전트의 오류율 자체</strong>를 줄이는 도구다. 할 수 있는 일이 적으면 더 나은 결정을 내린다. 의도와 미션에 시간을 들인 에이전트 루프가 더 좋고 빠르고 강해진 실제 사례가 있다.</li>
+          <li>보안팀과 애플리케이션 팀이 <strong>같은 언어</strong>로 이야기하게 된다. 신원 분야는 전에는 완전히 다른 언어였다.</li>
+        </ul>
+
+        <h3>Ian: 보안 소프트웨어 공장 <span class="ts">33:30</span></h3>
+        <p>Keycard는 이날 agentbaseline.org에 보안 소프트웨어 공장 레퍼런스 아키텍처를 공개했다. 공장을 세 수준으로 나눈다.</p>
+        <ol class="plain">
+          <li>사람이 주도하는 공장</li>
+          <li>워크플로가 주도하는 공장</li>
+          <li>에이전트가 모든 지점에서 주도하는 공장. 모두가 가고 싶어 하는 곳이다.</li>
+        </ol>
+        <p>런타임 인가는 이 생태계의 핵심 부품이다. 공장이 방향을 잡고 올바른 것에 접근하게 한다. 시크릿 매니저와는 다르다. 결정론적 소프트웨어를 위한 이전 세대 도구와는 전혀 다른 결정을 내리기 때문이다. 언제 사람을 부를지, 어떤 에이전트가 어떤 일을 다른 에이전트에게 넘길 수 있는지, 프로덕션에 접근해 자동 패치하는 에이전트를 어떻게 둘지가 모두 여기에 걸린다.</p>
+        <p class="note">Ian의 진단: 소프트웨어를 이렇게 많이 만들어 본 적이 없는데, 프로덕션에 올리고 동작을 확인하는 데서 완전히 병목이 걸려 있다. 다음 단계는 LLM으로 텍스트와 코드를 만드는 데서 벗어나 배포하고 반복하고 안정화하고 사고에 대응하게 만드는 것이다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="sensors">
+        <header><span class="num">11</span><h2>로봇에서 배우기: 의도 너머의 센서 <span class="ts">35:00</span></h2></header>
+        <p>로봇이 팔을 올릴 때는 "올려도 되나"만 묻지 않는다. 주변이 무엇이 바뀌었는지, 지금도 안전한지를 본다. 근처에 다른 물체가 있나. 온도는 어떤가. 몸통이 움직이는 중은 아닌가. 어느 것도 결정론적이지 않다. 모두 확률적이고, 센서 데이터를 한꺼번에 놓고 가장 나은 선택지를 고른다.</p>
+        <p>Michael Davis는 오늘날 조직의 인가 결정이 대부분 <strong>단일 이진 판단</strong>이라고 했다. 미래에는 통하지 않는다. 사용자의 의도를 그 사용자가 놓인 생태계와 짝지어야 한다.</p>
+        <ul class="plain">
+          <li>어디서 접속하나, 몇 시인가 같은 기본 맥락.</li>
+          <li>더 나아가면: 이 관리자가 지금 Firefox로 이 서버에 접근하게 둘까. 이 서버에는 고위험 취약점이 있고 그 사람의 기기는 아직 패치되지 않았는데.</li>
+          <li>이 맥락은 여러 팀에서 오기도 하지만, 더 중요하게는 <strong>센서</strong>에서 온다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">관측성과 합치기</span>
+          <span>OpenTelemetry의 스팬 수준에서 이 맥락을 가졌다고 상상해 보자. 트레이스의 한 스팬을 보면 그때 애플리케이션 바깥 환경이 어땠는지와 사용자의 의도가 무엇이었는지를 함께 안다. 진단이 완전히 달라진다. 그 결과 인가 결정은 <strong>수명이 더 짧아지고 맥락은 더 풍부해진다.</strong></span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="audit-log">
+        <header><span class="num">12</span><h2>에이전트 손이 닿지 않는 로그 <span class="ts">37:20</span></h2></header>
+        <p>의도 기반 인가가 잘 작동하는지 보려면 결국 에이전트의 행동 로그를 본다. 무엇이 거부됐고 무엇이 허용됐나. 사회자는 왜 그 인가 로그가 에이전트 밖에, 에이전트의 통제 밖에 있어야 하는지 물었다.</p>
+        <p>Ian의 답은 집행 지점이 에이전트의 뇌와 손 밖에 있어야 하는 이유와 같다. <strong>이 녀석을 믿을 수 없기 때문이다.</strong></p>
+        <div class="callout warn">
+          <span class="title">Hugging Face 사고</span>
+          <span>Ian이 든 사례다. 한 축은 Squid 프록시의 알려지지 않은 취약점을 에이전트가 악용한 것이다. 더 중요한 축은 무슨 일이 벌어지는지에 대한 <strong>관측도 모니터링도 없었다</strong>는 점이다. 에이전트는 취약점을 통해 열린 인터넷으로 나갔고, 그 행동을 기록하고 지켜보는 곳이 없었다.</span>
+        </div>
+        <p>네트워크 트래픽에 집행 지점을 두든, 취약점을 그때그때 막든, 어쨌든 <strong>누가 이 에이전트에게 무엇을 어떤 목적으로 시켰고 그것이 아직 유효한지</strong>를 적은 기록이 있어야 한다.</p>
+        <p>Ian은 이것이 결국 <strong>책임</strong>의 문제라고 했다. 그래서 에이전트에 대한 새 규제는 필요 없다고 본다. 기존 책임법을 적용하면 된다. 내가 에이전트를 고용해 어떤 행동을 시켰고 그 행동이 피해를 냈다면, 책임은 고용한 쪽에 있다. 조직일 수도, 개인일 수도, 권한을 위임한 누군가일 수도 있다. 그 질문에 답하려면 "누가 했나"에 답할 수 있어야 하고, 그것이 <strong>변조 저항 인가 로그</strong>가 필요한 이유다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="pdoom">
+        <header><span class="num">13</span><h2>마지막 질문: 파멸 확률 <span class="ts">38:50</span></h2></header>
+        <p>사회자가 마지막으로 가벼운 질문을 던졌다. AI가 인류를 망칠 것이라는 <strong>파멸 확률</strong> <span class="en">p(doom)</span> 논쟁이 있다. 런타임 인가와 입력·출력 검증 같은 총체적 전략이면 충분한가. 파멸 확률은 진짜인가.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Dick Hardt · "패널의 비관론자" <span class="ts">39:30</span></span>
+            <ul>
+              <li>특정 조직에 묶이지 않은 완전 자율 에이전트가 세상을 접수한다는 것은 아직 공상과학이다.</li>
+              <li>책임 있는 조직은 올바른 통제를 넣을 것이고, 그런 도구는 충분히 진화하고 있다.</li>
+              <li>남는 위험은 둘이다. 하나는 정비가 안 된 조직의 <strong>내부자</strong>가 특별한 접근 권한으로 에이전트를 풀어놓는 것.</li>
+              <li>더 걱정되는 다른 하나는 <strong>나쁜 일을 원하는 사람</strong>이 이 도구를 쥐는 것. Hugging Face 사고는 나쁜 일을 원하지 않았는데도 일어났다. Black Hat 발표는 그에 대한 경고였다.</li>
+            </ul>
+            <p class="verdict">악의적이든 무책임해서든 <b>대형 자연재해 규모의 사고</b>는 일어날 것이다. 치명적이지 않을 만큼 준비돼 있기를 바란다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Michael Davis · 엔지니어를 믿는다 <span class="ts">41:20</span></span>
+            <ul>
+              <li>확률을 숫자로 말할 수는 없다.</li>
+              <li>엔지니어의 창의력이 문제 해결에 들어가면 늘 놀랍고 설레는 결과가 나왔다.</li>
+              <li>지금 이 자리의 엔지니어들이 문제를 반복해서 풀고 있고, 능력은 빠르게 좋아지고 있다.</li>
+            </ul>
+            <p class="verdict">엔지니어들이 답을 찾을 것이라고 믿는 데 어려움이 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Ian · "가장 뜨거운 의견" <span class="ts">41:50</span></span>
+            <ul>
+              <li>0은 아니지만 <strong>점근적으로 0에 가깝다.</strong></li>
+              <li>대부분의 유인은 계속 이어가는 쪽에 있다. 책임 프레임워크가 있고, 사람은 대체로 선하다.</li>
+              <li>에이전트는 컴퓨터다. <strong>플러그를 뽑을 수 있다.</strong></li>
+              <li>빠르게 반복하며 되는 곳과 안 되는 곳을 찾고 있다. 안 되는 곳에서는 피해가 나고, 그것이 "이건 하지 말자"고 말하는 <strong>사회의 항체</strong>가 된다.</li>
+            </ul>
+            <p class="verdict">Pocket OS(추정) 창립자처럼 데이터를 잃은 사람에게는 안된 일이지만, 나머지 모두는 거기서 함께 배운다. 그래서 이 논쟁 자체를 믿지 않는다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li><strong>런타임 인가</strong>는 상시 권한 대신 도구 호출마다 허가하는 방식이다. 도구가 거칠고, 정책은 불완전하고, 환경은 변하므로 <strong>의도</strong>가 필요하다.</li>
+          <li><strong>OAuth</strong>는 웹사이트 간 통신용이다. 사전 등록과 브라우저를 가정하고 범위가 거칠다. 무엇을 할지 미리 모르는 에이전트에 맞지 않는다.</li>
+          <li>은행처럼 <strong>사람이 아니라 거래를 인가</strong>한다. 수표의 메모란이 의도, 금액·수취인·날짜가 한도다.</li>
+          <li><strong>미션</strong>은 사람이 에이전트에게 준 큰 목표다. 식별자가 모든 호출을 따라다녀 감사가 가능하다. 책임은 에이전트가 아니라 사람에게 있다.</li>
+          <li><strong>작업 에이전트와 감독 에이전트를 분리</strong>한다. 명백한 것은 결정론적 정책이, 애매한 것은 감독 에이전트가 거른다.</li>
+          <li>넓은 금지 정책 위에 <strong>거래적 의도와 비즈니스 의도의 교집합</strong>을 겹쳐 허용 범위를 만든다. 꼭 필요할 때만 사람을 부른다.</li>
+          <li><strong>Resy 사건</strong>: 에이전트는 될 때까지 시도한다. 끊기만 하는 속도 제한 대신 소비량을 계속 알려 주는 <strong>예산</strong>을 준다.</li>
+          <li><strong>뇌와 손을 분리</strong>하고 자격 증명은 샌드박스 밖 출구 프록시에 둔다. 상황에 따라 도구를 빼면 보안도 좋아지고 토큰도 아낀다.</li>
+          <li>인가 결정은 이진 판단이 아니라 <strong>의도 + 환경 센서</strong>로 내린다. 그 결과 결정은 수명이 짧고 맥락은 풍부해진다.</li>
+          <li>기계는 책임질 수 없다. <strong>누가 무엇을 왜 시켰는지</strong>를 에이전트 손이 닿지 않는 변조 저항 로그에 남긴다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>런타임 인가란 무엇이고, "이 호출을 허용할까"가 단순하지 않은 세 가지 이유는?</span></summary><div class="answer">에이전트에게 넓은 상시 권한을 주지 않고 도구 호출마다 그 시점에 허가하는 방식. 이유는 도구와 API가 거칠고, 사람이 완벽한 정책을 못 쓰고, 환경이 실행 중에 바뀌기 때문이다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Dick Hardt가 OAuth를 에이전트에 맞지 않는다고 본 이유 세 가지는?</span></summary><div class="answer">원래 웹사이트 간 통신용으로 설계됐고, 클라이언트 사전 등록과 브라우저 리다이렉트를 가정하며, 범위가 너무 거칠다. 에이전트는 무엇을 할지 미리 알 수 없다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>수표 비유에서 의도와 한도는 각각 무엇에 해당하나?</span></summary><div class="answer">메모란이 의도(왜 이 돈을 보내나), 금액·수취인·날짜가 한도다. 은행은 오래전에 사람 인증에서 거래 인가로 옮겼고 에이전트도 같은 길을 간다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>AAuth의 미션은 누구의 의도이며, 미션 식별자는 무엇에 쓰이나?</span></summary><div class="answer">에이전트가 대신 일하는 사람(조직 또는 개인)의 의도다. 책임은 그 사람에게 있다. 미션 식별자는 모든 호출을 따라다녀 나중에 이 미션 안에서 어떤 결정이 내려졌는지 감사할 수 있게 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>"CEO 이메일 읽기"와 "CEO 이메일 외부 전달"은 각각 어디서 걸리나?</span></summary><div class="answer">읽기는 애매하지 않아 결정론적 정책에 바로 걸린다. 외부 전달은 애매해서 감독 에이전트가 판단한다. 작업 에이전트는 일만 하고, 감독 에이전트는 허용 범위만 정한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Ian이 말한 두 종류의 의도와, 그것으로 허용 범위를 만드는 방법은?</span></summary><div class="answer">거래적 의도(지금 이 순간의 목적, 예: 스테이징 버그 수정)와 비즈니스 의도(조직이 이 에이전트를 산 이유). 각각을 상자로 바꾸고 교집합을 계산해 실제 허용 범위를 만든다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>Resy 사건에서 에이전트가 시간당 몇 번 호출했고, 전통적 속도 제한과 예산의 차이는?</span></summary><div class="answer">시간당 200번. 속도 제한은 그냥 끊고 에이전트는 왜 끊겼는지 모른다. 예산은 얼마나 썼고 남았는지 계속 알려 주고, 바닥나면 감독이 더 줄지 결정한다. 그래서 에이전트가 자원을 아껴 쓰게 된다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>뇌와 손 구조에서 인가 경계는 어디에 있고 왜 그곳인가?</span></summary><div class="answer">샌드박스 밖의 출구 프록시. 뇌(모델)는 목표를 끈질기게 좇으므로 믿을 수 없다. 샌드박스 안에서는 마음껏 실험하게 두고, 바깥의 결정론적 층에서 인가와 기록을 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Michael Davis가 소개한 "도구를 동적으로 빼기"의 예는?</span></summary><div class="answer">에이전트가 이메일을 쓰러 가면 그 미션이 끝날 때까지 웹 검색을 포함한 외부 송신 도구를 모두 끄고, 끝나면 다시 켠다. 독성 조합을 막는 방법이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>Ian은 왜 의도 시스템이 토큰도 아낀다고 했나?</span></summary><div class="answer">알맞은 능력을 알맞은 때에만 주면 에이전트가 엉뚱한 길에 시간을 쓰지 않고, 안 되는 일은 빨리 포기한다. MCP의 컨텍스트 비대화 불만도 이 방식으로 줄어든다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>로봇 팔 비유에서 인가 결정에 의도 말고 무엇을 더 넣어야 하나?</span></summary><div class="answer">환경 센서. 접속 위치, 시간, 서버의 취약점과 기기의 패치 상태 같은 맥락이다. 단일 이진 판단 대신 확률적으로 가장 나은 선택지를 고르고, 결정은 수명이 짧고 맥락은 풍부해진다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>Hugging Face 사고에서 Ian이 더 중요하다고 본 축은?</span></summary><div class="answer">Squid 프록시 취약점보다 관측과 모니터링이 전혀 없었다는 점. 그래서 누가 무엇을 왜 시켰고 아직 유효한지를 에이전트 손이 닿지 않는 변조 저항 로그로 남겨야 한다. 결국 책임 문제다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">패널 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트가 쥐고 있는 상시 권한과 API 키 목록을 적는다<span class="how">확인: 에이전트 프로세스 안이나 디스크에 키가 남아 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>"절대 안 되는 일"과 "항상 사람이 들어오는 일"을 결정론적 정책으로 먼저 쓴다<span class="how">예: 남의 메일 읽기, 프로덕션 데이터 삭제, 외부 송금</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트를 띄울 때 미션(이번 과제의 목적)을 한 줄로 받고 식별자를 모든 호출 로그에 붙인다<span class="how">확인: 로그만 보고 "어느 과제의 어느 결정"인지 되짚을 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>외부 API 호출에 시간 제한뿐 아니라 호출 예산을 두고, 남은 양을 에이전트에게 알려 준다<span class="how">Resy 사건 참고: 끊기만 하면 에이전트는 왜 끊겼는지 모른다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>도구를 샌드박스 안에 두고 자격 증명은 밖의 출구 프록시에서만 붙인다<span class="how">확인: 프록시를 거치지 않고 밖으로 나가는 길이 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>작업 단계에 따라 쓸 수 있는 도구를 줄인다<span class="how">예: 이메일 작성 중에는 웹 검색과 외부 송신 도구를 끈다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>인가 결정에 환경 맥락을 하나 이상 넣는다<span class="how">예: 샌드박스 안인가, 접속 위치와 시간, 대상 시스템의 취약점 상태</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>허용·거부 로그를 에이전트가 쓸 수 없는 곳에 남기고 트레이스와 연결한다<span class="how">확인: 사고 뒤에 "사람 실수인가, 에이전트 오류인가"를 로그로 가릴 수 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>런타임 인가</td><td>Runtime authorization. 에이전트가 도구를 부르는 그 시점에 호출 하나하나를 허가하는 방식</td></tr>
+              <tr><td>의도 기반 인가</td><td>Intent-based authorization. 사용자나 조직이 무엇을 하려는지를 맥락으로 써서 런타임 인가 결정을 내리는 것</td></tr>
+              <tr><td>OAuth</td><td>한 서비스가 사용자를 대신해 다른 서비스에 접근하도록 권한을 위임하는 표준. Dick Hardt가 공동 창시자</td></tr>
+              <tr><td>범위 (scope)</td><td>OAuth에서 위임하는 권한의 단위. 패널은 에이전트에게 너무 거칠다고 본다</td></tr>
+              <tr><td>AAuth</td><td>Dick Hardt가 만들고 있는 에이전트용 인가 프로토콜. 미션, 예산, 감독 에이전트 개념을 담는다</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 에이전트가 외부 도구와 데이터에 연결하는 표준</td></tr>
+              <tr><td>미션</td><td>Mission. 사람이 에이전트에게 준 큰 목표. 식별자가 모든 결정을 따라다닌다</td></tr>
+              <tr><td>감독 에이전트</td><td>Supervising agent. 일은 하지 않고 정책을 들고 작업 에이전트가 무엇을 해도 되는지 정하는 별도 에이전트</td></tr>
+              <tr><td>결정론적 정책</td><td>조건이 맞으면 항상 같은 결과가 나오는 규칙. 예: 남의 이메일은 읽을 수 없다</td></tr>
+              <tr><td>동의 피로</td><td>Consent fatigue. 허가 요청이 너무 잦아 사람이 내용을 보지 않고 승인하게 되는 상태</td></tr>
+              <tr><td>예산 (budget)</td><td>AAuth에서 토큰에 붙이는 자원 사용 한도. 소비량을 에이전트에게 계속 알려 준다</td></tr>
+              <tr><td>속도 제한</td><td>Rate limiting. 일정 시간 안의 요청 수를 넘기면 끊는 전통적 방식</td></tr>
+              <tr><td>뇌와 손</td><td>Brains and hands. 모델(뇌)과 샌드박스 안의 도구(손)를 분리하고 자격 증명은 밖에 두는 구조</td></tr>
+              <tr><td>출구 프록시</td><td>Egress proxy. 샌드박스에서 밖으로 나가는 모든 트래픽이 거치는 지점. 인가 경계가 된다</td></tr>
+              <tr><td>독성 조합</td><td>Toxic combination. 따로는 괜찮지만 함께 있으면 위험해지는 권한이나 맥락의 조합</td></tr>
+              <tr><td>고객 확인 / 에이전트 확인</td><td>KYC / Know Your Agent. 금융의 고객 신원 확인 절차를 에이전트에게 확장한 것</td></tr>
+              <tr><td>미등록 클라이언트</td><td>Unregistered client. 처음 보는, 미리 등록되지 않은 접속자. 웹에서는 CAPTCHA로 걸렀다</td></tr>
+              <tr><td>연합형 프로토콜</td><td>Federated protocol. 한 회사가 통제하지 않고 여러 참여자가 같은 표준으로 맞물리는 방식. 예: OIDC, TLS</td></tr>
+              <tr><td>심리적 소유권</td><td>Psychological ownership. 사람이 에이전트의 결과를 자기 일로 느끼는 연결. 책임을 지기 쉽게 한다</td></tr>
+              <tr><td>피해 범위</td><td>Blast radius. 한 사고가 영향을 미치는 범위</td></tr>
+              <tr><td>OpenTelemetry 스팬</td><td>관측 표준 OpenTelemetry에서 한 작업 단위를 기록한 것. 여러 스팬이 모여 트레이스가 된다</td></tr>
+              <tr><td>변조 저항 로그</td><td>Tamper-resistant log. 기록 주체가 나중에 고치거나 지울 수 없게 만든 로그</td></tr>
+              <tr><td>파멸 확률</td><td>p(doom). AI가 인류에 치명적 결과를 낼 확률을 두고 벌어지는 논쟁</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>패널 소개: Keycard, JPMorgan Chase, AAuth</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>런타임 인가의 정의와 의도가 필요한 이유</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>Ian: 보안 우선 기업과 거친 권한</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>Dick Hardt: OAuth는 이런 세계용이 아니다</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>Michael Davis: 개발자처럼 에이전트를 온보딩한다</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>Notion MCP 예시, 은행의 거래 인가와 수표 비유</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>결제는 범위가 아니다, 미션 개념</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>쇼핑 세션과 버그 세션, Pocket OS(추정) 식 사고</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>미션은 누구의 의도인가, 협상과 감사</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>작업 에이전트와 감독 에이전트, CEO 이메일 예시</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>동의 피로, 결정론적 정책 위의 두 가지 의도와 교집합</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>여러 곳에서 온 의도가 합쳐진다, 아직 아주 초기</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>에이전트 커머스: 사용자와 상인의 이득</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>고객 확인에서 에이전트 확인으로</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>미등록 클라이언트, CAPTCHA, Vercel 스페인 차단</td></tr>
+              <tr><td><span class="ts">19:50</span></td><td>닫힌 상자 대신 프로토콜, 감독 에이전트의 독립</td></tr>
+              <tr><td><span class="ts">21:30</span></td><td>연합형 웹인가, 대형 플레이어에 묶이는가</td></tr>
+              <tr><td><span class="ts">22:20</span></td><td>심리적 소유권, 1979년 IBM 매뉴얼</td></tr>
+              <tr><td><span class="ts">23:20</span></td><td>의도는 동기, 진단에서 포렌식으로</td></tr>
+              <tr><td><span class="ts">24:50</span></td><td>Resy 사건: 시간당 200번 호출과 계정 정지</td></tr>
+              <tr><td><span class="ts">25:30</span></td><td>될 때까지 시도하는 에이전트, AAuth 예산</td></tr>
+              <tr><td><span class="ts">27:00</span></td><td>뇌와 손 구조, 샌드박스와 출구 프록시</td></tr>
+              <tr><td><span class="ts">29:20</span></td><td>뇌는 하나가 아니다, 독성 조합, 도구 동적 제거</td></tr>
+              <tr><td><span class="ts">30:30</span></td><td>MCP 컨텍스트 비대화와 토큰 절약</td></tr>
+              <tr><td><span class="ts">31:20</span></td><td>프로덕션 전략: 인증에서 인가로, 오류율 감소</td></tr>
+              <tr><td><span class="ts">33:30</span></td><td>보안 소프트웨어 공장 레퍼런스 아키텍처, 세 수준</td></tr>
+              <tr><td><span class="ts">35:00</span></td><td>로봇 팔 비유, 센서와 OpenTelemetry 스팬</td></tr>
+              <tr><td><span class="ts">37:20</span></td><td>인가 로그는 에이전트 밖에, Hugging Face 사고</td></tr>
+              <tr><td><span class="ts">38:20</span></td><td>새 규제보다 기존 책임법, 변조 저항 로그</td></tr>
+              <tr><td><span class="ts">38:50</span></td><td>파멸 확률: 세 패널의 답</td></tr>
+              <tr><td><span class="ts">43:00</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'IavxrdVnwXM:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

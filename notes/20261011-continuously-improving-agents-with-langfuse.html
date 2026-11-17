@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 개선 루프 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#why">AI 엔지니어링이 필요한 이유</a></li>
+      <li><a href="#loop">온라인 루프와 오프라인 루프</a></li>
+      <li><a href="#trace">모든 것은 트레이스에서 시작한다</a></li>
+      <li><a href="#monitoring">모니터링의 세 가지 역할</a></li>
+      <li><a href="#specs">예제 앱: 아빠 IT 지원 에이전트</a></li>
+      <li><a href="#setup">설정과 첫 트레이스</a></li>
+      <li><a href="#failmodes">무엇이 잘못될 수 있나 정하기</a></li>
+      <li><a href="#eval1">평가기 1: 사용자가 반박한다</a></li>
+      <li><a href="#eval2">평가기 2: 전부 대문자로 쓴다</a></li>
+      <li><a href="#verify">정말 잡히는지 확인</a></li>
+      <li><a href="#eval3">평가기 3: 범위 밖 요청</a></li>
+      <li><a href="#agent">코딩 에이전트로 트레이스 분석</a></li>
+      <li><a href="#close">루프를 닫는 법</a></li>
+      <li><a href="#tomorrow">내일부터 시작한다면</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-11 · 44분 · 영어 발표 한글 정리</span>
+      <h1>에이전트는 배포한 뒤에 좋아진다</h1>
+      <p class="lead">에이전트는 서버가 멀쩡해도 답이 틀릴 수 있다. 그래서 프로덕션의 트레이스를 보고, 우리 앱에서 실제로 잘못되는 유형을 정의하고, 그것을 자동으로 잡는 평가기를 달고, 잡힌 것을 데이터셋으로 모아 다음 변경을 검증한다. 이 과정을 계속 돌리는 것이 발표자들이 말하는 AI 엔지니어링이다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=BOCjybvJYM4" target="_blank" rel="noopener">Continuously Improving Agents with Langfuse</a></span>
+        <span>발표: Lotte Verheyden, Annabell Schäfer (Langfuse, ClickHouse)</span>
+      </div>
+      <p class="note">영어 워크숍의 자동 자막을 바탕으로 한글로 정리했다. 앞부분 개념 설명은 Lotte Verheyden, 실습 시연은 Annabell Schäfer가 맡았다. 수치는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 "lenfuse"로 뭉개진 이름은 Langfuse로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자 두 사람은 Langfuse 소속이고, 이 워크숍은 Langfuse 제품을 실습하는 자리다. 도구의 장점을 말하는 대목은 그 점을 감안해 읽자. 다만 "트레이스 → 모니터링 → 데이터셋 → 실험" 이라는 흐름 자체는 특정 도구에 묶이지 않는다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트는 결정적이지 않다. <strong>시스템 지표가 정상이어도 답이 틀리거나 품질이 낮을 수 있다.</strong> 이 간극을 메우는 일이 AI 엔지니어링이다.</li>
+        <li>AI 엔지니어링 루프는 다섯 단계다. 프로덕션에서 돌아가는 <strong>온라인 부분(트레이싱, 모니터링)</strong>과 프로덕션 밖의 <strong>오프라인 부분(데이터셋, 실험, 평가)</strong>으로 나뉜다.</li>
+        <li>고위험 분야가 아니면 <strong>온라인 두 단계만으로 시작</strong>해도 충분히 멀리 간다. 제품이 성숙하거나 실수의 대가가 크면 오프라인 부분을 더한다.</li>
+        <li><strong>모든 것은 트레이스에서 시작한다.</strong> 트레이스가 부실하면 모니터링에서 놓치고, 데이터셋도 나빠지고, 결정도 나빠진다.</li>
+        <li>자동 평가기는 확장은 잘 되지만 새로운 유형은 못 잡는다. <strong>사용자 피드백과 사람의 샘플 검토</strong>가 그 빈틈을 메운다.</li>
+        <li>평가기는 템플릿을 복붙하는 것이 아니다. <strong>우리 앱에서 실제로 잘못되는 유형</strong>을 먼저 생각한다. 시연에서는 "사용자가 반박한다", "전부 대문자로 쓴다", "범위 밖 요청"을 골랐다.</li>
+        <li>코딩 에이전트에 Langfuse 스킬을 붙이면 트레이스 전체를 훑어 <strong>평가기가 안 보던 문제</strong>까지 찾아낸다. 시연에서는 검색 도구가 조용히 실패하고 있던 것을 찾았다.</li>
+        <li>신호를 잡은 뒤에는 <strong>평가 기준을 손보고 데이터셋을 키운다.</strong> 변경할 때마다 그 데이터셋으로 실험을 돌려 회귀가 없을 때만 배포한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="why">
+        <header><span class="num">01</span><h2>AI 엔지니어링이 필요한 이유 <span class="ts">01:10</span></h2></header>
+        <p>Lotte Verheyden은 먼저 전통 엔지니어링과 다른 점 하나를 짚는다. <strong>AI 에이전트는 결정적이지 않다</strong> <span class="en">non-deterministic</span>. 같은 입력에도 다른 답이 나올 수 있다.</p>
+        <p>그래서 이상한 상황이 생긴다. 서버는 살아 있고 에러도 없고 응답 시간도 정상이다. 그런데 에이전트가 사용자에게 준 답이 틀렸거나, 틀리진 않았지만 품질이 모자란다. 기존 모니터링은 이걸 보지 못한다.</p>
+        <div class="callout">
+          <span class="title">AI 엔지니어링이 푸는 문제</span>
+          <span>"시스템은 건강해 보이는데 에이전트의 답이나 행동은 잘못됐다." 이 간극을 보이게 만들고 줄여 가는 일련의 과정이 AI 엔지니어링이다. 발표자는 이 과정들을 이어 붙이면 하나의 계속 돌아가는 루프가 된다고 말한다.</span>
+        </div>
+        <p class="note">Langfuse는 이 과정을 실행하는 플랫폼이고 오픈소스다. 모델과 프레임워크를 가리지 않는다고 발표자가 소개했다. 제품 소개 대목이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="loop">
+        <header><span class="num">02</span><h2>온라인 루프와 오프라인 루프 <span class="ts">02:40</span></h2></header>
+        <p>발표자는 AI 엔지니어링 루프를 다섯 단계로 그린다. 회사마다 세부는 다르지만 큰 틀은 두 덩어리다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">온라인 · 프로덕션에서 <span class="ts">03:20</span></span>
+            <ul>
+              <li><strong>트레이싱</strong> <span class="en">tracing</span>: 앱에 계측을 넣고 배포하면, 에이전트가 무엇을 했는지 트레이스가 들어온다.</li>
+              <li><strong>모니터링</strong> <span class="en">monitoring</span>: 들어온 트레이스를 평가기와 대시보드로 자동 감시한다. 사용자 피드백과 사람의 샘플 검토도 여기 들어간다.</li>
+            </ul>
+            <p class="verdict"><b>시작점</b>: 고위험 분야가 아닌 팀은 이 둘만으로 시작해도 된다. 모니터링에서 본 것으로 간단히 고치고, 배포하고, 다시 트레이스를 본다. 빠르게 반복하는 좋은 첫걸음이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">오프라인 · 프로덕션 밖에서 <span class="ts">04:30</span></span>
+            <ul>
+              <li><strong>데이터셋</strong> <span class="en">datasets</span>: 구조화된 테스트 케이스 모음. 모니터링에서 본 사례가 주 재료다.</li>
+              <li><strong>실험</strong> <span class="en">experiments</span>: 변경안을 데이터셋에 돌린다.</li>
+              <li><strong>평가</strong> <span class="en">evaluation</span>: 실험 결과를 채점한다.</li>
+            </ul>
+            <p class="verdict"><b>언제</b>: 제품이 성숙했거나, 실수 하나가 큰 피해를 주는 환경이면 이쪽을 더한다. 결과가 더 좋고 회귀가 없을 때만 배포한다.</p>
+          </div>
+        </div>
+        <p>이번 워크숍은 <strong>온라인 부분, 그중에서도 모니터링</strong>에 집중한다. 오프라인 부분은 마지막에 방향만 짚는다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="trace">
+        <header><span class="num">03</span><h2>모든 것은 트레이스에서 시작한다 <span class="ts">05:10</span></h2></header>
+        <p>발표자는 트레이스 설정에 시간을 충분히 쓰라고 강조한다. 이유는 연쇄 효과다.</p>
+        <ol class="plain">
+          <li>트레이스가 부실하면 모니터링에서 문제를 다 잡지 못한다.</li>
+          <li>모니터링에서 놓치면 데이터셋에 좋은 사례가 들어가지 않는다.</li>
+          <li>데이터셋이 나쁘면 무엇을 평가할지 제대로 결정하지 못한다.</li>
+        </ol>
+        <h3>트레이스의 구조 <span class="ts">05:40</span></h3>
+        <p>트레이스 <span class="en">trace</span>는 관측 <span class="en">observation</span>의 묶음이다. 관측은 에이전트가 답을 만들며 거친 각 단계다. LLM 호출일 수도 있고 도구 호출일 수도 있다. 관측은 중첩될 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>관측 종류</th><th>붙어 있는 데이터 (예)</th></tr></thead>
+            <tbody>
+              <tr><td>LLM 호출</td><td>소요 시간, 토큰 사용량과 비용, 사용한 모델, 사용한 프롬프트 버전. 품질을 판단하는 데 필요한 모든 것</td></tr>
+              <tr><td>도구 호출</td><td>종류마다 다르다. 웹 검색이면 실제로 보낸 검색어가 한 데이터 포인트다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 데이터가 있어야 다음 단계인 모니터링이 가능하다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="monitoring">
+        <header><span class="num">04</span><h2>모니터링의 세 가지 역할 <span class="ts">06:30</span></h2></header>
+        <ol class="plain">
+          <li><strong>집계 지표</strong>: 시간에 따른 시스템 건강을 본다. 비용뿐 아니라 품질도 포함한다. 평가기 점수가 시간이 지나며 떨어지지 않는지 확인한다.</li>
+          <li><strong>사용자 피드백으로 신호 찾기</strong>: 앱이 커지면 트레이스를 전부 볼 수 없다. 사용자 피드백은 진짜 봐야 할 트레이스를 띄워 주는 장치다.</li>
+          <li><strong>피드백과 평가</strong>: 자동 평가기를 두고, 사람이 직접 주석을 달기도 한다.</li>
+        </ol>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">자동 평가기</span>
+            <ul>
+              <li>잘 확장된다. 모든 트레이스에 계속 돌릴 수 있다.</li>
+              <li>내가 미리 생각하지 못한 새롭고 미묘한 경우는 잘 못 잡는다.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">사용자 피드백 · 사람의 주석</span>
+            <ul>
+              <li>확장은 덜 된다.</li>
+              <li>내가 생각하지 못한 것을 발견하는 곳은 여기다.</li>
+            </ul>
+          </div>
+        </div>
+        <p>둘은 서로를 대신하지 못한다. <strong>자동 평가기로 넓게 덮고, 사람과 사용자 피드백으로 빈틈을 찾는다.</strong></p>
+      </section>
+
+      <!-- 5 -->
+      <section id="specs">
+        <header><span class="num">05</span><h2>예제 앱: 아빠 IT 지원 에이전트 <span class="ts">08:30</span></h2></header>
+        <p>여기서부터 Annabell Schäfer가 시연한다. 예제는 "Specs"라는 이름의 IT 지원 에이전트다. Annabell Schäfer의 아버지가 WhatsApp으로 휴대폰, 프린터, 컴퓨터 설정을 자꾸 물어와서 만든 개인 프로젝트에서 나왔다. 워크숍용은 간단한 웹 UI를 쓴다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성 요소</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td>사용자</td><td>아빠. 질문을 보낸다</td></tr>
+              <tr><td>지원 컨텍스트 조회 도구</td><td>어떤 휴대폰, 어떤 운영체제, 어떤 앱을 쓰는지 가져온다</td></tr>
+              <tr><td>도움말 라이브러리 검색 도구</td><td>자주 묻는 질문과 해결 방법이 담긴 문서를 검색한다</td></tr>
+              <tr><td>OpenAI API</td><td>답을 생성한다</td></tr>
+              <tr><td>구현</td><td>TypeScript, OpenAI Agents SDK. 이미 Langfuse 계측이 들어가 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 앱으로 두 가지를 한다. 트레이스를 함께 보고, 그다음 "아빠가 원하는 지원을 받고 있는지 알려면 무엇을 봐야 하는가"를 생각한다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="setup">
+        <header><span class="num">06</span><h2>설정과 첫 트레이스 <span class="ts">10:10</span></h2></header>
+        <p>워크숍 자료는 langfuse.com/workshop 에 있고, 저장소는 GitHub의 langfuse/langfuse-workshop 이다. 설정 순서는 이렇다.</p>
+        <ol class="plain">
+          <li>Langfuse에 가입하고 리전을 고른다. 어느 리전이든 상관없다. 프로젝트가 자동으로 만들어진다.</li>
+          <li>프로젝트 페이지에서 API 키를 만든다.</li>
+          <li>저장소를 클론하고 <code>.env</code> 샘플을 복사해 Langfuse 키와 OpenAI 키를 넣는다. 워크숍용 OpenAI 키는 현장에서 QR 코드로 나눠 주고 뒤에 폐기한다고 했다.</li>
+          <li>의존성을 설치하고 <code>npm run dev</code>로 띄운다.</li>
+        </ol>
+        <h3>첫 트레이스 읽기 <span class="ts">13:50</span></h3>
+        <p>"iPhone에서 Bluetooth 켜는 법"을 물으면 에이전트가 도구를 쓰고 단계별 답을 준다. Langfuse 트레이싱 화면에 첫 트레이스가 뜬다.</p>
+        <ul class="plain">
+          <li>트레이스 안의 각 행이 관측이다. 아이콘이 다르면 종류가 다르다.</li>
+          <li>맨 위 뿌리는 <strong>에이전트 관측</strong>이다. 그 아래에 LLM 생성 <span class="en">generation</span> 몇 개와 컨텍스트를 가져온 도구 호출들이 매달려 있다.</li>
+        </ul>
+        <p class="note">계측을 처음부터 손으로 넣는 단계별 가이드도 있고, 코딩 에이전트용 Langfuse 스킬로 자동으로 넣을 수도 있다고 발표자가 말했다. 이날은 계측이 끝난 상태에서 트레이스를 다루는 쪽에 집중했다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="failmodes">
+        <header><span class="num">07</span><h2>무엇이 잘못될 수 있나 정하기 <span class="ts">14:50</span></h2></header>
+        <p>아빠가 앱을 쓸 때 우리는 옆에 없다. 그게 에이전트를 만든 이유다. 그래서 에이전트가 무엇을 했는지 기록하는 데서 그치지 않고, <strong>그 기록이 무슨 뜻인지 해석</strong>해야 한다.</p>
+        <p>발표자는 "지원 앱에서 실제로 무엇이 잘못될 수 있나"를 먼저 생각했다. 그 결과가 세 가지 실패 유형이고, 각각 평가기 하나로 잡는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>실패 유형</th><th>신호</th><th>평가기 방식</th><th>보는 것</th></tr></thead>
+            <tbody>
+              <tr><td>사용자가 반박한다</td><td>"그 버튼이 없는데요", "그거 아닌데요"</td><td>LLM 판사</td><td>대화 전체 + 마지막 사용자 메시지</td></tr>
+              <tr><td>사용자가 좌절했다</td><td>전부 대문자로 쓴다. 욕설도 같은 부류</td><td>코드 기반</td><td>마지막 사용자 메시지</td></tr>
+              <tr><td>범위 밖 요청</td><td>휴대폰 지원 앱에 프린터나 컴퓨터를 묻는다</td><td>LLM 판사</td><td>시스템 프롬프트 + 마지막 사용자 메시지</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>실습은 <code>git checkout</code>으로 모니터링 체크포인트 브랜치로 옮긴 뒤 진행한다. Langfuse 평가기 화면에는 두 종류가 있다. <strong>코드 기반 평가기</strong>는 결정적인 검사용이고, <strong>LLM 판사</strong> <span class="en">LLM-as-a-judge</span>는 대화에 숨어 있는 암묵적인 것을 끌어내는 용도다.</p>
+        <p class="note">자막에는 "LLM as a Dutch"로 적혀 있다. 문맥상 LLM-as-a-judge다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="eval1">
+        <header><span class="num">08</span><h2>평가기 1: 사용자가 반박한다 <span class="ts">16:30</span></h2></header>
+        <p>Langfuse가 제공하는 "사용자 반박" <span class="en">user disagreement</span> 템플릿을 쓴다. LLM 판사이므로 먼저 평가에 쓸 모델 연결이 필요하다. 시연에서는 같은 OpenAI 키를 연결했다. 다른 모델이나 자체 게이트웨이 프록시도 연결할 수 있다고 했다.</p>
+        <h3>설정 순서 <span class="ts">18:20</span></h3>
+        <ol class="plain">
+          <li><strong>대상 관측 고르기</strong>: 생성 하나가 아니라 트레이스의 뿌리인 <strong>에이전트 관측</strong>을 고른다. 도구 호출이나 생성을 고를 수도 있다.</li>
+          <li><strong>입력만 본다</strong>: 이 평가기는 사용자 메시지를 봐야 하므로 입력 쪽을 대상으로 한다.</li>
+          <li><strong>변수 매핑</strong>: 평가 프롬프트 안의 중괄호 변수에 트레이스의 어느 부분을 넣을지 <strong>JSON 경로</strong>로 지정한다.
+            <ul class="plain">
+              <li>대화 이력 변수에는 메시지 배열 전체를 넣는다. 미리보기에 질문, 도구 호출, 답이 한데 묶여 들어오는 것이 보인다.</li>
+              <li>마지막 사용자 메시지 변수에는 사용자의 최신 메시지만 넣는다.</li>
+            </ul>
+          </li>
+          <li><strong>실행</strong>: 이제 들어오는 트레이스마다 실시간으로 돈다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">왜 이 신호가 중요한가 <span class="ts">20:20</span></span>
+          <span>아빠가 "Bluetooth 어떻게 켜요"라고 묻고, 이어서 "그 버튼이 없는데요, 말한 게 틀렸어요"라고 하면 잡힌다. 발표자의 가늠으로는 질문 500개 중 500개가 실패하진 않겠지만 다섯에서 일곱 개쯤은 설명이 충분히 명확하지 않을 것이다. 그 몇 개가 어디서 무엇이 잘못되는지 알려 주는 신호다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="eval2">
+        <header><span class="num">09</span><h2>평가기 2: 전부 대문자로 쓴다 <span class="ts">21:00</span></h2></header>
+        <p>Annabell Schäfer는 자기도 Claude나 Codex에 답답해지면 대문자로 쓴다고 했다. 채팅 앱에서 전부 대문자는 사용자 좌절을 잡는 좋은 신호다. 욕설이나 평소에 안 쓰는 단어도 같은 부류의 신호다.</p>
+        <p>이건 LLM이 필요 없다. <strong>코드 기반 평가기</strong>로 만든다.</p>
+        <ul class="plain">
+          <li>워크숍 자료의 Python 코드를 쓴다. 윗부분은 고정이고, 아래 평가 함수만 복사한다. TypeScript도 지원한다.</li>
+          <li>함수는 JSON 경로로 사용자 메시지를 꺼내 전부 대문자인지 확인하고, 그러면 <strong>불리언 점수 true</strong>를 돌려준다.</li>
+          <li>이름은 <code>is_all_caps_frustrated</code>처럼 짓는다. 불리언 점수에는 "is"를 붙여 true가 무슨 뜻인지 바로 알게 한다.</li>
+          <li>대상은 <strong>실시간 관측</strong>, 그중 <strong>에이전트 관측</strong>이다.</li>
+          <li>오른쪽의 <strong>테스트 실행</strong>으로 먼저 확인한다. Bluetooth 질문은 대문자가 아니라 false가 나온다. 결과가 마음에 들면 실행한다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">코드 기반 평가기로 할 수 있는 다른 일 <span class="ts">23:20</span></span>
+          <span>특정 단어 찾기, 브랜드 이름 표기 검사 같은 결정적 규칙은 모두 여기에 맞는다. 발표자는 "Langfuse"의 f를 대문자로 쓰는 실수를 예로 들었다. 그리고 지금은 실시간 관측에 걸었지만, 같은 평가기를 오프라인 개선 과정의 <strong>실험 결과</strong>에도 돌릴 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="verify">
+        <header><span class="num">10</span><h2>정말 잡히는지 확인 <span class="ts">24:50</span></h2></header>
+        <p>평가기를 만들었으면 동작을 확인한다. 발표자는 앱에서 직접 상황을 만들었다.</p>
+        <ol class="plain">
+          <li>"Bluetooth 어떻게 켜요"를 묻는다.</li>
+          <li>답을 받고 나서 대문자로 좌절을 표현한다. 시스템 프롬프트에 대응 지침이 있어 에이전트는 어떻게든 받아 준다.</li>
+          <li>"아니요, 그런 Bluetooth 표시는 없어요"라고 반박한다. 에이전트는 사용자가 맞다고 한다.</li>
+        </ol>
+        <p>트레이스 화면으로 돌아가면 새 트레이스가 여러 개 들어와 있고 평가기 점수도 붙어 있다. 트레이스를 열면 뿌리 관측(에이전트)에 <strong>사용자 반박 = true</strong>가 붙었다. 대문자 좌절 점수도 같은 자리에 붙는다.</p>
+        <div class="callout">
+          <span class="title">점수의 쓸모 <span class="ts">27:10</span></span>
+          <span>이제 점수로 필터를 걸 수 있다. "사용자 반박 true" 또는 "대문자 좌절 true"인 관측만 골라 보면, 수백 개 트레이스 중 실제로 들여다볼 가치가 있는 것만 남는다. 점수 필터는 <strong>봐야 할 트레이스를 찾는 도구</strong>다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="eval3">
+        <header><span class="num">11</span><h2>평가기 3: 범위 밖 요청 <span class="ts">27:40</span></h2></header>
+        <p>프로덕션에서 자주 보고 싶은 것 하나가 더 있다. <strong>앱이 하라고 만들지 않은 일을 누가 시키고 있는가.</strong> 발표자는 이를 범위 밖 요청 <span class="en">out-of-scope request</span>이라 부른다.</p>
+        <p>예제 앱의 시스템 프롬프트는 휴대폰 IT 지원만 하라고 되어 있다. 하지만 아빠는 프린터와 컴퓨터도 있다.</p>
+        <h3>앞 두 평가기와 다른 점 <span class="ts">28:20</span></h3>
+        <ul class="plain">
+          <li>마지막 사용자 메시지만 보는 것이 아니라 <strong>시스템 프롬프트도 같이 본다.</strong> 앱이 해야 할 일과 사용자가 하려는 일을 비교하기 때문이다.</li>
+          <li>그래서 대상 관측을 에이전트가 아니라 <strong>생성</strong>으로 잡는다. 시스템 프롬프트가 거기 있다.</li>
+          <li>변수 매핑: 시스템 프롬프트 변수에는 대화의 <strong>첫 번째 메시지</strong>를, 다른 변수에는 마지막 사용자 메시지를 넣는다.</li>
+        </ul>
+        <p>JSON 경로로 변수를 정의하기 때문에 트레이스의 어느 부분이든 골라 넣을 수 있다. 같은 틀로 보는 대상만 바꾸면 전혀 다른 평가기가 된다.</p>
+        <div class="callout">
+          <span class="title">잡은 뒤에 내리는 결정 <span class="ts">30:10</span></span>
+          <span>범위 밖 요청이 잡히면 두 갈래로 생각한다. 앱의 범위를 넓힐 것인가. 아니면 사용자에게 이 앱이 무엇을 하는지 제대로 알리지 못한 것인가. 범위가 큰 앱에서는 사용자가 시스템 용도를 완전히 오해하는 경우도 있다. 이 신호가 그걸 드러낸다.</span>
+        </div>
+        <blockquote>밖에 있는 걸 복사해 붙이는 일이 아니다. 우리 앱에서 겪을 전형적인 실패 유형이 무엇인지 생각하는 일이다.<cite>Annabell Schäfer의 말을 옮김 <span class="ts">30:50</span></cite></blockquote>
+      </section>
+
+      <!-- 12 -->
+      <section id="agent">
+        <header><span class="num">12</span><h2>코딩 에이전트로 트레이스 분석 <span class="ts">31:50</span></h2></header>
+        <p>직접 만든 트레이스 몇 개로는 패턴이 안 보인다. 워크숍 자료 끝의 스크립트로 <strong>가상의 프로덕션 트레이스 묶음</strong>을 Langfuse 인스턴스에 넣는다. 점수까지 포함된 데이터셋이다. 넣고 나면 트레이스가 여러 페이지로 늘어난다.</p>
+        <p>이제 질문은 "이 많은 트레이스에서 무엇이 잘못되고 무엇이 잘 되고 있는지 어떻게 찾는가"다. 발표자는 코딩 에이전트를 쓴다.</p>
+        <h3>Langfuse 스킬과 CLI <span class="ts">33:50</span></h3>
+        <ul class="plain">
+          <li>설치 명령은 워크숍 설정 단계에 있다. 발표자는 보통 코딩 에이전트에게 "설치해" 라고 시킨다.</li>
+          <li>CLI는 Langfuse의 모든 API를 노출한다. 트레이스, 점수, 데이터셋, 실험 실행을 명령줄이나 코딩 에이전트에서 바로 다룬다.</li>
+          <li>처음 계측을 넣을 때도 같은 스킬로 앱에 트레이싱을 자동으로 추가할 수 있다.</li>
+        </ul>
+        <h3>Codex에 시킨 것 <span class="ts">35:20</span></h3>
+        <p>지시는 한 줄이다. "Langfuse 스킬을 써서 우리 트레이스에서 문제를 찾아 줘." Codex는 실시간 트레이스에 접근해 어떤 질문이 들어왔고 어떤 점수가 붙었는지 본다. 대문자 좌절과 사용자 반박도 보지만, <strong>우리가 평가기로 걸지 않은 것</strong>도 본다. 지연 시간, 도구 호출 문제, 조용히 실패하는 곳까지 훑는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>리포트의 발견</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>조용한 검색 품질 실패</td><td>도움말 라이브러리 검색 도구가 제 역할을 못 하고 있었다. 평가기로 걸지 않았고, 발표자도 몰랐던 문제다</td></tr>
+              <tr><td>검색 실패가 지연과 비용을 올림</td><td>도구 호출 재시도가 늘어 응답이 느려지고 비용이 올랐다</td></tr>
+              <tr><td>평가 커버리지 공백</td><td>최근 트래픽 중 일부에서만 평가 신호가 나온다. 전부 평가되고 있지 않았다</td></tr>
+              <tr><td>프롬프트 버전 불일치</td><td>사용 중인 프롬프트 버전이 어긋나 있었다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 시간 관계로 미리 만들어 둔 리포트를 보여 주고, 현장에서 돈 Codex 결과가 같은 항목을 찾았는지만 확인했다. 트레이스 수는 "120개쯤, 아니 70개"라고 말해 정확하지 않다.</p>
+        <h3>찾은 것 고치기 <span class="ts">39:00</span></h3>
+        <p>가장 흥미로운 항목은 검색 도구다. 도움이 안 되는 도구라면 빼는 것도 답이다. Codex에게 그 도구를 정리하라고 시킨다. 코딩 에이전트는 Langfuse 데이터뿐 아니라 <strong>저장소 코드 컨텍스트</strong>도 갖고 있어서, Langfuse 설정만이 아니라 코드 자체를 고칠 수 있다.</p>
+        <div class="callout">
+          <span class="title">어디까지 맡기고 어디서 사람이 보나</span>
+          <span>발표 서두에서 Annabell Schäfer는 코딩 에이전트로 자신을 10배 늘리는 법과 함께 "어디서 사람이 루프에 남아야 하는지"도 다루겠다고 했다. 시연에서 사람이 한 일은 무엇을 잡을지 정하기, 리포트를 읽고 고칠 항목을 고르기, 그리고 다음 절에서 말하는 평가 기준과 데이터셋을 관리하는 것이다. 트레이스를 훑고 패턴을 찾고 코드를 고치는 일은 에이전트에 맡겼다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="close">
+        <header><span class="num">13</span><h2>루프를 닫는 법 <span class="ts">39:50</span></h2></header>
+        <p>이날 한 일은 프로덕션 트레이스에서 신호를 잡는 것이다. 에이전트가 어떤 도구를 쓰고 무엇을 입출력했는지 단계별로 보이게 했고, 거기서 신호를 뽑았다. 이 신호로 에이전트를 계속 좋아지게 하려면 두 가지를 더 해야 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">평가 기준을 관리한다</span>
+            <p>평가기가 한쪽에 치우쳐 있거나 사실 아무것도 말해 주지 않을 수 있다. 질의응답에서도 이 질문이 나왔다. 신호를 보면서 평가기 구성을 계속 손봐야 필요한 정보가 나온다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">데이터셋을 관리한다</span>
+            <p>처음 앱을 만들 때는 사용자가 무엇을 할지 안다고 생각한다. 시간이 지나면 예상 못 한 엣지 케이스가 쏟아진다. 좋은 프로덕션 사례를 골라 오프라인 평가 데이터셋에 넣어야 데이터셋이 실제 사용자를 대표한다.</p>
+          </div>
+        </div>
+        <div class="shift" aria-label="온라인 신호에서 오프라인 검증으로">
+          <div><span class="tag">온라인</span><b>프로덕션 트레이스에서 신호를 잡는다</b><span class="muted">사용자 반박, 대문자 좌절, 범위 밖 요청, 품질 평가</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">오프라인</span><b>그 사례로 데이터셋을 키우고 실험으로 검증한다</b><span class="muted">변경마다 실험, CI/CD에 넣어 회귀 없음을 확인한 뒤 배포</span></div>
+        </div>
+        <p>발표자는 이것이 <strong>한 번 하고 끝나는 일이 아니라</strong>고 못 박는다. 반복해서 루프를 닫아야 데이터셋이 사용자를 대표하고, 그 위에서 돈 실험 결과를 믿고 배포할 수 있다.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="tomorrow">
+        <header><span class="num">14</span><h2>내일부터 시작한다면 <span class="ts">42:30</span></h2></header>
+        <p>워크숍 웹사이트의 전체 과정은 8단계다. 이날은 트레이싱과 모니터링 두 단계만 다뤘고, 프롬프트 관리와 데이터셋 설정 같은 나머지는 자료로 따라갈 수 있다.</p>
+        <p>발표자가 "우리가 여러분이라면 내일 이렇게 시작한다"고 말한 순서다.</p>
+        <ol class="plain">
+          <li>내 저장소에 Langfuse 스킬로 트레이싱을 넣는다. 앱에서 실제로 무슨 일이 일어나는지부터 안다.</li>
+          <li>트레이스를 <strong>사람이 직접</strong> 훑어 사용자가 무엇을 하는지 이해한다.</li>
+          <li>프로덕션 트레이스에 평가기를 건다.</li>
+          <li>그다음 오프라인 최적화로 넘어간다.</li>
+        </ol>
+        <p class="note">2번이 눈에 띈다. 자동화 도구를 만드는 회사의 발표자가 트레이스를 손으로 읽는 단계를 명시적으로 넣었다.</p>
+      </section>
+
+      <!-- 15 -->
+      <section id="recap">
+        <header><span class="num">15</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트는 결정적이지 않아서 <strong>시스템이 건강해 보여도 답이 틀릴 수 있다.</strong> 기존 모니터링으로는 안 보인다.</li>
+          <li>AI 엔지니어링 루프는 온라인(트레이싱, 모니터링)과 오프라인(데이터셋, 실험, 평가)으로 나뉜다.</li>
+          <li>고위험이 아니면 <strong>온라인 두 단계로 시작</strong>한다. 성숙하거나 위험이 크면 오프라인을 더한다.</li>
+          <li><strong>트레이스 품질이 모든 하류 단계의 상한</strong>이다. 설정에 시간을 들인다.</li>
+          <li>모니터링은 집계 지표, 사용자 피드백 신호, 자동 평가와 사람 주석의 세 역할을 한다.</li>
+          <li>자동 평가기는 넓게 덮고, <strong>사람과 사용자 피드백이 새로운 유형을 찾는다.</strong> 둘 다 필요하다.</li>
+          <li>평가기를 만들기 전에 <strong>우리 앱의 실패 유형</strong>을 정한다. 템플릿 복붙이 아니다.</li>
+          <li>결정적인 검사는 코드 기반, 암묵적인 판단은 LLM 판사. 둘 다 JSON 경로로 트레이스의 어느 부분을 볼지 지정한다.</li>
+          <li>코딩 에이전트에 트레이스 접근을 주면 <strong>평가기가 안 보던 조용한 실패</strong>를 찾고 코드까지 고친다.</li>
+          <li>신호를 잡은 뒤에는 <strong>평가 기준과 데이터셋을 계속 관리</strong>하고, 변경마다 실험으로 회귀를 확인한 뒤 배포한다.</li>
+        </ol>
+      </section>
+
+      <!-- 16 -->
+      <section id="quiz">
+        <header><span class="num">16</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>AI 엔지니어링이 전통 엔지니어링과 다른 근본 이유 하나는?</span></summary><div class="answer">에이전트가 결정적이지 않다는 것. 그래서 서버 지표가 정상이어도 답이 틀리거나 품질이 낮을 수 있고, 이 간극을 보이게 만드는 과정이 따로 필요하다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>AI 엔지니어링 루프의 다섯 단계를 온라인과 오프라인으로 나누면?</span></summary><div class="answer">온라인: 트레이싱, 모니터링. 오프라인: 데이터셋, 실험, 평가.</div></details>
+          <details><summary><span class="qn">Q3</span><span>어떤 팀이 온라인 두 단계만으로 시작해도 되고, 언제 오프라인을 더하나?</span></summary><div class="answer">고위험 분야가 아닌 팀은 트레이싱과 모니터링만으로 시작해 빠르게 반복한다. 제품이 성숙하거나 실수 하나의 피해가 큰 환경이면 데이터셋, 실험, 평가를 더한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>"모든 것은 트레이스에서 시작한다"는 말의 연쇄 논리는?</span></summary><div class="answer">트레이스가 부실하면 모니터링에서 놓친다. 놓치면 데이터셋에 좋은 사례가 없다. 데이터셋이 나쁘면 무엇을 평가할지 제대로 결정하지 못한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>자동 평가기와 사용자 피드백·사람 주석은 각각 무엇에 강하고 약한가?</span></summary><div class="answer">자동 평가기는 모든 트레이스에 계속 돌릴 수 있어 확장이 좋지만, 미리 생각 못 한 새 유형은 못 잡는다. 사용자 피드백과 사람 주석은 확장은 덜 되지만 생각 못 한 것을 발견한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>시연에서 고른 세 가지 실패 유형과 각각의 평가기 방식은?</span></summary><div class="answer">사용자 반박(LLM 판사), 전부 대문자 좌절(코드 기반), 범위 밖 요청(LLM 판사).</div></details>
+          <details><summary><span class="qn">Q7</span><span>범위 밖 요청 평가기는 왜 대상 관측을 에이전트가 아니라 생성으로 잡았나?</span></summary><div class="answer">시스템 프롬프트를 참조해야 하기 때문이다. 앱이 해야 할 일(시스템 프롬프트, 대화의 첫 메시지)과 사용자가 하려는 일(마지막 사용자 메시지)을 비교한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>평가 프롬프트의 변수에 트레이스의 어느 부분을 넣을지 어떻게 지정하나?</span></summary><div class="answer">JSON 경로로 지정한다. 대화 이력에는 메시지 배열 전체, 마지막 사용자 메시지에는 최신 사용자 메시지처럼 부분을 골라 매핑한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>불리언 점수 평가기 이름에 "is"를 붙이라고 한 이유는?</span></summary><div class="answer">true가 무슨 뜻인지 바로 알게 하려고. <code>is_all_caps_frustrated</code>가 true면 사용자가 대문자로 좌절을 표현했다는 뜻이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>코딩 에이전트가 트레이스에서 찾은 것 중 평가기로 걸지 않았던 문제는?</span></summary><div class="answer">도움말 라이브러리 검색 도구가 조용히 실패하고 있던 것. 그 재시도가 지연과 비용도 올리고 있었다. 평가 커버리지 공백과 프롬프트 버전 불일치도 찾았다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>신호를 잡은 뒤 루프를 닫기 위해 계속 관리해야 하는 두 가지는?</span></summary><div class="answer">평가 기준(평가기 구성)과 데이터셋. 좋은 프로덕션 사례를 데이터셋에 넣고, 변경마다 실험으로 회귀를 확인한 뒤 배포한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 "내일 시작한다면" 제안한 네 단계 순서는?</span></summary><div class="answer">스킬로 트레이싱 넣기, 트레이스를 사람이 직접 훑기, 프로덕션 트레이스에 평가기 걸기, 그다음 오프라인 최적화.</div></details>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="apply">
+        <header><span class="num">17</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트의 모든 LLM 호출과 도구 호출이 트레이스에 중첩 구조로 잡히는지 확인한다<span class="how">LLM 호출에는 모델, 토큰, 비용, 프롬프트 버전이, 도구 호출에는 실제 입력(검색어 등)이 붙어 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>우리 앱에서 실제로 잘못될 수 있는 유형을 3개 적는다<span class="how">템플릿을 열기 전에 적는다. 사용자 반박, 좌절 표현, 범위 밖 요청은 참고일 뿐</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>결정적으로 검사할 수 있는 유형은 코드 기반 평가기로 만든다<span class="how">특정 단어, 표기 규칙, 형식 검사. LLM을 쓰지 않아 싸고 일정하다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>판단이 필요한 유형은 LLM 판사로 만들고, 보는 범위를 JSON 경로로 좁힌다<span class="how">대화 전체가 필요한가, 마지막 메시지만 필요한가, 시스템 프롬프트도 필요한가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>평가기를 실행하기 전에 테스트 실행으로 한 건 확인하고, 실행 후 직접 상황을 만들어 점수가 붙는지 본다<span class="how">확인: 뿌리 관측에 점수가 붙고 그 점수로 필터가 되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>점수 필터로 "볼 가치가 있는 트레이스"만 골라 사람이 주기적으로 읽는다<span class="how">자동 평가기가 못 잡는 새 유형은 여기서 나온다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>코딩 에이전트에 트레이스와 점수 접근을 주고 "문제를 찾아 달라"고 한 번 시켜 본다<span class="how">평가기로 걸지 않은 지연, 도구 재시도, 조용한 실패가 나오는지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>잡힌 프로덕션 사례를 오프라인 데이터셋에 넣는 절차를 정한다<span class="how">누가, 얼마나 자주, 어떤 기준으로 넣는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>프롬프트나 도구를 바꿀 때 그 데이터셋으로 실험을 돌려 회귀가 없을 때만 배포한다<span class="how">CI/CD에 넣을 수 있는지 검토한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 18 -->
+      <section id="glossary">
+        <header><span class="num">18</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>AI 엔지니어링</td><td>에이전트가 프로덕션에서 무엇을 하는지 보고, 평가하고, 데이터셋으로 검증해 계속 개선하는 일련의 과정. 발표자의 정의</td></tr>
+              <tr><td>결정적이지 않음</td><td>Non-deterministic. 같은 입력에 매번 같은 출력이 나오지 않는 성질</td></tr>
+              <tr><td>트레이스</td><td>Trace. 사용자 요청 하나를 처리하며 에이전트가 거친 모든 단계의 기록</td></tr>
+              <tr><td>관측</td><td>Observation. 트레이스 안의 한 단계. LLM 호출, 도구 호출 등. 중첩될 수 있다</td></tr>
+              <tr><td>생성</td><td>Generation. 관측 중 LLM 호출에 해당하는 것</td></tr>
+              <tr><td>에이전트 관측</td><td>트레이스의 뿌리가 되는 관측. 그 아래에 생성과 도구 호출이 매달린다</td></tr>
+              <tr><td>온라인 / 오프라인</td><td>온라인은 실제 사용자 트래픽이 흐르는 프로덕션에서 하는 일. 오프라인은 그 밖에서 데이터셋으로 하는 일</td></tr>
+              <tr><td>평가기</td><td>Evaluator. 트레이스나 관측을 보고 점수를 매기는 자동 장치</td></tr>
+              <tr><td>코드 기반 평가기</td><td>Python이나 TypeScript 코드로 규칙을 적어 결정적으로 채점하는 평가기</td></tr>
+              <tr><td>LLM 판사</td><td>LLM-as-a-judge. 다른 LLM에게 프롬프트를 주어 응답이나 대화를 채점하게 하는 평가기</td></tr>
+              <tr><td>점수</td><td>Score. 평가기가 관측에 붙이는 결과값. 불리언, 숫자 등</td></tr>
+              <tr><td>JSON 경로</td><td>JSON 데이터 안에서 특정 위치를 가리키는 표기. 평가 프롬프트 변수에 트레이스의 어느 부분을 넣을지 지정할 때 쓴다</td></tr>
+              <tr><td>변수 매핑</td><td>평가 프롬프트의 중괄호 변수와 트레이스 데이터의 위치를 연결하는 일</td></tr>
+              <tr><td>데이터셋</td><td>Dataset. 구조화된 테스트 케이스 모음. 모니터링에서 본 프로덕션 사례가 주 재료</td></tr>
+              <tr><td>실험</td><td>Experiment. 변경한 프롬프트나 코드를 데이터셋에 돌려 결과를 얻는 일</td></tr>
+              <tr><td>회귀</td><td>새 변경 때문에 원래 잘 되던 것이 망가지는 것</td></tr>
+              <tr><td>범위 밖 요청</td><td>Out-of-scope request. 시스템 프롬프트가 정한 앱의 용도를 벗어난 사용자 요청</td></tr>
+              <tr><td>체크포인트</td><td>워크숍 저장소에서 특정 단계 상태로 맞춰 둔 git 브랜치</td></tr>
+              <tr><td>스킬 / CLI</td><td>코딩 에이전트가 Langfuse API를 다룰 수 있게 해 주는 명령줄 도구와 사용 지침 묶음</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 19 -->
+      <section id="timeline">
+        <header><span class="num">19</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>워크숍 소개, langfuse.com/workshop 안내</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>AI 엔지니어링이란: 에이전트는 결정적이지 않다</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>Langfuse 소개, 발표자 소개</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>AI 엔지니어링 루프 다섯 단계, 온라인과 오프라인</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>온라인만으로 시작해도 되는 팀, 오프라인이 필요한 때</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>모든 것은 트레이스에서 시작한다</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>트레이스의 구조: 관측과 붙어 있는 데이터</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>모니터링의 세 역할</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>자동 평가기와 사람 피드백의 강약</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>Annabell Schäfer 시연 시작, 오늘의 초점</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>예제 앱 Specs: 아빠 IT 지원 에이전트</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>계정, API 키, .env 설정</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>의존성 설치, 앱 실행</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>첫 트레이스 읽기</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>모니터링 모듈, 지원 앱에서 잘못될 수 있는 것</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>체크포인트 브랜치로 전환</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>평가기 종류, 사용자 반박 템플릿, LLM 연결</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>평가기 1 설정: 대상 관측, JSON 경로 변수 매핑</td></tr>
+              <tr><td><span class="ts">20:20</span></td><td>사용자 반박 신호가 중요한 이유</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>평가기 2: 전부 대문자 좌절, 코드 기반</td></tr>
+              <tr><td><span class="ts">23:50</span></td><td>대상 관측 선택, 테스트 실행, 실험에도 적용 가능</td></tr>
+              <tr><td><span class="ts">24:50</span></td><td>앱에서 직접 상황 만들어 확인</td></tr>
+              <tr><td><span class="ts">26:20</span></td><td>트레이스에 붙은 점수 확인, 점수 필터</td></tr>
+              <tr><td><span class="ts">27:40</span></td><td>평가기 3: 범위 밖 요청</td></tr>
+              <tr><td><span class="ts">30:10</span></td><td>잡은 뒤의 결정: 범위 확대 또는 안내 개선</td></tr>
+              <tr><td><span class="ts">30:50</span></td><td>복붙이 아니라 우리 앱의 실패 유형을 생각하라</td></tr>
+              <tr><td><span class="ts">31:50</span></td><td>프로덕션 트레이스 시딩</td></tr>
+              <tr><td><span class="ts">33:50</span></td><td>Langfuse 스킬과 CLI 설치</td></tr>
+              <tr><td><span class="ts">35:20</span></td><td>Codex에 트레이스 문제 찾기 지시</td></tr>
+              <tr><td><span class="ts">36:40</span></td><td>리포트: 조용한 검색 실패, 지연과 비용, 커버리지 공백</td></tr>
+              <tr><td><span class="ts">39:00</span></td><td>검색 도구 정리를 Codex에 맡김</td></tr>
+              <tr><td><span class="ts">39:50</span></td><td>줌아웃: 평가 기준과 데이터셋 관리</td></tr>
+              <tr><td><span class="ts">41:30</span></td><td>루프는 한 번이 아니다, 실험과 배포</td></tr>
+              <tr><td><span class="ts">42:30</span></td><td>8단계 워크숍 안내, 내일 시작한다면</td></tr>
+              <tr><td><span class="ts">43:40</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'BOCjybvJYM4:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

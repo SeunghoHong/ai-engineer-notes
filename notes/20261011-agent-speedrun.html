@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 스피드런</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- code block (this note only) ---------- */
+pre {
+  margin: 0; padding: 14px 16px; max-width: 68ch; overflow-x: auto;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.6;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#strands">Strands Agents란</a></li>
+      <li><a href="#agentcore">AgentCore: 에이전트를 배포하는 서비스</a></li>
+      <li><a href="#workshop">워크숍 진행 방식</a></li>
+      <li><a href="#basic">모듈 1: 기본 에이전트와 루프</a></li>
+      <li><a href="#hooks">모듈 2: 훅으로 결정론적 제어</a></li>
+      <li><a href="#skills">모듈 3: 스킬로 맥락 주기</a></li>
+      <li><a href="#steering">모듈 4: 스티어링</a></li>
+      <li><a href="#deploy">모듈 5: AgentCore에 배포</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 프로젝트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-11 · 60분 · 영어 발표 한글 정리</span>
+      <h1>에이전트 한 시간 만에 프로덕션까지</h1>
+      <p class="lead">고객 상담 에이전트 하나를 60줄짜리 기본형에서 시작해 훅, 스킬, 스티어링으로 제어 장치를 붙이고, 마지막에 명령 몇 줄로 AWS에 배포한다. 핵심은 "LLM은 확률적이니, 꼭 지켜야 할 것은 코드로 못 박는다"는 것이다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=YXiLj4tJt5A" target="_blank" rel="noopener">Agent Speedrun</a></span>
+        <span>발표: Elizabeth Fuentes Leone, Sandhya Subramani (AWS)</span>
+      </div>
+      <p class="note">영어 워크숍의 자동 자막을 바탕으로 한글로 정리했다. 라이브 워크숍이라 Wi-Fi 문제와 로그인 안내가 섞여 있는데, 이 노트는 기술 내용만 추렸다. 자막에서 이름이 뭉개진 곳은 확실한 경우만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">두 발표자는 AWS 소속이고, 발표에서 다루는 Strands Agents와 Amazon Bedrock AgentCore는 AWS 제품이다. 비용이나 편의성에 대한 평가는 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>Strands Agents</strong>는 AWS가 만든 오픈소스 에이전트 하네스다. 모델은 아무거나 붙일 수 있고, MCP와 A2A를 지원한다.</li>
+        <li>에이전트의 기본은 <strong>루프</strong>다. 사용자 입력 → LLM이 도구 선택 → 도구 실행 → 결과를 다시 LLM에 → 답변. 도구는 <code>@tool</code> 데코레이터 하나로 만든다.</li>
+        <li><strong>훅</strong>은 루프의 특정 지점에 끼워 넣는 코드다. 예: 요청 한 번에 도구 호출을 3회로 제한하는 속도 제한기. 프롬프트는 "제안"이고 훅은 "강제"다.</li>
+        <li><strong>스킬</strong>은 마크다운으로 쓴 절차서다. 시스템 프롬프트에 다 넣지 않고, 질문 유형에 맞는 것만 그때 불러온다.</li>
+        <li><strong>스티어링</strong>은 옆에서 지켜보는 짝 에이전트다. 응답 형식, 어조, 절차 순서를 검사하고 고치게 한다.</li>
+        <li><strong>AgentCore</strong>에 배포하려면 코드에 진입점 데코레이터 하나만 붙이면 된다. 명령 두어 개로 컨테이너, 권한, 메모리, 관측이 따라온다. 발표에서는 배포에 약 1분이 걸렸다.</li>
+        <li>관측을 켜려면 콘솔에서 <strong>Transaction Search</strong>를 켜고 OpenTelemetry 배포판을 requirements에 넣어야 한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="strands">
+        <header><span class="num">01</span><h2>Strands Agents란 <span class="ts">01:20</span></h2></header>
+        <p>Strands Agents는 AWS가 만들어 공개한 오픈소스 <strong>에이전트 하네스</strong><span class="en">agent harness</span>다. 하네스란 LLM을 감싸서 도구, 순서, 규칙을 정해 주는 실행 틀이다.</p>
+        <ul class="plain">
+          <li><strong>모델은 가져다 쓴다.</strong> Amazon Bedrock과 기본으로 연결되지만, OpenAI, Hugging Face, 로컬 Llama 등 어떤 모델 제공자도 붙일 수 있다.</li>
+          <li><strong>MCP와 A2A</strong>를 지원한다. MCP는 도구 연결 규약, A2A는 에이전트끼리 대화하는 규약이다.</li>
+          <li><strong>어디서나 돌린다.</strong> 로컬, AWS 관리형 서비스, 다른 호스팅 모두 가능하다.</li>
+          <li>가드레일과 관측<span class="en">observability</span>이 내장돼 있다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">하네스를 쓰면 좋은 점 <span class="ts">19:00</span></span>
+          <span>모델을 바꿔도 시스템 프롬프트와 구조는 그대로 둘 수 있다. 같은 코드로 여러 모델의 성능을 비교하기 쉽다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="agentcore">
+        <header><span class="num">02</span><h2>AgentCore: 에이전트를 배포하는 서비스 <span class="ts">02:40</span></h2></header>
+        <p>Amazon Bedrock AgentCore는 에이전트를 프로덕션에 올리는 데만 집중한 서비스다. 프레임워크를 가리지 않는다. Strands든 LangChain이든 CrewAI든 코드를 컨테이너에 넣어 CLI 한 줄로 배포한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성 요소</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>Runtime</td><td>에이전트 코드가 도는 컨테이너. 세션 단위로 돌고, 한 세션은 최대 8시간까지 이어진다. 단기 메모리와 관측이 기본으로 붙는다. 세션이 늘면 자동으로 늘어나고 줄면 줄어든다.</td></tr>
+              <tr><td>Gateway</td><td>도구와 MCP 서버가 많을 때 하나의 엔드포인트 뒤에 모은다. 의미 기반 검색<span class="en">semantic search</span>으로 지금 상황에 맞는 도구를 골라 준다.</td></tr>
+              <tr><td>Memory</td><td>8시간을 넘는 장기 메모리. 벡터 저장소나 DB를 직접 만들 필요가 없다. 기본 제공 메모리 유형이 세 가지 있고, 자기 프롬프트로 커스텀 메모리도 만들 수 있다.</td></tr>
+              <tr><td>Identity</td><td>에이전트의 신원과 권한. 발표에서는 이름만 언급했다.</td></tr>
+              <tr><td>Observability</td><td>서버 자원이 아니라 <strong>에이전트 관점의 관측</strong>이다. 토큰을 얼마나 썼는지, 어떤 도구를 불렀는지, 루프 안에서 무슨 일이 있었는지를 CloudWatch에서 본다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">세션 길이에 대해 발표자는 "15분에서 8시간까지"라고 말했다. 15분이 기본값인지 다른 한계인지는 자막만으로 분명하지 않다. 메모리 유형 세 가지의 이름은 발표자가 기억나지 않는다고 했으므로 여기에도 적지 않았다.</p>
+        <p>Elizabeth Fuentes Leone은 보안과 데이터 처리도 짚었다. 고객 데이터로 모델을 학습하지 않고 데이터는 고객 계정 안에만 머문다는 설명이다. 발표자 소속을 감안해 읽을 대목이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="workshop">
+        <header><span class="num">03</span><h2>워크숍 진행 방식 <span class="ts">07:40</span></h2></header>
+        <p>워크숍은 Jupyter 노트북 다섯 모듈로 진행한다. AWS Workshop Studio에서 미리 만들어 둔 계정을 쓰기 때문에 참가자는 자기 AWS 계정이나 신용카드가 필요 없다. 환경은 행사 뒤에도 며칠 열어 둔다고 했다.</p>
+        <ol class="plain">
+          <li>기본 에이전트와 에이전트 루프</li>
+          <li>훅<span class="en">hooks</span></li>
+          <li>스킬<span class="en">skills</span></li>
+          <li>스티어링<span class="en">steering</span></li>
+          <li>세션 관리와 AgentCore 배포</li>
+        </ol>
+        <p>평가<span class="en">evaluation</span> 모듈도 준비했지만, 발표자들은 기본을 천천히 다지는 쪽을 택했고 시간 안에 다루지 못했다. 각 모듈마다 커널을 Python 3.13으로 골라야 한다. 모듈마다 <code>chat.py</code>가 있어서 터미널에서 같은 코드로 여러 턴 대화를 해 볼 수 있다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="basic">
+        <header><span class="num">04</span><h2>모듈 1: 기본 에이전트와 루프 <span class="ts">16:20</span></h2></header>
+        <p>만드는 것은 <strong>고객 상담 에이전트</strong>다. 고객이 주문을 조회하거나 환불을 요청하면 처리한다.</p>
+
+        <h3>에이전트 루프가 힘의 원천이다 <span class="ts">17:30</span></h3>
+        <ol class="plain">
+          <li>사용자가 질문을 보낸다.</li>
+          <li>에이전트가 LLM을 부른다. LLM이 질문을 읽고 어떤 도구를 쓸지 정한다.</li>
+          <li>도구가 실행되고, 결과가 다시 LLM에 들어간다.</li>
+          <li>더 필요한 도구가 없으면 답변을 만든다.</li>
+        </ol>
+        <p>LLM은 다음 토큰을 예측하는 기계다. 답을 LLM의 기억에 맡기지 말고 <strong>진실의 출처</strong>에 묶어야 한다. 그 출처가 DB든 파일이든, 도구로 감싸서 에이전트에게 준다. 언제 어떤 도구를 쓸지는 LLM의 추론에 맡긴다.</p>
+
+        <h3>코드는 세 덩어리 <span class="ts">19:40</span></h3>
+        <ul class="plain">
+          <li><strong>데이터</strong>: 고객 두 명과 주문 내역을 담은 딕셔너리. 실습용 가짜 데이터다.</li>
+          <li><strong>도구 세 개</strong>: 고객 조회, 주문 이력 조회, 환불 처리. 모양은 제각각이어도 전부 <code>@tool</code> 데코레이터를 붙인 함수다.</li>
+          <li><strong>에이전트</strong>: 시스템 프롬프트, 모델, 도구 목록. Bedrock 기본 모델을 쓰면 모델은 생략해도 된다.</li>
+        </ul>
+        <p>시스템 프롬프트는 도구를 어떻게 쓸지 알려 준다. 발표에서 쓴 지침은 세 가지였다. 행동하기 전에 항상 고객 조회로 신원을 확인한다. 도구가 준 데이터로 답한다. 이미 가진 정보를 고객에게 다시 묻지 않는다.</p>
+        <p class="note">아래는 발표 코드를 노트용으로 간추린 <strong>예시</strong>다. 실제 워크숍 코드와 이름이 다를 수 있다.</p>
+<pre><code>from strands import Agent, tool
+
+@tool
+def lookup_customer(customer_id: str) -&gt; dict:
+    """고객 ID로 고객 정보를 찾는다."""
+    return CUSTOMERS[customer_id]
+
+agent = Agent(
+    system_prompt="You are a customer service agent. ...",
+    tools=[lookup_customer, get_order_history, process_refund],
+)
+agent("Hi, I'm customer C001. Can you check my recent orders?")</code></pre>
+
+        <h3>안을 들여다보기 <span class="ts">22:50</span></h3>
+        <p>"에이전트가 뭘 하는지 모르겠다"는 흔한 불만에 대한 답은 메시지 목록이다. <code>agent.messages</code>를 찍어 보면 사용자 발화, 어시스턴트의 도구 호출 1, 2, 도구 결과, 최종 답변이 순서대로 보인다. 토큰 사용량 같은 지표도 같이 나온다. Sandhya Subramani는 이 기본 에이전트가 <strong>60줄이 안 되는 코드</strong>라고 강조했다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="hooks">
+        <header><span class="num">05</span><h2>모듈 2: 훅으로 결정론적 제어 <span class="ts">25:50</span></h2></header>
+        <p>훅<span class="en">hook</span>은 에이전트 루프의 특정 지점에 내 코드를 끼워 넣는 장치다. 끼울 수 있는 자리는 여럿이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지점</th><th>할 수 있는 일</th></tr></thead>
+            <tbody>
+              <tr><td>호출 전</td><td>누가 쓰는지 확인, 이런 질문을 받아도 되는지 판단</td></tr>
+              <tr><td>LLM 호출 후</td><td>모델이 낸 결정 검사</td></tr>
+              <tr><td>도구 호출 전</td><td>이 도구 호출을 승인할지 취소할지 결정, 호출 횟수 제한</td></tr>
+              <tr><td>도구 실행 후</td><td>결과 검사</td></tr>
+              <tr><td>응답 전</td><td>보내면 안 되는 답변 차단</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>실습: 도구 호출 속도 제한기 <span class="ts">28:20</span></h3>
+        <p>LLM이 폭주해서 도구를 끝없이 부르면 토큰만 태운다. 그래서 <strong>요청 한 번에 도구 호출은 최대 3회</strong>라는 하드 스톱을 만든다.</p>
+        <ol class="plain">
+          <li><code>strands.hooks</code>에서 <code>HookProvider</code>와 <code>HookRegistry</code>를 가져온다.</li>
+          <li>속도 제한기 클래스를 만들고 최대 호출 수를 받는다.</li>
+          <li>레지스트리에 콜백 두 개를 등록한다. 호출 전 이벤트에서는 카운터를 0으로 되돌린다. 도구 호출 전 이벤트에서는 카운터를 올리고 한도를 넘으면 막는다.</li>
+          <li>에이전트를 만들 때 <code>hooks=[RateLimiterHook(max_calls=3)]</code> 한 줄을 더한다.</li>
+        </ol>
+        <p>한도를 더 낮춰 일부러 깨뜨려 보면 "고객 조회 차단"이 찍힌다. 에이전트가 날뛸까 걱정된다면, 답은 훅이다.</p>
+
+        <div class="callout">
+          <span class="title">프롬프트는 제안, 훅은 강제 <span class="ts">31:20</span></span>
+          <span>Elizabeth Fuentes Leone이 덧붙였다. LLM은 확률적이라 프롬프트는 "이렇게 해 달라"는 제안일 뿐이다. 훅은 파이썬 코드라서 결정론적이다. 예를 들어 입력에 카드 번호가 섞여 있으면 훅이 모델에 가기 전에 막는다. 모델은 그 정보를 아예 받지 않고, 다시 부를 필요도 없으니 토큰도 아낀다. 응답 후 훅으로는 내보내면 안 되는 답변을 막는다.</span>
+        </div>
+
+        <h3>질문: 도구는 막혔는데 루프는 계속 돌던데? <span class="ts">34:10</span></h3>
+        <p>청중의 지적이 정확했다. 데모에서 훅은 도구 호출만 막았고, LLM은 계속 시도하다가 루프 끝까지 갔다. 발표자의 답은 이렇다. 시연을 위해 끝까지 돌게 뒀을 뿐이고, 훅 안에서 <strong>그 턴을 바로 끝내도록</strong> 만들 수도 있다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="skills">
+        <header><span class="num">06</span><h2>모듈 3: 스킬로 맥락 주기 <span class="ts">35:10</span></h2></header>
+        <p>고객은 에이전트가 모르는 것도 묻는다. 비밀번호가 안 된다, 계정이 잠겼다, 배송은 어디쯤이냐. 그 답을 어디에 둘까.</p>
+        <p>시스템 프롬프트에 전부 넣으면 매 호출마다 입력 토큰으로 들어가 낭비된다. 대신 <strong>스킬 폴더</strong>에 마크다운 파일로 절차를 적어 두고, 질문 유형에 맞는 것만 그때 읽게 한다.</p>
+        <ul class="plain">
+          <li>워크숍의 스킬 세 개: 환불 처리, 주문 추적, 계정 문제 대응.</li>
+          <li>계정 스킬에는 비밀번호 재설정 요건, 계정 잠김 처리 절차 같은 내용이 들어 있다.</li>
+          <li>에이전트를 만들 때 <code>plugins</code> 인자에 스킬 플러그인을 넣고 스킬 폴더를 가리킨다.</li>
+        </ul>
+        <p>"무선 헤드폰 환불해 달라"고 하면 에이전트는 먼저 스킬 목록을 훑어 맞는 것을 고르고, 그 스킬을 <strong>도구처럼 호출</strong>한 뒤 절차대로 움직인다. 흐름에 정해진 순서가 생기고, 맥락은 필요한 순간에만 들어온다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="steering">
+        <header><span class="num">07</span><h2>모듈 4: 스티어링 <span class="ts">39:10</span></h2></header>
+        <p>에이전트는 어려운 질문은 잘 맞히면서 "이 형식으로 답해"는 자꾸 어긴다. 말도 길다. 매번 "대시 그만 써"라고 말하는 대신 결정론적으로 잡고 싶다.</p>
+        <p>스티어링<span class="en">steering</span>은 <strong>짝 에이전트</strong>를 붙이는 방식이다. 짝 프로그래밍처럼, 본 에이전트가 출력을 만드는 동안 옆 에이전트가 보고 "그 형식이 아니다"라고 바로잡는다. 프로덕션에서는 형식이 조금만 틀려도 곤란하니 이런 장치가 필요하다.</p>
+
+        <h3>스티어링 핸들러 <span class="ts">41:10</span></h3>
+        <p>작동 방식은 훅과 같다. LLM 호출 전후, 도구 호출 전후에 끼운다. 차이는 그 지점에서 검사하는 주체가 코드가 아니라 <strong>또 하나의 에이전트</strong>일 수 있다는 점이다. 하드코딩한 함수로도, 규칙을 받은 에이전트로도 만들 수 있고, 출력 타입 강제 같은 것도 된다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">환불 절차 핸들러</span>
+            <p>환불 전에 반드시 고객을 먼저 조회하게 한다. 정해진 절차를 건너뛰지 않도록 지킨다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">어조 가드레일 핸들러</span>
+            <p>구체적인 기한을 약속하지 않는다. 고객을 탓하지 않는다. 고객의 불만을 먼저 인정한다.</p>
+          </div>
+        </div>
+        <p>에이전트에 두 핸들러를 넘기고 "모델 뒤에서 조종" 같은 지점을 정하면, 실행 로그에 고객 조회와 주문 이력 조회 뒤에 <strong>"에이전트 응답 평가 중"</strong>이 추가로 찍힌다. 최종 답이 나가기 전에 한 번 더 검사하는 것이다.</p>
+
+        <div class="callout">
+          <span class="title">규칙을 DB에 두기 <span class="ts">45:00</span></span>
+          <span>Elizabeth Fuentes Leone이 소개한 보조 라이브러리가 있다. 자막으로는 "agent control"로 들린다(추정). 여행 예약 에이전트를 예로 들면, 훅은 6명 이상 예약을 그냥 막는다. 스티어링 규칙은 6명이면 방 두 개로 나눠 예약하게 유도한다. 이런 규칙을 DB에 두면 에이전트는 DB 주소만 알면 된다. 규칙이 바뀔 때 코드를 고치지 않고 DB만 고친다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="deploy">
+        <header><span class="num">08</span><h2>모듈 5: AgentCore에 배포 <span class="ts">46:30</span></h2></header>
+        <p>세션 관리자 모듈은 시간상 건너뛰었다. 프레임워크로 메모리를 저장하는 방법인데, AgentCore 메모리를 쓰면 프레임워크 없이도 된다고 했다. 배포는 노트북이 아니라 <strong>터미널의 CLI</strong>로 한다.</p>
+
+        <h3>코드에서 바뀌는 것은 한 줄 <span class="ts">48:00</span></h3>
+        <p>노트북에서 돌던 에이전트와 프로덕션 에이전트의 유일한 차이는 <strong>진입점 데코레이터</strong>다. 런타임은 이 데코레이터를 보고 "이 뒤가 에이전트다"라고 안다. 컨테이너가 호출될 때마다 그 함수가 실행된다.</p>
+        <p class="note">자막에서는 "MTP entry point"로 들린다. Strands와 AgentCore 문서의 <code>@app.entrypoint</code>를 가리키는 것으로 보인다(추정).</p>
+
+        <h3>관측을 켜는 두 가지 준비 <span class="ts">49:30</span></h3>
+        <ol class="plain">
+          <li>AWS 콘솔의 AgentCore 메뉴에서 <strong>Configure → Transaction Search</strong>를 켠다. 이걸 안 켜면 CloudWatch가 정보를 못 받아서 에이전트 관측이 비어 있다.</li>
+          <li>requirements에 AWS OpenTelemetry 배포판 라이브러리를 넣는다. Strands는 AWS용으로 만들어져 추가 수정이 없다. LangChain이나 CrewAI는 라이브러리가 따로 있고 코드도 조금 손봐야 한다.</li>
+        </ol>
+
+        <h3>배포 순서 <span class="ts">52:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>프로젝트 만들기</td><td>이름을 정하고 "harness"가 아니라 "agent"를 고른다. 코드가 이미 있으니 "내 코드 가져오기"를 택한다. 폴더와 환경이 생긴다.</td></tr>
+              <tr><td>로컬 테스트</td><td>로컬에서는 <code>agentcore dev</code>로 돌려 보고 세션과 토큰 사용량을 볼 수 있다. Workshop Studio의 가상 머신에서는 안 된다. 로컬에서 Bedrock을 쓰려면 AWS 자격 증명이 필요하다.</td></tr>
+              <tr><td>배포 방식 고르기</td><td>코드 직접 배포 또는 컨테이너. 모델 키는 Bedrock을 쓰면 추가 입력이 없고, Anthropic이나 OpenAI 키를 가져올 수도 있다.</td></tr>
+              <tr><td>배포</td><td><code>agentcore deploy</code> 한 줄. 자격 증명을 검사하고, IAM 역할과 정책, 서비스 간 권한을 알아서 만든다. 내부적으로 CDK로 CloudFormation 스택을 만든다. 발표에서는 약 1분 걸렸다.</td></tr>
+              <tr><td>호출</td><td>터미널에서 바로 호출하거나 boto3 SDK로 호출한다. 필요한 것은 에이전트의 ARN뿐이다.</td></tr>
+              <tr><td>관측</td><td>Runtime 화면의 관측 대시보드에서 세션과 추적<span class="en">trace</span>을 본다. 세션 하나가 컨테이너 하나다. 반영까지 1~2분 걸린다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자가 터미널에서 친 명령의 정확한 이름은 자막만으로 모두 확인되지 않는다. 위 표의 명령어는 발표 흐름과 AgentCore 스타터 툴킷의 일반 명령을 바탕으로 적었다.</p>
+        <p>발표는 "AWS에서 무언가 만들 때 제일 번거로운 IAM 정책과 권한을 AgentCore가 대신 해 준다"로 마무리됐다. 마지막 QR 코드에는 슬라이드, 워크숍 링크, 소량의 크레딧이 담겨 있었다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="recap">
+        <header><span class="num">09</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>Strands Agents는 AWS의 오픈소스 하네스다. 모델은 아무거나, MCP와 A2A 지원, 어디서나 실행.</li>
+          <li>에이전트의 힘은 <strong>루프</strong>에서 나온다. LLM이 도구를 고르고, 결과를 다시 읽고, 답을 만든다.</li>
+          <li>답은 LLM의 기억이 아니라 <strong>도구로 감싼 진실의 출처</strong>에서 가져온다.</li>
+          <li>기본 에이전트는 시스템 프롬프트, 모델, 도구 목록 세 가지면 된다. 60줄 미만이다.</li>
+          <li><code>agent.messages</code>를 보면 루프 안에서 무슨 일이 있었는지 다 보인다.</li>
+          <li><strong>훅</strong>은 루프 지점에 끼우는 코드다. 프롬프트는 제안이고 훅은 강제다. 민감 정보 차단, 호출 횟수 제한에 쓴다.</li>
+          <li><strong>스킬</strong>은 마크다운 절차서다. 시스템 프롬프트를 부풀리지 않고 필요한 순간에만 맥락을 넣는다.</li>
+          <li><strong>스티어링</strong>은 짝 에이전트가 형식과 어조를 검사하고 바로잡는 장치다. 규칙은 DB에 둘 수 있다.</li>
+          <li>AgentCore 배포는 진입점 데코레이터 한 줄과 CLI 명령 몇 개다. 권한과 인프라는 서비스가 만든다.</li>
+          <li>관측은 공짜가 아니다. Transaction Search를 켜고 OpenTelemetry 라이브러리를 넣어야 보인다.</li>
+        </ol>
+      </section>
+
+      <!-- 10 -->
+      <section id="quiz">
+        <header><span class="num">10</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>에이전트 하네스란 무엇이고, 왜 모델을 바꾸기 쉬운가?</span></summary><div class="answer">LLM을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀이다. 하네스가 구조를 잡고 있으니 모델만 갈아 끼워도 시스템 프롬프트와 코드는 그대로 둘 수 있다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>에이전트 루프의 네 단계는?</span></summary><div class="answer">사용자 입력 → LLM이 도구 선택 → 도구 실행 결과를 LLM에 전달 → 더 필요한 도구가 없으면 답변 생성.</div></details>
+          <details><summary><span class="qn">Q3</span><span>왜 답을 LLM의 기억에 맡기지 말라고 하나?</span></summary><div class="answer">LLM은 다음 토큰을 예측할 뿐이다. DB나 파일 같은 진실의 출처를 도구로 감싸 주고, 그 데이터로 답하게 해야 한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Strands에서 도구를 만드는 가장 간단한 방법은?</span></summary><div class="answer">함수에 <code>@tool</code> 데코레이터를 붙인다. 조회든 환불이든 모양은 달라도 패턴은 같다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>훅과 프롬프트의 차이를 한 문장으로?</span></summary><div class="answer">프롬프트는 확률적인 모델에게 주는 제안이고, 훅은 루프 지점에서 실행되는 결정론적 코드다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>속도 제한 훅은 어느 두 이벤트에 콜백을 걸었나?</span></summary><div class="answer">호출 전 이벤트에서 카운터를 0으로 되돌리고, 도구 호출 전 이벤트에서 카운터를 올려 한도를 넘으면 막는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>훅으로 카드 번호를 막으면 토큰이 절약되는 이유는?</span></summary><div class="answer">모델에 가기 전에 막으니 모델이 그 정보를 받지도 않고, 다시 부를 필요도 없다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>스킬을 시스템 프롬프트에 다 넣지 않는 이유는?</span></summary><div class="answer">시스템 프롬프트는 매 호출마다 입력 토큰으로 들어간다. 스킬은 질문 유형에 맞는 것만 그때 읽어 토큰을 아끼고 흐름을 정돈한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>스티어링이 훅과 다른 점은?</span></summary><div class="answer">끼우는 지점은 같지만, 검사하는 주체가 코드만이 아니라 또 하나의 에이전트일 수 있다. 형식, 어조, 절차 순서를 보고 바로잡는다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>노트북 에이전트를 AgentCore용으로 바꿀 때 코드에서 달라지는 것은?</span></summary><div class="answer">진입점 데코레이터 하나다. 런타임은 그 뒤의 함수를 에이전트로 보고 호출마다 실행한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>배포했는데 CloudWatch에 에이전트 관측이 안 보인다. 먼저 확인할 두 가지는?</span></summary><div class="answer">콘솔에서 Transaction Search를 켰는지, requirements에 AWS OpenTelemetry 배포판을 넣었는지.</div></details>
+          <details><summary><span class="qn">Q12</span><span>AgentCore 배포가 IAM 작업을 줄여 준다는 말의 뜻은?</span></summary><div class="answer">역할, 정책, 서비스 간 권한을 CLI가 CDK로 CloudFormation 스택을 만들며 알아서 생성한다. 사용자는 정책을 직접 쓰지 않는다.</div></details>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="apply">
+        <header><span class="num">11</span><h2>내 프로젝트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트가 답할 때 기댈 진실의 출처를 정하고 도구로 감싼다<span class="how">확인: LLM이 기억으로 답하는 질문이 남아 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>시스템 프롬프트에 도구 사용 순서를 적는다<span class="how">예: 행동 전 신원 확인, 이미 가진 정보 다시 묻지 않기</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>메시지 목록과 토큰 지표를 찍어 루프를 한 번 눈으로 본다<span class="how">확인: 도구 호출 순서가 기대와 같은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>요청당 도구 호출 상한을 훅으로 건다<span class="how">확인: 한도를 낮춰 실제로 막히는지 테스트했는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>민감 정보 차단은 프롬프트가 아니라 호출 전 훅으로 한다<span class="how">확인: 모델이 그 정보를 받지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>자주 묻는 절차를 스킬 마크다운으로 빼고 시스템 프롬프트를 줄인다<span class="how">확인: 호출당 입력 토큰이 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>형식과 어조 규칙을 스티어링 핸들러로 만든다<span class="how">확인: 응답 전 검사 로그가 찍히는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>배포 전에 관측을 켠다<span class="how">Transaction Search 켜기, OpenTelemetry 라이브러리 추가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="glossary">
+        <header><span class="num">12</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트 하네스</td><td>Agent harness. LLM을 감싸 도구, 순서, 규칙, 검사를 정해 주는 실행 틀</td></tr>
+              <tr><td>에이전트 루프</td><td>입력 → 도구 선택 → 실행 → 결과 재투입 → 답변을 반복하는 흐름</td></tr>
+              <tr><td>도구</td><td>Tool. 에이전트가 호출할 수 있는 함수. 외부 데이터나 동작에 닿는 통로</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 도구와 데이터 소스를 모델에 연결하는 공통 규약</td></tr>
+              <tr><td>A2A</td><td>Agent-to-Agent. 에이전트끼리 대화하는 규약</td></tr>
+              <tr><td>훅</td><td>Hook. 루프의 특정 지점에서 실행되는 사용자 코드</td></tr>
+              <tr><td>콜백</td><td>Callback. 특정 이벤트가 일어날 때 불리도록 등록해 둔 함수</td></tr>
+              <tr><td>결정론적</td><td>같은 입력에 항상 같은 결과가 나오는 것. 확률적인 LLM의 반대말</td></tr>
+              <tr><td>스킬</td><td>Skill. 특정 종류의 일을 처리하는 절차를 적은 마크다운 파일</td></tr>
+              <tr><td>스티어링</td><td>Steering. 짝 에이전트가 출력의 형식과 어조를 검사하고 바로잡는 장치</td></tr>
+              <tr><td>가드레일</td><td>에이전트가 넘지 말아야 할 선을 정해 두는 안전 장치</td></tr>
+              <tr><td>AgentCore</td><td>Amazon Bedrock AgentCore. 에이전트를 프로덕션에 올리는 AWS 서비스</td></tr>
+              <tr><td>Runtime</td><td>에이전트 코드가 도는 컨테이너. 세션 단위로 돌고 자동으로 늘고 줄어든다</td></tr>
+              <tr><td>Gateway</td><td>여러 도구와 MCP 서버를 하나의 엔드포인트 뒤에 모으고 의미 검색으로 골라 주는 것</td></tr>
+              <tr><td>관측</td><td>Observability. 토큰, 도구 호출, 루프 내부 동작을 기록해 들여다보는 것</td></tr>
+              <tr><td>Transaction Search</td><td>CloudWatch가 에이전트 추적 데이터를 받도록 켜는 설정</td></tr>
+              <tr><td>OpenTelemetry</td><td>추적과 지표를 표준 형식으로 수집하는 오픈소스 도구 모음</td></tr>
+              <tr><td>CDK</td><td>Cloud Development Kit. Python, TypeScript 같은 언어로 AWS 인프라를 코드로 정의하는 도구</td></tr>
+              <tr><td>CloudFormation</td><td>AWS 인프라를 템플릿으로 정의하고 스택 단위로 만드는 서비스</td></tr>
+              <tr><td>IAM</td><td>AWS의 권한 관리. 어떤 역할이 어떤 서비스를 쓸 수 있는지 정한다</td></tr>
+              <tr><td>ARN</td><td>Amazon Resource Name. AWS 자원 하나를 가리키는 고유 식별자</td></tr>
+              <tr><td>boto3</td><td>AWS를 호출하는 파이썬 SDK</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="timeline">
+        <header><span class="num">13</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, 워크숍 목표</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>Strands Agents 소개</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>AgentCore: Runtime, 세션, 관측</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>Gateway와 Memory</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>오늘의 모듈 순서</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>Workshop Studio 로그인 안내</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>코드 편집기 열기, 커널 선택</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>모듈 1: 고객 상담 에이전트와 모델 제공자</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>에이전트 루프 설명</td></tr>
+              <tr><td><span class="ts">19:40</span></td><td>데이터, 도구 세 개, 시스템 프롬프트</td></tr>
+              <tr><td><span class="ts">22:50</span></td><td>메시지 목록으로 루프 들여다보기</td></tr>
+              <tr><td><span class="ts">24:20</span></td><td>chat.py로 여러 턴 대화</td></tr>
+              <tr><td><span class="ts">25:50</span></td><td>모듈 2: 훅 소개</td></tr>
+              <tr><td><span class="ts">28:20</span></td><td>속도 제한 훅 구현과 테스트</td></tr>
+              <tr><td><span class="ts">31:20</span></td><td>프롬프트는 제안, 훅은 강제</td></tr>
+              <tr><td><span class="ts">34:10</span></td><td>질문: 루프 자체를 멈추려면</td></tr>
+              <tr><td><span class="ts">35:10</span></td><td>모듈 3: 스킬 폴더와 플러그인</td></tr>
+              <tr><td><span class="ts">39:10</span></td><td>모듈 4: 스티어링과 짝 에이전트</td></tr>
+              <tr><td><span class="ts">41:10</span></td><td>스티어링 핸들러 두 종류</td></tr>
+              <tr><td><span class="ts">45:00</span></td><td>규칙을 DB에 두는 라이브러리</td></tr>
+              <tr><td><span class="ts">46:30</span></td><td>모듈 5: 배포 준비, 진입점 데코레이터</td></tr>
+              <tr><td><span class="ts">49:30</span></td><td>Transaction Search와 OpenTelemetry</td></tr>
+              <tr><td><span class="ts">52:00</span></td><td>프로젝트 생성, 로컬 테스트</td></tr>
+              <tr><td><span class="ts">55:40</span></td><td>배포 실행, CDK와 CloudFormation</td></tr>
+              <tr><td><span class="ts">57:30</span></td><td>호출 테스트와 관측 대시보드</td></tr>
+              <tr><td><span class="ts">58:50</span></td><td>마무리, 자료 QR</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'YXiLj4tJt5A:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>은행 에이전트 안전 증명</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#stakes">1,900만 고객과 피해 범위</a></li>
+      <li><a href="#example">같은 질문, 다른 대화</a></li>
+      <li><a href="#failures">대본 봇에 없던 실패 4가지</a></li>
+      <li><a href="#funnel">모델 앞의 라우팅 깔때기</a></li>
+      <li><a href="#vector">품질은 점수가 아니라 벡터</a></li>
+      <li><a href="#human">사람 검증부터</a></li>
+      <li><a href="#judge">LLM 판정자는 후하다</a></li>
+      <li><a href="#pipeline">평가는 운영 인프라다</a></li>
+      <li><a href="#models">두 종류의 모델, 두 가지 고장</a></li>
+      <li><a href="#rollout">섀도 배포와 단계적 출시</a></li>
+      <li><a href="#feedback">사람 피드백을 관문으로</a></li>
+      <li><a href="#conclusion">결론: 판정자를 의심하라</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-04 · 18분 · 영어 발표 한글 정리</span>
+      <h1>에이전트를 만드는 건 쉽다, 안전을 증명하는 게 어렵다</h1>
+      <p class="lead">영국 2위 소매은행 NatWest는 고객 1,900만 명이 쓰는 상담 챗봇에 AI 답변과 에이전트를 넣고 있다. 발표자는 에이전트를 만드는 일보다 그것이 안전하다고 증명하는 일이 훨씬 어렵다고 보고, 그 증명에 쓴 라우팅 구조와 평가 방식과 출시 절차를 보여 준다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=5UgnatzpZ9E" target="_blank" rel="noopener">Building the AI Agent Is Easy. Proving It's Safe Isn't</a></span>
+        <span>발표: Jonathan Osborne (NatWest Group 리드 AI 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳(NatWest, Cora, Comet, Opik, LangGraph, OpenTelemetry)은 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>NatWest의 상담 챗봇 Cora는 하루 약 10만 건의 대화를 맡는다. 무서운 건 모델 성능이 아니라 <strong>피해 범위</strong>다. 고객이 1,900만 명이면 틀린 답 하나가 실제 고객의 실제 돈이 된다.</li>
+        <li>에이전트에는 대본 봇에 없던 실패가 생긴다. <strong>자신 있게 틀리고, 설득당하고, 맞지만 도움이 안 되고, 매번 다르게 답한다.</strong> 기존 회귀 테스트로는 안전을 증명할 수 없다.</li>
+        <li>그래서 먼저 <strong>모델이 맡을 범위를 줄였다.</strong> 필터와 규칙과 임베딩 분류기로 된 라우팅 깔때기가 생성형 AI 앞에 선다.</li>
+        <li>품질은 점수 하나가 아니라 <strong>안전·과업·경험의 세 방향</strong>으로 잰다. 결제 에이전트의 전체 통과율 83%는 주제 전환 상황의 43%를 가리고 있었다.</li>
+        <li>LLM 판정자는 후하다. 판정자 평균은 0.97, 사람 평균은 0.83이었고 <strong>둘의 상관은 거의 0</strong>이었다. 판정 모델을 바꾸기만 해도 점수가 크게 달라졌다.</li>
+        <li>평가는 한 번 돌리는 노트북이 아니라 <strong>운영 인프라</strong>다. 표본 채점은 4시간마다 돌고, 프롬프트 변경은 CI/CD 회귀 관문을 통과해야 한다.</li>
+        <li>출시는 <strong>섀도 배포 → 브랜드별 단계 출시 → 몇 초 만에 되돌리는 플래그</strong> 순서다. 사람 피드백을 필수 관문으로 만들자 귀한 라벨 1만 4천 개가 쌓였다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="stakes">
+        <header><span class="num">01</span><h2>1,900만 고객과 피해 범위 <span class="ts">00:40</span></h2></header>
+        <p>NatWest Group은 영국에서 두 번째로 큰 소매은행이다. 개인 고객은 약 1,900만 명이다. 발표자는 이 숫자를 기억해 두라고 했다. 이 발표의 다른 모든 내용이 이 숫자 때문에 중요해진다.</p>
+        <p>Cora는 고객이 가장 먼저 만나는 디지털 상담 창구다. 하루 대화는 약 10만 건이다. 지금까지 답은 대부분 미리 짜 둔 대본이었다. 대본에 없는 질문이면 답하지 못했다. 고객은 답답한 채로 상담원 연결을 기다려야 했다.</p>
+        <h3>올해 바뀌는 것 <span class="ts">01:20</span></h3>
+        <p>올해부터 Cora의 고객 여정<span class="en"> journey</span> 가운데 약 3분의 1을 AI가 만드는 답으로 옮기고 있다. 두 갈래다.</p>
+        <ul class="plain">
+          <li><strong>RAG 답변</strong>: 사내 지식 베이스에서 관련 문서를 찾아 근거로 붙여 답한다. RAG는 검색 증강 생성<span class="en"> retrieval-augmented generation</span>의 줄임말이다.</li>
+          <li><strong>에이전트</strong>: 고객 대신 실제로 일을 처리한다. 예를 들어 송금을 돕거나 주소를 바꾼다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">무서운 건 모델이 아니라 피해 범위 <span class="ts">01:40</span></span>
+          <span>발표자는 요즘 모델이 대체로 좋은 답을 낸다고 본다. 문제는 피해 범위<span class="en"> blast radius</span>다. 고객이 1,900만 명이면 틀린 답 몇 개는 버그 티켓으로 끝나지 않는다. 실제 고객의 실제 돈이 걸린다. 규제 기관의 곤란한 질문이 오고, 회사 평판이 상한다.</span>
+        </div>
+        <p>그래서 이 발표는 에이전트 자체를 다루지 않는다. 출시 승인을 받기까지 무엇을 했는지, 그리고 자기 팀의 지표를 믿게 되기까지 무엇이 필요했는지를 다룬다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="example">
+        <header><span class="num">02</span><h2>같은 질문, 다른 대화 <span class="ts">02:20</span></h2></header>
+        <p>고객이 묻는다. "수수료 없이 주택담보대출을 더 갚을 수 있나요?"</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">지금 · 대본 봇</span>
+            <ul>
+              <li>"mortgage"라는 키워드만 알아본다</li>
+              <li>메뉴를 띄운다: 신청, 금리, 내 대출</li>
+              <li>고객은 "해당 없음"을 고른다</li>
+              <li>다시 말해 달라고 할 수도 있다</li>
+            </ul>
+            <p class="verdict"><b>결과</b>: 대개 여기서 끝이다. 고객은 답답한 채로 상담원 대기열에 선다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">앞으로 · AI 답변</span>
+            <ul>
+              <li>지식 베이스로 답한다: "1년에 잔액의 10%까지 더 갚을 수 있고, 중도상환 수수료는 없습니다. 고객님 상품을 확인해 볼까요?"</li>
+              <li>그런데 고객이 주제를 바꾼다: "그냥 계좌를 닫을 수 있나요?" <span class="ts">03:00</span></li>
+            </ul>
+            <p class="verdict"><b>주제 전환</b><span class="en"> digression</span>은 아주 흔하다. 결정 트리 방식은 여기에 특히 약하다. 이 주제는 뒤에서 숫자로 다시 나온다.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <span class="title">무엇이든 답할 수 있으면 무엇이든 틀릴 수 있다 <span class="ts">03:20</span></span>
+          <span>"10%까지"라는 조건이 이 고객의 상품에는 해당하지 않는다면 어떻게 될까. 실제 고객의 실제 대출에 실제 돈이 걸린 오답이 된다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="failures">
+        <header><span class="num">03</span><h2>대본 봇에 없던 실패 4가지 <span class="ts">03:40</span></h2></header>
+        <p>에이전트는 스스로 추론하고, 결정하고, 문장을 만든다. 그래서 대본 봇에는 없던 실패가 최소 네 가지 생긴다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 자신 있게 틀린다</span>
+            <p>환각<span class="en"> hallucination</span>이다. 있지도 않은 출처를 근거로 들면서도 확신에 차 있다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 설득당한다</span>
+            <p>프롬프트 인젝션<span class="en"> prompt injection</span>이다. 고객의 입력 자체가 공격이 될 수 있다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 맞지만 도움이 안 된다</span>
+            <p>정확하고 정책에도 맞는 답을 한다. 그런데 빙빙 돌기만 하고 고객의 용건은 끝나지 않는다. 고객은 몹시 답답하다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">4 · 매번 다르게 답한다</span>
+            <p>비결정성<span class="en"> nondeterminism</span>이다. 같은 입력에 전혀 다른 출력이 나온다. 정해진 출력을 확인하는 전통 테스트가 잘 맞지 않는다.</p>
+          </div>
+        </div>
+        <p>그 결과 기존 Cora 팀이 수년간 쌓은 회귀 테스트를 더는 그대로 쓸 수 없다. <span class="ts">04:30</span></p>
+        <div class="shift" aria-label="실패 범위의 차이">
+          <div><span class="tag">대본 봇</span><b>실패 범위가 닫혀 있다</b><span class="muted">일어날 수 있는 상황을 모두 적고, 모두 테스트하고, 원하는 대로 동작한다고 확신할 수 있다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">에이전트</span><b>실패 범위가 열려 있다</b><span class="muted">상황을 다 적을 수 없다. 테스트만으로는 안전에 도달할 수 없다</span></div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="funnel">
+        <header><span class="num">04</span><h2>모델 앞의 라우팅 깔때기 <span class="ts">04:50</span></h2></header>
+        <p>첫 단계는 방어를 단단히 하는 일이 아니었다. 먼저 공격받을 수 있는 면을 줄였다. 그 장치가 라우팅 깔때기<span class="en"> routing funnel</span>다. 모든 고객 대화는 깔때기 맨 위로 들어온다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th><th>AI 사용</th></tr></thead>
+            <tbody>
+              <tr><td>1 맥락 필터</td><td>버튼 클릭 같은 흔한 이벤트를 걸러 낸다. 발표자 말로 약 20%가 여기서 빠진다</td><td>없음</td></tr>
+              <tr><td>2 사전 분류 규칙</td><td>고객의 발화와 메타데이터만으로 목적지를 정한다. 결과가 매번 같은 규칙이다</td><td>없음</td></tr>
+              <tr><td>3 관련성 판단·다시 쓰기</td><td>앞의 두 관문을 넘은 발화에만 모델이 처음 돈다. 조건이 맞을 때만 켜지며, 여러 맥락이 섞인 복잡한 질문을 다듬는다</td><td>모델</td></tr>
+              <tr><td>4 의도 분류기</td><td>임베딩 위에서 도는 신경망이다. 발화를 보고 처리할 백엔드를 예측한다</td><td>고전 ML (생성형 아님)</td></tr>
+              <tr><td>5 정책 규칙</td><td>이 고객이 그 백엔드에 들어가도 되는지 마지막으로 확인한다</td><td>없음</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>왜 이렇게 만들었나 <span class="ts">05:50</span></h3>
+        <p>네 가지 이유가 있다. 대부분 은행이라서 생기는 이유다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>이유</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>접근 통제</td><td>고객이 들어가면 안 되는 백엔드에 닿지 않게 강제한다</td></tr>
+              <tr><td>감사 가능성</td><td>모든 결정에 코드가 붙는다. 나중에 완전히 추적하고 재현할 수 있다. 규제 기관이 이것을 요구한다</td></tr>
+              <tr><td>회복력</td><td>모델이나 생성형 AI가 멈춰도 고객에게 답을 줄 수 있다</td></tr>
+              <tr><td>거버넌스</td><td>전부 버전 관리되는 설정이다. 전체를 다시 배포하지 않고 바꿀 수 있어서, 시장 상황이 바뀌면 빨리 대응한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>언어 모델에 맥락을 대충 넣고 1,900만 고객에게 바로 들이밀지 않았다. 무엇에 정말 모델이 필요한지부터 깊이 따졌다.<cite>발표자의 말을 옮김 <span class="ts">06:20</span></cite></blockquote>
+      </section>
+
+      <!-- 5 -->
+      <section id="vector">
+        <header><span class="num">05</span><h2>품질은 점수가 아니라 벡터 <span class="ts">06:30</span></h2></header>
+        <p>기존 Cora에서 보던 핵심 지표는 정확도였다. "의도 라우터의 정확도는 94%"라고 하면 좋게 들린다. 하지만 이 숫자는 중요한 질문에 답하지 않는다.</p>
+        <ul class="plain">
+          <li>답이 실제 출처에 근거했나?</li>
+          <li>고객의 질문이 실제로 해결됐나?</li>
+          <li>자기 능력 밖일 때 멈추고 사람을 불렀나?</li>
+        </ul>
+        <p>이 모두를 점수 하나에 담을 수는 없다. 그래서 품질을 점수가 아닌 벡터로 다루기로 했다. <span class="ts">07:00</span></p>
+        <div class="shift" aria-label="품질을 재는 방식의 변화">
+          <div><span class="tag">전에는</span><b>점수 하나</b><span class="muted">"정확도 94%"</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이제는</span><b>세 방향의 벡터</b><span class="muted">답 하나하나를 안전·과업·경험으로 따로 채점한다</span></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방향</th><th>묻는 것</th></tr></thead>
+            <tbody>
+              <tr><td>안전 <span class="en">safety</span></td><td>고객에게 해가 될 수 있었나?</td></tr>
+              <tr><td>과업 <span class="en">task</span></td><td>맡은 일을 실제로 해냈나?</td></tr>
+              <tr><td>경험 <span class="en">experience</span></td><td>상대하기 어땠나?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>세 방향은 따로 감시하고 따로 경보를 건다. 그래야 "환각을 일으킨다"와 "맞지만 상대하기 괴롭다"를 구분할 수 있다. 원인이 다르니 고치는 방법도 아주 다르다.</p>
+
+        <h3>틀릴 때의 확신이 더 위험하다 <span class="ts">07:30</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">라우터 A · 94%</span>
+            <p>틀리는 6%에도 100% 확신한다.</p>
+            <p class="verdict"><b>훨씬 위험하다.</b> 틀린 답이 아무 신호 없이 고객에게 간다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">라우터 B · 85%</span>
+            <p>자기가 틀릴 수 있다는 것을 안다.</p>
+            <p class="verdict"><b>덜 위험하다.</b> 모를 때 멈추고 사람을 부를 수 있다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="human">
+        <header><span class="num">06</span><h2>사람 검증부터 <span class="ts">07:40</span></h2></header>
+        <p>자동화를 걱정하기 전에 늘 하던 대로 사람 검증부터 했다. 올해 6월, 결제 에이전트를 대상으로 했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>값</th></tr></thead>
+            <tbody>
+              <tr><td>대화 수</td><td>111건</td></tr>
+              <tr><td>결제 여정</td><td>37가지</td></tr>
+              <tr><td>브랜드</td><td>4개</td></tr>
+              <tr><td>평가자</td><td>대화마다 서로 독립된 사람 3명</td></tr>
+              <tr><td>전체 통과율</td><td>83%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 전체 숫자는 늘 그렇듯 쓸모가 없다고 했다. 상황별로 쪼개면 이렇다. <span class="ts">08:00</span></p>
+
+        <figure class="chart" aria-label="결제 에이전트 상황별 통과율: 정상 경로 97%, 예외 상황 76%, 주제 전환 43%. 전체 83%">
+          <span class="chart-title">결제 에이전트 상황별 통과율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>정상 경로</span><span class="val">97</span></div>
+              <div class="track"><div class="fill" style="width:97%" title="정상 경로: 97%"></div><div class="baseline" style="left:83%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>예외 상황</span><span class="val">76</span></div>
+              <div class="track"><div class="fill" style="width:76%" title="예외 상황: 76%"></div><div class="baseline" style="left:83%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>주제 전환</span><span class="val">43</span></div>
+              <div class="track"><div class="fill key" style="width:43%" title="주제 전환: 43%"></div><div class="baseline" style="left:83%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 전체 통과율 83%</span><span>100</span></div>
+          <span class="caption">주제 전환은 앞의 주택담보대출 예처럼 대화 중간에 용건을 바꾸는 상황이다.</span>
+        </figure>
+        <p>83%라는 점수 하나가 <strong>97%와 43% 사이의 54%p 차이</strong>를 가리고 있었다.</p>
+
+        <h3>사람끼리도 의견이 갈린다 <span class="ts">08:20</span></h3>
+        <p>덜 알려졌지만 더 미묘한 질문이 있다. 사람 평가자끼리는 서로 동의할까?</p>
+        <figure class="chart" aria-label="사람 평가자끼리의 일치율: 편향과 공정성 95%, 의도 이해 64%">
+          <span class="chart-title">사람 평가자끼리의 일치율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>편향·공정성 (객관적 항목)</span><span class="val">95</span></div>
+              <div class="track"><div class="fill" style="width:95%" title="편향·공정성: 95%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>의도 이해 (주관적 항목)</span><span class="val">64</span></div>
+              <div class="track"><div class="fill key" style="width:64%" title="의도 이해: 64%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">의도 이해: 봇이 고객이 원하는 것을 제대로 알아들었는가.</span>
+        </figure>
+        <p>LLM 판정자<span class="en"> LLM-as-a-judge</span>를 도입할 때는 흔히 판정자를 사람 평가자와 맞추려 한다. 그런데 사람끼리 64%만 일치한다면 판정자는 무엇에 맞춰야 할까. <strong>사람 점수를 그대로 목표로 삼을 수는 없다.</strong></p>
+        <div class="callout">
+          <span class="title">사람 검증이 잡아낸 것 <span class="ts">09:00</span></span>
+          <span>실패의 가장 큰 원인 두 가지는 모델 문제가 아니라 엔지니어링 문제였다. 사람 검증이 그것을 찾아냈다. 이것만으로도 사람 검증은 값을 했다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="judge">
+        <header><span class="num">07</span><h2>LLM 판정자는 후하다 <span class="ts">09:10</span></h2></header>
+        <p>이제 채점을 자동화할 차례다. AI를 붙인 Cora+는 아직 출시 전이라, 발표자는 다른 사내 프로젝트의 데이터를 보여 준다.</p>
+        <div class="card">
+          <span class="tag">사내 불만 처리 에이전트</span>
+          <ul>
+            <li>고객이 불만을 제기하면 에이전트가 여러 도구로 정보를 모은다</li>
+            <li>불만 처리 담당 직원이 읽을 요약을 쓴다. 고객이 왜 불만을 냈는지, 어떻게 도울 수 있는지 설명한다</li>
+            <li>2월에 출시했다</li>
+            <li>약 1만 4천 건을 사람과 LLM 판정자가 함께 채점했다</li>
+          </ul>
+        </div>
+
+        <h3>충실도 점수 <span class="ts">09:50</span></h3>
+        <p>충실도<span class="en"> faithfulness</span>는 요약이 근거 자료와 맞는지 보는 점수다. 0에서 1 사이다.</p>
+        <figure class="chart" aria-label="충실도 평균 점수: LLM 판정자 0.97, 사람 0.83. 두 점수의 상관은 거의 0">
+          <span class="chart-title">불만 처리 에이전트 충실도 평균 점수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>LLM 판정자</span><span class="val">0.97</span></div>
+              <div class="track"><div class="fill key" style="width:97%" title="LLM 판정자 평균: 0.97"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>사람</span><span class="val">0.83</span></div>
+              <div class="track"><div class="fill" style="width:83%" title="사람 평균: 0.83"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>0.5</span><span>1</span></div>
+          <span class="caption">판정자 점수는 맨 위에 몰려 거의 퍼지지 않았다. 사람 점수는 훨씬 넓게 퍼졌다. 평균만 보면 비슷해 보이지만, 건별로 보면 두 점수의 상관은 거의 0이었다.</span>
+        </figure>
+        <p>판정자와 사람의 평균 오차는 약 0.2였다(추정). 이것만 보면 판정자가 그럭저럭 괜찮다고 결론 내리기 쉽다. 하지만 두 점수가 함께 오르내리는 정도, 즉 상관<span class="en"> correlation</span>은 거의 0이었다.</p>
+        <p class="note">자막에는 평균 오차가 "2"로 들린다. 0~1 척도라서 0.2로 읽었다. 두 평균의 차이는 0.14인데, 건별 오차의 평균은 이보다 클 수 있다. 건마다 오차가 위아래로 갈리면 평균끼리 비교할 때 서로 상쇄되기 때문이다.</p>
+        <div class="callout warn">
+          <span class="title">구분하지 못하는 판정자는 쓸모없다</span>
+          <span>좋은 건과 나쁜 건을 가려내지 못하는 판정자는 사실상 가치가 없다. LLM은 기본적으로 후하게 채점하려 한다. 판정자가 후해지지 않게 막아야 한다.</span>
+        </div>
+
+        <h3>판정 모델을 바꾸면 점수가 흔들린다 <span class="ts">10:20</span></h3>
+        <p>슬라이드의 주황 점선은 이 지표의 합격 기준선이다. 판정자 점수는 기준선보다 넉넉히 위에 있었다. 그러다 판정자 뒤의 모델만 바꿨다. 입력도, 채점받는 출력도 그대로였다. 그런데 점수가 크게 떨어졌다.</p>
+        <p class="note">자막으로는 "0.8 위에서 0.2 위로" 떨어졌다고 들린다. 그 값이 점수 자체인지 기준선과의 차이인지는 자막만으로는 알 수 없다.</p>
+        <div class="callout">
+          <span class="title">판정 모델도 설정이다</span>
+          <span>판정 모델은 평가 설정의 일부가 된다. 판정 모델을 바꾸면 깨지는 변경<span class="en"> breaking change</span>이 생길 수 있다.</span>
+        </div>
+
+        <h3>판정자와 판정받는 쪽은 다른 모델 계열로 <span class="ts">10:50</span></h3>
+        <p>이 팀은 판정자를 에이전트와 다른 모델 계열로 옮겼다. 판정하는 쪽과 판정받는 쪽의 사각지대가 달라지게 하려는 것이다. 발표자에 따르면 이렇게 하자 판정자 점수와 사람 점수가 훨씬 가까워졌다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="pipeline">
+        <header><span class="num">08</span><h2>평가는 운영 인프라다 <span class="ts">11:00</span></h2></header>
+        <p>다시 Cora로 돌아와, 채점이 실제로 어떻게 도는지 본다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1 기록</td><td>에이전트와 가드레일 사이의 실제 대화를 전부 기록한다. OpenTelemetry와 OpenInference 같은 오픈 표준을 쓴다</td></tr>
+              <tr><td>2 표본 추출</td><td>기본은 5% 무작위 표본이다. 여기에 "흥미로운" 대화를 전부 더한다: 상담원 연결, 실패, 유난히 긴 대화, 고객이 화난 대화</td></tr>
+              <tr><td>3 채점</td><td>LLM 판정자가 앞에서 본 안전·과업·경험 세 방향으로 채점한다</td></tr>
+              <tr><td>4 저장</td><td>트레이스, 점수, 실험이 모두 Comet 한곳에 모인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>은행이라 붙는 제약 <span class="ts">11:40</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">망 분리</span>
+            <p>완전히 분리된 망<span class="en"> air-gapped</span>에서 일한다. 인터넷에는 전혀 닿지 않는다.</p>
+            <ul>
+              <li>판정 모델은 사설 경로와 사내 생성형 AI 게이트웨이로 부른다</li>
+              <li>SaaS인 Comet은 AWS를 거친 승인된 파트너 앱 형태로 쓴다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">개인 식별 정보</span>
+            <p>개인 식별 정보<span class="en"> PII</span>는 단 하나도 사내망 밖으로 나가면 안 된다.</p>
+            <p class="verdict">그래서 평가의 상당 부분은 개인 식별 정보가 빠진 상태에서 이뤄진다.</p>
+          </div>
+        </div>
+
+        <h3>주기 <span class="ts">12:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>작업</th><th>주기</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>트레이스 기록</td><td>대화가 일어나는 즉시</td><td>모든 대화의 근거를 남긴다</td></tr>
+              <tr><td>오프라인 채점</td><td>4시간마다</td><td>표본을 판정자로 채점한다</td></tr>
+              <tr><td>회귀 검사</td><td>변경마다, CI/CD 안에서</td><td>프롬프트나 맥락을 조금만 바꿔도 에이전트의 답이 크게 달라질 수 있다. 검증된 기준선과 계속 비교한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>CI/CD에는 강제 회귀 관문<span class="en"> hard regression gate</span>이 있다. 무슨 일이 생길지 정확히 이해하기 전에는 변경을 합칠 수 없다.</p>
+        <div class="callout">
+          <span class="title">지속 평가는 운영 인프라의 일부다 <span class="ts">12:30</span></span>
+          <span>출시할 때 노트북에서 몇 번 돌려 보고 끝내는 일이 아니다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="models">
+        <header><span class="num">09</span><h2>두 종류의 모델, 두 가지 고장 <span class="ts">12:40</span></h2></header>
+        <p>이 시스템에는 성격이 다른 모델이 함께 있다. 망가지는 방식이 다르니 감시하는 방식도 다르다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">생성형 AI 에이전트</span>
+            <p><strong>회귀한다.</strong> 누군가 프롬프트를 바꾸면 동작이 크게 달라질 수 있다.</p>
+            <ul>
+              <li>대응: CI/CD 회귀 관문</li>
+              <li>Opik 트레이스 <span class="ts">13:00</span>: 결제 에이전트의 LangGraph 노드 하나하나가 스팬 하나가 된다</li>
+              <li>에이전트가 느리거나 특정 지점에서 깨지면, 사람이나 다른 에이전트가 바로 들어가 원인을 찾는다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">의도 분류기 · 고전 ML <span class="ts">13:10</span></span>
+            <p><strong>표류한다.</strong> 사람의 말투는 모델을 학습시킨 시점부터 조금씩 변한다.</p>
+            <ul>
+              <li>입력 특성 드리프트<span class="en"> input feature drift</span>를 본다</li>
+              <li>사람 라벨을 기준으로 F1 점수를 잰다</li>
+              <li>재학습이 필요한 시점을 신호등 기준으로 정해 두었다</li>
+            </ul>
+          </div>
+        </div>
+        <p class="note">자막의 "rag thresholds"는 검색 증강 생성(RAG)이 아니라 빨강·주황·초록 단계로 상태를 나누는 신호등 기준으로 읽었다(추정).</p>
+        <div class="callout">
+          <span class="title">입력 드리프트는 먼저 우는 경보다 <span class="ts">13:40</span></span>
+          <span>발표자는 입력 특성 드리프트를 얕보지 말라고 했다. F1 점수가 떨어지기 전에 모델이 나빠지기 시작했다는 것을 먼저 알려 준다. 재학습이 필요하다는 신호다.</span>
+        </div>
+        <p>문제가 둘이면 도구도 둘이다. 하지만 관측·평가 체계까지 둘로 나누고 싶지는 않았다. 그래서 Comet 한 플랫폼에 생성형 AI용 Opik과 ML용 MPM을 함께 둔다. <span class="ts">13:50</span></p>
+        <p class="note">발표자는 발표가 끝나면 Comet 부스에 있겠다고 했다. Comet 제품을 권하는 대목은 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="rollout">
+        <header><span class="num">10</span><h2>섀도 배포와 단계적 출시 <span class="ts">14:00</span></h2></header>
+        <p>은행을 무너뜨리지 않고 신문 기사도 만들지 않으면서 어떻게 내보낼까. 시작은 섀도 배포<span class="en"> shadow deployment</span>다.</p>
+        <ul class="plain">
+          <li>새 시스템을 실제 운영에 올린다</li>
+          <li>새 시스템은 고객의 발화를 분류만 한다</li>
+          <li>고객에게 실제로 답하는 건 기존 대본 방식이다</li>
+        </ul>
+        <p>위험은 거의 0인데, 실제 고객이 어떤 질문을 던지는지 진짜 데이터로 볼 수 있다.</p>
+        <div class="callout">
+          <span class="title">규제 산업의 교착을 푸는 법 <span class="ts">14:30</span></span>
+          <span>발표자는 이 섀도 모드를 이 프로젝트에서 다른 곳에 가장 옮겨 쓰기 쉬운 부분으로 꼽는다. 규제 산업에는 교착이 자주 생긴다. 승인이 없으면 출시해서 운영 데이터를 얻을 수 없다. 그런데 모델 리스크 담당 동료들은 승인 전에 모델이 실제 운영 데이터에 어떻게 반응하는지 보고 싶어 한다. 섀도 모드는 "안전하게 관찰하기"와 "실제로 고객에게 답하기"를 떼어 내 이 교착을 푼다.</span>
+        </div>
+        <div class="shift" aria-label="출시 결정 방식의 변화">
+          <div><span class="tag">한 번에</span><b>큰 결정 하나</b><span class="muted">전부를 한꺼번에 내보내는 빅뱅 출시</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">나눠서</span><b>작은 결정 여러 개</b><span class="muted">하나하나 자신 있게 내릴 수 있는 크기로 쪼갠다</span></div>
+        </div>
+
+        <h3>브랜드별로, 비율로 <span class="ts">15:00</span></h3>
+        <ol class="plain">
+          <li>브랜드 하나씩 연다</li>
+          <li>브랜드 안에서도 사용자 비율을 조금씩 올린다</li>
+          <li>중간중간 KPI로 계속 갈지 멈출지<span class="en"> go/no-go</span> 정한다</li>
+          <li>그 결정의 일부는 자동이고, 일부는 사람이 승인한다</li>
+        </ol>
+
+        <h3>몇 초 만에 되돌리는 스위치 <span class="ts">15:20</span></h3>
+        <p>이 모든 것을 가능하게 하는 건 기능 플래그<span class="en"> feature flag</span>다.</p>
+        <ul class="plain">
+          <li><strong>전역 플래그</strong>: 모든 대화를 한 번에 대본 방식으로 되돌린다</li>
+          <li><strong>백엔드별 플래그</strong>: 백엔드 하나하나를 전체에서, 또는 브랜드 같은 특정 단위에서만 따로 끌 수 있다</li>
+          <li>둘 다 몇 초 안에 된다</li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section id="feedback">
+        <header><span class="num">11</span><h2>사람 피드백을 관문으로 <span class="ts">15:40</span></h2></header>
+        <p>다시 불만 처리 에이전트 이야기다. 직원이 쓰는 이 에이전트에서 사람 피드백은 관문이다. 엄지 버튼도, 형식적인 체크 상자도 아니다.</p>
+        <ul class="plain">
+          <li>담당 직원이 조사를 다시 돌리고 싶으면, 먼저 피드백을 남겨야 한다</li>
+          <li>팀은 직원이 왜 다시 돌리고 싶었는지 알고 싶다</li>
+          <li>덕분에 품질 좋은 직원 라벨 1만 4천 개가 쌓였다</li>
+        </ul>
+        <figure class="chart" aria-label="모은 사람 라벨 수: 불만 처리 에이전트 14,000개, 다른 많은 프로젝트는 그 10분의 1인 1,400개도 어렵다">
+          <span class="chart-title">모은 사람 라벨 수 (개)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>불만 처리 에이전트</span><span class="val">14,000</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="불만 처리 에이전트: 14,000개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>다른 많은 프로젝트</span><span class="val">&lt; 1,400</span></div>
+              <div class="track"><div class="fill" style="width:10%" title="다른 많은 프로젝트: 1,400개 미만"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>7,000</span><span>14,000</span></div>
+          <span class="caption">"많은 프로젝트는 그 10분의 1도 모으기 어렵다"는 발표자의 말에 맞춰 두 번째 막대를 1,400으로 그렸다.</span>
+        </figure>
+
+        <h3>프로젝트끼리 주고받은 것 <span class="ts">16:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방향</th><th>건너간 것</th></tr></thead>
+            <tbody>
+              <tr><td>불만 처리 → Cora</td><td>불만 처리 팀이 운영 중에 판정자 문제를 발견했다. 그래서 Cora에는 판정자 보정과 회귀 검사가 들어갔다</td></tr>
+              <tr><td>Cora → 불만 처리</td><td>Cora가 만든 Comet Opik 중심의 구조를 불만 처리 팀은 아직 쓰지 않는다. 운영 모니터링에 이 구조를 들여올 예정이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>에이전트는 싼 부분이었다. 다시, 또다시 쓸 수 있는 건 평가의 뼈대다.<cite>발표자의 말을 옮김 <span class="ts">16:30</span></cite></blockquote>
+      </section>
+
+      <!-- 12 -->
+      <section id="conclusion">
+        <header><span class="num">12</span><h2>결론: 판정자를 의심하라 <span class="ts">16:40</span></h2></header>
+        <p>발표자는 규제 환경에서 고객용 에이전트를 내보낼 사람에게 주는 교훈 목록을 띄웠다. 그중 실제 운영 판정자 데이터가 뒷받침하는 3번과 4번만 짚었다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">교훈 3 <span class="ts">17:00</span></span>
+            <p><strong>위에 몰린 판정자는 고장 난 계기다.</strong></p>
+            <ul>
+              <li>판정자는 지나치게 긍정적으로 채점하려 한다. 맞서 싸워야 한다</li>
+              <li>평균만 보지 말고 점수가 퍼진 모양을 비교한다</li>
+              <li>판정자가 실제로 사람 리뷰어와 맞는지 확인한다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">교훈 4 <span class="ts">17:10</span></span>
+            <p><strong>판정 모델은 기준값 설정의 일부다.</strong></p>
+            <ul>
+              <li>판정 모델을 바꾸면 모르는 사이에 깨지는 변경이 들어올 수 있다</li>
+            </ul>
+          </div>
+        </div>
+        <p>발표자는 생성형 AI와, 여전히 조금 쓰는 고전 ML 양쪽에 Comet을 쓴다고 다시 강조했다. 그리고 이렇게 끝맺었다. 다음 달 실제로 출시하면 이 중 얼마나 맞았는지 알게 될 것이다. <span class="ts">17:30</span></p>
+        <p class="note">슬라이드의 나머지 교훈은 자막에 나오지 않아 옮기지 않았다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>고객이 1,900만 명이면 모델 품질보다 <strong>피해 범위</strong>가 문제다. 틀린 답 하나가 실제 돈, 규제 질문, 평판 손상이 된다.</li>
+          <li>무엇이든 답하는 에이전트는 무엇이든 틀릴 수 있다. 대본 봇에 없던 실패 4가지(자신 있게 틀림, 설득당함, 맞지만 무익함, 비결정성)가 생긴다.</li>
+          <li>테스트만으로는 안전에 도달할 수 없다. 그래서 먼저 <strong>모델이 맡을 범위를 줄인다.</strong></li>
+          <li>라우팅 깔때기는 필터·규칙·임베딩 분류기·정책 규칙으로 되어 있다. 접근 통제, 감사 가능성, 회복력, 거버넌스를 위해서다.</li>
+          <li>품질은 점수 하나가 아니라 <strong>안전·과업·경험의 벡터</strong>다. 틀릴 때도 확신하는 시스템이 더 위험하다.</li>
+          <li>결제 에이전트의 전체 83%는 주제 전환 43%를 가렸다. <strong>상황별로 쪼개 본다.</strong></li>
+          <li>사람끼리도 주관적 항목은 64%만 일치한다. 사람 점수를 그대로 판정자의 목표로 삼을 수 없다.</li>
+          <li>LLM 판정자는 후하다. 평균 0.97 대 0.83에 상관은 거의 0이었다. <strong>평균이 아니라 분포와 상관을 본다.</strong></li>
+          <li>판정 모델도 설정이다. 바꾸면 깨질 수 있다. 에이전트와 다른 모델 계열을 쓰고, 평가를 CI/CD 회귀 관문까지 갖춘 운영 인프라로 둔다.</li>
+          <li>섀도 배포로 시작해 브랜드별로 연다. 몇 초 만에 되돌리는 플래그를 둔다. 사람 피드백을 관문으로 만들면 귀한 라벨이 쌓인다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말한 진짜 위험은 무엇인가?</span></summary><div class="answer">모델 품질이 아니라 피해 범위다. 고객이 1,900만 명이면 틀린 답 몇 개가 실제 고객의 돈, 규제 기관의 질문, 회사 평판 손상으로 이어진다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>에이전트에 새로 생기는 실패 4가지는? 기존 테스트가 안 맞는 이유는?</span></summary><div class="answer">자신 있게 틀림(환각), 설득당함(프롬프트 인젝션), 맞지만 도움이 안 됨, 비결정성. 같은 입력에도 출력이 달라지니 정해진 출력을 확인하는 테스트와 기존 회귀 테스트가 잘 맞지 않는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>라우팅 깔때기에서 AI를 쓰지 않는 단계는?</span></summary><div class="answer">맥락 필터, 사전 분류 규칙, 정책 규칙. 의도 분류기는 모델이지만 생성형 AI가 아니라 임베딩 위의 신경망이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>깔때기를 이렇게 만든 네 가지 이유는?</span></summary><div class="answer">접근 통제, 감사 가능성(모든 결정에 코드가 붙고 재현 가능), 회복력(모델이 멈춰도 답함), 거버넌스(버전 관리되는 설정이라 재배포 없이 변경).</div></details>
+          <details><summary><span class="qn">Q5</span><span>정확도 94% 라우터가 85% 라우터보다 위험할 수 있는 이유는?</span></summary><div class="answer">94% 라우터가 틀리는 6%에도 100% 확신한다면 틀린 답이 아무 신호 없이 나간다. 85%라도 자기가 틀릴 수 있다는 것을 아는 라우터는 멈추고 사람을 부를 수 있다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>결제 에이전트의 전체 통과율 83%가 가린 것은?</span></summary><div class="answer">정상 경로 97%, 예외 상황 76%, 주제 전환 43%. 가장 좋은 경우와 나쁜 경우 사이에 54%p 차이가 있었다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>사람 평가자끼리의 일치율이 LLM 판정자 설계에 주는 교훈은?</span></summary><div class="answer">객관적 항목은 95%, 주관적인 의도 이해는 64%만 일치했다. 사람끼리도 갈리니 사람 점수를 그대로 판정자의 목표로 삼을 수 없다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>판정자 평균 0.97, 사람 평균 0.83, 상관 거의 0. 무엇이 문제인가?</span></summary><div class="answer">평균 오차만 보면 괜찮아 보이지만, 판정자는 좋은 건과 나쁜 건을 구분하지 못한다. 거의 모든 건에 높은 점수를 주는 판정자는 쓸모없다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>판정 모델만 바꿨을 때 무슨 일이 생겼고, 팀은 어떻게 대응했나?</span></summary><div class="answer">입력과 출력이 같은데 점수가 크게 떨어졌다. 판정 모델을 설정의 일부로 관리하고, 판정자를 에이전트와 다른 모델 계열로 옮겼다. 그러자 판정자 점수와 사람 점수가 가까워졌다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>고전 ML 분류기가 나빠지는 것을 F1 점수보다 먼저 알려 주는 신호는?</span></summary><div class="answer">입력 특성 드리프트. 실제 입력이 학습 때와 달라지는 것이 성능 하락보다 먼저 보인다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>섀도 배포는 규제 산업의 어떤 교착을 푸나?</span></summary><div class="answer">승인이 없으면 운영 데이터를 얻을 수 없고, 모델 리스크 쪽은 승인 전에 운영 데이터에서의 반응을 보고 싶어 한다. 섀도 배포는 새 시스템이 분류만 하고 답은 기존 방식이 하게 해서, 관찰과 응답을 떼어 낸다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>불만 처리 에이전트는 사람 피드백을 어떻게 받았고, 무엇을 얻었나?</span></summary><div class="answer">조사를 다시 돌리려면 먼저 피드백을 남겨야 하는 관문으로 만들었다. 그 결과 직원 라벨 1만 4천 개가 쌓였다. 많은 프로젝트는 그 10분의 1도 모으기 어렵다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>모델이 꼭 필요한 요청만 모델로 보낸다<span class="how">필터와 규칙으로 처리할 수 있는 몫을 먼저 잰다. 발표에서는 맥락 필터 하나로 약 20%가 빠졌다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>품질을 안전·과업·경험으로 나눠 따로 경보를 건다<span class="how">확인: 환각 문제와 "맞지만 괴로운" 문제를 구분할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>전체 통과율 대신 상황별 통과율을 본다<span class="how">정상 경로, 예외 상황, 주제 전환을 나눠 잰다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>사람 평가자끼리의 일치율부터 잰다<span class="how">항목별로 잰다. 일치율이 낮은 항목은 채점 기준을 다시 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>판정자 점수를 사람 점수와 평균이 아니라 분포와 상관으로 비교한다<span class="how">확인: 판정자 점수가 위에 몰려 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>판정 모델을 설정처럼 버전 관리한다<span class="how">바꿀 때마다 기준선과 다시 비교한다. 판정자는 에이전트와 다른 모델 계열로 고른다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>프롬프트·맥락 변경을 CI/CD 회귀 관문에 건다<span class="how">확인: 검증된 기준선보다 나빠진 변경이 합쳐지지 못하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>새 시스템을 섀도 모드로 먼저 돌린다<span class="how">새 시스템은 판단만 기록하고, 고객에게는 기존 방식이 답한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>전체와 기능 단위로 되돌리는 플래그를 둔다<span class="how">확인: 몇 초 안에 기존 방식으로 돌아갈 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>재실행 같은 행동 앞에 사람 피드백을 받는다<span class="how">형식적인 엄지 버튼이 아니라 다음 단계로 가는 관문으로 만든다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>피해 범위</td><td>Blast radius. 한 번의 실패가 영향을 미치는 범위</td></tr>
+              <tr><td>고객 여정</td><td>Journey. 고객이 한 가지 용건을 끝내기까지의 대화 흐름</td></tr>
+              <tr><td>대본 봇 / 결정 트리</td><td>미리 정한 메뉴와 갈래로만 답하는 챗봇</td></tr>
+              <tr><td>RAG</td><td>지식 베이스에서 관련 문서를 찾아 근거로 붙여 답을 만드는 방식</td></tr>
+              <tr><td>주제 전환</td><td>Digression. 대화 중간에 다른 용건으로 넘어가는 것</td></tr>
+              <tr><td>환각</td><td>Hallucination. 사실이 아닌 내용을 그럴듯하게 지어내는 것</td></tr>
+              <tr><td>프롬프트 인젝션</td><td>입력 안에 지시문을 숨겨 AI가 원래 지시 대신 그것을 따르게 만드는 공격</td></tr>
+              <tr><td>비결정성</td><td>같은 입력에도 출력이 매번 달라질 수 있는 성질</td></tr>
+              <tr><td>회귀 테스트</td><td>새 변경 때문에 원래 잘 되던 기능이 망가지지 않았는지 확인하는 테스트</td></tr>
+              <tr><td>임베딩</td><td>문장을 숫자 벡터로 바꾼 것. 뜻이 비슷하면 벡터도 가깝다</td></tr>
+              <tr><td>의도 분류기</td><td>Intent classifier. 발화가 어떤 용건인지 분류해 처리할 백엔드를 고르는 모델</td></tr>
+              <tr><td>감사 가능성</td><td>Auditability. 모든 결정을 나중에 추적하고 재현할 수 있는 성질</td></tr>
+              <tr><td>LLM 판정자</td><td>LLM-as-a-judge. LLM이 다른 모델의 출력을 채점하는 방식</td></tr>
+              <tr><td>충실도</td><td>Faithfulness. 답이나 요약이 근거 자료와 맞는 정도</td></tr>
+              <tr><td>상관</td><td>Correlation. 두 점수가 함께 오르내리는 정도. 0이면 서로 관계가 없다</td></tr>
+              <tr><td>트레이스 / 스팬</td><td>요청 하나를 처리한 전체 기록이 트레이스, 그 안의 단계 하나가 스팬이다</td></tr>
+              <tr><td>OpenTelemetry</td><td>트레이스 같은 관측 데이터를 기록하는 오픈 표준. OpenInference는 AI 앱용 오픈 표준이다</td></tr>
+              <tr><td>망 분리</td><td>Air-gapped. 외부 인터넷과 완전히 끊긴 네트워크 환경</td></tr>
+              <tr><td>PII</td><td>Personally identifiable information. 이름, 계좌처럼 개인을 알아볼 수 있는 정보</td></tr>
+              <tr><td>CI/CD</td><td>코드 변경을 자동으로 테스트하고 배포하는 파이프라인</td></tr>
+              <tr><td>드리프트</td><td>Drift. 실제 입력이 학습 때와 달라져 모델 성능이 서서히 떨어지는 현상</td></tr>
+              <tr><td>F1 점수</td><td>정밀도와 재현율을 함께 반영한 분류 성능 지표</td></tr>
+              <tr><td>섀도 배포</td><td>Shadow deployment. 새 시스템을 운영에 올려 판단만 기록하고, 실제 응답은 기존 시스템이 하게 하는 방식</td></tr>
+              <tr><td>기능 플래그</td><td>Feature flag. 배포 없이 기능을 켜고 끄는 스위치</td></tr>
+              <tr><td>모델 리스크</td><td>Model risk. 은행에서 모델이 틀려서 생기는 위험을 심사하는 일. 그 일을 맡은 부서를 가리키기도 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, 주제: 만드는 건 쉽고 증명이 어렵다</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>NatWest와 고객 1,900만 명</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>Cora: 하루 약 10만 건, 대부분 대본</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>여정의 3분의 1을 RAG 답변과 에이전트로</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>무서운 건 피해 범위</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>주택담보대출 질문: 대본 봇 vs AI</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>주제 전환</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>무엇이든 답하면 무엇이든 틀린다</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>대본 봇에 없던 실패 4가지</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>닫힌 실패 범위 vs 열린 실패 범위</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>라우팅 깔때기</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>깔때기의 네 가지 이유</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>정확도 94%가 답하지 못하는 것</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>품질은 벡터: 안전·과업·경험</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>틀릴 때의 확신</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>결제 에이전트 사람 검증</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>97% / 76% / 43%</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>사람끼리의 일치율 95% vs 64%</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>실패의 큰 원인은 엔지니어링 문제</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>LLM 판정자와 불만 처리 에이전트</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>충실도: 판정자 0.97 vs 사람 0.83, 상관 거의 0</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>판정 모델 교체로 점수 하락</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>판정자를 다른 모델 계열로</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>채점 파이프라인: 기록, 표본, 채점, Comet</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>망 분리와 PII 제약</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>주기: 실시간, 4시간, CI/CD</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>평가는 운영 인프라</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>생성형 AI는 회귀한다, Opik 트레이스</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>고전 ML은 표류한다: 드리프트와 F1</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>입력 드리프트는 먼저 우는 경보</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>한 플랫폼: Opik과 MPM</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>섀도 배포</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>규제 산업의 교착</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>브랜드별 비율 출시, KPI</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>기능 플래그</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>사람 피드백을 관문으로</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>프로젝트끼리 주고받은 것</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>에이전트는 싸고, 평가 뼈대는 재사용된다</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>교훈 3: 위에 몰린 판정자</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>교훈 4: 판정 모델도 설정</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>다음 달 출시, 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '5UgnatzpZ9E:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

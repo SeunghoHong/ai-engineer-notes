@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>우버 머지 큐 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#problem">합치면 깨지는 문제</a></li>
+      <li><a href="#submitqueue">SubmitQueue의 방식</a></li>
+      <li><a href="#ai-load">AI가 들어오자 막힌 큐</a></li>
+      <li><a href="#gating">대응 1: 입장 제한</a></li>
+      <li><a href="#deferral">대응 2: 보류 큐</a></li>
+      <li><a href="#relaxation">대응 3: 충돌 완화</a></li>
+      <li><a href="#cost">대가: 다시 깨지는 메인</a></li>
+      <li><a href="#post-land">머지 후 검증</a></li>
+      <li><a href="#results">결과와 다음 계획</a></li>
+      <li><a href="#closing">마무리: 하이브리드 검증</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-09 · 28분 · 영어 발표 한글 정리</span>
+      <h1>늘 초록인 메인에서, 조금 깨져도 되는 메인으로</h1>
+      <p class="lead">AI가 만든 변경이 몰리자 Uber의 머지 대기 시간은 30분에서 3~4시간으로 늘었다. Uber는 일부 변경 조합의 사전 테스트를 포기해 처리량을 세 배 넘게 올렸고, 깨진 곳은 머지한 뒤 전체를 다시 검증해 잡는다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=hX140a5klW0" target="_blank" rel="noopener">AI Writes Code Faster Than Uber Can Merge It</a></span>
+        <span>발표: Preetam Dwivedi (Uber 스태프 엔지니어, 개발자 플랫폼), Manjari Akella (Uber 시니어 엔지니어, 같은 팀)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 발표자 이름과 SubmitQueue는 알려진 이름으로 바로잡았다. 머지 후 검증 시스템의 이름은 자막에서 여러 가지로 들려 확실하지 않다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>각자 CI를 통과한 PR도 <strong>합치면 메인이 깨질 수 있다.</strong> Uber의 머지 큐 SubmitQueue는 변경 조합을 미리 시험해 메인을 늘 초록으로 지켰다.</li>
+        <li>AI가 만든 변경이 늘자 요청이 두 달 만에 <strong>시간당 90건에서 130건</strong>으로 44% 늘었다. P95 대기 시간은 <strong>30분에서 3~4시간</strong>이 됐다.</li>
+        <li>첫 대응은 <strong>입장 제한</strong>이다. 혼잡 시간대에 비싼 변경을 받지 않아 처리량이 약 160건으로 올랐다. 대신 개발자가 시간을 골라 다시 넣어야 했다.</li>
+        <li>둘째는 <strong>보류 큐</strong>다. 비싼 변경을 저장해 두었다가 큐가 감당할 수 있을 때 자동으로 넣는다. 기다리는 시간은 그대로다.</li>
+        <li>셋째는 <strong>충돌 완화</strong>다. 변경 사이 겹침에 점수를 매기고 약한 연결을 끊어 병렬로 돌린다. 처리량이 약 250건으로 올랐다.</li>
+        <li>대가로 <strong>테스트하지 않은 조합이 메인에 들어간다.</strong> 머지 후 검증 시스템이 따로 둔 "검증된 메인" 포인터로 정상 커밋을 알려 준다.</li>
+        <li>지금은 혼잡 시간대에 <strong>시간당 약 300건</strong>을 머지하고 P95는 다시 <strong>30분</strong>이다. 다음 목표는 묶어 빌드하기, 서비스 단위 초록 표시, 복구 자동화다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="problem">
+        <header><span class="num">01</span><h2>합치면 깨지는 문제 <span class="ts">00:50</span></h2></header>
+        <p>Uber는 언어별로 모노레포 <span class="en">monorepo</span> 6개를 쓴다. 모노레포는 여러 서비스와 라이브러리의 코드를 한 저장소에 모아 둔 것이다. 서비스와 라이브러리 변경은 거의 모두 이 6개 중 하나에서 일어난다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Uber 모노레포 규모</th><th>발표자가 밝힌 수치</th></tr></thead>
+            <tbody>
+              <tr><td>기여하는 개발자</td><td>5,000명 이상</td></tr>
+              <tr><td>매주 커밋</td><td>36,000개 이상</td></tr>
+              <tr><td>매주 PR</td><td>약 27,000개</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표는 가장 큰 Go 모노레포를 기준으로 이야기한다. 확장 문제가 가장 많이 생기는 곳이다.</p>
+
+        <h3>따로는 초록, 합치면 빨강 <span class="ts">01:30</span></h3>
+        <ol class="plain">
+          <li>개발자 두 명이 같은 메인 브랜치 <span class="en">trunk</span>에서 각자 PR A와 B를 만든다.</li>
+          <li>두 PR 모두 CI를 통과한다. 빌드와 테스트가 모두 초록 <span class="en">green</span>이다.</li>
+          <li>A를 머지한다. 메인은 여전히 초록이다.</li>
+          <li>B를 머지한다. 메인이 깨진다.</li>
+        </ol>
+        <p>B는 A가 들어간 메인에서 한 번도 테스트되지 않았다. 각자는 맞았지만 <strong>두 변경의 조합은 아무도 시험하지 않았다.</strong></p>
+        <p>개발자 수천 명이 하루에 수백, 수천 개의 변경을 넣으면 이 일이 계속 일어난다. 메인이 자주 깨지고, 원인을 찾아 고치는 비용을 회사 전체가 나눠 낸다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="submitqueue">
+        <header><span class="num">02</span><h2>SubmitQueue: 가능한 미래를 미리 시험한다 <span class="ts">03:00</span></h2></header>
+        <p>Uber의 답은 자체 머지 큐 <span class="en">merge queue</span>인 SubmitQueue다. 머지 큐는 변경을 바로 메인에 넣지 않는다. 줄을 세워 검증한 뒤에 넣는다.</p>
+        <p>SubmitQueue는 메인이 앞으로 될 수 있는 상태를 미리 만들어 시험한다. 변경이 A와 B 두 개면 가능한 미래는 셋이다.</p>
+        <ul class="plain">
+          <li>A만 들어간 메인</li>
+          <li>B만 들어간 메인</li>
+          <li>A와 B가 모두 들어간 메인</li>
+        </ul>
+        <p>그중 <strong>메인 전체를 초록으로 유지하는 변경만</strong> 들여보낸다. 발표의 예에서는 A와 B를 함께 넣어도 초록이라 둘 다 들어간다.</p>
+
+        <h3>사람 속도에서 통하던 세 기법 <span class="ts">03:50</span></h3>
+        <p>가능한 미래를 전부 빌드하면 비용이 너무 크다. SubmitQueue는 세 가지 기법으로 규모를 감당했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기법</th><th>하는 일</th><th>효과</th></tr></thead>
+            <tbody>
+              <tr><td>타깃 분석<br><span class="en">target analysis</span></td><td>변경이 건드리는 빌드 타깃을 본다. 서로 다른 서비스를 건드려 겹치는 부분이 없으면 따로 빌드·테스트하고 머지한다.</td><td>모든 변경을 한 줄로 세우지 않아 처리량이 오른다.</td></tr>
+              <tr><td>확률적 추측 실행<br><span class="en">probabilistic speculation</span></td><td>과거 빌드 기록과 변경의 특징으로 변경마다 성공 점수를 예측한다. 실제로 필요할 가능성이 큰 빌드부터 돌린다.</td><td>가능한 미래를 전부 빌드하지 않아도 된다.</td></tr>
+              <tr><td>큰 변경 건너뛰기<br><span class="en">bypassing large changes</span></td><td>빌드가 오래 걸리는 큰 변경이 기다리는 동안, 나중에 들어온 작은 변경이 먼저 빌드되고 머지된다.</td><td>작은 변경이 큰 변경을 기다리지 않아 큐가 빨리 돈다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>빌드 타깃 <span class="en">target</span>은 빌드 시스템이 따로 빌드하고 테스트하는 단위다. 여기까지는 사람이 PR을 만들던 시절에 잘 통했다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="ai-load">
+        <header><span class="num">03</span><h2>AI가 들어오자 막힌 큐 <span class="ts">05:40</span></h2></header>
+        <p>AI가 변경을 만들기 시작하자 PR이 생기고 머지되는 속도가 바뀌었다.</p>
+        <ul class="plain">
+          <li>2026년 1월: 시간당 약 90건</li>
+          <li>2026년 3월: 시간당 약 130건. 두 달 만에 44% 늘었다.</li>
+        </ul>
+        <p>발표자는 이 증가의 주된 원인으로 AI가 만든 변경을 꼽았다.</p>
+
+        <figure class="chart" aria-label="P95 머지 시간 비교: 1월 시간당 약 90건일 때 30분, 3월 시간당 약 130건일 때 3~4시간">
+          <span class="chart-title">P95 머지 시간 <span class="ts">06:10</span></span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>1월 · 시간당 약 90건</span><span class="val">30분</span></div>
+              <div class="track"><div class="fill" style="width:12.5%" title="1월: 30분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>3월 · 시간당 약 130건</span><span class="val">3~4시간</span></div>
+              <div class="track"><div class="fill key" style="width:87.5%" title="3월: 3~4시간"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>2시간</span><span>4시간</span></div>
+          <span class="caption">요청이 44% 늘었는데 대기 시간은 6~8배가 됐다. "3~4시간"은 가운데값 3.5시간에 맞춰 그렸다.</span>
+        </figure>
+
+        <p>P95 머지 시간 <span class="en">P95 land time</span>은 요청 100건을 빠른 순으로 세웠을 때 95번째 요청이 메인에 들어가기까지 걸린 시간이다. 그동안에도 메인은 늘 초록이었다. <strong>대가는 개발자가 3~4시간씩 기다리는 것이었다.</strong></p>
+        <p class="note">발표는 1월과 3월 숫자를 "시간당 요청 수"로 소개했다. 뒤에서는 같은 숫자를 "시간당 머지 수"와 이어서 비교한다. 이 노트도 발표를 따라 두 숫자를 같은 축에 놓았다.</p>
+
+        <h3>세 가지 대응 <span class="ts">07:10</span></h3>
+        <p>여기서부터는 Manjari가 설명한다. 기존 최적화로는 더 버틸 수 없었다. 그래서 SubmitQueue 위에 최적화를 세 가지 더 얹었다.</p>
+        <ol class="plain">
+          <li><strong>입장 제한</strong>: 큐에 들어오는 요청을 조절한다.</li>
+          <li><strong>보류 큐</strong>: 입장 제한 때문에 생기는 개발자의 불편을 줄인다.</li>
+          <li><strong>충돌 완화</strong>: 큐 안에서 병렬로 돌 수 있는 일을 늘린다.</li>
+        </ol>
+      </section>
+
+      <!-- 4 -->
+      <section id="gating">
+        <header><span class="num">04</span><h2>대응 1: 입장 제한 <span class="ts">08:00</span></h2></header>
+        <p>입장 제한 <span class="en">admission gating</span>은 이름 그대로다. SubmitQueue 입구에 문을 하나 둔다. 들어오는 요청을 보고 둘 중 하나로 나눈다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">작은 변경 · small</span>
+            <p>건드리는 타깃이 적다. 다른 변경과 병렬로 돌리기 쉽다.</p>
+            <p class="verdict"><b>혼잡 시간대에도 받는다.</b> 평소처럼 빌드·테스트하고 머지한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">비싼 변경 · expensive</span>
+            <p>여러 타깃이나 빌드 그래프 전체에 걸친다. 자원을 오래 붙잡는다. 큐 안의 다른 변경 전부와 함께 검증해야 해서 병목이 된다.</p>
+            <p class="verdict"><b>혼잡 시간대에는 거절한다.</b> 개발자가 한가한 시간에 다시 넣어야 한다.</p>
+          </div>
+        </div>
+        <p>나누는 기준은 무엇이든 될 수 있다. Uber가 쓰는 기준 중 하나가 앞에서 본 타깃 분석이다.</p>
+        <p>이렇게 하면 큐에 무엇이 들어올지 통제할 수 있다. 부담은 일부 변경과 일부 개발자에게 몰린다.</p>
+
+        <h3>얻은 것과 잃은 것 <span class="ts">09:40</span></h3>
+        <p>처리량 <span class="en">throughput</span>이 20% 넘게 올랐다. 업무 시간 기준 시간당 머지 수가 130건에서 약 160건이 됐다.</p>
+        <div class="callout warn">
+          <span class="title">개발자가 스케줄러가 된다</span>
+          <span>작은 변경은 보호받으니 모든 개발자가 그런 건 아니다. 코드 전반에 쓰이는 라이브러리를 맡은 개발자가 특히 큰 영향을 받는다. 하는 일 자체가 비싼 변경이기 때문이다. 혼잡 시간대의 용량은 지켰지만 그만큼 개발자를 기다리게 했다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="deferral">
+        <header><span class="num">05</span><h2>대응 2: 보류 큐 <span class="ts">10:30</span></h2></header>
+        <p>비싼 변경을 아예 거절하지 않고, 기록해 두었다가 큐가 감당할 수 있을 때 다시 넣으면 어떨까. 보류 <span class="en">deferral</span>가 그 일을 한다.</p>
+        <div class="shift" aria-label="입장 제한만 있을 때와 보류 큐를 더했을 때의 비교">
+          <div><span class="tag">입장 제한만 있을 때</span><b>혼잡 시간대의 비싼 변경은 거절</b><span class="muted">개발자가 나중에 직접 다시 넣는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">보류 큐를 더하면</span><b>보류 큐에 저장해 둔다</b><span class="muted">문이 열리면(예: 혼잡 시간이 끝나면) 자동으로 SubmitQueue에 다시 넣는다</span></div>
+        </div>
+        <p>개발자는 한 번만 제출한다. 비싼 변경은 큐가 받아낼 수 있을 때 풀려난다.</p>
+
+        <h3>얻은 것과 잃은 것 <span class="ts">11:40</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">좋아진 점</span>
+            <p>새벽에 일어나거나 늦게까지 남지 않아도 된다. 큐가 한가해 보이는 때를 노려 버튼을 누를 필요가 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">그대로인 점</span>
+            <p>기다리는 시간은 줄지 않는다. 비싼 변경이 큐에 들어가기까지 걸리는 시간은 같다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="relaxation">
+        <header><span class="num">06</span><h2>대응 3: 충돌 완화 <span class="ts">12:10</span></h2></header>
+        <p>마지막 대응을 보기 전에, SubmitQueue가 일을 왜 줄 세우는지부터 보자. 타깃 분석은 두 요청을 병렬로 돌릴지, 차례로 돌릴지 정한다. 건드리는 타깃이 하나라도 겹치면 차례로 돌린다.</p>
+        <p>발표의 예는 요청 A부터 F까지 6개다. 이웃한 요청끼리 타깃이 적어도 하나씩 겹친다. 그래서 6개가 모두 이어져 있다. 이렇게 이어진 묶음을 연결 요소 <span class="en">connected component</span>라고 한다.</p>
+        <p>SubmitQueue는 한 연결 요소를 한 덩어리로 다룬다. <strong>6개가 함께 가야 하니 일이 빨라질 수 없다.</strong></p>
+
+        <h3>세 단계: 점수, 유지, 끊기 <span class="ts">13:30</span></h3>
+        <p>충돌 완화 <span class="en">conflict relaxation</span>는 이 연결을 근거를 갖고 끊는다.</p>
+        <div class="shift" aria-label="충돌 판단 방식의 변화">
+          <div><span class="tag">이전</span><b>겹침이 하나라도 있으면 충돌</b><span class="muted">한 요청이 다른 요청 뒤에 줄을 선다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">충돌 완화</span><b>겹침이 얼마나 강한지 점수를 매긴다</b><span class="muted">강한 연결은 남기고 약한 연결은 끊는다</span></div>
+        </div>
+        <ol class="plain">
+          <li><strong>점수 매기기</strong>: 겹침이 있나 없나가 아니라 얼마나 강한지 본다.</li>
+          <li><strong>강한 연결 유지</strong>: 점수가 높은 연결은 그대로 둔다.</li>
+          <li><strong>약한 연결 끊기</strong>: 설정값이 정한 병렬도에 맞춰 점수가 낮은 연결을 끊는다.</li>
+        </ol>
+
+        <h3>점수 매기기: 자카드 점수 <span class="ts">14:20</span></h3>
+        <p>Uber는 겹침의 강도를 자카드 점수 <span class="en">Jaccard score</span>로 잰다. 두 가지를 본다.</p>
+        <ul class="plain">
+          <li>두 요청이 함께 건드리는 타깃</li>
+          <li>변경 때문에 새로 생기는 의존 관계</li>
+        </ul>
+        <p>둘을 합쳐 0과 1 사이의 점수를 만든다. 1에 가까우면 겹침이 강하다. 0에 가까우면 겹치는 타깃이 적은 약한 연결이다.</p>
+        <div class="callout">
+          <span class="title">예시: 자카드 점수 계산</span>
+          <span>자카드 점수는 두 집합에서 "공통 원소 수 ÷ 전체 원소 수"다. A가 타깃 x, y, z를 건드리고 B가 y, z, w를 건드린다고 하자. 공통은 y, z로 2개다. 전체는 x, y, z, w로 4개다. 점수는 2 ÷ 4 = 0.5다.</span>
+        </div>
+        <p class="note">위 타깃과 숫자는 이해를 돕기 위한 예시다. 타깃 겹침과 새 의존 관계를 어떻게 섞는지는 발표에서 설명하지 않았다.</p>
+
+        <h3>예시: 병렬도 50% <span class="ts">15:10</span></h3>
+        <p>앞의 A~F 6개 요청에 겹침 점수를 붙였다고 하자. 설정값은 "큐 안에서 늘 병렬도 50% 이상"이다. 요청이 6개이니 서로 독립된 줄이 적어도 3개 있어야 한다.</p>
+        <p>점수가 가장 낮은 연결은 B–C와 B–E였다. 이 두 연결을 끊으면 연결 요소가 3개로 나뉜다.</p>
+        <div class="shift" aria-label="연결을 끊기 전과 후">
+          <div><span class="tag">끊기 전</span><b>6개가 한 줄</b><span class="muted">하나씩 차례로 처리한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">B–C, B–E를 끊은 뒤</span><b>2개씩 3줄</b><span class="muted">줄마다 서로 기다리지 않고 따로 처리한다</span></div>
+        </div>
+        <p class="note">연결 구조와 점수는 슬라이드에 있었고 자막에는 일부만 나온다. 끊은 연결로 보면 세 줄은 {A, B}, {C, D}, {E, F}로 추정된다.</p>
+
+        <h3>언제 끊나: 새 요청이 들어올 때 한 번 <span class="ts">16:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>언제 계산하나</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>전역 재계산</td><td>충돌 그래프를 만들 때마다 처음부터 다시</td><td>새 요청이 들어오고 끝난 일이 나갈 때마다 그래프가 흔들린다</td></tr>
+              <tr><td>도착할 때 한 번<br><span class="muted">Uber의 선택</span></td><td>새 요청이 도착할 때, 그 요청과 큐 안 요청들 사이의 연결만</td><td>정한 결과를 그대로 쓴다. 다음 결정은 다음 요청이 올 때 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>한 번 정하면 바꾸지 않는 데는 이유가 있다. 이전 충돌 그래프를 보고 잡아 둔 일이 그대로 남는다. 미리 돌려 둔 추측 빌드를 버리지 않으니 요청이 더 빨리 마무리된다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="cost">
+        <header><span class="num">07</span><h2>대가: 다시 깨지는 메인 <span class="ts">18:00</span></h2></header>
+        <p>세 대응 중 효과가 가장 컸다. 처리량이 50% 넘게 올랐다. 혼잡 시간대 시간당 머지 수가 약 160건에서 거의 250건이 됐고, 때로는 그 이상이었다. P95 머지 시간도 아주 좋아졌다.</p>
+        <div class="callout warn">
+          <span class="title">내준 것: 늘 초록인 메인</span>
+          <span>연결을 끊은 요청끼리는 조합을 시험하지 않는다. 그래서 일부 조합은 테스트 없이 메인에 들어간다. 메인이 깨질 수 있다. 이제 "들어간 뒤에 검증한다"는 새 의무가 생겼다.</span>
+        </div>
+
+        <h3>출발점으로 돌아온 예 <span class="ts">19:20</span></h3>
+        <p>Preetam이 발표 첫 예로 돌아간다. A와 B 사이의 충돌을 완화하면 둘은 각자 따로 사전 검증을 통과한다. A, B 순서로 메인에 들어간다. 그런데 A+B 조합이 메인에서 실패한다.</p>
+        <p>발표를 시작한 그 자리, <strong>깨진 메인</strong>으로 돌아왔다. 다른 점은 이번에는 알고 선택했다는 것이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="post-land">
+        <header><span class="num">08</span><h2>머지 후 검증: 두 개의 포인터 <span class="ts">20:00</span></h2></header>
+        <p>깨진 메인을 다루는 시스템은 머지 후 검증 <span class="en">post-land validation</span>을 맡는다. 자막에는 이름이 "stowpipe", "store pipe" 등으로 들린다. 이 노트에서는 Stowpipe(추정)라고 쓴다.</p>
+        <p>Stowpipe는 메인에 들어온 커밋을 모두 검증한다. 빌드가 깨졌는지 찾아내고, 깨졌으면 복구를 시작한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">main</span>
+            <p>SubmitQueue가 머지한 모든 변경이 쌓이는 메인 브랜치의 끝이다.</p>
+            <p class="verdict">잠깐 <b>깨져 있을 수 있다.</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">verified main · 검증된 메인</span>
+            <p>Stowpipe가 관리하는 포인터다. 마지막으로 확인된 정상 커밋을 가리킨다.</p>
+            <p class="verdict">언제나 <b>정상으로 확인된 커밋</b>이다.</p>
+          </div>
+        </div>
+
+        <h3>포인터가 움직이는 방식 <span class="ts">20:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>상황</th><th>main</th><th>검증된 메인</th><th>Stowpipe가 한 일</th></tr></thead>
+            <tbody>
+              <tr><td>시작</td><td>A</td><td>A</td><td>A는 초록으로 확인된 커밋이다</td></tr>
+              <tr><td>B, C, D가 들어옴</td><td>D</td><td>A</td><td>A 위에 쌓인 B~D를 검증한다. 실패한다. 포인터를 A에 그대로 둔다</td></tr>
+              <tr><td>E, F, G가 더 들어옴</td><td>G</td><td>G</td><td>A 위에 쌓인 B~G를 검증한다. 통과한다. 포인터를 G로 옮긴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Stowpipe는 새로 들어온 커밋을 계속 지켜본다. 통과하면 포인터를 옮긴다. 실패하면 다음 변경을 기다려 다시 검증한다.</p>
+        <div class="callout">
+          <span class="title">초록을 약속하는 대상이 바뀌었다</span>
+          <span>예전에는 메인의 끝이 늘 초록이었다. 이제 메인의 끝은 잠깐 깨질 수 있다. 대신 검증된 메인 포인터가 늘 정상 커밋을 가리킨다. 발표 끝에서 Preetam은 사용하는 쪽이 이 정상 상태를 가져다 쓴다고 했다.</span>
+        </div>
+
+        <h3>메인이 깨졌을 때 <span class="ts">22:50</span></h3>
+        <ol class="plain">
+          <li>Stowpipe가 검증 실패를 찾아내고 알림을 보낸다.</li>
+          <li>당번 <span class="en">on-call</span> 엔지니어가 호출된다.</li>
+          <li>당번이 수정 커밋을 만들거나 문제 변경을 되돌린다 <span class="en">revert</span>.</li>
+          <li>그 커밋도 SubmitQueue를 거쳐 메인에 들어간다.</li>
+          <li>Stowpipe가 새 상태를 검증한다. 통과하면 검증된 메인 포인터를 옮긴다.</li>
+        </ol>
+        <p>이 복구는 지금 사람이 손으로 한다. 다음 계획에서 자동화하려는 부분이다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="results">
+        <header><span class="num">09</span><h2>결과와 다음 계획 <span class="ts">23:40</span></h2></header>
+        <p>발표 시점에 Uber는 혼잡 시간대에 <strong>시간당 약 300건</strong>을 머지한다. P95 머지 시간은 <strong>30분</strong>을 유지한다. 1월의 시간당 90건과 비교하면 233% 늘었다.</p>
+
+        <figure class="chart" aria-label="시간당 머지 수의 변화: 1월 90, 3월 130, 입장 제한 뒤 약 160, 충돌 완화 뒤 약 250, 발표 시점 최대 약 300">
+          <span class="chart-title">시간당 머지 수의 변화</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>2026년 1월</span><span class="val">90</span></div>
+              <div class="track"><div class="fill" style="width:30%" title="1월: 시간당 90건"></div><div class="baseline" style="left:30%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>2026년 3월 · AI 변경 증가</span><span class="val">130 · +44%</span></div>
+              <div class="track"><div class="fill" style="width:43.3%" title="3월: 시간당 130건"></div><div class="baseline" style="left:30%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>입장 제한 뒤 · 업무 시간</span><span class="val">약 160 · +23%</span></div>
+              <div class="track"><div class="fill" style="width:53.3%" title="입장 제한 뒤: 시간당 약 160건"></div><div class="baseline" style="left:30%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>충돌 완화 뒤 · 혼잡 시간</span><span class="val">약 250 · +56%</span></div>
+              <div class="track"><div class="fill" style="width:83.3%" title="충돌 완화 뒤: 시간당 약 250건"></div><div class="baseline" style="left:30%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>발표 시점 · 혼잡 시간 최대</span><span class="val">약 300 · 1월 대비 +233%</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="발표 시점: 시간당 약 300건"></div><div class="baseline" style="left:30%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 1월 (90)</span><span>300</span></div>
+          <span class="caption">+44%, +23%, +56%는 바로 앞 막대 대비, +233%는 1월 대비다. 발표 숫자로 다시 계산했고, 발표에서 말한 "44%", "20% 넘게", "50% 넘게", "233%"와 맞는다. 단계마다 잰 시간대가 다르니 흐름만 보자.</span>
+        </figure>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>대응</th><th>하는 일</th><th>얻은 것</th><th>내준 것</th></tr></thead>
+            <tbody>
+              <tr><td>입장 제한</td><td>혼잡 시간대에 비싼 변경을 거절한다</td><td>처리량 130 → 약 160</td><td>개발자가 일정을 직접 짠다</td></tr>
+              <tr><td>보류 큐</td><td>거절 대신 저장했다가 자동으로 다시 넣는다</td><td>다시 넣는 수고가 사라진다</td><td>기다리는 시간은 그대로다</td></tr>
+              <tr><td>충돌 완화</td><td>약한 겹침을 끊어 병렬로 돌린다</td><td>처리량 약 160 → 약 250</td><td>테스트 안 된 조합이 메인에 들어간다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자들은 SubmitQueue와 Stowpipe를 만드는 팀이다. 두 프로젝트를 오픈소스로 개발하고 있다며 기여를 권했다. 성과 수치는 그 점을 감안해 읽자. 충돌 완화 뒤 메인이 얼마나 자주 깨지는지, 복구에 얼마나 걸리는지는 발표에서 숫자로 밝히지 않았다.</p>
+
+        <h3>다음 계획 <span class="ts">24:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>계획</th><th>하는 일</th><th>기대하는 효과</th></tr></thead>
+            <tbody>
+              <tr><td>묶어 빌드하기<br><span class="en">batching</span></td><td>SubmitQueue에서 관련 변경을 묶어 함께 빌드한다</td><td>빌드 수가 줄어 같은 자원으로 더 많은 일을 한다</td></tr>
+              <tr><td>잘게 나눈 초록 표시</td><td>저장소 전체에 포인터 하나를 두는 대신, 서비스나 프로젝트 단위로 초록인지 표시한다</td><td>메인 일부가 깨져도 어디가 깨졌는지 안다. 전부를 막지 않고 서비스별로 배포를 이어 간다</td></tr>
+              <tr><td>복구 자동화</td><td>수정이나 되돌리기 커밋을 자동으로 만들어 SubmitQueue에 넣는다</td><td>복구 시간 <span class="en">time to recovery</span>이 줄어든다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="closing">
+        <header><span class="num">10</span><h2>마무리: 하이브리드 검증 <span class="ts">26:10</span></h2></header>
+        <p>Uber는 검증을 머지 전과 머지 후로 나누는 하이브리드 방식을 골랐다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">머지 전</span>
+            <p>중요한 곳은 여전히 사전 검증한다. 깨져도 감당할 수 있는 곳은 충돌을 완화하고 나중에 검증한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">머지 후</span>
+            <p>Stowpipe가 들어온 변경 전체를 빠짐없이 검증한다.</p>
+          </div>
+        </div>
+        <blockquote>중요한 것은 머지 전에, 모든 것은 마지막에 검증한다.<cite>발표자의 표현을 줄여 옮김</cite></blockquote>
+        <p>이렇게 처리량과 안정성 사이의 균형을 잡는다. 사용하는 쪽은 검증된 정상 상태를 가져다 쓴다.</p>
+        <p>발표자들은 SubmitQueue의 내부 동작을 다룬 이전 발표들을 QR 코드로 소개하며 마쳤다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>따로 통과한 두 변경도 합치면 깨질 수 있다. 머지 큐는 조합을 미리 시험해 메인을 초록으로 지킨다.</li>
+          <li>SubmitQueue는 타깃 분석, 확률적 추측 실행, 큰 변경 건너뛰기로 사람 속도의 변경량을 감당했다.</li>
+          <li>AI가 만든 변경으로 요청이 두 달 만에 44% 늘자(시간당 90 → 130건), P95 대기 시간이 30분에서 3~4시간이 됐다.</li>
+          <li><strong>입장 제한</strong>: 혼잡 시간대에 비싼 변경을 거절해 처리량이 약 160건으로 올랐다. 대신 개발자가 일정을 짜야 했다.</li>
+          <li><strong>보류 큐</strong>: 거절 대신 저장했다가 한가할 때 자동으로 넣는다. 수고는 줄지만 기다림은 그대로다.</li>
+          <li>겹침이 하나만 있어도 변경이 줄을 서고, 이어진 변경 전체가 한 덩어리로 묶인다.</li>
+          <li><strong>충돌 완화</strong>: 겹침에 자카드 점수를 매기고 약한 연결을 끊어 병렬 줄을 만든다. 처리량이 약 250건으로 올랐다.</li>
+          <li>끊는 결정은 새 요청이 들어올 때 한 번만 한다. 이미 돌고 있는 추측 빌드를 지키기 위해서다.</li>
+          <li>대가는 테스트 안 된 조합이 메인에 들어가는 것이다. 머지 후 검증이 <strong>검증된 메인 포인터</strong>로 정상 상태를 따로 알려 준다.</li>
+          <li>결과는 혼잡 시간대 최대 시간당 약 300건, P95 30분. 다음은 묶어 빌드하기, 서비스 단위 초록 표시, 복구 자동화다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>PR A와 B가 각각 CI를 통과했는데, 둘 다 머지한 뒤 메인이 깨진 이유는?</span></summary><div class="answer">B는 A가 들어간 메인에서 한 번도 테스트되지 않았다. 각자는 맞았지만 두 변경의 조합은 아무도 시험하지 않았다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>AI 이전에 SubmitQueue가 규모를 감당한 세 가지 기법은?</span></summary><div class="answer">타깃 분석(겹치지 않는 변경은 따로 처리), 확률적 추측 실행(필요할 가능성이 큰 빌드부터), 큰 변경 건너뛰기(작은 변경이 큰 변경을 기다리지 않음).</div></details>
+          <details><summary><span class="qn">Q3</span><span>2026년 1월에서 3월 사이 무엇이 바뀌었나?</span></summary><div class="answer">시간당 요청이 약 90건에서 130건으로 44% 늘었다. P95 머지 시간은 30분에서 3~4시간이 됐다. 메인은 계속 초록이었고, 대가는 개발자의 기다림이었다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>입장 제한은 비싼 변경을 어떻게 다루고, 누가 가장 큰 대가를 치르나?</span></summary><div class="answer">혼잡 시간대에 비싼 변경을 거절해 개발자가 한가한 시간에 다시 넣게 한다. 코드 전반에 쓰이는 라이브러리를 맡은 개발자가 가장 큰 영향을 받는다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>보류 큐가 해결한 것과 해결하지 못한 것은?</span></summary><div class="answer">해결한 것: 개발자가 한 번만 제출하면 큐가 감당할 수 있을 때 자동으로 다시 넣는다. 해결하지 못한 것: 기다리는 시간은 그대로다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>요청 A~F가 한 연결 요소로 묶이면 무슨 일이 생기나?</span></summary><div class="answer">SubmitQueue가 6개를 한 덩어리로 다뤄 함께 가야 한다. 병렬로 처리할 수 없어 일이 빨라지지 않는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>충돌 완화의 세 단계는?</span></summary><div class="answer">겹침의 강도에 점수를 매긴다. 강한 연결은 유지한다. 설정값에 맞춰 약한 연결을 끊는다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Uber의 겹침 점수는 무엇을 보고, 높은 점수는 무슨 뜻인가?</span></summary><div class="answer">두 요청이 함께 건드리는 타깃과 새로 생기는 의존 관계를 합쳐 0~1 사이의 자카드 점수를 만든다. 1에 가까울수록 겹침이 강하다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>병렬도 50% 설정에서 요청이 6개면 독립된 줄이 몇 개 필요하고, 예에서는 어떤 연결을 끊었나?</span></summary><div class="answer">적어도 3개. 점수가 가장 낮은 B–C와 B–E를 끊어 2개씩 3줄로 나눴다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>연결 끊기를 매번 전체 다시 계산하지 않고 새 요청이 도착할 때만 하는 이유는?</span></summary><div class="answer">전체를 다시 계산하면 요청이 들고 날 때마다 그래프가 흔들린다. 도착할 때 한 번 정하면 이미 잡아 둔 일과 추측 빌드를 살릴 수 있다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>B, C, D가 들어온 뒤 검증이 실패하면 검증된 메인은 어디를 가리키나? 나중에 G까지 통과하면?</span></summary><div class="answer">실패하면 마지막 정상 커밋 A에 머문다. A 위의 B~G가 통과하면 G로 옮겨 간다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>Uber가 다음에 하려는 세 가지는?</span></summary><div class="answer">관련 변경을 묶어 빌드하기, 서비스나 프로젝트 단위로 초록 표시하기, 수정과 되돌리기를 자동으로 만들어 복구 시간 줄이기.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>머지 큐의 P95 대기 시간과 시간당 머지 수를 매주 기록한다<span class="how">확인: AI 도구를 들이기 전후를 숫자로 비교할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>변경을 "작은 변경"과 "비싼 변경"으로 나누는 기준을 정한다<span class="how">예: 건드리는 빌드 타깃 수, 빌드 그래프에서 영향받는 범위</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>비싼 변경은 거절하지 말고 보류 큐에 넣는다<span class="how">큐가 한가해지면 자동으로 다시 넣어, 개발자가 시간대를 노리지 않게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>비싼 변경이 몰리는 사람의 대기 시간을 따로 잰다<span class="how">공용 라이브러리 담당자처럼 하는 일 자체가 비싼 변경인 사람</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>변경 사이의 겹침을 있다/없다가 아니라 점수로 본다<span class="how">확인: 약한 겹침 하나 때문에 줄을 서는 변경이 얼마나 되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>사전 검증을 줄이기 전에 머지 후 전체 검증부터 갖춘다<span class="how">마지막으로 확인된 정상 커밋을 가리키는 포인터를 둔다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>배포와 다른 사용처가 검증된 정상 커밋만 가져가게 한다<span class="how">확인: 메인 끝이 깨졌을 때 깨진 커밋이 배포되지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>메인이 깨졌을 때의 알림, 당번, 되돌리기 절차를 정하고 복구 시간을 잰다<span class="how">다음 단계: 되돌리기 커밋을 자동으로 만들어 머지 큐에 넣는다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>모노레포</td><td>Monorepo. 여러 서비스와 라이브러리의 코드를 한 저장소에 모아 둔 것</td></tr>
+              <tr><td>메인 브랜치</td><td>Trunk, main. 모든 변경이 합쳐지는 기준 브랜치</td></tr>
+              <tr><td>초록 / 깨짐</td><td>Green / broken. 빌드와 테스트가 모두 통과한 상태 / 하나라도 실패한 상태</td></tr>
+              <tr><td>머지 (land)</td><td>변경이 머지 큐를 거쳐 메인 브랜치에 실제로 들어가는 것. 발표에서는 land라고 부른다</td></tr>
+              <tr><td>머지 큐</td><td>Merge queue. 변경을 바로 넣지 않고 줄을 세워 검증한 뒤 메인에 넣는 시스템</td></tr>
+              <tr><td>SubmitQueue</td><td>Uber의 머지 큐</td></tr>
+              <tr><td>빌드 타깃</td><td>Target. 빌드 시스템이 따로 빌드하고 테스트하는 단위</td></tr>
+              <tr><td>빌드 그래프</td><td>Build graph. 빌드 타깃들이 서로 어떻게 의존하는지 나타낸 그래프</td></tr>
+              <tr><td>추측 실행</td><td>Speculation. 결과가 정해지기 전에 일어날 수 있는 경우를 미리 빌드·테스트해 두는 것</td></tr>
+              <tr><td>처리량</td><td>Throughput. 일정 시간 동안 처리한 양. 여기서는 시간당 머지 수</td></tr>
+              <tr><td>P95</td><td>100건을 빠른 순으로 세웠을 때 95번째 값. 느린 쪽 끝의 경험을 보여 준다</td></tr>
+              <tr><td>혼잡 시간대</td><td>Peak hours. 요청이 가장 많이 몰리는 시간</td></tr>
+              <tr><td>입장 제한</td><td>Admission gating. 큐 입구에서 요청을 나눠 비싼 변경을 혼잡 시간대에 받지 않는 것</td></tr>
+              <tr><td>보류 큐</td><td>Deferred queue. 거절할 요청을 저장해 두었다가 나중에 자동으로 다시 넣는 보조 큐</td></tr>
+              <tr><td>충돌 그래프</td><td>Conflict graph. 요청을 점으로, 타깃이 겹치는 관계를 선으로 그린 그래프</td></tr>
+              <tr><td>연결 요소</td><td>Connected component. 그래프에서 선으로 서로 이어진 점들의 묶음</td></tr>
+              <tr><td>자카드 점수</td><td>Jaccard score. 두 집합의 공통 원소 수를 전체 원소 수로 나눈 값. 0~1 사이</td></tr>
+              <tr><td>충돌 완화</td><td>Conflict relaxation. 겹침 점수가 낮은 연결을 끊어 병렬로 처리하는 것</td></tr>
+              <tr><td>머지 후 검증</td><td>Post-land validation. 메인에 들어온 뒤의 상태를 다시 빌드·테스트하는 것</td></tr>
+              <tr><td>검증된 메인</td><td>Verified main. 마지막으로 정상이 확인된 커밋을 가리키는 포인터</td></tr>
+              <tr><td>당번</td><td>On-call. 장애가 나면 호출되어 대응하는 담당 엔지니어</td></tr>
+              <tr><td>되돌리기</td><td>Revert. 문제를 일으킨 변경을 취소하는 커밋을 만드는 것</td></tr>
+              <tr><td>복구 시간</td><td>Time to recovery. 깨진 상태에서 정상으로 돌아오기까지 걸린 시간</td></tr>
+              <tr><td>묶어 빌드하기</td><td>Batching. 관련 변경 여러 개를 한 번에 빌드해 빌드 수를 줄이는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>주제: 늘 초록인 메인에서 조금 깨진 메인으로</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>발표자 소개와 순서</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>Uber 모노레포 규모</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>따로 통과, 합치면 실패</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>SubmitQueue: 가능한 미래를 미리 시험</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>타깃 분석</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>확률적 추측 실행</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>큰 변경 건너뛰기</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>AI 이후: 시간당 90 → 130건</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>P95 30분 → 3~4시간</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>Manjari: 세 가지 대응 개요</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>입장 제한</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>입장 제한의 득실: 130 → 160, 개발자가 스케줄러가 됨</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>보류 큐</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>보류 큐의 득실</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>타깃 겹침과 연결 요소</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>충돌 완화의 세 단계</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>자카드 점수</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>병렬도 50% 예시: B–C, B–E 끊기</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>끊는 시점: 전역 재계산 vs 도착할 때 한 번</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>충돌 완화의 득실: 160 → 250, 메인이 깨질 수 있음</td></tr>
+              <tr><td><span class="ts">19:10</span></td><td>Preetam: 다시 깨진 메인</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>머지 후 검증 시스템과 두 포인터</td></tr>
+              <tr><td><span class="ts">20:50</span></td><td>포인터 예시: B~D 실패, B~G 통과</td></tr>
+              <tr><td><span class="ts">22:50</span></td><td>메인이 깨졌을 때 복구 절차</td></tr>
+              <tr><td><span class="ts">23:40</span></td><td>결과: 시간당 약 300건, P95 30분</td></tr>
+              <tr><td><span class="ts">24:10</span></td><td>오픈소스 안내</td></tr>
+              <tr><td><span class="ts">24:30</span></td><td>다음 계획: 묶어 빌드하기, 서비스 단위 초록, 복구 자동화</td></tr>
+              <tr><td><span class="ts">26:10</span></td><td>마무리: 하이브리드 검증</td></tr>
+              <tr><td><span class="ts">27:10</span></td><td>이전 발표 안내와 인사</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'hX140a5klW0:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

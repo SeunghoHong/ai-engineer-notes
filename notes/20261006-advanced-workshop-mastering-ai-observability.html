@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 관측성 워크숍 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- pipeline steps (this note only) ---------- */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: step; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 10px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; }
+.steps li::before { content: counter(step); font-family: var(--font-mono); font-weight: 500; color: var(--accent); background: var(--accent-soft); border-radius: 4px; text-align: center; font-size: var(--step--1); line-height: 1.6; }
+.steps b { display: block; }
+.steps span { font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#tracing">출발점은 트레이싱</a></li>
+      <li><a href="#flywheel">능동 관측성과 플라이휠</a></li>
+      <li><a href="#scores">신호 1: 스코어</a></li>
+      <li><a href="#topics">신호 2: 토픽</a></li>
+      <li><a href="#qa1">질의응답 1: 경쟁사·백엔드·호스팅</a></li>
+      <li><a href="#setup">워크숍 준비</a></li>
+      <li><a href="#trace-eval">트레이스와 평가 흘려 보내기</a></li>
+      <li><a href="#automation">스코어를 자동화에 걸기</a></li>
+      <li><a href="#enable-topics">토픽 켜고 커스텀 패싯 만들기</a></li>
+      <li><a href="#signal">데이터를 넣고 신호 읽기</a></li>
+      <li><a href="#improve">신호에서 개선까지</a></li>
+      <li><a href="#qa2">질의응답 2: 운영 질문</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-06 · 1시간 52분 · 영어 발표 한글 정리</span>
+      <h1>AI 에이전트 관측성 마스터하기</h1>
+      <p class="lead">에이전트는 엄청난 양의 트레이스를 만든다. 그 소음 속에서 쓸 만한 신호를 뽑아내려면 트레이스 위에 스코어와 토픽을 자동으로 붙이고, 그 신호를 코딩 에이전트가 읽어 데이터셋과 평가를 고치게 해야 한다. 이 워크숍은 Braintrust로 그 순환 고리를 끝까지 돌려 본다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=hfEczxdNyvU" target="_blank" rel="noopener">Advanced Workshop: Mastering AI Observability</a></span>
+        <span>발표: Doug Guthrie (Braintrust 솔루션 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 것만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다. 1시간을 넘는 곳은 <span class="ts">h:mm:ss</span>로 적었다.</p>
+      <p class="note">발표자는 Braintrust 직원이고 워크숍 전체가 Braintrust 제품 위에서 진행된다. 경쟁 제품 비교와 "고객들이 이렇게 쓴다"는 말은 그 점을 감안해 읽자. 다만 트레이싱, 스코어, 토픽, 플라이휠이라는 뼈대는 어느 도구를 쓰든 그대로 가져갈 수 있다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>트레이싱이 바닥이다.</strong> 에이전트가 거친 모든 단계와 도구의 입력·출력이 트레이스에 없으면 블랙박스다. 어디서 품질이 떨어지는지 알 수 없다.</li>
+        <li><strong>플라이휠을 만든다.</strong> 프로덕션 관찰이 개발을 이끌어야 한다. 고치고, 평가로 회귀 여부를 확인하고, 배포하고, 다시 관찰한다.</li>
+        <li>신호는 두 가지다. <strong>스코어</strong>는 이미 아는 실패 유형을 재고, <strong>토픽</strong>은 아직 모르는 패턴을 찾는다.</li>
+        <li>스코어 팁: 판단 이유를 남기게 하고, 처음엔 <strong>이진 채점</strong>, 기준은 <strong>가혹하게</strong>, 평가에서 100점이 나오면 테스트가 약한 것이다.</li>
+        <li>토픽은 트레이스를 전처리해 패싯으로 요약하고, 임베딩해 지도를 만들고, 라벨을 붙인다. Braintrust가 호스팅하는 전용 모델로 돌리고 입력 100만 토큰당 6센트라고 한다.</li>
+        <li>워크숍에서는 트레이스 968개를 넣고 자동화와 토픽이 실시간으로 신호를 붙이는 것을 봤다. 커스텀 패싯이 "주문 조회 실패"라는 평가에 없던 문제를 드러냈다.</li>
+        <li>신호를 읽는 일은 UI 클릭에서 <strong>SQL을 쓰는 플랫폼 에이전트(Loop)</strong>로, 다시 <strong>CLI와 스킬을 쥔 코딩 에이전트</strong>로 옮겨 간다. 코딩 에이전트가 문제를 찾고 데이터셋에 추가하고 스코어를 만들고 평가까지 돌린다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="tracing">
+        <header><span class="num">01</span><h2>출발점은 트레이싱 <span class="ts">05:00</span></h2></header>
+        <p>관측성<span class="en">observability</span>의 바닥은 트레이싱<span class="en">tracing</span>이다. 에이전트가 최종 답에 이르기까지 어떤 단계를 밟았는지, 각 도구에 무엇을 넣고 무엇을 받았는지를 기록하는 일이다. 단계가 늘어나면 이 기록은 금방 커진다. 그래도 이것이 없으면 어디서 품질이 무너지는지 알 수 없고, Codex나 Claude Code 같은 코딩 에이전트에게 "여길 봐"라고 가리킬 수도 없다.</p>
+        <div class="callout">
+          <span class="title">두 개의 과제</span>
+          <span>하나는 트레이스를 모아 볼 수 있는 플랫폼을 갖추는 것이다. 다른 하나는 그 많은 데이터에서 무언가 통찰을 끌어내는 것이다. 발표자는 두 번째가 진짜 어려운 쪽이라고 말한다.</span>
+        </div>
+        <h3>어디에나 붙는다 <span class="ts">06:40</span></h3>
+        <p>워크숍의 예제 에이전트는 OpenAI Agents SDK로 만든 가짜 고객 지원 봇이다. 발표자는 에이전트 자체는 중요하지 않다고 말한다. Braintrust는 여러 에이전트 프레임워크, 여러 AI 제공자, Python·TypeScript·Java·Ruby·Go 같은 언어, OpenTelemetry, 직접 짠 오케스트레이션까지 연동된다고 소개한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="flywheel">
+        <header><span class="num">02</span><h2>능동 관측성과 플라이휠 <span class="ts">04:10</span></h2></header>
+        <p>발표자는 업계 대부분이 아직 데이터를 <strong>수동적으로 바라보는</strong> 단계에 있다고 본다. Braintrust가 가려는 방향은 <strong>능동 관측성</strong><span class="en">active observability</span>이다. 사용자가 플랫폼을 뒤져 의미를 캐내는 대신, 플랫폼이 바로 쓸 수 있는 통찰을 먼저 건네는 것이다.</p>
+        <h3>플라이휠 <span class="ts">08:00</span></h3>
+        <p>발표자가 하루에 백 번은 말한다는 단어다. 핵심은 <strong>프로덕션이 개발을 이끌어야 한다</strong>는 것이다.</p>
+        <ol class="steps">
+          <li><b>고친다</b><span>프롬프트, 도구, 아키텍처 어디든 변경을 만든다</span></li>
+          <li><b>평가한다</b><span>그 변경이 에이전트를 망쳤는지 나아지게 했는지 오프라인 평가로 확인한다</span></li>
+          <li><b>배포한다</b><span>평가가 준 확신으로 프로덕션에 내보낸다</span></li>
+          <li><b>관찰한다</b><span>프로덕션 트레이스를 모은다</span></li>
+          <li><b>통찰을 뽑는다</b><span>사람이 다 읽을 수 없는 규모라서 그 위에 지능을 얹어야 한다. 이 단계가 다시 1번으로 이어진다</span></li>
+        </ol>
+        <p>이 고리가 아주 사소한 일이 되어서 어느 팀이든 쉽게 끼워 넣을 수 있어야 한다는 것이 발표자의 바람이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="scores">
+        <header><span class="num">03</span><h2>신호 1: 스코어 <span class="ts">09:50</span></h2></header>
+        <p>발표자가 말하는 "신호"는 두 가지다. 첫째가 스코어<span class="en">score</span>다. 에이전트의 출력을 어떤 기준으로 재는 평가기다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>종류</th><th>특징</th><th>예</th></tr></thead>
+            <tbody>
+              <tr><td>코드 기반</td><td>빠르고 싸고 만들기 쉽다. LLM을 부르지 않는다</td><td>스키마 검증, 도구 A가 도구 B보다 먼저 불렸는가</td></tr>
+              <tr><td>LLM 심판</td><td>주관적인 판단에 사람 같은 이해를 끌어온다. 기준을 글로 주면 점수를 낸다</td><td>대화 전체를 보고 "문제가 해결됐는가" 채점</td></tr>
+              <tr><td>사람 검토와 맞춘 LLM 심판</td><td>심판이 낸 점수를 사람이 검토해 보정한다. 온라인에서 실제 사용자 대화를 채점한다면 꼭 필요하다</td><td>사람이 심판 결과를 수정하는 검토 화면</td></tr>
+              <tr><td>LLM을 부르는 코드 스코어</td><td>분기 같은 복잡한 논리를 코드로 짜고, 필요한 곳에서만 LLM을 부른다</td><td>워크숍 저장소에 예시가 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>심판은 한 번 만들고 잊는 물건이 아니다. 에이전트가 바뀌면 스코어도 함께 바뀌어야 한다.</p>
+
+        <h3>고객들에게서 들은 요령 <span class="ts">12:10</span></h3>
+        <p class="note">발표자는 이 목록을 "소금 한 꼬집과 함께" 들으라고 했다. 모든 상황에 맞지는 않지만 여러 고객에서 잘 통했다는 뜻이다.</p>
+        <ul class="plain">
+          <li><strong>판단 이유를 남기게 한다.</strong> 사람이 검토할 때 "왜 이 점수가 나왔는지" 알면 스코어를 어떻게 고칠지 보인다.</li>
+          <li><strong>처음엔 이진 채점.</strong> A·B·C·D보다 통과·실패가 낫다.</li>
+          <li><strong>가혹하게 잰다.</strong> 어려운 예시를 만든다. 평가에서 100점이 나오면 테스트 케이스가 약하거나 스코어가 물렁한 것이다.</li>
+          <li><strong>프롬프트에 예시를 넣는다.</strong></li>
+          <li><strong>채점 모델은 생성 모델보다 강한 것을 쓴다.</strong> 사람의 주관에 조금이라도 가까워지도록. 트래픽 양에 따라 온라인에서는 달라질 수 있다.</li>
+        </ul>
+
+        <h3>오프라인과 온라인 <span class="ts">13:50</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">오프라인 스코어</span>
+            <p>평가<span class="en">eval</span>에서 돌린다. "이걸 프로덕션에 내보내도 되는가"를 묻는다. 개선인지 회귀인지 알려 준다. CI나 자동 파이프라인에 묶을 수 있다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">온라인 스코어</span>
+            <p>프로덕션에 들어오는 트래픽을 그 자리에서 채점한다. 목적은 트레이스에 신호를 붙여 두는 것이다. "라우팅 정확도가 0인 사례들에 어떤 패턴이 있나"처럼, 거대한 데이터를 작고 읽을 만한 덩어리로 줄인다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="topics">
+        <header><span class="num">04</span><h2>신호 2: 토픽 <span class="ts">15:10</span></h2></header>
+        <p>두 번째 신호는 Braintrust의 토픽<span class="en">Topics</span> 기능이다. 스코어는 이미 알아챈 실패 유형, 즉 <strong>아는 모름</strong><span class="en">known unknowns</span>을 잰다. 하지만 사용자가 에이전트를 찌르는 방식은 테스트 시나리오보다 훨씬 넓다. 사실성이나 유해성 같은 전통적인 스코어가 잡는 오류는 아주 일부다. 토픽은 그 바깥, <strong>모르는 모름</strong><span class="en">unknown unknowns</span>과 조용한 실패를 찾는 도구다.</p>
+        <p>찾은 것이 꼭 실패일 필요는 없다. 사용자가 에이전트로 하려는 일 중 아직 지원하지 않는 것이 보이면 그게 곧 기능 요청이고 로드맵이다. 발표자는 고객들이 토픽을 로드맵 재료로 쓰기 시작했다고 말한다.</p>
+
+        <h3>패싯 <span class="ts">16:50</span></h3>
+        <p>토픽은 데이터 속 패턴을 묶어 군집으로 보여 주고, 각 군집이 얼마나 자주 나오는지 알려 준다. 어떤 관점으로 패턴을 볼지 정하는 것이 패싯<span class="en">facet</span>이다.</p>
+        <ul class="plain">
+          <li><strong>기본 패싯</strong>: 작업<span class="en">task</span>, 이슈<span class="en">issues</span>, 감정<span class="en">sentiment</span>. 사용자가 무엇을 하려 하는지, 어떤 기분인지, 어떤 문제를 겪는지. 분류 체계는 미리 주지 않아도 LLM이 만든다.</li>
+          <li><strong>커스텀 패싯</strong>: 내가 알고 싶은 것을 프롬프트로 직접 쓴다.</li>
+        </ul>
+
+        <h3>파이프라인 <span class="ts">18:30</span></h3>
+        <ol class="steps">
+          <li><b>전처리</b><span>거대한 트레이스를 LLM에게 줄 만한 크기로 줄인다. 기본 전처리기는 스레드 뷰처럼 사용자·어시스턴트·도구 호출의 주고받음만 남긴다. 메타데이터나 다른 스팬이 필요하면 직접 쓸 수 있다</span></li>
+          <li><b>패싯 적용</b><span>전처리한 데이터를 각 패싯 프롬프트에 넣는다</span></li>
+          <li><b>요약</b><span>패싯별 결과를 짧게 요약한다</span></li>
+          <li><b>임베딩</b><span>요약을 벡터로 바꿔 백엔드에 저장한다</span></li>
+          <li><b>토픽 지도</b><span>벡터로 군집을 만들어 산점도 같은 지도를 그린다</span></li>
+          <li><b>라벨과 분류</b><span>각 트레이스에 라벨을 붙인다. 이 라벨이 있으면 사람도, 코딩 에이전트도 소음을 쉽게 걸러 낼 수 있다</span></li>
+        </ol>
+        <p>요약과 임베딩 단계는 Braintrust가 직접 학습해 호스팅하는 모델만 쓴다. 발표자는 처음엔 다른 모델도 꽂을 수 있게 했지만 결과가 나빠서 막았다고 설명한다. 다른 스코어들은 사용자가 등록한 자기 모델로 돌지만 토픽만은 예외다.</p>
+
+        <figure class="chart" aria-label="토픽 파이프라인 호스팅 모델 비용: 입력 100만 토큰당 6센트, 출력 100만 토큰당 40센트">
+          <span class="chart-title">토픽 파이프라인 호스팅 모델 비용 (100만 토큰당, 센트)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>입력</span><span class="val">6¢</span></div>
+              <div class="track"><div class="fill key" style="width:15%" title="입력: 100만 토큰당 6센트"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>출력</span><span class="val">40¢</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="출력: 100만 토큰당 40센트"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>20</span><span>40</span></div>
+          <span class="caption">발표자가 말한 수치다. 같은 신호를 LLM 심판으로 만들 때 쓰는 모델과 비교해 보라는 취지다. 목표는 트레이스 100%에 돌릴 수 있는 규모와 비용이다.</span>
+        </figure>
+
+        <div class="callout">
+          <span class="title">왜 만들었나 <span class="ts">20:50</span></span>
+          <span>Braintrust는 대량 데이터를 받아 1초 안에 조회하는 문제는 일찍 풀었다. 없던 것은 그 데이터로 <em>무언가를 하는</em> 능력이었다. 토픽은 규모와 비용 양쪽에서 버티도록 설계한 파이프라인이고, 고객이 플라이휠을 그 위에 짓도록 만든 기본 부품이라는 설명이다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="qa1">
+        <header><span class="num">05</span><h2>질의응답 1: 경쟁사·백엔드·호스팅 <span class="ts">22:50</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>발표자의 답</th></tr></thead>
+            <tbody>
+              <tr><td>우리 팀은 Lightstep을 쓴다. Braintrust를 써야 할 이유는?</td><td>남을 깎아내리지는 않겠다고 전제했다. 꼽은 것은 두 가지다. 언어·프레임워크에 중립적인 유연성. 그리고 자체 백엔드 BrainStore. LangSmith는 LangGraph·LangChain 쪽에 기운 기능이 있다고 봤다.</td></tr>
+              <tr><td>BrainStore란?</td><td>2024년 말 Braintrust가 직접 만든 데이터베이스다. 원래 ClickHouse를 썼는데 Netflix·Microsoft·Dropbox 같은 고객이 들어오자 규모에서 무너졌다고 한다. 당시엔 미쳤다는 소리를 들었지만 지금은 LangSmith도, Arize(추정)도 자체 DB를 만들었다며, 이 부분에서 1년쯤 앞서 있다고 주장했다. 토픽이 가능한 것도 이 백엔드 덕이라고 했다.</td></tr>
+              <tr><td>트레이스가 다 비슷한데 토픽이 정말 의미 있는 차이를 내나?</td><td>프로덕션에서 쓰는 고객들은 그렇다고 할 것이다. 같은 도구, 같은 흐름이라도 실제 사용자가 붙으면 차이가 드러난다. 무료 계정으로 직접 넣어 보라고 권했다.</td></tr>
+              <tr><td>Claude Code·Codex 세션에도 토픽을 쓸 수 있나?</td><td>된다. Claude Code, Codex, Cursor, OpenCode 연동이 있다. 여러 고객이 코딩 에이전트가 워크플로를 얼마나 개선하는지 보려고 토픽을 얹는 중이다.</td></tr>
+              <tr><td>호스팅 방식은?</td><td>SaaS, BYOC, 하이브리드. 처음부터 하이브리드를 염두에 두고 설계했다. 제어 평면(웹앱·메타데이터)은 Braintrust가, 데이터 평면(트레이스·데이터셋·실험)은 고객 VPC에 둘 수 있다. 슬라이드에 나온 고객의 90%는 자체 호스팅일 것이라고 추정했다.</td></tr>
+              <tr><td>긴 대화는 토픽을 어떻게 처리하나?</td><td>설정으로 푼다. 트레이스 단위가 아니라 그룹 단위로 묶고, 일정 시간이 지난 뒤에만 돌리게 할 수 있다. 워크숍 뒤쪽에서 실제 설정을 보여 줬다.</td></tr>
+              <tr><td>전처리기를 바꿀 수 있나?</td><td>기본 전처리기 외에 직접 만들 수 있다. 패싯도 마찬가지다. 발표자는 이 파이프라인이 "좋은 의미로 완전히 해킹 가능하다"고 표현했다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="setup">
+        <header><span class="num">06</span><h2>워크숍 준비 <span class="ts">32:30</span></h2></header>
+        <p>행사장 인터넷이 끊겨 참가자 대부분은 따라 하지 못했다. 발표자 혼자 진행했다. 저장소는 GitHub의 dpguthrie 계정에서 찾을 수 있다고 했다.</p>
+        <ol class="steps">
+          <li><b>조직과 프로젝트</b><span>Braintrust 조직을 만들고 프로젝트 이름을 <code>AIE-workshop</code>으로 짓는다. 저장소 코드가 이 이름을 가정한다</span></li>
+          <li><b>AI 제공자 등록</b><span>설정에서 OpenAI와 Anthropic API 키를 넣는다. 온라인 채점에 LLM 심판을 쓰려면 모델이 필요하다. 최근 주요 제공자에 워크로드 아이덴티티 연합도 추가했고, 자체 게이트웨이도 커스텀 제공자로 연결할 수 있다</span></li>
+          <li><b>Braintrust API 키 생성</b><span></span></li>
+          <li><b>의존성 설치</b><span>uv로 가상 환경을 만들고 개발 의존성까지 설치한다</span></li>
+          <li><b>.env 작성</b><span>예시 파일을 복사해 Braintrust API 키와 기본 모델을 넣는다. 기본 모델은 등록한 제공자에서 접근 가능한 것이어야 한다. 채팅 UI와 평가 실행에 쓴다</span></li>
+          <li><b>Braintrust CLI</b><span>임의 SQL 실행, 평가 실행, 로그 보기, 데이터셋 만들기를 터미널에서 한다. <code>bt setup skills</code>로 코딩 에이전트(Codex, Claude Code, OpenCode, Cursor, Qwen(추정), Gemini)에 스킬을 준다. <code>bt init</code>은 조직과 프로젝트를 담은 config.json을 만든다. 저장소에 올려 두면 팀 전체가 같은 설정을 쓴다</span></li>
+          <li><b>점검</b><span><code>make ready</code>로 CLI, API 키, 기본 모델이 다 있는지 확인한다</span></li>
+        </ol>
+        <p class="note">채점 스코어는 사용자가 등록한 모델로 돈다. 그래서 자기 API 키가 필요하다. 토픽 파이프라인만 Braintrust 호스팅 모델을 쓴다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="trace-eval">
+        <header><span class="num">07</span><h2>트레이스와 평가 흘려 보내기 <span class="ts">48:20</span></h2></header>
+        <h3>트레이스가 들어오는지 확인</h3>
+        <p>채팅 UI에서 질문 하나를 보내면 Braintrust 로그에 트레이스가 하나 생긴다. 연동 코드는 짧다. Braintrust SDK에서 가져온 트레이싱 프로세서를 OpenAI Agents SDK의 트레이스 프로세서로 지정하면 모든 스팬이 Braintrust로 간다. 한 줄짜리 자동 계측도 있지만, 발표자는 Braintrust 게이트웨이를 함께 쓰려고 직접 설정했다. 게이트웨이를 쓰면 등록한 모든 AI 제공자를 하나의 인터페이스로 부른다.</p>
+        <h3>평가 돌리기 <span class="ts">50:10</span></h3>
+        <p>저장소에는 테스트 케이스 몇 개가 든 작은 데이터셋이 있다. CLI로 데이터셋을 만들고 행을 올린 뒤 평가를 실행하면 각 행이 에이전트를 거치고 결과가 Braintrust 실험<span class="en">experiment</span> 페이지에 쌓인다. 다음에 무언가를 고친 뒤 다시 돌리면 지난 실행과 비교해 개선인지 회귀인지 알 수 있다.</p>
+        <p>스코어는 섞어 쓴다. "필수 도구가 호출됐는가" 같은 코드 기반 스코어와, "지원 요청이 해결됐는가", "도구 사용이 적절했는가" 같은 LLM 심판이 함께 있다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="automation">
+        <header><span class="num">08</span><h2>스코어를 자동화에 걸기 <span class="ts">52:10</span></h2></header>
+        <p>로그가 들어올 때 스코어가 자동으로 돌게 하려면 먼저 스코어를 Braintrust에 올려야 한다. UI에서 정의할 수도 있지만 워크숍은 코드로 정의하고 <code>make push-scores</code>로 올린다. 저장소에서 버전 관리가 되고, 플레이그라운드의 다른 사용자도 같은 스코어를 쓸 수 있다.</p>
+        <h3>LLM 심판에 넘기는 변수 <span class="ts">53:40</span></h3>
+        <ul class="plain">
+          <li><strong>thread</strong>: 대화 전체의 주고받음. 여러 턴을 한꺼번에 보여 줄 때 쓴다. 로그 페이지의 스레드 아이콘에서 보는 것과 같다.</li>
+          <li><strong>user messages</strong>, <strong>assistant messages</strong>: 한쪽만 볼 때.</li>
+          <li><strong>input</strong>, <strong>output</strong>: 특정 스팬 하나만 볼 때. 예를 들어 정책 조회 도구만 채점하려면 이것을 쓴다.</li>
+        </ul>
+        <h3>자동화의 범위 <span class="ts">54:40</span></h3>
+        <p>로그 페이지 오른쪽 위 자동화<span class="en">automations</span>에서 규칙을 만든다. 범위<span class="en">scope</span> 선택이 중요하다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>범위</th><th>언제 쓰나</th></tr></thead>
+            <tbody>
+              <tr><td>트레이스</td><td>트레이스 안의 모든 스팬을 보고 점수를 낸다. 워크숍은 이것을 썼다</td></tr>
+              <tr><td>스팬</td><td>중간 단계 하나를 채점한다. 기본은 루트 스팬이고, 스팬 이름 같은 필터로 특정 도구를 고른다</td></tr>
+              <tr><td>그룹</td><td>여러 턴이 서로 다른 트레이스로 흩어져 있을 때 공통 ID로 묶는다. 워크숍에서는 대화 ID를 썼다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          <span class="title">샘플링 비율과 비용</span>
+          <span>LLM 심판을 자동화에 걸면 로그가 들어올 때마다 실제 모델 호출이 일어난다. 발표자는 신호를 잘 보이려고 100%로 두었지만, 따라 하는 사람은 낮추라고 했다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="enable-topics">
+        <header><span class="num">09</span><h2>토픽 켜고 커스텀 패싯 만들기 <span class="ts">57:20</span></h2></header>
+        <p>자동화 옆의 "토픽 켜기"를 누르면 기본 패싯 세 개(작업, 감정, 이슈)가 보인다. 기존 트레이스에도 적용할 수 있다. 같은 화면에서 커스텀 패싯과 커스텀 전처리기를 만든다.</p>
+        <h3>커스텀 패싯: 지원 워크플로 이슈 <span class="ts">58:50</span></h3>
+        <p>저장소에 마크다운 파일로 프롬프트가 들어 있다. 이름을 "support workflow issue"로 붙이고 프롬프트를 붙여 넣는다. 한 가지 요령이 있다. 프롬프트에서 문제가 없으면 "none"을 내라고 지시하고, 패싯 설정의 제외 정규식으로 그 출력을 걸러 낸다. 발표자는 잘못된 것만 보고 싶기 때문이다.</p>
+        <h3>CLI로 같은 설정 하기 <span class="ts">1:00:20</span></h3>
+        <p>UI에서 한 일을 CLI로도 할 수 있다. 토픽 자동화 설정에는 다음 항목이 있다.</p>
+        <ul class="plain">
+          <li><strong>필터</strong>: 조건에 맞는 트레이스에만 파이프라인을 돌린다.</li>
+          <li><strong>샘플링 비율</strong>: 트래픽과 비용을 보고 정한다.</li>
+          <li><strong>토픽 창</strong><span class="en">topic window</span>: 토픽 지도를 만들 때 어느 기간의 트레이스를 쓸지.</li>
+          <li><strong>실행 시점</strong>: 하루나 이틀처럼, 대화가 끝났을 만한 시간이 지난 뒤에 돌린다. 긴 대화 질문에 대한 답이다.</li>
+          <li><strong>범위</strong>: 스코어 자동화와 같다. 트레이스 단위 또는 대화 ID 같은 메타데이터로 묶는 그룹 단위.</li>
+        </ul>
+      </section>
+
+      <!-- 10 -->
+      <section id="signal">
+        <header><span class="num">10</span><h2>데이터를 넣고 신호 읽기 <span class="ts">1:03:00</span></h2></header>
+        <p>S3에 저장해 둔 트레이스를 <code>bt sync</code>로 밀어 넣는다. 발표자는 다른 제공자에서 트레이스를 옮겨 오려는 고객들을 이 방법으로 도왔다고 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>가져온 양</th><th>값</th></tr></thead>
+            <tbody>
+              <tr><td>트레이스</td><td>968개</td></tr>
+              <tr><td>스팬</td><td>5,260개</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">자막에서는 발표자가 스팬 수를 1,052라고 말했다가 "그건 속도"라며 5,260으로 고쳤다. 뒤의 코딩 에이전트 출력에서도 트레이스 968개가 다시 확인된다.</p>
+
+        <h3>트레이스를 보는 세 가지 방법 <span class="ts">1:04:10</span></h3>
+        <ul class="plain">
+          <li><strong>스레드 뷰</strong>: 사용자와 에이전트의 주고받음을 본다. OpenAI Agents SDK는 이전 메시지를 모두 붙여 주기 때문에 턴마다 별도 트레이스라도 맥락이 보인다. 대화 ID로 묶으면 다른 턴의 트레이스도 같은 트리에 끌어올 수 있다.</li>
+          <li><strong>타임라인 뷰</strong>: 병목이 어디인지, LLM 호출마다 캐시 적중이 있었는지 본다.</li>
+          <li><strong>Loop</strong>: 오른쪽 아래 파란 아이콘. 플랫폼에 내장된 에이전트다. 트레이스 데이터 위에 사람 검토용 UI를 즉석에서 만들어 달라고 할 수도 있다. 심판 보정에 다른 역할의 사람을 끌어들이는 방법이다.</li>
+        </ul>
+
+        <h3>신호가 실시간으로 붙는다 <span class="ts">1:06:20</span></h3>
+        <p>데이터가 들어오자마자 자동화가 돈다. 의사소통 품질, 지원 해결 같은 심판 점수가 붙고, 토픽도 생긴다. 한 트레이스에는 "반품 환불 상태 확인"이라는 작업, "보류 중인 거래에 대한 불만"이라는 부정 감정, 그리고 커스텀 패싯으로 "주문 기록 조회 실패. 주문 ID 조회도 고객 검색도 주문을 찾지 못함"이 붙었다.</p>
+
+        <h3>토픽 지도 읽기 <span class="ts">1:07:30</span></h3>
+        <p>미리 돌려 둔 다른 프로젝트에서 토픽 페이지를 열었다. 위쪽에는 토픽별 빈도 스냅샷이 있다. 작업 패싯에서 가장 많은 것은 "운송 중 파손 해결"이었다. 이런 정보가 에이전트가 더 해야 할 일을 알려 준다.</p>
+        <div class="callout">
+          <span class="title">이슈 토픽이 비어 있던 이유</span>
+          <span>토픽은 패싯 결과가 최소 100개는 모여야 지도를 만든다. 기본 이슈 프롬프트는 이 에이전트와 잘 맞지 않아 결과가 거의 없었다. 발표자는 이것을 좋은 일로 본다. 쓸 수 없는 신호를 억지로 만들지 않는다. 대신 커스텀 패싯이 "기록 조회 실패"를 드러냈다. 평가에서는 잡지 못한 문제다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="improve">
+        <header><span class="num">11</span><h2>신호에서 개선까지 <span class="ts">1:09:50</span></h2></header>
+        <p>신호를 만들었으면 그걸로 무언가를 해야 한다. 발표자는 세 단계로 보여 준다.</p>
+        <div class="shift" aria-label="신호 읽는 방법의 이동">
+          <div><span class="tag">1단계 · 사람이 UI에서</span><b>필터하고 클릭한다</b><span class="muted">라벨과 스코어로 결과를 좁히고 트레이스를 열어 스팬을 읽는다. 작동하지만 수동적이고 모든 부담이 사용자에게 있다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">2·3단계 · 에이전트가</span><b>SQL로 찾고 고친다</b><span class="muted">Loop나 코딩 에이전트가 신호를 기준으로 관련 트레이스만 끌어와 분석하고, 데이터셋과 스코어와 코드까지 바꾼다</span></div>
+        </div>
+
+        <h3>2단계: Loop에게 묻기 <span class="ts">1:11:40</span></h3>
+        <p>"최근 로그를 보고 지원 에이전트에서 무엇을 개선해야 하는지 알려 달라"고 물었다. Loop는 BrainStore에 SQL을 여러 번 날려 관련 데이터만 끌어왔다. 모든 트레이스를 다 읽을 수는 없다. <strong>트레이스에 진짜 신호가 붙어 있고, 그 위를 유연하게 질의할 수 있어야</strong> 필요한 부분만 가져올 수 있다. 흥미로운 사례를 찾으면 그 트레이스와 스팬의 입력·출력을 직접 들여다본다.</p>
+
+        <h3>발견한 것을 플라이휠에 되돌리기 <span class="ts">1:14:00</span></h3>
+        <ol class="plain">
+          <li>필터로 찾은 흥미로운 트레이스를 UI에서 <strong>데이터셋에 추가</strong>한다. 이것이 오프라인 평가에 새 엣지 케이스가 된다.</li>
+          <li>에이전트를 고치고 <strong>평가를 다시 돌려</strong> 지난 실행과 비교한다.</li>
+          <li>자주 보이는 새 실패 유형이 있으면 <strong>새 스코어를 만든다.</strong> "기록 조회 실패"처럼, 다음 배포 전에 미리 잡을 수 있게.</li>
+        </ol>
+        <p>발표자는 평가 데이터셋을 "기준선"이라고 부른다. 처음 만든 테스트 케이스는 에이전트가 할 수 있는 일을 전부 담지 못한다. 프로덕션에서 사례를 골라 계속 보태야 평가가 에이전트와 함께 자란다.</p>
+
+        <h3>3단계: 코딩 에이전트에게 스킬 주기 <span class="ts">1:15:30</span></h3>
+        <p>이 모든 단계를 자동으로 돌리는 것이 목표다. Braintrust는 오픈소스 스킬 저장소를 공개했고, 현재 스킬은 하나다. 에이전트 개선 플라이휠을 코딩 에이전트가 직접 돌리게 하는 스킬이다. GitHub CLI, npx, 또는 저장소 복제로 설치한다.</p>
+        <p>발표자는 Codex에 같은 프롬프트를 주고 돌렸다. 화면에 보인 과정은 이렇다.</p>
+        <ul class="plain">
+          <li><code>bt sql</code>로 프로젝트를 질의해 지원 트레이스 968개를 확인했다.</li>
+          <li>채점된 실패와 "사람에게 넘기기 도구 오류"의 눈에 띄는 군집을 찾았다.</li>
+          <li>분류 결과와 대표적인 실패 트레이스를 열어 보고 요약했다.</li>
+          <li>데이터셋을 새로 만들고 예시를 넣었다.</li>
+          <li>새 스코어를 만들고, 에이전트에 새 도구를 추가했다.</li>
+          <li>평가를 돌리고 실험 결과를 다시 SQL로 질의했다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">Braintrust가 못 하는 것, 코딩 에이전트가 하는 것 <span class="ts">1:41:40</span></span>
+          <span>Braintrust 자체는 내 코드베이스를 모른다. 그래서 특정 함수나 아키텍처를 고치라고 권할 수 없다. CLI를 코딩 에이전트에 붙이면 에이전트가 저장소 안에서 프로덕션 신호를 읽고 코드까지 바꾼다. 발표자는 이것이 지금 Braintrust에서 가장 설득력 있는 부분이라고 했다.</span>
+        </div>
+
+        <h3>GitHub Action으로 자동화 <span class="ts">1:44:30</span></h3>
+        <p>플랫폼에 "플라이휠 돌리기" 버튼은 없다. 대신 이미 있는 도구로 끼워 넣는다. 발표자가 만든 예시는 Claude Code를 GitHub Action에서 돌리는 YAML이다. Braintrust CLI와 스킬을 가져와 분석하고, 무엇을 왜 바꿨는지, 평가로 본 영향, Braintrust 링크, 회귀 목록을 담은 PR을 연다. 사람은 리뷰어가 된다. 일정 주기, 특정 이벤트, Slack 메시지로도 트리거할 수 있다. 한 고객은 이 방식으로 하루에 PR을 5~10개 더 낸다고 한다.</p>
+        <p class="note">"하루 PR 5~10개 증가"는 발표자가 고객 사례로 전한 수치다. 어떤 고객인지, 어떤 기준인지는 밝히지 않았다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="qa2">
+        <header><span class="num">12</span><h2>질의응답 2: 운영 질문 <span class="ts">1:24:00</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>발표자의 답</th></tr></thead>
+            <tbody>
+              <tr><td>하이브리드 배포 조건</td><td>엔터프라이즈 플랜에서만 된다. BYOC는 데이터 평면이 고객 인프라에 있되 Braintrust가 관리한다. 하이브리드는 고객 팀이 직접 관리하고 Terraform 제공자나 Helm 차트를 준다.</td></tr>
+              <tr><td>고객들은 어떤 모델을 쓰나</td><td>대부분 큰 제공자의 모델이다. 조금씩 바뀌어 직접 미세 조정하는 곳이 생기고 있다. 평가의 목적 하나가 회귀 없이 모델을 갈아 끼우는 것이다.</td></tr>
+              <tr><td>토픽에 다른 모델을 쓸 수 있나</td><td>요약과 임베딩 단계는 Braintrust 호스팅 모델만 된다. 그 일에 맞춰 학습했고, 다른 모델을 꽂아 봤더니 결과가 나빴다.</td></tr>
+              <tr><td>토픽 결과로 대시보드를 만들 수 있나</td><td>된다. 라벨은 트레이스의 메타데이터라서 꺼내 쓸 수 있다. 예시 뷰는 <code>classifications.sentiment</code>가 비어 있지 않은 것을 라벨로 묶어 시간에 따른 감정, 작업 상위 목록을 그렸다. 지금은 모니터 페이지가 프로젝트 단위다. 조직 전체 뷰는 직접 질의해야 하고 앞으로 바뀔 예정이다.</td></tr>
+              <tr><td>샘플링 비율은 어떻게 정하나</td><td>새 에이전트는 높게, 성숙할수록 낮춘다. 아는 실패가 줄면 스코어가 주는 신호도 줄기 때문이다. LLM 심판이 분류나 분류 체계 성격이면 토픽으로 바꿔 보라. Dropbox는 복잡한 분류 스코어를 토픽으로 실험했다. 심판은 트레이스 100%에 돌릴 수 없었지만 토픽은 비용 때문에 가능했다.</td></tr>
+              <tr><td>스코어 A의 결과로 스코어 B를 돌릴 수 있나</td><td>UI에는 없다. 코드 기반 스코어 하나가 안에서 A를 부르고 그 결과로 B를 불러 점수 배열을 돌려주면 된다. 또는 자동화 필터로 특정 스코어 스팬이 있을 때만 돌게 할 수 있다.</td></tr>
+              <tr><td>토픽이 찾아낸 뜻밖의 것</td><td>어느 고객이 사용자가 에이전트로 하려는 줄 몰랐던 일을 작업 패싯에서 발견했다. 실패가 아니라 기능 요청이었다. 발표자는 이것이 가장 놀라웠다고 했다.</td></tr>
+              <tr><td>프로젝트는 어떻게 나누나</td><td>용도나 에이전트 단위다. 한 프로젝트에 로그, 데이터셋, 스코어가 함께 산다. 곧 프로젝트 안에 일급 에이전트 객체가 생겨 다중 에이전트 시스템도 한 프로젝트에서 구분할 수 있다.</td></tr>
+              <tr><td>평가는 얼마나 자주 바뀌나</td><td>에이전트를 바꾸는 만큼이다. 프롬프트만 고치면 데이터셋에 예시를 몇 개 보태는 정도다. 단순한 에이전트면 평가가 거의 안 바뀔 수 있다는 지적은 타당하다. 그래도 싸게 할 수 있다면 프로덕션 신호를 만드는 일 자체에 가치가 있다.</td></tr>
+              <tr><td>스코어를 Braintrust에서 돌릴까, 내 인프라에서 돌릴까</td><td>둘 다 하는 고객이 있다. 복잡한 의존성이 있는 코드 스코어도 올릴 때 의존성을 함께 묶을 수 있는데, 이걸 모르는 고객이 있었다. 올리면 "마지막 이벤트 후 60초 기다렸다가 실행" 같은 비동기 코드를 내 쪽에서 안 짜도 된다. 스팬은 변경 가능해서 스팬 ID만 있으면 내 코드에서 점수와 지표를 나중에 붙일 수도 있다.</td></tr>
+              <tr><td>트레이스 접근을 막으면서 통찰은 주고 싶다</td><td>트레이스는 아무도 못 보는 프로젝트에 쓰고, 서비스 계정이 플라이휠을 돌리게 한다. 사람에게는 분석 결과, 실행한 SQL, 집계 데이터, PR만 준다.</td></tr>
+              <tr><td>가장 저평가된 기능</td><td>Braintrust CLI. 2월 말에 나왔는데 아직 안 쓰는 고객이 많다. 모두 코딩 에이전트를 쓰는 시대라 CLI와 스킬을 붙이는 것이 가장 설득력 있다. 둘째는 원격 평가<span class="en">remote eval</span>. 평가를 플레이그라운드에 노출해 PM이나 도메인 전문가가 시스템 프롬프트나 도구 설명을 바꿔 보게 한다. 엔지니어가 병목이 되지 않게 한다.</td></tr>
+              <tr><td>원격 평가는 어떻게 동작하나</td><td>평가 코드에 파라미터(각 에이전트의 프롬프트와 모델 등)를 노출한다. <code>--dev</code>로 개발 서버를 띄우면 플레이그라운드가 localhost 8300에서 찾는다. 자체 인프라에 올릴 수도 있다. 플레이그라운드에서 실행하면 Braintrust가 그 서버의 평가 엔드포인트에 POST를 보내고, 코드는 서버에서 돌고 결과만 스트리밍된다. 발표자의 예시 서버는 Modal에 떠 있다.</td></tr>
+              <tr><td>코딩 에이전트 세션 자체를 평가하나</td><td>내부에서 준비 중이다. 스킬에 평가를 돌리고 Claude Code·Codex 세션을 이해하는 부품을 만들고 있다. 저장소의 커밋 두 개, 별 한 개는 중요도를 보여 주는 게 아니라고 했다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>트레이스가 없으면 에이전트는 블랙박스다. 모든 단계와 도구 입출력을 기록하는 것이 관측성의 바닥이다.</li>
+          <li>진짜 어려운 일은 모으는 것이 아니라 <strong>그 데이터에서 신호를 뽑는 것</strong>이다. 사람이 다 읽을 규모가 아니다.</li>
+          <li>플라이휠: 고치고, 평가하고, 배포하고, 관찰하고, 통찰을 뽑아 다시 고친다. <strong>프로덕션이 개발을 이끈다.</strong></li>
+          <li>스코어는 <strong>아는 실패</strong>를 잰다. 코드 기반은 싸고 빠르고, LLM 심판은 주관을 다루며, 심판은 사람 검토로 보정한다.</li>
+          <li>스코어 요령: 이유 남기기, 처음엔 이진 채점, 가혹한 기준, 프롬프트에 예시, 채점 모델은 생성 모델보다 강하게. <strong>100점은 테스트가 약하다는 신호다.</strong></li>
+          <li>토픽은 <strong>모르는 실패</strong>와 기능 요청을 찾는다. 전처리, 패싯, 요약, 임베딩, 지도, 라벨 순서로 돌고 전용 호스팅 모델을 쓴다.</li>
+          <li>자동화 범위는 트레이스, 스팬, 그룹 셋이다. 여러 트레이스에 흩어진 대화는 대화 ID로 묶는다.</li>
+          <li>커스텀 패싯은 "문제 없음"을 정규식으로 걸러 <strong>잘못된 것만</strong> 남긴다. 토픽은 결과가 100개는 모여야 지도를 만든다.</li>
+          <li>신호를 읽는 주체가 사람의 클릭에서 SQL을 쓰는 Loop로, 다시 CLI와 스킬을 쥔 코딩 에이전트로 옮겨 간다. 코딩 에이전트는 코드베이스를 알기 때문에 실제 수정까지 한다.</li>
+          <li>평가 데이터셋은 기준선일 뿐이다. 프로덕션에서 고른 사례를 계속 보태고, 반복되는 실패는 새 스코어로 만든다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 "신호" 두 가지는 무엇이고 각각 무엇을 잡나?</span></summary><div class="answer">스코어와 토픽. 스코어는 이미 아는 실패 유형(아는 모름)을 재고, 토픽은 아직 모르는 패턴(모르는 모름)과 조용한 실패, 기능 요청을 찾는다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>평가에서 모든 케이스가 100점이면 발표자는 어떻게 해석하라고 했나?</span></summary><div class="answer">테스트 케이스가 충분히 어렵지 않거나 스코어가 충분히 가혹하지 않다는 뜻이다. 기준을 다시 조정해야 한다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>스코어 종류 네 가지는?</span></summary><div class="answer">코드 기반, LLM 심판, 사람 검토와 맞춘 LLM 심판, 그리고 코드 안에서 LLM을 부르는 코드 기반 스코어.</div></details>
+          <details><summary><span class="qn">Q4</span><span>토픽 파이프라인의 여섯 단계를 순서대로 말해 보자.</span></summary><div class="answer">전처리 → 패싯 적용 → 요약 → 벡터 임베딩 → 토픽 지도 → 라벨과 분류.</div></details>
+          <details><summary><span class="qn">Q5</span><span>토픽 파이프라인에서 다른 모델을 쓸 수 없는 단계와 그 이유는?</span></summary><div class="answer">요약과 임베딩 단계. Braintrust가 그 일에 맞춰 학습한 호스팅 모델만 쓴다. 다른 모델을 꽂아 봤더니 결과가 나빴다고 한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>자동화 범위 세 가지와, 여러 트레이스로 흩어진 대화에 쓰는 것은?</span></summary><div class="answer">트레이스, 스팬, 그룹. 흩어진 대화는 그룹 범위를 고르고 대화 ID 같은 공통 메타데이터로 묶는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>커스텀 패싯을 만들 때 발표자가 쓴 요령은?</span></summary><div class="answer">프롬프트에서 문제가 없으면 "none"을 내게 하고, 제외 정규식으로 그 출력을 걸러 낸다. 잘못된 것만 보려는 목적이다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>기본 이슈 패싯의 토픽이 생기지 않은 이유는? 발표자는 그것을 어떻게 봤나?</span></summary><div class="answer">토픽 지도는 패싯 결과가 최소 100개 모여야 만들어지는데, 기본 이슈 프롬프트가 이 에이전트와 안 맞아 결과가 거의 없었다. 발표자는 쓸 수 없는 신호를 억지로 만들지 않는 것이 좋은 일이라고 봤다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Loop가 "최근 로그에서 무엇을 개선할까"라는 질문에 답하기 위해 한 일은?</span></summary><div class="answer">BrainStore에 SQL을 여러 번 날려 관련 트레이스만 끌어왔다. 모든 트레이스를 읽는 대신, 붙어 있는 스코어와 토픽 라벨을 기준으로 필요한 부분만 질의했다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>Braintrust는 못 하지만 CLI를 쥔 코딩 에이전트는 할 수 있는 일은?</span></summary><div class="answer">코드베이스를 알고 실제 수정을 하는 것. Braintrust는 내 코드를 모르니 특정 함수나 아키텍처를 고치라고 권할 수 없다. 코딩 에이전트는 저장소 안에서 신호를 읽고 도구를 추가하거나 스코어를 만든다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>샘플링 비율은 에이전트 성숙도에 따라 어떻게 바뀌어야 하나?</span></summary><div class="answer">새 에이전트는 높게, 성숙할수록 낮춘다. 아는 실패가 줄면 스코어가 주는 신호도 줄기 때문이다. 분류 성격의 심판은 더 싼 토픽으로 바꾸는 것도 방법이다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>원격 평가는 누구를 위한 기능인가?</span></summary><div class="answer">PM이나 도메인 전문가처럼 코드 밖에서 플라이휠에 기여하는 사람. 평가를 플레이그라운드에 노출해 시스템 프롬프트나 도구 설명을 바꿔 보게 한다. 엔지니어가 병목이 되지 않게 하는 목적이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트의 모든 단계와 도구 입출력이 트레이스에 남는지 확인한다<span class="how">확인: 실패한 응답 하나를 골라 어느 도구가 무엇을 받고 돌려줬는지 끝까지 따라갈 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>아는 실패 유형마다 스코어를 하나씩 만든다<span class="how">싼 것은 코드로, 주관적인 것은 LLM 심판으로. 심판은 판단 이유를 함께 내게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>스코어는 이진으로 시작하고 기준을 가혹하게 잡는다<span class="how">확인: 평가 점수가 100%라면 테스트 케이스와 기준을 더 어렵게 만든다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>채점 모델을 생성 모델보다 강한 것으로 둔다<span class="how">온라인 채점은 샘플링 비율로 비용을 조절한다. 새 에이전트는 높게, 성숙하면 낮게</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>스코어를 코드로 정의하고 저장소에서 버전 관리한다<span class="how">확인: 스코어 변경이 코드 리뷰를 거치는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>여러 트레이스에 흩어진 대화를 묶을 공통 ID를 메타데이터로 남긴다<span class="how">예: 대화 ID. 자동화와 토픽의 그룹 범위에 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>모르는 실패를 찾는 장치를 둔다<span class="how">토픽 같은 군집화든 주기적 샘플 읽기든. "문제 없음"은 걸러 내고 잘못된 것만 남긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>프로덕션에서 찾은 사례를 평가 데이터셋에 보태는 경로를 만든다<span class="how">확인: 지난달 데이터셋에 프로덕션 출신 사례가 몇 개 늘었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>반복되는 새 실패 유형은 배포 전에 잡는 스코어로 만든다<span class="how">예: "기록 조회 실패"처럼 토픽에서 드러난 것</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>코딩 에이전트가 관측 데이터를 SQL이나 CLI로 질의할 수 있게 한다<span class="how">확인: 에이전트에게 "최근 로그에서 무엇을 고칠까"라고 물으면 관련 트레이스만 끌어오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c11"><span>사람이 리뷰하는 PR로 끝나는 자동 개선 루프를 하나 시험한다<span class="how">무엇을 왜 바꿨는지, 평가로 본 영향, 회귀 목록을 PR에 담는다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>관측성</td><td>Observability. 시스템이 안에서 무엇을 했는지 바깥에서 알 수 있는 정도</td></tr>
+              <tr><td>트레이스</td><td>Trace. 요청 하나가 끝날 때까지 거친 모든 단계의 기록</td></tr>
+              <tr><td>스팬</td><td>Span. 트레이스 안의 단계 하나. LLM 호출이나 도구 호출 하나가 스팬이다</td></tr>
+              <tr><td>스레드 뷰</td><td>트레이스를 사용자와 어시스턴트와 도구의 주고받음으로 보여 주는 화면</td></tr>
+              <tr><td>플라이휠</td><td>Flywheel. 한 바퀴 돌 때마다 다음 바퀴가 쉬워지는 순환 고리. 여기서는 고치기·평가·배포·관찰·통찰의 순환</td></tr>
+              <tr><td>능동 관측성</td><td>Active observability. 사용자가 뒤지지 않아도 플랫폼이 통찰을 먼저 건네는 방식</td></tr>
+              <tr><td>스코어</td><td>Score. 에이전트 출력을 기준에 따라 재는 평가기. 점수를 내는 함수나 프롬프트</td></tr>
+              <tr><td>LLM 심판</td><td>LLM judge. 기준을 주고 LLM이 출력을 채점하게 하는 스코어</td></tr>
+              <tr><td>오프라인 / 온라인 스코어</td><td>오프라인은 평가 데이터셋에, 온라인은 들어오는 프로덕션 트래픽에 돌린다</td></tr>
+              <tr><td>평가 (eval)</td><td>데이터셋의 각 행을 에이전트에 넣고 스코어로 채점하는 실행. 결과는 실험으로 쌓인다</td></tr>
+              <tr><td>실험</td><td>Experiment. 평가 한 번의 결과. 이전 실험과 비교해 개선과 회귀를 본다</td></tr>
+              <tr><td>회귀</td><td>새 변경 때문에 원래 잘 되던 것이 망가지는 일</td></tr>
+              <tr><td>토픽</td><td>Topics. 트레이스를 패턴별로 묶어 빈도와 라벨을 보여 주는 Braintrust 기능</td></tr>
+              <tr><td>패싯</td><td>Facet. 토픽이 패턴을 볼 관점. 작업, 감정, 이슈 같은 기본 패싯과 직접 쓴 커스텀 패싯</td></tr>
+              <tr><td>전처리기</td><td>Preprocessor. 큰 트레이스를 LLM에게 줄 크기로 줄이는 단계</td></tr>
+              <tr><td>임베딩</td><td>Embedding. 글을 숫자 벡터로 바꿔 비슷한 것끼리 가깝게 놓는 것</td></tr>
+              <tr><td>아는 모름 / 모르는 모름</td><td>Known unknowns는 있을 줄 아는 문제, unknown unknowns는 존재조차 모르는 문제</td></tr>
+              <tr><td>자동화</td><td>Automation. 로그가 들어올 때 스코어나 토픽을 자동으로 돌리는 규칙</td></tr>
+              <tr><td>범위 (스코프)</td><td>자동화가 트레이스 전체, 스팬 하나, 또는 묶인 그룹 중 무엇을 볼지</td></tr>
+              <tr><td>샘플링 비율</td><td>들어오는 로그 중 몇 퍼센트에 스코어를 돌릴지</td></tr>
+              <tr><td>BrainStore</td><td>Braintrust가 2024년 말 직접 만든 백엔드 데이터베이스. SQL로 트레이스를 질의할 수 있다</td></tr>
+              <tr><td>Loop</td><td>Braintrust 플랫폼 안에 내장된 에이전트</td></tr>
+              <tr><td>Braintrust CLI (bt)</td><td>터미널에서 SQL, 평가, 로그, 데이터셋을 다루는 도구. 코딩 에이전트에 스킬로 붙인다</td></tr>
+              <tr><td>스킬</td><td>Skill. 코딩 에이전트에게 특정 작업 방법을 알려 주는 지시문 묶음</td></tr>
+              <tr><td>원격 평가</td><td>Remote eval. 평가 코드를 서버로 노출해 플레이그라운드에서 파라미터를 바꿔 실행하는 기능</td></tr>
+              <tr><td>플레이그라운드</td><td>코드 없이 프롬프트와 모델을 바꿔 가며 돌려 보는 Braintrust 화면</td></tr>
+              <tr><td>게이트웨이</td><td>여러 AI 제공자를 하나의 인터페이스로 부르는 중간 서버</td></tr>
+              <tr><td>제어 평면 / 데이터 평면</td><td>Control plane은 웹앱과 메타데이터, data plane은 트레이스·데이터셋·실험 같은 실제 데이터</td></tr>
+              <tr><td>BYOC</td><td>Bring Your Own Cloud. 고객 클라우드에 데이터 평면을 두되 공급자가 관리하는 방식</td></tr>
+              <tr><td>OpenAI Agents SDK</td><td>OpenAI가 만든 에이전트 구축 라이브러리. 워크숍 예제가 이것으로 만들어졌다</td></tr>
+              <tr><td>OpenTelemetry</td><td>트레이스와 지표를 모으는 업계 표준 규격</td></tr>
+              <tr><td>uv</td><td>Python 패키지와 가상 환경을 관리하는 도구</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, 워크숍 저장소 QR</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>Braintrust 소개, 평가와 관측성은 동전의 양면</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>수동 관측에서 능동 관측성으로</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>트레이싱이 바닥이다</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>프레임워크·언어·제공자 연동</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>플라이휠: 프로덕션이 개발을 이끈다</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>신호 1: 스코어 네 종류</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>스코어 요령: 이유, 이진, 가혹함, 예시, 강한 채점 모델</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>오프라인 스코어와 온라인 스코어</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>신호 2: 토픽, 모르는 모름</td></tr>
+              <tr><td><span class="ts">16:50</span></td><td>기본 패싯과 커스텀 패싯, 로드맵 재료</td></tr>
+              <tr><td><span class="ts">18:30</span></td><td>토픽 파이프라인 여섯 단계</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>호스팅 모델과 비용</td></tr>
+              <tr><td><span class="ts">22:50</span></td><td>질문: Lightstep·LangSmith와 비교</td></tr>
+              <tr><td><span class="ts">24:00</span></td><td>BrainStore: 2024년 말 자체 DB</td></tr>
+              <tr><td><span class="ts">26:50</span></td><td>질문: 토픽이 정말 의미 있는 차이를 내나</td></tr>
+              <tr><td><span class="ts">28:50</span></td><td>질문: 코딩 에이전트 세션에 토픽 쓰기</td></tr>
+              <tr><td><span class="ts">30:00</span></td><td>호스팅: SaaS, BYOC, 하이브리드</td></tr>
+              <tr><td><span class="ts">31:00</span></td><td>질문: 긴 대화, 커스텀 전처리기</td></tr>
+              <tr><td><span class="ts">32:30</span></td><td>워크숍 시작, 조직과 프로젝트 만들기 (인터넷 장애)</td></tr>
+              <tr><td><span class="ts">36:00</span></td><td>AI 제공자와 API 키</td></tr>
+              <tr><td><span class="ts">40:30</span></td><td>uv 설치, .env, Braintrust CLI와 스킬 설정</td></tr>
+              <tr><td><span class="ts">46:30</span></td><td>bt init, make ready</td></tr>
+              <tr><td><span class="ts">48:20</span></td><td>첫 트레이스, OpenAI Agents SDK 연동 코드, 게이트웨이</td></tr>
+              <tr><td><span class="ts">50:10</span></td><td>데이터셋 만들고 평가 돌리기, 실험 페이지</td></tr>
+              <tr><td><span class="ts">52:10</span></td><td>스코어 올리기, LLM 심판 변수 (thread 등)</td></tr>
+              <tr><td><span class="ts">54:40</span></td><td>자동화 만들기: 트레이스·스팬·그룹 범위, 샘플링 비율</td></tr>
+              <tr><td><span class="ts">57:20</span></td><td>토픽 켜기, 기본 패싯</td></tr>
+              <tr><td><span class="ts">58:50</span></td><td>커스텀 패싯 "지원 워크플로 이슈", none 제외 정규식</td></tr>
+              <tr><td><span class="ts">1:00:20</span></td><td>CLI로 토픽 설정: 필터, 샘플링, 창, 실행 시점, 범위</td></tr>
+              <tr><td><span class="ts">1:03:00</span></td><td>bt sync로 트레이스 968개 가져오기</td></tr>
+              <tr><td><span class="ts">1:04:10</span></td><td>스레드 뷰, 타임라인 뷰, Loop</td></tr>
+              <tr><td><span class="ts">1:06:20</span></td><td>자동화와 토픽이 실시간으로 붙는다</td></tr>
+              <tr><td><span class="ts">1:07:30</span></td><td>토픽 지도 읽기, 100개 기준, 기록 조회 실패 발견</td></tr>
+              <tr><td><span class="ts">1:09:50</span></td><td>UI에서 필터하기의 한계</td></tr>
+              <tr><td><span class="ts">1:11:40</span></td><td>Loop가 SQL로 관련 트레이스를 끌어온다</td></tr>
+              <tr><td><span class="ts">1:14:00</span></td><td>데이터셋에 추가, 평가 재실행, 새 스코어</td></tr>
+              <tr><td><span class="ts">1:15:30</span></td><td>Braintrust 스킬 저장소, 코딩 에이전트에게 플라이휠 맡기기</td></tr>
+              <tr><td><span class="ts">1:16:30</span></td><td>평가 코드 구조, 프로덕션 사례를 데이터셋으로</td></tr>
+              <tr><td><span class="ts">1:19:40</span></td><td>스킬 설치, Codex 실행</td></tr>
+              <tr><td><span class="ts">1:21:40</span></td><td>Codex가 SQL로 968개 트레이스와 실패 군집을 찾는다</td></tr>
+              <tr><td><span class="ts">1:24:00</span></td><td>질문: 하이브리드 배포, 모델 선택</td></tr>
+              <tr><td><span class="ts">1:26:40</span></td><td>질문: 토픽 모델 고정 이유</td></tr>
+              <tr><td><span class="ts">1:27:50</span></td><td>질문: 커스텀 대시보드</td></tr>
+              <tr><td><span class="ts">1:29:00</span></td><td>질문: 샘플링 비율, Dropbox의 토픽 실험</td></tr>
+              <tr><td><span class="ts">1:30:30</span></td><td>질문: 스코어 연쇄, 토픽이 찾은 뜻밖의 것</td></tr>
+              <tr><td><span class="ts">1:32:50</span></td><td>질문: 프로젝트 단위, 에이전트 객체, 모니터 페이지</td></tr>
+              <tr><td><span class="ts">1:34:40</span></td><td>질문: 평가는 얼마나 자주 바뀌나</td></tr>
+              <tr><td><span class="ts">1:36:20</span></td><td>질문: 스코어를 어디서 돌릴까, 의존성 묶기, 스팬 변경</td></tr>
+              <tr><td><span class="ts">1:38:20</span></td><td>질문: 접근 제어와 서비스 계정</td></tr>
+              <tr><td><span class="ts">1:39:10</span></td><td>가장 저평가된 기능: CLI, 원격 평가</td></tr>
+              <tr><td><span class="ts">1:41:40</span></td><td>Codex 결과: 새 스코어, 새 도구, 새 데이터셋, 평가</td></tr>
+              <tr><td><span class="ts">1:44:30</span></td><td>GitHub Action으로 PR 자동 생성, 하루 5~10개 PR 사례</td></tr>
+              <tr><td><span class="ts">1:47:20</span></td><td>원격 평가 동작 방식, 파라미터, 개발 서버, Modal</td></tr>
+              <tr><td><span class="ts">1:50:00</span></td><td>코딩 에이전트 세션 평가 준비 중</td></tr>
+              <tr><td><span class="ts">1:51:10</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'hfEczxdNyvU:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

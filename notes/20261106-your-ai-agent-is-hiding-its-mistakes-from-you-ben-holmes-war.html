@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>자기 개선 에이전트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- example file (added for this note: sample rubric markdown) ---------- */
+.example { display: grid; gap: 8px; max-width: 68ch; }
+pre {
+  margin: 0; padding: 14px 16px; overflow-x: auto;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: var(--step--1); line-height: 1.6; white-space: pre;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#factory">소프트웨어 팩토리란</a></li>
+      <li><a href="#loop">자기 개선 루프</a></li>
+      <li><a href="#collect">1단계: 대화 모으기</a></li>
+      <li><a href="#scorers">2단계: 무엇을 채점할까</a></li>
+      <li><a href="#rubric">루브릭 쓰는 법</a></li>
+      <li><a href="#grade">3단계: 대화마다 채점</a></li>
+      <li><a href="#improve">4단계: 실패를 모아 고치기</a></li>
+      <li><a href="#skill-doctor">Skill Doctor로 해 보기</a></li>
+      <li><a href="#trend">점수를 시간 순으로 보기</a></li>
+      <li><a href="#continuous">루프를 계속 돌리기</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-06 · 19분 · 영어 발표 한글 정리</span>
+      <h1>에이전트가 숨긴 실수를 찾아 고치는 루프</h1>
+      <p class="lead">에이전트는 막히면 알아서 돌아가고, 끝에 "됐다"고만 말한다. 그 숨은 실패를 찾으려면 지난 대화를 모아 채점하고, 실패만 모아 스킬과 설정을 고치는 루프를 돌려야 한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=pz74r-4dGfQ" target="_blank" rel="noopener">Your AI Agent Is Hiding Its Mistakes From You</a></span>
+        <span>발표: Ben Holmes (Warp DevEx 엔지니어링 리드)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 고쳤고, 확실하지 않은 것은 "(추정)"을 붙였다. 화면의 슬라이드와 데모는 자막에 없어서, 발표자가 말로 설명한 부분만 담았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트는 막히면 혼자 우회하고 <strong>성공했다고만 보고한다.</strong> 낡은 지시와 실패한 도구 호출은 대화 기록 속에 묻힌다.</li>
+        <li>해법은 <strong>자기 개선 루프</strong>다. 대화를 모으고, 채점하고, 실패를 모으고, 개선을 제안하고, 다시 채점한다.</li>
+        <li>모을 것은 세 가지다. <strong>대화 원문, 도구 호출, 결과물</strong>(diff나 PR).</li>
+        <li>채점은 LLM 심판이 루브릭(채점표)으로 한다. 발표의 예시 기준은 <strong>불필요한 테스트, 장황함, 효율</strong>이다.</li>
+        <li>루브릭은 <strong>마크다운 몇 줄과 통과선</strong>이면 시작할 수 있다.</li>
+        <li>PR이 머지되면 채점하고, <strong>24시간마다 실패만 모아</strong> 개선 에이전트에게 넘긴다. 개선 에이전트는 스킬과 설정 변경을 PR로 제안한다.</li>
+        <li>점수를 시간 순으로 그려 두면 <strong>어떤 변경이 효과가 있었는지 증거</strong>가 생긴다. 메모리 방식에는 이 부분이 보이지 않는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="factory">
+        <header><span class="num">01</span><h2>소프트웨어 팩토리란 <span class="ts">01:00</span></h2></header>
+        <p>소프트웨어 팩토리 <span class="en">software factory</span>는 소프트웨어 개발 과정 전체를 자동화한 것이다. 여러 에이전트가 일을 나눠 맡고 다음 에이전트에게 넘기는 조립 라인으로 그리기도 하고, 계속 도는 바퀴로 그리기도 한다.</p>
+        <ol class="plain">
+          <li>할 일을 모아 둔 곳에서 출발한다. 작업 보드일 수도 있고 Slack 메시지일 수도 있다.</li>
+          <li>에이전트가 조사하고 분류한다 <span class="en">triage</span>.</li>
+          <li>사람과 함께 스펙을 쓴다.</li>
+          <li>에이전트가 구현한다.</li>
+          <li>컴퓨터 사용 <span class="en">computer use</span> 기능으로 스크린샷과 녹화를 남겨, 사람이 보기 좋은 PR을 만든다.</li>
+          <li>에이전트끼리 서로의 허점을 찾는 적대적 코드 리뷰 <span class="en">adversarial code review</span>를 몇 번 거친다.</li>
+          <li>에이전트가 배포된 시스템을 지켜보고, 다시 1로 돌아간다.</li>
+        </ol>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">바퀴를 돌리는 일</span>
+            <p>에이전트가 작업을 받아 PR까지 만든다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">바퀴를 고치는 일 <span class="ts">01:50</span></span>
+            <p>에이전트를 움직이는 시스템 자체를 개선한다. 메타 엔지니어링, 가드닝이라고도 부르고, Warp는 <strong>팩토리 엔지니어링</strong> <span class="en">factory engineering</span>이라 부른다.</p>
+          </div>
+        </div>
+        <p>고칠 대상은 여러 가지다. 에이전트가 읽는 스킬, 코드 구조, 에이전트가 코드베이스의 맞는 곳을 건드리는지 보는 정적 분석(SonarQube 같은 도구)이 있다. 이 발표는 그중 <strong>스킬과 설정</strong>을 고치는 루프만 다룬다. <span class="ts">02:30</span></p>
+      </section>
+
+      <!-- 2 -->
+      <section id="loop">
+        <header><span class="num">02</span><h2>자기 개선 루프 <span class="ts">02:40</span></h2></header>
+        <p>자기 개선 에이전트 <span class="en">self-improving agent</span>는 자기가 해 온 일을 돌아보고, 자기 설정을 어떻게 고칠지 스스로 찾는다. 루프는 다섯 단계다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1. 모으기</td><td>팀 전체의 에이전트 대화를 한곳에 모은다</td></tr>
+              <tr><td>2. 채점하기</td><td>채점 에이전트가 팀이 정한 기준(효율, 코드 품질, 테스트 커버리지 등)으로 대화마다 점수를 매긴다</td></tr>
+              <tr><td>3. 실패 찾기</td><td>많은 대화를 채점한 뒤, 실패만 골라 왜 실패했는지 찾는다</td></tr>
+              <tr><td>4. 개선 제안</td><td>cron으로 정해진 시각에 깨어난 에이전트가 스킬과 설정 변경을 제안한다</td></tr>
+              <tr><td>5. 다시 채점</td><td>변경 뒤에 점수가 어떻게 바뀌는지 계속 본다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>2단계의 채점 방식을 <strong>LLM 심판</strong> <span class="en">LLM as a judge</span>이라 한다. 언어 모델에게 루브릭(채점표)을 주고 대화를 평가하게 하는 방식이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="collect">
+        <header><span class="num">03</span><h2>1단계: 대화를 한곳에 모은다 <span class="ts">03:20</span></h2></header>
+        <p>에이전트가 팀 전체의 작업을 보고 판단하려면, 먼저 모든 대화가 한곳에 있어야 한다.</p>
+
+        <h3>혼자 쓸 때 <span class="ts">03:30</span></h3>
+        <p>Claude Code, Codex, Pi(추정) 같은 로컬 에이전트는 대화를 내 컴퓨터에 파일로 남긴다. Claude Code는 <code>.claude</code> 폴더, Codex는 <code>.codex</code> 폴더에 쌓인다. 내 설정만 다듬을 거라면 이것으로 충분하다.</p>
+
+        <h3>팀으로 쓸 때 <span class="ts">03:50</span></h3>
+        <ul class="plain">
+          <li><strong>직접 모으기</strong>: 발표자가 만난 어떤 팀은 팀원 모두의 <code>.claude</code> 폴더를 압축해 공유 S3 버킷에 올리는 자동화를 만들었다.</li>
+          <li><strong>공용 컴퓨터에서 돌리기</strong> <span class="ts">04:10</span>: 에이전트가 각자의 노트북이 아니라 팀이 함께 쓰는 컴퓨터에서 돌면, 대화가 저절로 한곳에 쌓인다. 오래 켜 두는 OpenClaw 인스턴스일 수도 있고, 작업마다 새로 뜨는 격리된 샌드박스일 수도 있다. Warp Factories는 작업마다 Docker 샌드박스를 띄운다.</li>
+        </ul>
+
+        <h3>무엇을 남기나 <span class="ts">05:10</span></h3>
+        <p>사람과 에이전트가 주고받은 말만으로는 부족하다. 세 가지를 모두 남긴다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">대화 원문 · transcript</span>
+            <p>사람이 보낸 말과 에이전트가 돌려준 말.</p>
+          </div>
+          <div class="card">
+            <span class="tag">도구 호출 · tool calls</span>
+            <p>파일 시스템 접근, MCP 호출처럼 에이전트가 바깥과 닿은 모든 기록. 에이전트가 실제로 무엇을 했는지 보여 준다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">결과물 · output</span>
+            <p>대화 속 코드 diff, 또는 커밋을 고정해 확인한 실제 PR. 품질을 채점할 대상이다.</p>
+          </div>
+        </div>
+        <p>도구 호출이 빠지면 다음 절의 <strong>효율 채점</strong>을 할 수 없다. 에이전트의 헛걸음은 대화 원문이 아니라 도구 호출에 남기 때문이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="scorers">
+        <header><span class="num">04</span><h2>2단계: 무엇을 채점할까 <span class="ts">06:00</span></h2></header>
+        <p>채점기 <span class="en">scorer</span>는 대화 하나를 기준 하나로 평가한다. 발표자는 팀이 자주 겪는 불만에서 기준을 고르라며 세 가지 예를 든다.</p>
+
+        <h3>불필요한 테스트 <span class="ts">06:10</span></h3>
+        <p>발표자가 청중에게 "에이전트가 테스트를 너무 많이 쓴다고 느끼는 사람?" 하고 손을 들게 했다.</p>
+        <figure class="chart" aria-label="에이전트가 테스트를 너무 많이 쓴다고 손을 든 비율: 발표장 약 40%, 발표자 팀 약 100%">
+          <span class="chart-title">"에이전트가 테스트를 너무 많이 쓴다"에 손을 든 비율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>발표장 청중</span><span class="val">약 40</span></div>
+              <div class="track"><div class="fill" style="width:40%" title="발표장 청중: 약 40%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>발표자의 팀</span><span class="val">약 100</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="발표자의 팀: 약 100%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자가 눈대중으로 말한 값이다.</span>
+        </figure>
+        <p>결과는 모델과 지시에 따라 달라진다. 팀마다 E2E 테스트, 통합 테스트, 단위 테스트를 얼마나 둘지 생각도 다르다. 그래서 <strong>불필요한 테스트</strong> <span class="en">redundant test</span> 채점기를 두고, 대화마다 에이전트가 테스트를 지나치게 썼는지 본다.</p>
+
+        <h3>장황함 <span class="ts">07:00</span></h3>
+        <p>두 번째 질문은 "에이전트가 주석을 너무 많이 쓴다고 느끼는 사람?"이었다. 발표자는 어느 모델 이야기인지 짐작이 간다며 이름은 밝히지 않았다.</p>
+        <p>이건 보기 싫어서만의 문제가 아니다. 지금 가장 큰 병목은 코드 리뷰다. 에이전트가 변경을 요약한 글과 코드에 남긴 주석이 리뷰 속도를 좌우한다. 그래서 대화에서든 코드에서든 말이 지나치게 많은지 보는 <strong>장황함</strong> <span class="en">verbosity</span> 채점기를 둔다.</p>
+
+        <h3>효율 <span class="ts">07:50</span></h3>
+        <p>세 번째는 에이전트가 해결책까지 곧장 갔는지, 제자리에서 헛돌았는지다. 이 채점에는 도구 호출 기록이 꼭 필요하다.</p>
+        <div class="callout warn">
+          <span class="title">에이전트가 실수를 숨기는 방식 <span class="ts">08:10</span></span>
+          <span>요즘 에이전트는 끈질기다. 막히면 알아서 돌아가는 길을 찾고, 그 사실을 말하지 않는다. 끝에 "됐다"고만 보고한다. 사람 없이 오래 돌리거나 클라우드 샌드박스에서 돌리면 대화를 지켜보는 사람이 없어서, 실패한 도구 호출을 놓치기 쉽다.</span>
+        </div>
+        <p>발표자 팀이 실제로 겪은 일이다. <span class="ts">08:20</span></p>
+        <ol class="plain">
+          <li>테스트 하네스용 스킬에 낡은 지시가 많았다.</li>
+          <li>에이전트는 지시대로 안 되자 포트 번호를 여기저기 찔러 보며 환경을 스스로 알아냈다.</li>
+          <li>그다음에야 코드를 쓰기 시작했고, 이 과정을 팀에 알리지 않았다.</li>
+          <li>팀이 아는 건 "생각보다 2분쯤 더 걸린다"뿐이었다.</li>
+        </ol>
+        <p>겉으로는 사소한 지연인데, 속에는 고칠 거리가 많았다. 효율 채점기는 도구 호출을 훑어 이런 헛걸음을 잡아낸다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="rubric">
+        <header><span class="num">05</span><h2>루브릭 쓰는 법 <span class="ts">08:50</span></h2></header>
+        <p>채점기는 그냥 마크다운 파일이다. Warp에서는 스킬 정의와 비슷한 모양으로, LLM 심판에게 무엇을 어떻게 채점할지 알려 준다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>들어가는 것</th><th>뜻</th><th>발표에서 읽은 효율 채점기 내용</th></tr></thead>
+            <tbody>
+              <tr><td>채점 대상</td><td>이 채점기가 무엇을 보는가</td><td>결과를 향해 일했는가, 아니면 중복 단계와 불필요한 주고받기에 힘을 낭비했는가</td></tr>
+              <tr><td>라벨</td><td>점수마다 성공과 실패가 어떤 모습인지 <span class="ts">09:20</span></td><td>목록의 중간이 통과선이다. 0.4나 0.2면 실패다 <span class="ts">10:00</span></td></tr>
+              <tr><td>정의</td><td>기준의 세부 항목 <span class="ts">10:10</span></td><td>"cost human"(추정: 사람에게 드는 비용), 정보 수집 단계, 반복 단계의 오버헤드 <span class="en">routine step overhead</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 고등학교 에세이 채점표에 빗댄다. "정확히 다섯 문단이고, 수동태 없이 능동태만 쓰면 잘 쓴 글" 같은 식이다. 효율처럼 꽤 분명하게 정의할 수 있는 기준은, 이렇게 채점표로 에이전트를 시험하는 게 여전히 쓸모 있다.</p>
+        <p>통과선 아래로 떨어진 대화는 무언가 잘못된 대화이니 들여다본다. 통과한 대화는 대체로 괜찮았으니 더 볼 필요가 없다.</p>
+        <p>짧게 시작해서 쓰면서 키운다. Warp가 주는 템플릿이 있지만, 글머리 기호 몇 줄과 채점표만으로도 시작할 수 있다. 발표자 말로는 "과학보다는 기예(art)에 가깝다".</p>
+        <figure class="example">
+          <span class="eyebrow">예시 · 발표 내용을 바탕으로 만든 것이고, 화면에 나온 실제 파일은 아니다</span>
+<pre><code># Scorer: efficiency
+
+에이전트가 결과를 향해 곧장 일했는가,
+중복 단계와 불필요한 주고받기에 힘을 낭비했는가.
+
+## Labels
+- 1.0  곧장 해결했다
+- 0.8  작은 헛걸음이 한두 번 있었다
+- 0.6  헛걸음이 있었지만 스스로 빨리 바로잡았다
+- 0.4  실패: 환경을 파악하는 데 도구 호출을 많이 썼다
+- 0.2  실패: 같은 시도를 여러 번 되풀이했다
+- 0.0  실패: 끝내 해결하지 못했다
+
+## Definition
+- 사람에게 드는 비용: 사람이 몇 번 끼어들어야 했나
+- 정보 수집 단계: 필요한 정보를 찾는 데 얼마나 걸렸나
+- 반복 단계 오버헤드: 매번 하는 일에 낭비가 있었나</code></pre>
+          <span class="note">통과선은 0.6과 0.4 사이다. 발표에서 확인되는 것은 "0.4, 0.2는 실패, 중간 위는 통과"까지다.</span>
+        </figure>
+      </section>
+
+      <!-- 6 -->
+      <section id="grade">
+        <header><span class="num">06</span><h2>3단계: 대화마다 채점한다 <span class="ts">10:40</span></h2></header>
+        <p>채점기가 준비되면 에이전트가 대화를 채점한다.</p>
+        <ul class="plain">
+          <li>대화 하나에 채점 에이전트를 한 번 돌린다. <span class="ts">11:00</span></li>
+          <li>모든 대화를 채점해도 되고, 토큰을 아끼려고 무작위로 골라 채점해도 된다.</li>
+          <li>보통 <strong>PR이 머지되면</strong> 채점이 자동으로 시작된다. <span class="ts">12:20</span></li>
+        </ul>
+
+        <h3>예: 인증 서비스 구현 대화 <span class="ts">11:30</span></h3>
+        <p>에이전트가 풀스택으로 인증 서비스(자막의 "off service", auth service로 추정)를 구현했고, PR이 머지됐다고 하자. 채점 에이전트가 기준마다 이렇게 판정한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기준</th><th>판정</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>테스트</td><td>실패</td><td>팀 가이드는 E2E 테스트를 주로 쓰라고 하는데, 인증 서비스에 단위 테스트를 잔뜩 썼다</td></tr>
+              <tr><td>장황함</td><td>통과</td><td>코드 주석을 거의 안 쓰는 새 모델을 썼다. PR을 이해하기 쉬웠다</td></tr>
+              <tr><td>효율</td><td>실패</td><td>이 변경을 어떻게 테스트할지 알아내려고 테스트 환경을 오래 탐색했다. 미리 지시가 있었어야 했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>판정마다 통과나 실패와 함께, 왜 그렇게 봤는지 설명이 붙는다. 이 설명이 다음 단계의 에이전트가 무엇을 고칠지 정하는 재료가 된다.</p>
+        <p class="note">여기서 통과와 실패는 루브릭의 통과선 아래로 떨어졌는지만 뜻한다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="improve">
+        <header><span class="num">07</span><h2>4단계: 실패를 모아 고친다 <span class="ts">12:50</span></h2></header>
+        <p>채점은 대화가 끝나자마자 하고, 개선은 하루에 한 번 몰아서 한다.</p>
+        <ol class="plain">
+          <li>cron이 24시간마다 작업을 깨운다.</li>
+          <li>지난 24시간의 대화 표본을 가져온다. 예를 들어 200개다.</li>
+          <li>그중 실패한 대화만 남긴다. 예를 들어 50개다.</li>
+          <li>실패 보고서(무엇이, 왜 실패했는지)를 <strong>자기 개선 에이전트</strong> <span class="en">self-improvement agent</span>에게 넘긴다. <span class="ts">13:10</span></li>
+          <li>"공통점을 찾아라"라고 지시하고, 스킬 저장소와 코드베이스에 접근하게 해 준다. 코드 구조까지 바꿔야 할 때를 위해서다.</li>
+        </ol>
+        <figure class="chart" aria-label="하루치 대화 표본 200개 중 실패한 50개만 개선 에이전트에게 넘긴다">
+          <span class="chart-title">하루치 대화 중 개선 에이전트가 읽는 양 (개)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>지난 24시간 대화 표본</span><span class="val">200</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="대화 표본: 200개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>실패한 대화 (개선 에이전트에게 감)</span><span class="val">50</span></div>
+              <div class="track"><div class="fill key" style="width:25%" title="실패한 대화: 50개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>100</span><span>200</span></div>
+          <span class="caption">발표자가 "예를 들면" 하고 든 숫자다. 실패만 넘기므로 개선 에이전트가 읽는 양이 4분의 1로 준다.</span>
+        </figure>
+        <p>예를 들어 불필요한 테스트가 여러 PR에서 되풀이되면, 개선 에이전트가 스킬에 <strong>커버리지 피라미드</strong>(테스트 종류별로 얼마나 둘지 정한 그림)를 추가한다. <span class="ts">13:30</span></p>
+      </section>
+
+      <!-- 8 -->
+      <section id="skill-doctor">
+        <header><span class="num">08</span><h2>Skill Doctor로 한 번 해 보기 <span class="ts">13:50</span></h2></header>
+        <p>가장 쉽게 해 볼 수 있는 방법으로 발표자는 Warp가 만든 스킬 <strong>Skill Doctor</strong>를 소개한다. 주소는 <code>warp.dev/skilldoctor</code>다.</p>
+        <ul class="plain">
+          <li>개인 로컬 환경에서 실행한다.</li>
+          <li>Claude Code, Codex 등에 쌓인 대화를 훑어 한 번 채점한다.</li>
+          <li>토큰을 아끼려고 대화를 묶음으로 나눠 채점한다. <span class="ts">14:20</span></li>
+          <li>마지막에 개선 에이전트가 점수를 보고 보고서를 낸다. 발표자는 이를 스킬 성적표 <span class="en">report card</span>라고 부른다. <span class="ts">14:40</span></li>
+        </ul>
+
+        <h3>데모에서 나온 제안 <span class="ts">15:10</span></h3>
+        <p>발표자가 자기 프로젝트를 만든 세션들에 돌려 보니, 일부 지표가 기대보다 낮았고 장황함은 괜찮았다. 채점 에이전트들이 남긴 메모를 바탕으로 스킬 변경 두 가지가 나왔다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">E2E 테스트 스킬</span>
+            <ul>
+              <li>문제: 에이전트가 테스트할 머신에서 포트 번호를 두고 씨름했다. 환경이 어떻게 구성됐는지 몰랐다.</li>
+              <li>제안: 포트 번호를 먼저 찾은 뒤 시작하라는 지시를 넣는다. 될 때까지 부딪히지 않게 한다.</li>
+            </ul>
+            <p class="verdict"><b>효과</b>: 도구 호출이 준다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">changelog 스킬 <span class="ts">15:40</span></span>
+            <ul>
+              <li>문제: 발표자가 매번 changelog 문구를 원하는 표현으로 다시 쓰게 했다.</li>
+              <li>제안: 어떤 문장으로 쓸지 구체적으로 정한 규칙으로 스킬을 다시 썼다.</li>
+            </ul>
+            <p class="verdict"><b>효과</b>: 에이전트가 PR을 열 때마다 하던 주고받기가 사라진다.</p>
+          </div>
+        </div>
+        <p>둘 다 발표자가 직접 찾을 수도 있었다. 그래도 포트 문제는 놓치기 쉽다. 에이전트 하네스에서는 "작업 중" 표시 뒤에 가려지고, 클라우드에서 돌면 아예 보이지 않기 때문이다.</p>
+        <p>한 번 돌리는 건 당장 쉬운 개선거리를 찾는 출발점이다. 누가 기억날 때만 돌리기보다 계속 돌리는 편이 낫다.</p>
+        <p class="note">Skill Doctor와 Warp Factories는 발표자가 일하는 Warp의 제품이다. 이 절과 10절은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="trend">
+        <header><span class="num">09</span><h2>점수를 시간 순으로 본다 <span class="ts">16:10</span></h2></header>
+        <p>원래 여기서 점수 그래프를 보여 주려 했지만 스테이징 환경 접근이 끊겼다. 그래서 발표자는 말과 손그림으로 설명했다.</p>
+
+        <h3>메모리 방식과의 차이 <span class="ts">16:30</span></h3>
+        <p>에이전트 하네스의 메모리 기능이나, 밤사이 지난 대화를 되짚는 "꿈꾸기" <span class="en">dreaming</span>도 에이전트가 스스로를 돌아보는 방법이다. 이 발표의 루프와 비슷하다. 다만 에이전트가 무엇을 결론 냈는지 겉으로 보이지 않는다.</p>
+        <div class="shift" aria-label="메모리 방식과 점수 방식의 차이">
+          <div><span class="tag">메모리 · 꿈꾸기</span><b>에이전트가 혼자 돌아본다</b><span class="muted">무엇을 배웠는지 사람에게 안 보인다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">점수 + 대시보드</span><b>채점 결과가 기록으로 남는다</b><span class="muted">대화들이 어땠는지 사람이 보고 확인할 수 있다</span></div>
+        </div>
+
+        <h3>변경과 점수를 잇는다 <span class="ts">17:00</span></h3>
+        <p>채점이 계속 돌면 데이터가 쌓인다. 효율 점수를 시간 순으로 그리면 평균 50%, 60%처럼 오르내리는 선이 나온다.</p>
+        <p>스킬 변경을 머지한 날을 이 선 위에 찍으면, 점수가 꺾이는 지점과 맞춰 볼 수 있다. "이 스킬을 머지했더니 효율이 몇 % 올랐다"고 말할 증거가 생긴다. 에이전트가 스스로 나아질 뿐 아니라, 그게 진짜인지도 확인할 수 있다. <span class="ts">17:20</span></p>
+      </section>
+
+      <!-- 10 -->
+      <section id="continuous">
+        <header><span class="num">10</span><h2>루프를 계속 돌리기 <span class="ts">17:50</span></h2></header>
+        <p>Warp Factories에서는 이 루프가 한 번이 아니라 계속 돈다. 에이전트가 대화를 늘 채점하고, cron으로 깨어난 에이전트가 점수를 보고 설정 개선 PR을 올린다.</p>
+        <p>발표자가 보여 준 화면은 개선 PR 받은편지함이다. Warp 팀의 실제 에이전트 설정을 대상으로 하고, 팀이 리뷰할 PR이 쌓여 있다. <span class="ts">18:10</span></p>
+        <div class="callout">
+          <span class="title">머지된 예: triage 스킬 <span class="ts">18:20</span></span>
+          <span>triage 스킬에 하위 에이전트 <span class="en">sub-agent</span>를 띄우는 설정이 빠져 있었다. 에이전트는 하위 에이전트를 어떻게 만드는지 알아내려고 계속 헤맸고, 도구 호출을 많이 낭비했다. 개선 에이전트가 이를 찾아 "팩토리 설정의 이 부분을 고치면 토큰을 아낄 수 있다"고 제안했다.</span>
+        </div>
+        <p>발표자는 이런 PR을 여러 개 머지했고, 에이전트가 조금씩 더 효율적이고 품질이 높아졌다고 말한다. <span class="ts">18:50</span></p>
+        <p class="note">Warp 자사 제품의 화면이고, 효과도 발표자의 말이다. 점수가 얼마나 바뀌었는지 수치는 발표에 나오지 않았다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트는 막히면 우회하고 성공만 보고한다. <strong>실수는 대화 기록 속에 숨는다.</strong></li>
+          <li>팩토리 엔지니어링은 에이전트를 움직이는 시스템 자체를 고치는 일이다. 이 발표의 대상은 스킬과 설정이다.</li>
+          <li>루프는 <strong>모으기 → 채점 → 실패 찾기 → 개선 제안 → 다시 채점</strong>이다.</li>
+          <li>팀 전체 대화를 한곳에 모은다. 공용 컴퓨터에서 에이전트를 돌리면 저절로 모인다.</li>
+          <li><strong>대화 원문, 도구 호출, 결과물</strong> 세 가지를 모두 남긴다. 헛걸음은 도구 호출에 남는다.</li>
+          <li>채점 기준은 팀의 불만에서 고른다. 예: 불필요한 테스트, 장황함, 효율.</li>
+          <li>루브릭은 마크다운 몇 줄과 통과선이면 시작할 수 있다. 쓰면서 키운다.</li>
+          <li>PR 머지 때 채점하고, <strong>하루 한 번 실패만 모아</strong> 개선 에이전트에게 넘긴다.</li>
+          <li>개선은 스킬과 설정 변경 PR로 오고, 팀이 리뷰해서 머지한다.</li>
+          <li>점수를 시간 순으로 그리면 <strong>어떤 변경이 효과 있었는지 증거</strong>가 생긴다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>에이전트가 실수를 "숨긴다"는 말은 무슨 뜻인가?</span></summary><div class="answer">막히면 혼자 돌아가는 길을 찾고, 그 과정은 말하지 않은 채 "됐다"고만 보고한다는 뜻이다. 실패한 도구 호출과 낡은 지시는 기록 속에 묻힌다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>자기 개선 루프의 다섯 단계는?</span></summary><div class="answer">대화 모으기, 채점하기, 실패 찾기, 개선 제안, 다시 채점하기.</div></details>
+          <details><summary><span class="qn">Q3</span><span>대화를 분석하려면 무엇을 남겨야 하나?</span></summary><div class="answer">대화 원문, 도구 호출(파일 시스템, MCP 등), 결과물(코드 diff나 PR).</div></details>
+          <details><summary><span class="qn">Q4</span><span>팀 대화를 한곳에 모으는 두 가지 방법은?</span></summary><div class="answer">각자의 <code>.claude</code> 같은 폴더를 공유 저장소(예: S3)로 모으거나, 에이전트를 팀 공용 컴퓨터나 샌드박스에서 돌려 저절로 모이게 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>발표자 팀의 테스트 하네스 사례에서 겉으로 보인 증상과 실제 원인은?</span></summary><div class="answer">겉으로는 "생각보다 2분쯤 더 걸린다"뿐이었다. 실제로는 스킬의 낡은 지시 때문에 에이전트가 포트 번호를 이것저것 찔러 보며 환경을 알아내고 있었다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>장황함을 채점하는 이유는?</span></summary><div class="answer">지금 가장 큰 병목은 코드 리뷰다. 변경 요약과 코드 주석이 지나치게 길면 리뷰가 느려진다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>루브릭에 들어가는 세 부분과, 발표의 통과선 예는?</span></summary><div class="answer">채점 대상, 점수별 라벨, 기준의 정의. 라벨 목록의 중간이 통과선이고 0.4나 0.2는 실패다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>채점은 언제 시작하고, 모든 대화를 다 채점해야 하나?</span></summary><div class="answer">보통 PR이 머지되면 시작한다. 전부 채점해도 되고, 토큰을 아끼려고 무작위 표본만 채점해도 된다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>자기 개선 에이전트에게 무엇을 넘기나?</span></summary><div class="answer">지난 24시간 실패한 대화의 보고서(무엇이 왜 실패했는지)와 "공통점을 찾아라"라는 지시, 그리고 스킬 저장소와 코드베이스 접근 권한.</div></details>
+          <details><summary><span class="qn">Q10</span><span>Skill Doctor 데모에서 나온 스킬 변경 두 가지는?</span></summary><div class="answer">E2E 테스트 스킬에 "포트 번호를 먼저 찾아라"를 넣었고, changelog 스킬을 구체적인 문구 규칙으로 다시 썼다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>메모리나 꿈꾸기 방식과 비교해 점수 방식이 나은 점은?</span></summary><div class="answer">에이전트가 무엇을 판단했는지 기록으로 보인다. 스킬 변경 시점과 점수 변화를 맞춰 보면 효과가 있었는지 증거가 생긴다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>Warp 팀에서 머지된 개선 PR의 예는?</span></summary><div class="answer">triage 스킬에 하위 에이전트를 띄우는 설정이 빠져 있어 에이전트가 도구 호출을 낭비했다. 개선 에이전트가 팩토리 설정을 고치라고 제안했다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>내 에이전트 대화 기록이 어디에 쌓이는지 확인한다<span class="how">예: <code>.claude</code>, <code>.codex</code> 폴더. 확인: 지난주 대화를 열어 볼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>팀 대화를 한곳에 모은다<span class="how">공용 러너에서 에이전트를 돌리거나, 각자의 기록을 공유 저장소로 모은다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>대화 원문과 함께 도구 호출, 결과물도 남긴다<span class="how">확인: 실패한 도구 호출을 나중에 찾아볼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>팀이 자주 불평하는 문제 하나를 채점 기준으로 고른다<span class="how">예: 불필요한 테스트, 장황함, 효율</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>루브릭을 마크다운 몇 줄로 쓰고 통과선을 정한다<span class="how">채점 대상, 점수별 라벨, 정의. 짧게 시작해 쓰면서 키운다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>PR이 머지되면 채점이 자동으로 돌게 한다<span class="how">토큰이 걱정되면 무작위 표본만 채점한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>하루 한 번 실패한 대화만 모아 공통점을 찾게 한다<span class="how">개선 에이전트에게 스킬 저장소 접근 권한을 준다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>개선 제안은 PR로 받아 사람이 리뷰한 뒤 머지한다</span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>스킬 변경을 머지한 날과 점수를 같은 그래프에 둔다<span class="how">확인: 이 변경이 효과 있었다고 숫자로 말할 수 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>소프트웨어 팩토리</td><td>Software factory. 작업 접수부터 구현, 리뷰, 모니터링까지 개발 과정 전체를 에이전트로 자동화한 것</td></tr>
+              <tr><td>팩토리 엔지니어링</td><td>Factory engineering. 에이전트를 움직이는 시스템(스킬, 설정, 코드 구조)을 개선하는 일. 메타 엔지니어링, 가드닝이라고도 한다</td></tr>
+              <tr><td>자기 개선 에이전트</td><td>Self-improving agent. 지난 작업을 돌아보고 자기 설정을 어떻게 고칠지 찾는 에이전트</td></tr>
+              <tr><td>스킬</td><td>Skill. 에이전트가 특정 종류의 일을 할 때 읽는 지시 문서</td></tr>
+              <tr><td>도구 호출</td><td>Tool call. 에이전트가 파일을 읽거나 명령을 실행하는 등 바깥 도구를 쓴 기록</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 에이전트를 외부 도구와 데이터에 연결하는 표준</td></tr>
+              <tr><td>트레이스</td><td>Agent trace. 에이전트 한 번의 작업에서 오간 대화, 도구 호출, 결과를 모은 기록</td></tr>
+              <tr><td>LLM 심판</td><td>LLM as a judge. 언어 모델에게 기준을 주고 다른 모델의 결과를 평가하게 하는 방식</td></tr>
+              <tr><td>루브릭</td><td>Rubric. 점수마다 어떤 모습이면 그 점수인지 적어 둔 채점표</td></tr>
+              <tr><td>채점기</td><td>Scorer. 대화 하나를 기준 하나로 평가하도록 정의한 마크다운 파일과 그걸 쓰는 에이전트</td></tr>
+              <tr><td>샌드박스</td><td>Sandbox. 작업마다 따로 띄우는, 바깥과 격리된 실행 환경</td></tr>
+              <tr><td>cron</td><td>정해진 주기(예: 24시간마다)로 작업을 실행하는 스케줄러</td></tr>
+              <tr><td>무작위 표본</td><td>Random sampling. 전부 보지 않고 일부만 무작위로 골라 보는 것</td></tr>
+              <tr><td>E2E · 통합 · 단위 테스트</td><td>E2E는 사용자 흐름 전체를, 통합 테스트는 여러 부품이 함께 도는지를, 단위 테스트는 함수 하나를 검사한다</td></tr>
+              <tr><td>커버리지 피라미드</td><td>테스트 종류별로 얼마나 둘지 정한 그림. 발표에서는 개선 에이전트가 스킬에 추가하는 예로 나온다</td></tr>
+              <tr><td>triage</td><td>들어온 작업을 살펴 분류하고 우선순위를 정하는 단계</td></tr>
+              <tr><td>하위 에이전트</td><td>Sub-agent. 에이전트가 일을 나눠 맡기려고 띄우는 다른 에이전트</td></tr>
+              <tr><td>꿈꾸기</td><td>Dreaming. 에이전트가 사람이 없는 시간에 지난 대화를 되짚어 기억을 정리하는 방식</td></tr>
+              <tr><td>변곡점</td><td>Inflection point. 그래프의 흐름이 꺾이는 지점</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 자기 개선 에이전트라는 주제</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>소프트웨어 팩토리: 조립 라인과 바퀴</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>메타 엔지니어링, 팩토리 엔지니어링</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>이 발표의 대상: 스킬과 설정</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>자기 개선 루프와 LLM 심판</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>1단계: 대화를 한곳에 모으기</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>팀원 폴더를 S3에 모은 팀</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>공용 컴퓨터와 샌드박스에서 돌리기</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>남길 것 세 가지: 원문, 도구 호출, 결과물</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>2단계: 채점. "테스트가 너무 많다" 손들기</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>불필요한 테스트 채점기</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>"주석이 너무 많다"와 장황함 채점기</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>효율 채점기와 도구 호출 기록</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>낡은 지시를 몰래 우회한 에이전트</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>채점기는 마크다운 파일</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>라벨과 에세이 채점표 비유</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>통과선: 0.4, 0.2는 실패</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>3단계: 대화마다 채점</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>예: 인증 서비스 대화 채점</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>PR 머지가 트리거, 결과 쌓기</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>4단계: 24시간마다 실패 모으기</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>자기 개선 에이전트에게 넘기기</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>예: 커버리지 피라미드 추가</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>Skill Doctor 소개</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>스킬 성적표</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>제안 1: E2E 테스트 스킬과 포트 번호</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>제안 2: changelog 스킬</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>계속 돌리기, 스테이징 접근 끊김</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>메모리·꿈꾸기 방식과의 차이</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>효율 점수를 시간 순으로 그리기</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>Warp Factories의 개선 PR 받은편지함</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>머지된 예: triage 스킬의 하위 에이전트 설정</td></tr>
+              <tr><td><span class="ts">18:50</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'pz74r-4dGfQ:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

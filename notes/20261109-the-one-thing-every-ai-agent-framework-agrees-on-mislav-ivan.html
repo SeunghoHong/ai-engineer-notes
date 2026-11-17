@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 실행 경계 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- added for this note: code block, risky side of a shift diagram ---------- */
+pre {
+  margin: 0; padding: 14px 16px; max-width: 68ch; overflow-x: auto;
+  background: var(--code-bg); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: var(--step--1); line-height: 1.6;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+.shift > div.risk { border-color: var(--crit); }
+.shift .risk .tag { color: var(--crit); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#three-lines">세 줄짜리 공통점</a></li>
+      <li><a href="#disagree">거의 모든 것이 다른 프레임워크</a></li>
+      <li><a href="#where">코드는 어디서 돌리나</a></li>
+      <li><a href="#allowlist">1단계: 허용 목록</a></li>
+      <li><a href="#embedded">2단계: 내장 런타임</a></li>
+      <li><a href="#vm">3단계: 분리된 VM</a></li>
+      <li><a href="#direction">프레임워크가 지우는 것</a></li>
+      <li><a href="#usage">샌드박스 쓰임의 변화</a></li>
+      <li><a href="#wrong-question">"어떤 프레임워크?"는 틀린 질문</a></li>
+      <li><a href="#boundary">나중에 못 바꾸는 것</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 에이전트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-09 · 15분 · 영어 발표 한글 정리</span>
+      <h1>프레임워크보다 실행 경계를 먼저 정하라</h1>
+      <p class="lead">에이전트 프레임워크들은 거의 모든 것에서 서로 다르다. 그런데 에이전트가 만든 코드를 격리된 샌드박스에서 돌려야 한다는 점에는 모두 동의한다. 발표자는 그래서 프레임워크보다 코드를 어디서 돌릴지를 먼저 정하라고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=WWIFiQi9U4w" target="_blank" rel="noopener">The One Thing Every AI Agent Framework Agrees On</a></span>
+        <span>발표: Mislav Ivanda (Daytona 개발자 경험 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 사례와 날짜는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름(Claude Agent SDK, AG2, CrewAI, bubblewrap)은 알려진 이름으로 바로잡았다. 자막은 14:10 무렵 끊겨 마지막 문장을 다 담지 못했다. 발표자는 샌드박스를 파는 Daytona 소속이다. 샌드박스를 권하는 결론은 그 점을 감안해 읽자. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>Daytona를 여러 에이전트 프레임워크에 붙여 보니, 붙이는 모양은 달라도 속은 같은 세 줄이었다. <strong>샌드박스를 만들고, 그 안에서 실행하고, 지운다.</strong></li>
+        <li>이 프레임워크들은 에이전트의 정의, 구현 언어, 행동을 누가 정하는지까지 다르다. 그런데도 샌드박스에는 동의한다. 발표자는 이를 <strong>유행이 아니라 필요</strong>로 본다.</li>
+        <li>쓸모 있는 에이전트는 결국 코드나 셸 명령을 실행한다. 남는 질문은 <strong>그 코드를 어디서 돌리느냐</strong>다.</li>
+        <li>허용 목록은 모델이 <strong>무엇을 써야 하는지</strong>만 정하고, <strong>무엇을 쓸 수 있는지</strong>는 막지 못한다.</li>
+        <li>내장 런타임은 스크립트를 가두지만, 스크립트가 부르는 <strong>도구는 런타임 밖 내 컴퓨터에서 돈다.</strong></li>
+        <li>따로 떨어진 VM에서는 <strong>샌드박스가 뚫려도 앱은 뚫리지 않는다.</strong> 버리고 새로 띄우면 된다. 프레임워크들도 로컬 실행 같은 <strong>다른 선택지를 지우는 중</strong>이다.</li>
+        <li>프레임워크, 모델, 기능, 샌드박스 업체는 나중에 바꿀 수 있다. <strong>실행 경계는 아키텍처 전체를 정해서 나중에 바꾸기 어렵다.</strong> 그러니 가장 먼저 고른다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="three-lines">
+        <header><span class="num">01</span><h2>세 줄짜리 공통점 <span class="ts">00:50</span></h2></header>
+        <p>발표자 Mislav Ivanda는 Daytona의 개발자 경험 엔지니어다. Daytona는 <strong>샌드박스</strong> <span class="en">sandbox</span>를 제공하는 회사다. 샌드박스는 바깥과 격리된 실행 환경이다. 안에서 무슨 일이 벌어져도 밖에 영향을 주지 않게 만든 곳이다.</p>
+        <p>발표자는 지난 1년 동안 샌드박스가 필요한 곳마다 Daytona를 붙였다. 에이전트 프레임워크, 코딩 에이전트 하네스, 워크플로 도구, 개발자용 제품 등이다. 그 과정에서 같은 패턴이 계속 보였다.</p>
+
+        <h3>이 코드는 어느 프레임워크일까</h3>
+        <p>발표자는 코드 한 장을 띄우고 어느 프레임워크인지 물었다. 청중은 LangChain, LangGraph, Google ADK를 말했다. 발표자는 어느 답이든 맞는다고 했다. 프레임워크마다 Daytona를 붙인 코드가 거의 구별되지 않았기 때문이다.</p>
+        <p>겉으로 붙이는 방식은 프레임워크마다 달랐다.</p>
+        <ul class="plain">
+          <li>어떤 곳에서는 <strong>도구</strong> <span class="en">tool</span>로 붙인다.</li>
+          <li>어떤 곳에서는 따로 설치하는 <strong>외부 플러그인</strong>으로 붙인다.</li>
+          <li>어떤 곳에서는 프레임워크의 <strong>샌드박스 클라이언트 클래스를 확장</strong>하고 내부 API를 다룬다.</li>
+        </ul>
+        <p>하지만 속에서 하는 일은 모두 같은 세 줄이었다. <span class="ts">01:50</span></p>
+        <pre><code>sandbox = provider.create()   # 1. 샌드박스를 만든다
+result = sandbox.run(task)    # 2. 그 안에서 코드나 작업을 실행한다
+sandbox.delete()              # 3. 샌드박스를 지운다</code></pre>
+        <p class="note">예시: 발표 슬라이드의 코드가 아니다. 세 단계를 보여 주려고 쓴 의사 코드이고, 함수 이름은 실제 SDK와 다르다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="disagree">
+        <header><span class="num">02</span><h2>거의 모든 것이 다른 프레임워크 <span class="ts">02:10</span></h2></header>
+        <p>이 세 줄이 같다는 게 이상한 이유가 있다. 이 프레임워크들은 대부분 서로 경쟁한다. 기본 개념에서도 거의 합의하지 않는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>발표자가 정리한 답</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트란 무엇인가</td><td>LangGraph: 따라 이동할 수 있는 그래프<br>CrewAI: 역할을 맡아 스스로 일하는 여러 에이전트<br>OpenAI Agents SDK: LLM을 감싼 루프<br>Claude Agent SDK: 완성된 제품을 통째로 준다. 조립하지 않고 그대로 쓴다</td></tr>
+              <tr><td>어떤 언어로 만드나</td><td>주로 Python과 TypeScript로 갈린다</td></tr>
+              <tr><td>행동은 누가 정하나</td><td>Mastra, LangGraph: 개발자가 워크플로와 실행 경로를 직접 정한다<br>CrewAI: 에이전트가 목표를 이루려고 스스로 정한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>거의 모든 것에 동의하지 않는 회사들이 한 가지에 동의한다면, 그건 유행이 아니라 필요일 것이다.<cite>발표자의 말을 옮김 · <span class="ts">03:30</span></cite></blockquote>
+      </section>
+
+      <!-- 3 -->
+      <section id="where">
+        <header><span class="num">03</span><h2>코드는 어디서 돌리나 <span class="ts">03:40</span></h2></header>
+        <p>왜 다들 샌드박스에 동의할까. 발표자의 답은 이렇다. 에이전트로 쓸모 있는 일을 하다 보면, 에이전트가 코드를 실행하거나 <strong>셸</strong> <span class="en">shell</span>에 접근해야 하는 때가 반드시 온다.</p>
+        <p>그다음 질문은 "그 코드를 어디서 실행하나"다. 에이전트가 만든 코드가 어디까지 닿을 수 있는지 정하는 선을 <strong>실행 경계</strong> <span class="en">execution boundary</span>라고 한다. 발표자는 격리 수준을 세 단계로 나눈다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>대표 수단</th><th>무엇을 막나</th><th>어디가 새나</th></tr></thead>
+            <tbody>
+              <tr><td>1. 로컬 + 허용 목록</td><td>명령 허용 목록, 승인 창, 가로채기 훅</td><td>목록에 없는 명령</td><td>허용한 명령 하나로 거의 모든 일을 할 수 있다</td></tr>
+              <tr><td>2. 내장 런타임</td><td>V8, QuickJS</td><td>스크립트의 네트워크·파일 접근</td><td>스크립트가 부른 도구는 런타임 밖에서 실행된다</td></tr>
+              <tr><td>3. 분리된 VM</td><td>별도 컴퓨터를 API로 제어</td><td>내 인프라, 네트워크, 파일 시스템 전체</td><td>새더라도 앱까지 닿지 않는다 (발표자 주장)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="allowlist">
+        <header><span class="num">04</span><h2>1단계: 허용 목록과 승인 창 <span class="ts">04:10</span></h2></header>
+        <p>가장 기본적인 방식이다. 로컬에서 에이전트를 개발할 때 대부분 이렇게 쓴다.</p>
+        <ul class="plain">
+          <li><strong>허용 목록</strong> <span class="en">allow list</span>: 실행해도 되는 명령을 미리 정해 둔다.</li>
+          <li><strong>승인 창</strong> <span class="en">approval prompt</span>: Claude가 "이 명령을 실행할까요?"라고 묻는다. 발표자는 대부분 읽지도 않고 "예"를 누른다고 했다.</li>
+          <li><strong>가로채기 훅</strong> <span class="en">interception hook</span>: 명령이 실행되기 직전에 끼어들어 검사한다.</li>
+        </ul>
+        <h3>허용한 명령 하나가 전부를 연다 <span class="ts">04:40</span></h3>
+        <p>Claude 에이전트에게 <code>python -c</code>를 허용했다고 하자. 이 명령은 뒤에 붙인 Python 코드를 그대로 실행한다. 그래서 에이전트는 이 명령 하나로 다음을 모두 할 수 있다.</p>
+        <ul class="plain">
+          <li>소켓을 열어 네트워크에 접속한다.</li>
+          <li>파일 시스템을 고친다.</li>
+          <li>아무 코드나 실행한다.</li>
+        </ul>
+        <blockquote>모델이 무엇을 <em>써야</em> 하는지는 정했지만, 무엇을 <em>쓸 수 있는지</em>는 정하지 않았다.<cite>발표자의 말을 옮김 · <span class="ts">05:00</span></cite></blockquote>
+        <div class="callout warn">
+          <span class="title">모델이 공격자 손에 넘어가면</span>
+          <span>내 컴퓨터에 악성 명령을 실행할 뒷문을 열어 준 셈이다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="embedded">
+        <header><span class="num">05</span><h2>2단계: 내장 런타임 <span class="ts">05:20</span></h2></header>
+        <p>한 단계 나아간 방식이다. 코드 실행을 V8이나 QuickJS 같은 <strong>내장 런타임</strong> <span class="en">embedded runtime</span> 안으로 옮긴다. 내장 런타임은 앱 안에 넣어 쓰는 작은 코드 실행 엔진이다.</p>
+        <p>1단계보다는 낫다. 네트워크와 파일 시스템이 어느 정도 격리되기 때문이다.</p>
+
+        <h3>빈틈: 도구는 런타임 밖에서 돈다 <span class="ts">05:40</span></h3>
+        <p>발표자는 이 빈틈이 1단계보다 더 알아채기 어렵다고 말한다. 흐름을 따라가면 이렇다.</p>
+        <ol class="plain">
+          <li>에이전트에게 "DB 조회", "메일 보내기" 같은 도구가 있다.</li>
+          <li>에이전트가 이 도구들을 부르는 스크립트를 만든다.</li>
+          <li>그 스크립트를 내장 런타임 안에서 실행한다.</li>
+          <li>그런데 스크립트가 부른 도구는 런타임 밖, 내 컴퓨터에서 실제로 실행된다.</li>
+        </ol>
+        <div class="shift" aria-label="스크립트는 런타임 안에서 격리되지만, 스크립트가 부른 도구는 런타임 밖에서 격리 없이 실행된다">
+          <div><span class="tag">런타임 안 · 격리됨</span><b>에이전트가 만든 스크립트</b><span class="muted">네트워크와 파일 시스템이 막혀 있다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="risk"><span class="tag">런타임 밖 · 격리 안 됨</span><b>스크립트가 부른 도구</b><span class="muted">DB 조회, 메일 보내기가 내 컴퓨터에서 실제로 실행된다</span></div>
+        </div>
+        <p>그래서 악의적인 에이전트는 직접은 못 해도 도구를 거쳐 행동할 수 있다. 발표자의 정리로는, 에이전트가 만든 <strong>연결 코드</strong> <span class="en">glue code</span>는 격리했지만 <strong>도구 호출 자체는 격리하지 않은</strong> 것이다. <span class="ts">06:20</span></p>
+        <p>에이전트는 메일 도구나 DB 조회 도구로 나쁜 일을 할 수 있다. "DB 삭제" 도구까지 있다면 무슨 일이 생길지 짐작할 수 있다.</p>
+        <p class="note">V8과 QuickJS는 JavaScript 엔진이다. 발표자는 에이전트가 "Python 스크립트"를 만든다고 예를 들었지만, 요점은 언어가 아니다. 런타임 안의 코드가 부른 도구가 런타임 밖에서 실행된다는 점이 핵심이다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="vm">
+        <header><span class="num">06</span><h2>3단계: 분리된 VM <span class="ts">06:40</span></h2></header>
+        <p>발표자가 권하는 방식이다. 코드 실행에 <strong>따로 떨어진 컴퓨터나 가상 머신</strong> <span class="en">VM, virtual machine</span>을 쓴다.</p>
+        <ul class="plain">
+          <li>API로 VM과 주고받는다.</li>
+          <li>VM을 만들고 끄는 <strong>수명 주기</strong> <span class="en">lifecycle</span>도 API로 다룬다.</li>
+          <li>VM은 내 인프라, 네트워크, 파일 시스템에 닿지 않는다.</li>
+        </ul>
+
+        <h3>샌드박스가 뚫려도 앱은 뚫리지 않는다 <span class="ts">07:10</span></h3>
+        <blockquote>샌드박스가 뚫렸다고 앱이 뚫린 것은 아니다.<cite>발표 슬라이드의 문장. 자막이 뭉개져 앞뒤 설명으로 뜻을 살려 옮겼다 (추정)</cite></blockquote>
+        <div class="shift" aria-label="1·2단계에서는 한 번의 잘못이 앱 전체로 번지고, 3단계에서는 샌드박스 하나를 버리면 끝난다">
+          <div class="risk"><span class="tag">1·2단계</span><b>한 단계만 잘못돼도 앱 전체가 위험하다</b><span class="muted">승인한 Python 명령이나 잘못 동작한 도구 호출이 앱을 통째로 건드린다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">3단계</span><b>잘못돼도 샌드박스 하나를 버리면 된다</b><span class="muted">세상에서 가장 나쁜 코드를 돌려도 앱 로직에 닿지 못한다. 새 샌드박스를 띄우면 된다</span></div>
+        </div>
+        <p class="note">발표자는 이런 VM 방식 샌드박스를 제공하는 Daytona 소속이다. 3단계를 권하는 대목은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="direction">
+        <header><span class="num">07</span><h2>프레임워크가 지우는 것 <span class="ts">07:50</span></h2></header>
+        <p>발표자는 자기 주장의 근거로 프레임워크들이 움직이는 방향을 든다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>프레임워크</th><th>발표자가 말한 변화</th></tr></thead>
+            <tbody>
+              <tr><td>CrewAI</td><td>2026년 4월, 내 컴퓨터에서 코드를 돌리던 코드 인터프리터 도구를 없앴다. 지금은 전용 샌드박스 서비스를 쓰라고 안내한다</td></tr>
+              <tr><td>AG2</td><td>예전의 로컬 코드 실행기를 은퇴시켰다. 새 샌드박스 코드 도구 클래스는 어떤 환경에서 실행할지 명시하게 한다</td></tr>
+              <tr><td>Claude Agent SDK</td><td>기본으로 샌드박스를 쓴다. 다만 <strong>프로세스 수준 샌드박스</strong> <span class="en">process-level sandboxing</span>다. 리눅스의 bubblewrap 같은 도구로 하는 방식이다 <span class="ts">08:30</span></td></tr>
+              <tr><td>OpenAI Agents SDK</td><td>샌드박스 에이전트가 있다. 일부 샌드박스 업체와 Docker를 기본 지원한다. 로컬 실행도 허용하지만, 그 단점을 숨기지 않고 밝혀 둔다</td></tr>
+              <tr><td>Mastra</td><td>OpenAI Agents SDK와 비슷하다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">추가가 아니라 삭제 <span class="ts">09:10</span></span>
+          <span>프레임워크들은 샌드박스를 새로 넣는 게 아니다. 샌드박스는 원래 있었다. 바뀐 점은 <strong>그 밖의 선택지를 지우고 있다</strong>는 것이다.</span>
+        </div>
+        <p class="note">이 사례들은 발표자가 고른 것이다. 이 노트에서 각 프레임워크의 문서나 변경 기록을 확인하지는 않았다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="usage">
+        <header><span class="num">08</span><h2>샌드박스 쓰임의 변화 <span class="ts">09:10</span></h2></header>
+        <p>프레임워크의 방향이 바뀌는 동안, 샌드박스를 쓰는 방식도 함께 바뀌었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시기</th><th>쓰는 방식</th><th>샌드박스의 역할</th></tr></thead>
+            <tbody>
+              <tr><td>처음 <span class="ts">09:30</span></td><td>에이전트가 필요할 때 띄워 코드나 작업을 돌리고 끈다</td><td>잠깐 쓰고 버리는 실행기</td></tr>
+              <tr><td>모델이 똑똑해진 뒤 <span class="ts">09:50</span></td><td>에이전트 전체를 샌드박스 안에서 돌린다. 파일 시스템, 네트워크 등 모든 것을 맡긴다</td><td>에이전트의 실행 환경</td></tr>
+              <tr><td>최근 <span class="ts">10:00</span></td><td>수천 개를 동시에 띄운다</td><td><strong>강화학습</strong> <span class="en">reinforcement learning</span>, <strong>파인튜닝</strong> <span class="en">fine-tuning</span>, <strong>사후 학습</strong> <span class="en">post-training</span>, 벤치마크, 문제를 나눠 푸는 <strong>하위 에이전트</strong> <span class="en">sub-agent</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="wrong-question">
+        <header><span class="num">09</span><h2>"어떤 프레임워크?"는 틀린 질문 <span class="ts">10:30</span></h2></header>
+        <p>발표자도 "어떤 프레임워크를 골라야 하나요?"라는 질문을 자주 받는다. 발표자는 이 질문이 틀렸다고 본다.</p>
+        <p>이유는 두 가지다. 프레임워크를 비교할 때 보는 항목은 <strong>대부분 나중에 바꿀 수 있다.</strong> 반대로 바꾸기 어려운 것은 <strong>고를 때 잘 따지지 않는다.</strong></p>
+        <h3>나중에 바꿀 수 있는 것 <span class="ts">11:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>어떻게 바꾸나 (발표자 설명)</th></tr></thead>
+            <tbody>
+              <tr><td>프레임워크</td><td>같은 언어라면 코딩 에이전트에게 리팩터링을 맡긴다. 개발자들이 늘 하는 일이다</td></tr>
+              <tr><td>모델과 프롬프트</td><td>특정 모델에 맞춰 시스템 프롬프트를 다듬었다면 조금 까다롭다. 다시 조정하고 <strong>회귀 테스트</strong> <span class="en">regression testing</span>를 해야 하지만 충분히 할 수 있다</td></tr>
+              <tr><td>없는 기능</td><td><strong>평가</strong> <span class="en">evals</span>, <strong>추적</strong> <span class="en">tracing</span>, 메모리 같은 기능은 직접 <strong>바이브 코딩</strong> <span class="en">vibe coding</span>하거나 외부 플러그인으로 붙인다</td></tr>
+              <tr><td>샌드박스 업체</td><td>모두 같은 말을 쓴다. 만들고, 안에서 실행하고, 지운다. 업체마다 기능과 성능 차이는 있다 <span class="ts">12:30</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">예외: 내구 실행 <span class="ts">12:10</span></span>
+          <span><strong>내구 실행</strong> <span class="en">durable execution</span>은 일부 프레임워크가 주는 기능이다. 발표자는 이 기능만은 쉽게 따라 만들 수 없다고 했다. 아키텍처에 영향을 주기 때문이다. Claude에게 시켜 오후 한나절에 만들 수 있는 일이 아니다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="boundary">
+        <header><span class="num">10</span><h2>나중에 못 바꾸는 것: 실행 경계 <span class="ts">12:40</span></h2></header>
+        <p>쉽게 바꿀 수 없는 것은 <strong>실행 경계</strong>다. 에이전트의 코드를 로컬에서 돌릴지, 외부 샌드박스에서 돌릴지 정하는 일이다.</p>
+        <p>이 선택은 시스템 아키텍처 전체를 정한다. 시스템의 다른 부분을 어떻게 만들지도 이 선택을 따라간다. <span class="ts">13:00</span></p>
+        <p>도구가 좋은 예다. 모든 것을 로컬에서 돌린다고 생각하고 도구를 만들면, 도구는 호스트와 앱 프로세스의 환경을 그대로 쓰게 된다. 파일 시스템도 분리 없이 직접 쓴다. 나중에 샌드박스로 옮기려면 이 도구들을 다시 짜야 한다.</p>
+        <div class="callout warn">
+          <span class="title">POC 그대로 프로덕션까지 <span class="ts">13:20</span></span>
+          <span>대부분 <strong>POC</strong> <span class="en">proof of concept</span> 단계에서 로컬 실행으로 시작한다. 그리고 다시 돌아보지 않은 채 프로덕션까지 간다. 문제가 터지면 이미 늦다. 발표자는 그 문제가 제품을 끝장낼 수도 있다고 경고한다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="conclusion">
+        <header><span class="num">11</span><h2>결론 <span class="ts">13:50</span></h2></header>
+        <p>발표자의 결론은 하나다. <strong>프레임워크를 고르기 전에 실행 경계부터 고른다.</strong></p>
+        <blockquote>프레임워크는 의견이다. 그리고 경계는…<cite>발표자의 마지막 문장 <span class="en">"Frameworks are opinions and the boundaries…"</span> · <span class="ts">14:10</span></cite></blockquote>
+        <p class="note">자막은 14:10 무렵 이 문장 중간에서 끊기고, 15:30에 같은 말의 조각만 다시 나온다. 문장의 끝은 이 노트에서 확인할 수 없다. 앞의 흐름으로 보면 "프레임워크는 바꿀 수 있지만 경계는 바꾸기 어렵다"는 대비로 보인다 (추정).</p>
+        <div class="callout">
+          <span class="title">발표 내용을 순서로 옮기면</span>
+          <span>1. 에이전트가 만든 코드를 어디서 실행할지 정한다.<br>2. 그 경계를 전제로 도구를 만든다.<br>3. 프레임워크, 모델, 샌드박스 업체는 나중에 바꿀 수 있는 선택으로 다룬다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>프레임워크마다 샌드박스를 붙이는 모양(도구, 플러그인, 클래스 확장)은 달라도 속은 <strong>만들기, 실행, 지우기</strong> 세 줄이다.</li>
+          <li>프레임워크들은 에이전트의 정의, 구현 언어, 행동을 누가 정하는지에서 서로 다르다.</li>
+          <li>그런 경쟁자들이 동의하는 것은 유행이 아니라 필요라는 것이 발표자의 논리다.</li>
+          <li>쓸모 있는 에이전트는 결국 코드 실행이나 셸 접근이 필요하다. 남는 질문은 <strong>어디서 실행하느냐</strong>다.</li>
+          <li>허용 목록, 승인 창, 훅: <code>python -c</code> 하나만 허용해도 사실상 모든 것을 허용한 셈이다.</li>
+          <li>내장 런타임(V8, QuickJS): 스크립트는 갇히지만 <strong>도구는 내 컴퓨터에서 실행된다.</strong></li>
+          <li>분리된 VM: <strong>샌드박스가 뚫려도 앱은 뚫리지 않는다.</strong> 버리고 새로 띄운다.</li>
+          <li>발표자에 따르면 CrewAI, AG2 등은 로컬 실행 도구를 없애고 샌드박스를 요구하는 쪽으로 가고 있다.</li>
+          <li>샌드박스의 쓰임은 잠깐 쓰는 실행기에서 에이전트의 실행 환경으로, 다시 수천 개 동시 실행으로 넓어졌다.</li>
+          <li>프레임워크, 모델, 기능, 샌드박스 업체는 바꿀 수 있다. <strong>실행 경계는 아키텍처를 정하므로 프레임워크보다 먼저 고른다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 여러 프레임워크에서 본 공통 세 줄은?</span></summary><div class="answer">샌드박스 만들기, 그 안에서 코드나 작업 실행하기, 샌드박스 지우기. 도구, 플러그인, 클래스 확장처럼 붙이는 모양만 달랐다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>프레임워크들이 서로 동의하지 않는 세 가지는?</span></summary><div class="answer">에이전트란 무엇인가, 어떤 언어로 만드나(Python과 TypeScript), 에이전트의 행동을 누가 정하나(개발자가 워크플로를 정의하는가, 에이전트가 스스로 정하는가).</div></details>
+          <details><summary><span class="qn">Q3</span><span>LangGraph, CrewAI, OpenAI Agents SDK는 각각 에이전트를 무엇으로 보나?</span></summary><div class="answer">LangGraph는 따라 이동할 수 있는 그래프, CrewAI는 역할을 맡아 스스로 일하는 여러 에이전트, OpenAI Agents SDK는 LLM을 감싼 루프로 본다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>허용 목록에 <code>python -c</code>를 넣으면 왜 위험한가?</span></summary><div class="answer">이 명령 하나로 소켓 열기, 파일 수정, 임의 코드 실행이 모두 가능하다. 모델이 무엇을 써야 하는지만 정했고, 무엇을 쓸 수 있는지는 막지 못했다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>내장 런타임(V8, QuickJS) 방식의 빈틈은?</span></summary><div class="answer">스크립트는 런타임 안에서 돌지만, 스크립트가 부르는 도구(DB 조회, 메일 보내기)는 런타임 밖 내 컴퓨터에서 실행된다. 연결 코드만 격리되고 도구 호출은 격리되지 않는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>분리된 VM 방식을 가장 좋다고 하는 이유는?</span></summary><div class="answer">샌드박스가 뚫려도 앱이 뚫린 것은 아니기 때문이다. 아주 나쁜 코드를 돌려도 앱 로직에 닿지 못하고, 샌드박스를 버리고 새로 띄우면 된다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>발표자가 프레임워크의 방향을 보여 주려고 든 변화 두 가지는?</span></summary><div class="answer">CrewAI가 2026년 4월 로컬 코드 인터프리터 도구를 없애고 샌드박스 서비스를 안내한 것. AG2가 로컬 실행기를 은퇴시키고 실행 환경을 명시하게 하는 클래스를 둔 것. Claude Agent SDK의 기본 샌드박스, OpenAI Agents SDK의 샌드박스 에이전트도 함께 들었다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>"프레임워크들은 샌드박스를 추가하는 게 아니라 ○○○을 지우고 있다." 빈칸은?</span></summary><div class="answer">다른 선택지. 샌드박스는 원래 있었고, 로컬 실행 같은 대안을 없애는 중이다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>샌드박스 쓰임이 넓어진 세 단계는?</span></summary><div class="answer">잠깐 띄웠다 끄는 실행기, 에이전트 전체를 돌리는 실행 환경, 강화학습·사후 학습·벤치마크·하위 에이전트를 위해 수천 개를 동시에 띄우는 쓰임.</div></details>
+          <details><summary><span class="qn">Q10</span><span>나중에 바꿀 수 있는 것 네 가지와, 기능 중 예외 하나는?</span></summary><div class="answer">프레임워크(같은 언어일 때), 모델과 프롬프트, 평가·추적·메모리 같은 기능, 샌드박스 업체. 예외는 내구 실행이다. 아키텍처에 영향을 줘서 쉽게 따라 만들 수 없다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>실행 경계를 나중에 바꾸기 어려운 이유는?</span></summary><div class="answer">시스템 아키텍처 전체와 다른 부분을 만드는 방식을 정하기 때문이다. 로컬을 전제로 하면 도구가 호스트의 파일 시스템과 프로세스 환경을 분리 없이 쓰게 짜인다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 경고한 흔한 실수는?</span></summary><div class="answer">POC 때 로컬 실행으로 시작해서 다시 돌아보지 않고 프로덕션까지 가는 것. 문제가 터진 뒤에는 늦고, 제품을 끝장낼 수도 있다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 에이전트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>지금 에이전트가 코드를 어디서 실행하는지 적는다<span class="how">로컬 허용 목록, 내장 런타임, 분리된 VM 중 어느 것인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>허용 목록에서 사실상 모든 것을 여는 명령을 찾는다<span class="how"><code>python -c</code>처럼 임의 코드를 받아 실행하는 명령</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>승인 창을 안전장치로 믿지 않는다<span class="how">발표자 말대로 대부분 읽지 않고 "예"를 누른다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>도구 목록에서 내 인프라에 직접 닿는 도구를 표시한다<span class="how">DB 조회, 메일 보내기, 삭제처럼 런타임 밖에서 실행되는 도구</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>도구가 호스트의 파일 시스템과 프로세스 환경을 직접 쓰는지 확인한다<span class="how">로컬을 전제로 짠 도구는 나중에 샌드박스로 옮기기 어렵다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>샌드박스가 뚫렸다고 가정하고 피해 범위를 그려 본다<span class="how">확인: 샌드박스를 버리고 새로 띄우면 끝나는가, 앱까지 번지는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>쓰는 프레임워크의 코드 실행 기본값과 최근 변경을 확인한다<span class="how">로컬 실행 도구가 없어졌거나 경고가 붙었는지</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>POC를 프로덕션으로 올리기 전에 실행 경계를 다시 정한다<span class="how">새 프로젝트라면 프레임워크를 고르기 전에 정한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>샌드박스</td><td>Sandbox. 바깥과 격리된 실행 환경. 안에서 무슨 일이 생겨도 밖에 영향을 주지 않게 만든 곳</td></tr>
+              <tr><td>샌드박스 업체</td><td>Sandbox provider. 샌드박스를 API로 만들고 지우게 해 주는 서비스. Daytona가 여기에 속한다</td></tr>
+              <tr><td>에이전트 프레임워크</td><td>에이전트를 만들 때 쓰는 라이브러리. LangGraph, CrewAI, OpenAI Agents SDK, Mastra 등</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>실행 경계</td><td>Execution boundary. 에이전트가 만든 코드가 어디까지 닿을 수 있는지 정하는 선. 코드를 어디서 실행하느냐로 정해진다</td></tr>
+              <tr><td>허용 목록</td><td>Allow list. 실행해도 되는 명령을 미리 적어 둔 목록</td></tr>
+              <tr><td>승인 창</td><td>Approval prompt. 명령을 실행하기 전에 사람에게 "실행할까요?"라고 묻는 창</td></tr>
+              <tr><td>가로채기 훅</td><td>Interception hook. 명령이나 도구 호출이 실행되기 직전에 끼어들어 검사하는 코드</td></tr>
+              <tr><td>내장 런타임</td><td>Embedded runtime. 앱 안에 넣어 쓰는 작은 코드 실행 엔진. V8, QuickJS 같은 JavaScript 엔진이 예다</td></tr>
+              <tr><td>연결 코드</td><td>Glue code. 여러 도구를 이어 붙여 부르는 짧은 코드</td></tr>
+              <tr><td>VM</td><td>Virtual machine. 한 컴퓨터 안에서 따로 돌아가는 가상의 컴퓨터</td></tr>
+              <tr><td>프로세스 수준 샌드박스</td><td>Process-level sandboxing. 운영체제 기능으로 한 프로세스가 볼 수 있는 파일과 네트워크를 제한하는 방식. 리눅스의 bubblewrap이 예다</td></tr>
+              <tr><td>내구 실행</td><td>Durable execution. 작업이 중간에 멈춰도 상태를 저장해 두었다가 이어서 실행하게 하는 기능</td></tr>
+              <tr><td>사후 학습</td><td>Post-training. 이미 학습된 모델을 추가 데이터나 보상 신호로 더 다듬는 단계. 강화학습, 파인튜닝이 여기에 쓰인다</td></tr>
+              <tr><td>하위 에이전트</td><td>Sub-agent. 큰 에이전트가 일을 나눠 맡기려고 띄우는 작은 에이전트</td></tr>
+              <tr><td>회귀 테스트</td><td>Regression testing. 바꾼 뒤에도 원래 잘 되던 것이 그대로 되는지 확인하는 테스트</td></tr>
+              <tr><td>바이브 코딩</td><td>Vibe coding. AI에게 말로 시켜 코드를 빠르게 만드는 방식</td></tr>
+              <tr><td>POC</td><td>Proof of concept. 아이디어가 되는지 확인하려고 빨리 만든 시제품</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개: Daytona, 샌드박스 업체</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>퀴즈: 이 코드는 어느 프레임워크인가</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>공통 세 줄: 만들기, 실행, 지우기</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>프레임워크마다 다른 에이전트의 정의</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>구현 언어와 행동 결정권의 차이</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>"유행이 아니라 필요"</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>에이전트는 결국 코드를 실행한다</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>1단계: 허용 목록, 승인 창, 훅</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td><code>python -c</code>의 문제</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>2단계: V8, QuickJS 내장 런타임</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>도구 호출은 런타임 밖에서 돈다</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>3단계: 분리된 VM</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>샌드박스가 뚫려도 앱은 안전하다</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>프레임워크의 방향: CrewAI, AG2</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>Claude Agent SDK, OpenAI Agents SDK, Mastra</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>대안을 지운다 / 샌드박스 쓰임의 변화</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>수천 개 동시 실행: 학습, 벤치마크, 하위 에이전트</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>"어떤 프레임워크?"는 틀린 질문</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>바꿀 수 있는 것: 프레임워크, 모델, 기능</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>예외: 내구 실행</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>샌드박스 업체도 바꿀 수 있다</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>바꾸기 어려운 것: 실행 경계</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>POC 그대로 프로덕션까지</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>결론: 실행 경계를 먼저 고른다</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>"프레임워크는 의견이다" (자막 끊김)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'WWIFiQi9U4w:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

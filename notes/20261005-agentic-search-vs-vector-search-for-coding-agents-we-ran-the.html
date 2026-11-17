@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전틱 검색 대 벡터 검색</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#vibes">감이 아니라 숫자로 출시한다</a></li>
+      <li><a href="#questions">평가는 질문에 답하는 도구다</a></li>
+      <li><a href="#parts">평가의 네 요소</a></li>
+      <li><a href="#compare">실험을 비교하고 흔적을 읽는다</a></li>
+      <li><a href="#loop">로그에서 평가로, 다시 배포로</a></li>
+      <li><a href="#team">평가는 팀 스포츠다</a></li>
+      <li><a href="#two-searches">실제 사례: 두 가지 코드 검색</a></li>
+      <li><a href="#dataset">데이터셋: 버그가 있던 순간으로 되돌린다</a></li>
+      <li><a href="#task">태스크: 같은 하네스로 두 방식을 돌린다</a></li>
+      <li><a href="#traces">끊어진 트레이스를 잇는다</a></li>
+      <li><a href="#results">채점과 결과: 정확도는 같고 비용은 4배</a></li>
+      <li><a href="#learnings">트레이스에서 배운 세 가지</a></li>
+      <li><a href="#limits">이 평가의 빈틈</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-05 · 18분 · 영어 발표 한글 정리</span>
+      <h1>코딩 에이전트의 코드 검색, 벡터와 에이전틱 중 무엇이 나은가</h1>
+      <p class="lead">평가<span class="en">eval</span>는 AI 시스템에 대한 질문에 데이터로 답하는 방법이다. 발표자는 평가의 네 요소를 설명한 뒤, 코딩 에이전트가 버그 위치를 찾을 때 벡터 검색과 에이전틱 검색 중 무엇이 나은지 직접 평가한 과정을 처음부터 끝까지 보여 준다. 결과는 정확도는 같고 벡터 검색이 4배 더 비쌌다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=T3SS931wU0I" target="_blank" rel="noopener">Agentic Search vs Vector Search for Coding Agents: We Ran the Eval</a></span>
+        <span>발표: Jess (Braintrust 개발자 관계 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>"써 봤는데 괜찮더라"로 출시하면 감으로 결정하는 것이다.</strong> "200개 케이스 중 94% 통과"처럼 숫자로 말할 수 있어야 한다.</li>
+        <li>평가는 <strong>데이터셋, 태스크, 채점, 실험</strong> 네 요소로 이뤄진다. 셋 중 하나를 바꾸면 새 실험이 된다.</li>
+        <li>운영 로그에서 데이터셋을 뽑고, 평가로 배운 것을 코드에 반영하고, 다시 로그로 확인하는 <strong>순환</strong>이 기본 흐름이다.</li>
+        <li>실제 사례: Microsoft의 TypeScript Go 저장소에서 <strong>"fix" PR 약 20개</strong>를 모아, 버그가 있던 커밋에서 에이전트가 문제 위치를 찾게 했다.</li>
+        <li>두 방식 모두 Claude Code 하네스로 돌렸다. 벡터 검색 쪽은 <strong>프롬프트 지시만으로는 부족해서</strong> 도구 금지 플래그까지 써야 했다.</li>
+        <li>결과: <strong>정확도는 같았고 벡터 검색이 4배 더 비쌌다.</strong> 벡터 검색은 코드 조각은 잘 찾지만 import와 호출 관계 같은 "연결 조직"을 놓쳐 검색을 반복했다.</li>
+        <li>발표자 스스로 밝힌 한계: 시도 1회, 약한 벡터 검색 구현, 작은 데이터셋. 목적은 최고의 평가가 아니라 <strong>평가를 처음부터 끝까지 만드는 법</strong>을 보여 주는 것이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="vibes">
+        <header><span class="num">01</span><h2>감이 아니라 숫자로 출시한다 <span class="ts">00:50</span></h2></header>
+        <p>발표자는 고객과 통화하다 이런 말을 자주 들었다. "엔지니어링 팀이 준비됐다고 해서 출시했다." "PM이 프롬프트 몇 개를 써 봤는데 괜찮았다." 둘 다 감으로 출시를 결정한 것이다.</p>
+        <div class="shift" aria-label="출시 결정의 근거 변화">
+          <div><span class="tag">듣고 싶지 않은 말</span><b>"몇 번 써 봤는데 괜찮았다"</b><span class="muted">근거가 사람의 인상이다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">듣고 싶은 말</span><b>"200개 케이스 중 94%가 통과했다"</b><span class="muted">"정확도는 5% 올랐지만 말투 점수는 5% 떨어졌다"처럼 세부까지 말할 수 있다</span></div>
+        </div>
+        <p class="note">200개와 94%는 발표자가 든 예시 숫자다. 실제 측정값이 아니다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="questions">
+        <header><span class="num">02</span><h2>평가는 질문에 답하는 도구다 <span class="ts">01:30</span></h2></header>
+        <p>발표자는 평가<span class="en">eval</span>를 한 문장으로 정의한다. <strong>"AI 시스템에 대한 질문에 답하는 방법"</strong>이다. 평가로 답할 수 있는 질문은 이런 것들이다.</p>
+        <ul class="plain">
+          <li><strong>모델 선택</strong>: 새 모델이 계속 나오는데, 우리 용도에는 어느 모델이 맞나.</li>
+          <li><strong>다양한 상황</strong>: 영어 입력은 잘 되는데 일본어는 어떤가. Python은 잘 되는데 TypeScript는 어떤가.</li>
+          <li><strong>비용 효율</strong>: 비용을 크게 늘리지 않고 성능을 유지하려면 어떻게 하나.</li>
+          <li><strong>브랜드 일관성</strong>: 회사의 말투와 기준을 꾸준히 지키나.</li>
+          <li><strong>피드백</strong>: 사용자에게서 배워 계속 좋아지고 있나.</li>
+          <li><strong>회귀 감지</strong>: 무언가 깨지거나 나빠졌을 때 어떻게 알아채나.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">회귀 감지의 예: OpenAI의 아첨 모델 <span class="ts">02:20</span></span>
+          <span>발표자가 든 사례다. 2025년 4월 OpenAI가 모델을 더 도움이 되게 바꾸려 업데이트했는데, 결과적으로 사용자에게 지나치게 동조하는 아첨<span class="en">sycophancy</span> 성향이 생겨 덜 진실해졌다. AI 시스템은 복잡하고 결정적이지 않아서, 이런 변화를 잡아내려면 평가 체계가 미리 있어야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="parts">
+        <header><span class="num">03</span><h2>평가의 네 요소 <span class="ts">03:00</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>요소</th><th>무엇인가</th><th>보통 들어가는 것</th></tr></thead>
+            <tbody>
+              <tr><td>데이터셋 <span class="en">dataset</span></td><td>AI 시스템에 넣을 입력 모음</td><td>정답이 분명한 황금 케이스, 경계 케이스, 알려진 실패 유형</td></tr>
+              <tr><td>태스크 <span class="en">task</span></td><td>입력을 받아 출력을 내는 방식의 정의</td><td>시스템 프롬프트, 실행에 쓸 모델</td></tr>
+              <tr><td>채점 <span class="en">scoring</span></td><td>출력이 좋은지 나쁜지 판정하는 기준</td><td>결정적 채점, LLM 심판, 사람 검토. 기준은 보통 PM이나 엔지니어가 쓴다</td></tr>
+              <tr><td>실험 <span class="en">experiment</span></td><td>데이터셋·태스크·채점의 한 조합을 돌린 결과</td><td>셋 중 하나를 바꾸면 새 실험이다. 발표자는 이 단계가 가장 재미있다고 말한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>가설을 세우고 데이터셋이나 프롬프트나 채점 기준을 조금씩 바꾸면 실험이 여러 개 쌓인다. 그다음 실험끼리 비교해 무엇이 좋아졌고 무엇이 나빠졌는지 본다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="compare">
+        <header><span class="num">04</span><h2>실험을 비교하고 흔적을 읽는다 <span class="ts">04:30</span></h2></header>
+        <p>실험 1과 실험 2를 나란히 놓으면 개선과 회귀가 보인다. 행 하나를 눌러 어느 테스트 케이스가 바뀌었는지도 볼 수 있다. 발표자는 Braintrust 화면으로 이를 보여 줬다.</p>
+        <ul class="plain">
+          <li><strong>자연어로 질문하기</strong>: "실험을 요약해 줘", "이 실험들의 문제를 짚어 줘", "어느 실험이 가장 잘했나"처럼 트레이스와 실험 전체에 물을 수 있다.</li>
+          <li><strong>긴 대화에서 유용</strong>: 여러 턴이 오가는 대화의 트레이스에서는 환각이나 주제 이탈을 사람이 눈으로 잡기 어렵다. 이런 패턴을 찾는 데 쓴다.</li>
+          <li><strong>화면 밖에서도</strong>: 같은 일을 CLI와 MCP 서버로도 할 수 있다.</li>
+          <li><strong>관측<span class="en">observability</span></strong>: SDK로 코드를 감싸면 운영 로그가 들어온다. 대시보드를 만들고 지켜보는 전통적인 모니터링도 된다.</li>
+        </ul>
+        <p class="note">발표자는 평가·관측 도구를 만드는 Braintrust 소속이다. 이 절은 자사 제품 소개이니 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="loop">
+        <header><span class="num">05</span><h2>로그에서 평가로, 다시 배포로 <span class="ts">06:00</span></h2></header>
+        <p>발표자가 든 상황은 이렇다. 문서 사이트에 AI 챗봇을 어제 붙였다. 사용자가 문서에 대해 질문을 시작한다. 그다음은 이렇게 돈다.</p>
+        <ol class="plain">
+          <li><strong>앱</strong>에 사용자가 들어오면 운영 로그가 쌓인다.</li>
+          <li>로그에서 <strong>10~20행쯤 뽑아</strong> 데이터셋을 만든다.</li>
+          <li>데이터셋에 태스크와 채점을 붙여 <strong>평가를 돌린다</strong>. 데이터셋, 프롬프트, 채점 기준을 바꿔 여러 번 돌린다.</li>
+          <li>가장 잘 나온 실험에서 <strong>시스템에 대해 무언가를 배운다</strong>.</li>
+          <li>배운 것을 <strong>코드나 프롬프트에 반영</strong>해 다시 배포한다.</li>
+          <li>바뀐 동작이 다시 운영 로그에 나타난다. <strong>처음으로 돌아간다</strong>.</li>
+        </ol>
+      </section>
+
+      <!-- 6 -->
+      <section id="team">
+        <header><span class="num">06</span><h2>평가는 팀 스포츠다 <span class="ts">07:40</span></h2></header>
+        <p>발표자가 꼭 새기라고 강조한 슬라이드다. 실제 데이터를 들여오고, 라벨을 붙이고, 가설을 세우는 일은 한 사람이 다 하지 못한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>역할</th><th>평가에서 맡는 일</th></tr></thead>
+            <tbody>
+              <tr><td>AI 엔지니어</td><td>코드 변경. 그리고 데이터를 평가 플랫폼에 넣는 일</td></tr>
+              <tr><td>프로덕트 매니저</td><td>보통 평가를 주도한다. "성공이 무엇인가"라는 가설을 세우고 프롬프트를 다듬는다</td></tr>
+              <tr><td>도메인 전문가</td><td>보험·의료·법률처럼 전문 분야에서 데이터에 라벨을 붙이고 "잘한 답"의 기준을 준다</td></tr>
+              <tr><td>데이터 분석가</td><td>쌓인 결과를 분석한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="two-searches">
+        <header><span class="num">07</span><h2>실제 사례: 두 가지 코드 검색 <span class="ts">08:40</span></h2></header>
+        <p>Braintrust CEO Ankur는 가끔 X(옛 Twitter)에서 글을 보고 발표자에게 "이거 평가해 봐"라고 보낸다. 이번에는 Cursor가 올린 글이었다. Cursor는 검색 방식을 바꿔 코딩 에이전트 성능을 크게 올렸다고 했다. 이 주제로 온라인에서 논쟁이 많아서 평가해 볼 만했다.</p>
+        <p class="note">자막에서 발표자는 Cursor의 방식을 "시맨틱 검색, 즉 에이전틱 검색"이라고 말했다. 보통 시맨틱 검색<span class="en">semantic search</span>은 임베딩 기반의 벡터 검색을 가리키므로 말실수로 보인다(추정). 이 노트는 평가의 질문을 "Cursor가 내세운 임베딩 기반 검색이 정말 에이전틱 검색보다 나은가"로 읽는다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">벡터 검색 <span class="en">vector search</span> <span class="ts">09:30</span></span>
+            <p>코드나 글을 임베딩<span class="en">embedding</span>으로 바꾼다. 임베딩은 그 조각의 뜻을 숫자 벡터로 표현한 것이다.</p>
+            <ul>
+              <li>뜻이 가까우면 벡터도 가깝다. 늑대·개·고양이는 서로 가깝고, 바나나·사과와는 멀다.</li>
+              <li>임베딩을 Qdrant나 Pinecone 같은 벡터 데이터베이스에 저장한다.</li>
+              <li>"데이터베이스 로직이 어디 있나"라고 물으면, "데이터베이스"나 "로직"과 뜻이 가장 가까운 코드 조각<span class="en">chunk</span>들을 돌려준다.</li>
+            </ul>
+            <p class="verdict"><b>한 줄로</b>: 질문과 뜻이 비슷한 조각을 찾아 준다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">에이전틱 검색 <span class="en">agentic search</span> <span class="ts">10:40</span></span>
+            <p>LLM에 grep, find, ls, cat 같은 셸 도구를 준다. 사람이 코드를 뒤지듯 코드베이스를 탐색한다.</p>
+            <ul>
+              <li>함수 이름을 찾는다.</li>
+              <li>파일을 열어 읽는다.</li>
+              <li>그 함수의 호출을 따라 다른 파일로 간다.</li>
+              <li>필요한 것을 찾을 때까지 반복한다.</li>
+            </ul>
+            <p class="verdict"><b>한 줄로</b>: 사람처럼 따라가며 읽는다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="dataset">
+        <header><span class="num">08</span><h2>데이터셋: 버그가 있던 순간으로 되돌린다 <span class="ts">11:20</span></h2></header>
+        <p>평가의 첫 단계는 데이터셋이다. 발표자는 Microsoft가 공개한 TypeScript Go 저장소를 썼다.</p>
+        <ol class="plain">
+          <li>머지된 PR 중 제목에 <strong>"fix"</strong>가 들어간 것을 모았다.</li>
+          <li>각 PR의 <strong>부모 커밋</strong>을 체크아웃했다. 아직 버그가 남아 있는 시점의 코드다.</li>
+          <li>버그 코드와 수정 코드의 <strong>diff</strong>를 Claude에 주고, 이슈 트래커에 올릴 법한 <strong>버그 티켓 글</strong>을 만들게 했다.</li>
+          <li>그 티켓을 에이전트에 주고, 벡터 검색 또는 에이전틱 검색으로 <strong>버그 로직이 있는 위치를 찾게</strong> 했다.</li>
+        </ol>
+        <p>이렇게 모은 PR은 약 20개다. 정답(실제 수정 위치)이 PR 안에 이미 있으니, 사람이 라벨을 따로 붙일 필요가 없다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="task">
+        <header><span class="num">09</span><h2>태스크: 같은 하네스로 두 방식을 돌린다 <span class="ts">12:20</span></h2></header>
+        <p>태스크를 만들려면 두 검색 방식을 실제로 구현해야 했다. 난이도가 크게 달랐다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">에이전틱 검색: 쉬웠다</span>
+            <p>Claude Code는 기본이 에이전틱 검색이다. 과제를 주고 그냥 돌리면 된다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">벡터 검색: 손이 더 갔다</span>
+            <p>실험 조건을 맞추려고 벡터 검색도 Claude Code 하네스 안에서 돌렸다. 문제는 Claude Code가 자꾸 기본값인 에이전틱 검색으로 돌아가려 한다는 점이다. 두 가지를 했다.</p>
+            <ul>
+              <li>프롬프트에 "에이전틱 검색을 쓰지 말라"고 명시했다.</li>
+              <li>도구 금지 플래그<span class="en">disallowed tools</span>로 grep 같은 탐색 도구 호출 자체를 막았다.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">프롬프트만으로는 절대 충분하지 않다</span>
+          <span>발표자의 말이다. 지시문에 적는 것과 실제로 못 하게 막는 것은 다르다. 모델 행동을 통제하려면 하네스 수준의 제약을 함께 걸어야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="traces">
+        <header><span class="num">10</span><h2>끊어진 트레이스를 잇는다 <span class="ts">13:10</span></h2></header>
+        <p>Claude Code 실행을 하위 프로세스<span class="en">subprocess</span>로 띄웠더니 트레이스가 고아<span class="en">orphaned</span>가 됐다. 상위 트레이스에는 "Claude 에이전트 실행"이라는 한 칸만 보이고, 그 안에서 무슨 일이 일어났는지는 전혀 보이지 않았다.</p>
+        <p>해결책은 <strong>부모 스팬 ID를 환경 변수로 하위 프로세스에 넘기는 것</strong>이었다. 그러면 하위 프로세스 안의 기록이 상위 트레이스에 붙는다.</p>
+        <div class="shift" aria-label="트레이스 수정 전후">
+          <div><span class="tag">수정 전</span><b>"Claude 에이전트 실행" 한 줄</b><span class="muted">안에서 무엇을 했는지 알 수 없다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">수정 후</span><b>모든 턴, 모든 LLM 호출, 모든 명령</b><span class="muted">grep, bash, ls, find 호출이 하나씩 보인다</span></div>
+        </div>
+        <p>발표자는 이 수정이 중요했다고 말한다. 뒤에 나오는 "왜 이런 결과가 나왔나"를 따질 때 트레이스 안이 보여야 디버깅이 된다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="results">
+        <header><span class="num">11</span><h2>채점과 결과: 정확도는 같고 비용은 4배 <span class="ts">14:40</span></h2></header>
+        <p>채점은 단순했다. 에이전트가 고친 결과가 TypeScript Go 저장소의 <strong>테스트 스위트를 통과하면 100점, 실패하면 0점</strong>이다. 중간은 없다.</p>
+        <p>결과를 요약하면 <strong>두 방식의 정확도는 같았다</strong>. 그런데 벡터 검색이 에이전틱 검색보다 <strong>4배 비쌌다</strong>.</p>
+        <figure class="chart" aria-label="같은 정확도를 내는 데 든 비용 비교: 에이전틱 검색을 1로 놓으면 벡터 검색은 4">
+          <span class="chart-title">같은 정확도를 내는 데 든 비용 (에이전틱 검색 = 1)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>벡터 검색</span><span class="val">4</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="벡터 검색: 에이전틱 검색의 4배"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>에이전틱 검색</span><span class="val">1</span></div>
+              <div class="track"><div class="fill" style="width:25%" title="에이전틱 검색: 기준 1"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>2</span><span>4</span></div>
+          <span class="caption">발표자는 금액이 아니라 비율만 말했다. 정확도 수치도 "같았다"고만 했다.</span>
+        </figure>
+      </section>
+
+      <!-- 12 -->
+      <section id="learnings">
+        <header><span class="num">12</span><h2>트레이스에서 배운 세 가지 <span class="ts">15:20</span></h2></header>
+        <p>숫자만 보면 끝이 아니다. 발표자는 트레이스를 하나씩 손으로 읽으며 왜 이런 차이가 났는지 찾았다.</p>
+        <ol class="plain">
+          <li><strong>벡터 검색의 조각에는 맥락이 빠진다.</strong> 돌려받은 코드 조각에는 import, 도구 호출, 바로 위의 호출 코드가 자주 없다. 그래서 에이전트가 버그를 어떻게 고쳐야 할지 판단할 재료가 모자란다. 한 행에서는 벡터 검색 에이전트가 <strong>26번 검색</strong>하고도 함수 세 개가 파일 안에서 어떻게 엮이는지 끝내 맞추지 못했다.</li>
+          <li><strong>에이전틱 검색은 연결을 따라간다.</strong> 함수 이름을 grep하고, 함수 전체를 읽고, 로직의 결함을 보고, 호출하는 쪽을 따라 다른 파일로 넘어갔다. 발표자의 표현을 빌리면 벡터 검색은 정답 코드에 <em>가까이</em> 데려다 주지만, 에이전틱 검색은 조각들을 잇는 <strong>연결 조직</strong>을 갖고 있었다.</li>
+          <li><strong>비용 차이의 원인은 검색 횟수다.</strong> 벡터 검색은 조각을 받고, 부족해서 다시 검색하고, 또 조각을 받는 식으로 반복했다. 그때마다 LLM 호출이 쌓여 비용이 커졌다.</li>
+        </ol>
+        <blockquote>벡터 검색은 정답 코드에 가까이 가게 해 줬지만, 에이전틱 검색은 그 조각들의 로직을 잇는 연결 조직을 갖고 있었다.<cite>발표자의 표현을 옮김, <span class="ts">16:10</span></cite></blockquote>
+      </section>
+
+      <!-- 13 -->
+      <section id="limits">
+        <header><span class="num">13</span><h2>이 평가의 빈틈 <span class="ts">16:50</span></h2></header>
+        <p>발표자는 "이 평가에 구멍이 많다고 생각할 텐데, 맞는 지적이다"라고 먼저 말했다. 스스로 꼽은 한계는 세 가지다.</p>
+        <ul class="plain">
+          <li><strong>시도가 1회였다.</strong> LLM은 같은 입력에도 결과가 달라진다. 과제마다 여러 번 돌려야 점수를 믿을 수 있다.</li>
+          <li><strong>벡터 검색 구현이 약했다.</strong> 더 잘 만들 수 있었다. 결과가 벡터 검색 자체의 한계인지 구현의 한계인지 가르기 어렵다.</li>
+          <li><strong>데이터셋이 작았다.</strong> 약 20행이고 저장소도 하나다. 다른 저장소로 넓혀야 한다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">결론을 어디까지 믿을까</span>
+          <span>"벡터 검색이 정확도는 같고 4배 비싸다"는 이 조건에서 나온 한 번의 결과다. 저장소 하나, 약 20개 과제, 시도 1회, 발표자가 약하다고 인정한 벡터 검색 구현이다. 일반화된 결론으로 받기보다 "이렇게 평가를 짠다"는 본보기로 읽는 것이 맞다. 발표자도 목적은 최고의 평가가 아니라 평가를 끝까지 만드는 과정을 보여 주는 것이라고 했다.</span>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>"써 봤는데 괜찮다"는 감이다. 출시 결정은 <strong>"N개 중 몇 % 통과"</strong>처럼 숫자로 말한다.</li>
+          <li>평가는 <strong>AI 시스템에 대한 질문에 답하는 방법</strong>이다. 모델 선택, 비용, 다양한 상황, 회귀 감지가 대표 질문이다.</li>
+          <li>평가의 네 요소는 <strong>데이터셋, 태스크, 채점, 실험</strong>이다. 앞의 셋 중 하나를 바꾸면 새 실험이다.</li>
+          <li>기본 흐름은 <strong>운영 로그 → 데이터셋 → 평가 → 코드 반영 → 배포 → 다시 로그</strong>의 순환이다.</li>
+          <li>평가는 팀 스포츠다. <strong>PM이 성공의 가설</strong>을 세우고, 도메인 전문가가 정답 기준을 주고, 엔지니어가 데이터를 넣는다.</li>
+          <li>데이터셋은 <strong>"fix" PR의 부모 커밋</strong>으로 만들었다. 정답이 PR 안에 있어 라벨링이 공짜다.</li>
+          <li>두 방식을 <strong>같은 하네스</strong>에서 돌려 조건을 맞췄다. 벡터 검색은 프롬프트 지시만으로 부족해 <strong>도구 금지 플래그</strong>가 필요했다.</li>
+          <li>하위 프로세스의 트레이스는 끊어진다. <strong>부모 스팬 ID를 환경 변수로</strong> 넘겨 이어야 안에서 무슨 일이 있었는지 볼 수 있다.</li>
+          <li>결과는 <strong>정확도 같음, 벡터 검색 비용 4배</strong>. 원인은 조각에 import와 호출 관계가 빠져 검색을 반복한 것이다.</li>
+          <li>한계는 <strong>시도 1회, 약한 벡터 구현, 저장소 하나에 약 20행</strong>. 결론보다 평가를 끝까지 만드는 과정을 배운다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 "듣고 싶지 않은 말"과 "듣고 싶은 말"로 든 예는?</span></summary><div class="answer">듣고 싶지 않은 말은 "엔지니어링 팀이 준비됐다고 했다", "PM이 몇 개 써 봤는데 괜찮았다". 듣고 싶은 말은 "200개 케이스 중 94% 통과", "정확도 5% 상승, 말투 5% 하락"처럼 숫자로 말하는 것.</div></details>
+          <details><summary><span class="qn">Q2</span><span>평가의 네 요소는 무엇이고, 실험은 어떻게 정의되나?</span></summary><div class="answer">데이터셋, 태스크, 채점, 실험. 특정 데이터셋·태스크·채점의 한 조합을 돌린 것이 실험 하나다. 셋 중 하나를 바꾸면 새 실험이 된다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>태스크에는 구체적으로 무엇이 들어가나?</span></summary><div class="answer">시스템 프롬프트와 실행에 쓸 모델. 입력을 받아 출력을 내는 방식을 정의한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>운영 로그에서 평가로 이어지는 순환의 단계는?</span></summary><div class="answer">앱 → 운영 로그 → 로그 10~20행으로 데이터셋 → 평가 여러 번 → 배운 것을 코드에 반영 → 배포 → 다시 운영 로그.</div></details>
+          <details><summary><span class="qn">Q5</span><span>평가에서 PM과 도메인 전문가는 각각 무엇을 맡나?</span></summary><div class="answer">PM은 "성공이 무엇인가"라는 가설을 세우고 프롬프트를 다듬는다. 도메인 전문가는 보험·의료·법률처럼 전문 분야에서 라벨을 붙이고 잘한 답의 기준을 준다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>벡터 검색과 에이전틱 검색의 동작 차이를 한 문장씩 말하면?</span></summary><div class="answer">벡터 검색은 코드를 임베딩으로 바꿔 두고 질문과 뜻이 가까운 조각을 돌려준다. 에이전틱 검색은 LLM이 grep·cat 같은 도구로 사람처럼 파일을 열고 호출을 따라가며 찾는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>데이터셋을 만들 때 왜 PR의 부모 커밋을 체크아웃했나?</span></summary><div class="answer">부모 커밋은 아직 버그가 남아 있는 시점이다. 그 상태에서 에이전트에게 버그 위치를 찾게 해야 평가가 된다. diff로 버그 티켓 글을 만들었고, 정답은 PR의 수정 내용이다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>벡터 검색을 Claude Code 하네스에서 돌릴 때 프롬프트 외에 무엇이 더 필요했나?</span></summary><div class="answer">도구 금지 플래그. Claude Code가 기본값인 에이전틱 검색으로 돌아가지 않도록 grep 같은 탐색 도구 호출 자체를 막아야 했다. "프롬프트만으로는 절대 충분하지 않다."</div></details>
+          <details><summary><span class="qn">Q9</span><span>하위 프로세스의 트레이스가 끊어진 문제를 어떻게 풀었나?</span></summary><div class="answer">부모 스팬 ID를 환경 변수로 하위 프로세스에 넘겼다. 그 결과 모든 턴, LLM 호출, 터미널 명령이 상위 트레이스 안에 보이게 됐다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>결과는 어땠고, 비용 차이의 원인은 무엇이었나?</span></summary><div class="answer">정확도는 같았고 벡터 검색이 4배 비쌌다. 벡터 검색의 조각에는 import와 호출 코드가 빠져 있어 검색을 반복했고, 그때마다 LLM 호출이 쌓였다. 한 행에서는 26번 검색하고도 함수 세 개의 관계를 못 맞췄다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>발표자가 스스로 꼽은 이 평가의 한계 세 가지는?</span></summary><div class="answer">시도가 1회였다(여러 번 돌려야 한다). 벡터 검색 구현이 약했다. 데이터셋이 저장소 하나에 약 20행으로 작았다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 AI 기능에 대해 답하고 싶은 질문을 한 문장으로 쓴다<span class="how">예: "모델 A와 B 중 우리 용도에 맞는 것은?" "비용을 줄여도 정확도가 유지되나?"</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>운영 로그에서 10~20행을 뽑아 첫 데이터셋을 만든다<span class="how">황금 케이스, 경계 케이스, 알려진 실패 유형을 섞는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>정답이 이미 있는 데이터를 찾아 라벨링 비용을 없앤다<span class="how">발표의 방식: "fix" PR의 부모 커밋 + 수정 diff. 우리에겐 무엇이 그런 데이터인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>채점 기준을 먼저 단순하게 정한다<span class="how">발표는 테스트 통과 100 / 실패 0. 처음부터 LLM 심판을 복잡하게 만들지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>비교 실험은 하네스와 모델을 같게 두고 한 변수만 바꾼다<span class="how">발표는 두 검색 방식을 모두 Claude Code 하네스로 돌렸다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>금지하고 싶은 행동은 프롬프트와 함께 도구 수준에서도 막는다<span class="how">확인: 트레이스에서 금지한 도구 호출이 실제로 0인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>하위 프로세스나 외부 에이전트를 부를 때 트레이스가 이어지는지 확인한다<span class="how">부모 스팬 ID를 환경 변수 등으로 넘긴다. 확인: 안쪽 LLM 호출이 상위 트레이스에 보이는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>과제마다 여러 번 돌려 점수의 흔들림을 본다<span class="how">발표자가 1회 시도를 첫 한계로 꼽았다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>점수만 보지 않고 트레이스를 직접 읽어 "왜"를 적는다<span class="how">발표의 세 가지 배움은 모두 트레이스를 손으로 읽어서 나왔다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>PM, 도메인 전문가, 분석가에게 평가에서 맡을 역할을 정해 준다<span class="how">가설 세우기, 정답 기준 주기, 결과 분석</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>평가 (eval)</td><td>AI 시스템의 출력 품질을 재는 테스트 묶음. 발표자의 정의는 "AI 시스템에 대한 질문에 답하는 방법"</td></tr>
+              <tr><td>데이터셋</td><td>평가에 넣을 입력 모음. 황금 케이스, 경계 케이스, 실패 유형을 담는다</td></tr>
+              <tr><td>태스크</td><td>입력을 받아 출력을 내는 방식의 정의. 시스템 프롬프트와 모델</td></tr>
+              <tr><td>채점 (scoring)</td><td>출력이 좋은지 나쁜지 판정하는 기준과 방법</td></tr>
+              <tr><td>결정적 채점</td><td>Deterministic scoring. 같은 입력에 항상 같은 점수가 나오는 규칙 기반 채점. 예: 테스트 통과 여부</td></tr>
+              <tr><td>LLM 심판</td><td>LLM-as-a-judge. 다른 LLM이 출력을 읽고 점수를 매기는 채점</td></tr>
+              <tr><td>사람 검토</td><td>Human in review. 사람이 직접 출력을 보고 채점</td></tr>
+              <tr><td>실험</td><td>데이터셋·태스크·채점의 한 조합을 실행한 결과</td></tr>
+              <tr><td>회귀</td><td>변경 뒤에 원래 잘 되던 것이 나빠지는 것</td></tr>
+              <tr><td>아첨 (sycophancy)</td><td>모델이 사용자에게 지나치게 동조해 사실보다 듣기 좋은 말을 하는 성향</td></tr>
+              <tr><td>임베딩</td><td>글이나 코드 조각의 뜻을 숫자 벡터로 표현한 것. 뜻이 비슷하면 벡터도 가깝다</td></tr>
+              <tr><td>벡터 데이터베이스</td><td>임베딩을 저장하고 가까운 것을 빨리 찾아 주는 저장소. 예: Qdrant, Pinecone</td></tr>
+              <tr><td>벡터 검색 / RAG 검색</td><td>질문을 임베딩으로 바꿔 뜻이 가까운 조각을 찾는 검색. 발표자는 RAG 검색이라고도 불렀다</td></tr>
+              <tr><td>에이전틱 검색</td><td>LLM이 grep, find, ls, cat 같은 도구로 파일을 열고 호출을 따라가며 찾는 검색</td></tr>
+              <tr><td>조각 (chunk)</td><td>임베딩을 만들기 위해 코드나 글을 잘라 놓은 단위</td></tr>
+              <tr><td>하네스</td><td>모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀. 발표에서는 Claude Code</td></tr>
+              <tr><td>도구 금지 플래그</td><td>하네스가 특정 도구를 호출하지 못하게 막는 설정. 프롬프트 지시보다 강하다</td></tr>
+              <tr><td>부모 커밋</td><td>어떤 커밋 바로 앞의 커밋. "fix" PR의 부모 커밋은 버그가 아직 남아 있는 상태다</td></tr>
+              <tr><td>트레이스 / 스팬</td><td>Trace는 한 실행의 전체 기록, span은 그 안의 한 단계. 스팬에 부모 ID를 주면 계층이 이어진다</td></tr>
+              <tr><td>고아 트레이스</td><td>Orphaned trace. 부모와 연결이 끊어져 상위 기록에서 안이 보이지 않는 트레이스</td></tr>
+              <tr><td>하위 프로세스</td><td>Subprocess. 프로그램이 별도로 띄운 다른 프로그램 실행</td></tr>
+              <tr><td>관측 (observability)</td><td>운영 중 시스템의 로그와 지표를 모아 상태를 지켜보는 것</td></tr>
+              <tr><td>시도 (trial)</td><td>같은 과제를 한 번 실행하는 것. LLM은 결과가 흔들려 여러 시도가 필요하다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, 오늘의 구성</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>감으로 출시하는 팀 vs 숫자로 말하는 팀</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>평가는 질문에 답하는 방법: 모델 선택, 다양한 상황, 비용, 브랜드, 피드백, 회귀</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>회귀의 예: OpenAI 아첨 모델 업데이트</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>평가의 네 요소: 데이터셋, 태스크, 채점, 실험</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>실험 비교, 행 단위 확인, 자연어 질의</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>CLI와 MCP 서버, 관측과 대시보드</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>앱 → 로그 → 데이터셋 → 평가 → 반영 → 배포 순환</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>평가는 팀 스포츠: 엔지니어, PM, 도메인 전문가, 분석가</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>사례 배경: CEO가 보낸 Cursor 글</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>벡터 검색 설명: 임베딩, 벡터 DB, 조각 반환</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>에이전틱 검색 설명: grep, 파일 열기, 호출 따라가기</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>데이터셋: TypeScript Go의 "fix" PR, 부모 커밋, Claude로 티켓 생성, 약 20개</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>태스크: Claude Code 하네스, 프롬프트 + 도구 금지 플래그</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>고아 트레이스 문제와 부모 스팬 ID 환경 변수</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>수정 전후 트레이스 화면</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>채점: 테스트 통과 100 / 실패 0</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>결과: 정확도 같음, 벡터 검색 비용 4배</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>배움 1: 조각에 import와 호출 코드가 빠진다, 26번 검색</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>배움 2: 에이전틱 검색의 연결 조직</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>배움 3: 반복 검색이 비용을 키운다</td></tr>
+              <tr><td><span class="ts">16:50</span></td><td>한계: 시도 1회, 약한 벡터 구현, 작은 데이터셋</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>마무리: 목적은 평가를 끝까지 만드는 과정을 보여 주는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'T3SS931wU0I:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

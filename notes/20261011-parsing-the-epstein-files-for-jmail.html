@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JMail 문서 파싱 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#reducto">Reducto는 무엇을 하는가</a></li>
+      <li><a href="#jmail">JMail: 5시간 만에 만든 받은편지함</a></li>
+      <li><a href="#bottleneck">진짜 병목: 표지 한 장</a></li>
+      <li><a href="#jflights">JFlights: 손글씨 비행 기록</a></li>
+      <li><a href="#workflow">스키마 → 확인 → 배포</a></li>
+      <li><a href="#redaction">가린 것이 가려지지 않았다</a></li>
+      <li><a href="#internals">질의응답으로 본 내부 구조</a></li>
+      <li><a href="#benchmark">벤치마크는 결국 직접 만든다</a></li>
+      <li><a href="#product">RAG 챗봇은 왜 실패했나</a></li>
+      <li><a href="#custom">라벨링과 맞춤 설정</a></li>
+      <li><a href="#workshop">실습 안내</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 프로젝트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-11 · 29분 · 영어 발표 한글 정리</span>
+      <h1>엡스타인 문서 300만 쪽을 JMail로 만들기까지</h1>
+      <p class="lead">공개된 Epstein 문서를 Gmail처럼 읽게 해 주는 JMail은 다섯 시간 만에 만들어졌다. 하지만 그 뒤에는 스캔본, 손글씨, 어설프게 가린 PDF 300만 쪽을 데이터로 바꾸는 파싱 작업이 있었다. 문서 파싱 회사 Reducto의 두 발표자가 그 과정과 거기서 배운 것을 이야기한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=HGfsfKaVuGY" target="_blank" rel="noopener">Parsing the Epstein Files for JMail</a></span>
+        <span>발표: Palak Agarwal (Reducto 개발자 관계 총괄), Omar Alhait (Reducto 창립 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실한 것만 알려진 이름으로 바로잡았다. 뒷부분 절반은 청중 질의응답이라 질문은 들리지 않고 답만 들린다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">두 발표자 모두 Reducto 소속이고, 이 세션은 Reducto 제품 실습 워크숍이다. 제품 성능과 고객 사례에 관한 주장은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>JMail은 Epstein 문서 공개 당일 밤 <strong>5시간 만에</strong> 만들어진 Gmail 모양의 열람 서비스다. 2월까지 방문 4억 5천만 회, 사용자 1,800만 명이 됐다고 발표자는 말한다.</li>
+        <li>제품은 쉬웠고 <strong>문서가 어려웠다.</strong> 가려진 PDF, 스캔본, 손글씨 300만 쪽을 Reducto가 파싱했다.</li>
+        <li>Reducto의 방식은 <strong>문서를 사람처럼 이미지로 본다.</strong> PDF 속 글자 데이터를 믿는 대신 화면에 보이는 대로 읽고, 모델이 확신 없는 부분을 표시해 다시 확인한다.</li>
+        <li>작업 흐름은 단순하다. <strong>스키마를 만들고, 결과를 눈으로 확인하고, 그대로 배포한다.</strong> 큰 규모로 돌리기 전에 작은 캔버스에서 먼저 맞춰 본다.</li>
+        <li><strong>가림 처리 사고</strong>: 일부 정부 문서는 검은 상자만 얹어 놓아 글자가 그대로 남아 있었다. 파서가 너무 잘 읽어서, JMail 팀이 직접 다시 가려야 했다.</li>
+        <li>벤치마크는 <strong>결국 직접 만들어야 한다.</strong> 소량으로 느낌을 보고, 100장, 1,000장으로 늘려 체계적으로 잰다.</li>
+        <li>제품 교훈: 처음 만든 건 이메일에 질문하는 <strong>RAG 챗봇이었고 별로였다.</strong> 익숙한 Gmail 화면을 씌우자 수억 명이 썼다. 좋은 추출과 좋은 제품이 함께 있어야 한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="reducto">
+        <header><span class="num">01</span><h2>Reducto는 무엇을 하는가 <span class="ts">00:10</span></h2></header>
+        <p>Palak Agarwal이 회사를 먼저 소개한다. Reducto는 지저분한 비정형 문서를 AI가 정확하게 쓸 수 있는 데이터로 바꾸는 <strong>문서 파싱 플랫폼</strong>이다. 모델 바로 앞에 놓이는 층이라고 설명한다. 복잡한 레이아웃 처리와 후처리를 맡아, 고객은 자기 제품에만 집중하게 한다는 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>발표자가 밝힌 숫자</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>투자 유치</td><td>3년간 1억 800만 달러. 투자사로 Benchmark 등을 언급했다(자막에서 일부 뭉개짐)</td></tr>
+              <tr><td>처리한 문서</td><td>20억 건 이상</td></tr>
+              <tr><td>고객 예시</td><td>Harvey, Scale, 세계 5위권 헤지펀드 한 곳</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>깨끗한 PDF는 누구나 읽는다 <span class="ts">01:00</span></h3>
+        <p>깨끗한 PDF에 최신 모델을 붙이는 건 어렵지 않다. 문제는 기업 문서 대부분이 스캔본, 돌아간 페이지, 차트 같은 비정형이라는 점이다. Reducto가 내세우는 접근은 두 가지다.</p>
+        <ul class="plain">
+          <li><strong>래스터화 기반</strong> <span class="en">rasterization-based</span>: 문서 안에 들어 있는 글자 데이터를 읽는 대신, 사람이 보듯 페이지를 그림으로 놓고 읽는다.</li>
+          <li><strong>에이전트형 OCR</strong> <span class="en">agentic OCR</span>: 한 번 읽고 답을 확정하지 않는다. 모델이 확신 없는 부분을 표시하고, 고친 뒤 다음 단계로 간다.</li>
+        </ul>
+        <p>기능은 다섯 가지로 묶인다. <strong>파싱</strong> <span class="en">parse</span>, <strong>분할</strong> <span class="en">split</span>, <strong>추출</strong> <span class="en">extract</span>, <strong>편집</strong> <span class="en">edit</span>, <strong>분류</strong> <span class="en">classify</span>. 이날은 실습용으로 Studio를 셀프 가입으로 열어 두었다고 했다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="jmail">
+        <header><span class="num">02</span><h2>JMail: 5시간 만에 만든 받은편지함 <span class="ts">02:00</span></h2></header>
+        <p>청중 상당수가 JMail을 이미 알고 있었다. 모르는 사람을 위한 설명은 이렇다. 작년 11월 Epstein 문서가 공개된 날, Riley Walz와 Luke(Kino 창업자, 성은 자막에 없음)가 <strong>5시간 만에</strong> 만들었다. 개념은 Gmail을 그대로 베낀 화면이다. 로그인하면 Epstein의 받은편지함을 보는 것처럼 이메일을 읽을 수 있다.</p>
+        <p>이게 하나의 묶음으로 커졌다. JDrive, JFlights, JAmazon, JPhotos 같은 파생 서비스가 붙었다. Omar Alhait는 그중 JCal을 직접 만들었다고 했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>발표자가 밝힌 숫자</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>만든 시간</td><td>5시간 (작년 11월)</td></tr>
+              <tr><td>2월까지 방문</td><td>4억 5천만 회 이상</td></tr>
+              <tr><td>2월까지 사용자</td><td>1,800만 명 이상</td></tr>
+              <tr><td>지금도 매주 접속</td><td>수천만 명 (발표자 표현)</td></tr>
+              <tr><td>Reducto가 파싱한 양</td><td>300만 쪽 이상. 가림 처리된 PDF, 스캔 문서, 지저분한 정부 파일</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>문서 종류는 복잡한 양식과 표부터 수많은 사람의 손글씨까지 걸쳐 있었다. 발표자는 이 모든 문서의 파싱을 Reducto가 맡았다는 점을 자랑스럽게 밝혔다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="bottleneck">
+        <header><span class="num">03</span><h2>진짜 병목: 표지 한 장 <span class="ts">03:20</span></h2></header>
+        <p>Omar Alhait가 기술 이야기를 이어받는다. 문서 공개 전날 밤, 창업팀과 "이 사건으로 뭘 만들면 재미있을까"를 이야기하다가 아래층에서 일하던 Luke와 합류했다. 아이디어는 "Epstein이 된 것처럼 이메일에 로그인하기"로 굳어졌다.</p>
+        <p>제품 개념은 좋았는데 그 앞에 <strong>딱 하나 어려운 문제</strong>가 있었다. 문서 자체다. 발표자는 화면에 문서 표지 한 장을 띄우고, 이걸 ChatGPT에 넣어 결과를 직접 보라고 권했다. 레이아웃을 이해하기 어렵고, <strong>읽는 순서조차 사람마다 다르게 볼 수 있다</strong>는 것이다.</p>
+        <div class="callout">
+          <span class="title">여기서 배울 것</span>
+          <span>JMail 묶음의 모든 파생 제품은 먼저 문서를 데이터로 바꿔야 가능했다. 파싱이 병목이었고, 병목이 풀리자 제품은 빠르게 늘어났다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="jflights">
+        <header><span class="num">04</span><h2>JFlights: 손글씨 비행 기록 <span class="ts">05:20</span></h2></header>
+        <p>JFlights는 Epstein과 주변 인물의 비행 이력을 보여 준다. 원본은 <strong>손으로 쓴 비행 일지</strong>다. 표지가 어려웠다면 손글씨는 더 어렵다. 발표자는 당시 만든 파이프라인 설정을 Studio 화면에서 보여 줬다.</p>
+        <ol class="plain">
+          <li><strong>먼저 파싱한다.</strong> 문서를 넣고 실행하면 옵션을 바꿔 가며 결과를 바로 볼 수 있다.</li>
+          <li><strong>비행 전용 추출 설정을 따로 만든다.</strong> 비행 문서만 모아 하나의 추출 스키마로 처리했다.</li>
+          <li><strong>작은 캔버스에서 먼저 맞춘다.</strong> 수백만 장으로 키우기 전에 정확도가 기대만큼 나오는지 확인하는 놀이터였다.</li>
+        </ol>
+        <p>결과 화면에는 가림 처리된 칸이 섞여 있었고, 여러 형태의 문서가 하나의 스키마로 처리되고 있었다.</p>
+        <p class="note">여담 <span class="ts">07:40</span>: 첫 번째 문서 공개 당일 밤, 발표자는 최대한 빨리 파싱하느라 Reducto 인프라에 상당한 부하를 걸었다. 당직이던 동료 Alvin에게서 "좀 천천히 해 달라"는 메시지가 밤새 왔다고 한다. 결과적으로 제시간에 끝냈다.</p>
+        <p>이렇게 파싱한 문서 묶음을 <strong>기준 데이터</strong> <span class="en">ground truth</span>로 삼자, 그 위에 여러 파생 제품을 빠르게 만들 수 있었다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="workflow">
+        <header><span class="num">05</span><h2>스키마 → 확인 → 배포 <span class="ts">08:50</span></h2></header>
+        <p>발표자가 이 세션에서 하나만 가져가라고 한 것은 작업 흐름의 단순함이다.</p>
+        <div class="shift" aria-label="작업 흐름">
+          <div><span class="tag">1 · 스키마</span><b>원하는 데이터 모양을 정한다</b><span class="muted">추출 스키마가 결과를 결정한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div><span class="tag">2 · 확인</span><b>결과가 기대와 맞는지 본다</b><span class="muted">Studio에서 문서를 넣고 눈으로 확인</span></div>
+          <span class="arrow" aria-hidden="true" style="display:none"></span>
+        </div>
+        <div class="shift" aria-label="작업 흐름 계속">
+          <div><span class="tag">3 · 배포</span><b>그대로 코드로 받는다</b><span class="muted">직접 API 호출 또는 파이프라인 코드 조각</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">결과</span><b>문서를 넣자마자 데이터를 보고, 바로 운영에 올린다</b><span class="muted">발표자가 말한 "게임의 이름"</span></div>
+        </div>
+
+        <h3>스키마는 캔버스 위의 붓이다 <span class="ts">10:10</span></h3>
+        <p>첫 질문은 스키마를 어떻게 만드느냐였다. 발표자의 비유는 "추출 스키마는 Reducto 캔버스 위의 붓"이다. 무엇을 얻을지는 전부 스키마가 정한다. 시연으로 이력서 추출 파이프라인을 새로 만들고, 스키마를 자동 생성한 뒤 이력서 여러 장을 올려 돌렸다. 스키마가 만족스러운지 판단하는 것은 사용자의 몫이고, 문서를 넣어 보고 나서야 "이게 아니었네"를 알게 되는 경우도 많다고 했다.</p>
+
+        <h3>스키마 생성은 두 가지다 <span class="ts">12:30</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">기본 스키마 생성</span>
+            <p>설명을 적으면 LLM 호출 한 번으로 JSON 스키마를 만든다. 빠르게 화면에 뭔가 띄워 보고 싶을 때 쓴다.</p>
+            <p class="verdict"><b>장점</b>: 즉시. <b>한계</b>: 문서를 보지 않고 만든다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">강화 스키마 생성 <span class="en">enhanced</span></span>
+            <p>문서를 먼저 파싱하고, 그 내용에 맞춰 스키마의 필드 설명을 다듬는다. 미묘한 차이가 중요할 때 권한다.</p>
+            <p class="verdict"><b>장점</b>: 실제 문서에 맞는 설명. <b>비용</b>: 파싱을 먼저 돌려야 한다.</p>
+          </div>
+        </div>
+        <p class="note">발표자는 Reducto 제품이 하나의 모델이 아니라 여러 모델과 시각 언어 모델 <span class="en">VLM</span>의 묶음이라고 덧붙였다 <span class="ts">12:10</span>.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="redaction">
+        <header><span class="num">06</span><h2>가린 것이 가려지지 않았다 <span class="ts">13:50</span></h2></header>
+        <p>가림 처리 <span class="en">redaction</span>에 관한 질문에 발표자는 솔직하게 답했다. Reducto는 페이지 이미지뿐 아니라 <strong>PDF 안의 글자 데이터(메타데이터)도 함께 읽는다.</strong> 그런데 공개된 문서 일부는 글자 위에 검은 상자만 얹어 놓은 상태였다. 상자 밑의 글자는 그대로 남아 있었다.</p>
+        <div class="callout warn">
+          <span class="title">파서가 너무 잘 읽었다</span>
+          <span>제대로 가려진 파일도 있었지만, 일부 파일에서는 가림 뒤의 이름이 그대로 읽혔다. 가려진 데이터는 이유가 있어서 가려진 것이다. 결국 JMail 팀이 <strong>직접 다시 가림 처리</strong>를 해야 했다. 발표자는 "우리 도구가 조금 너무 잘 작동했다"고 표현했고, 소송 위험까지 생각해야 하는 무거운 책임이었다고 말했다.</span>
+        </div>
+        <p>교훈은 단순하다. <strong>PDF에 상자를 올리는 것은 가림 처리가 아니다.</strong> 그리고 문서를 파싱하는 쪽은 원본 작성자의 실수를 그대로 드러낼 수 있다는 점을 알고 있어야 한다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="internals">
+        <header><span class="num">07</span><h2>질의응답으로 본 내부 구조 <span class="ts">15:30</span></h2></header>
+        <p>이후 질문들은 Reducto 내부가 어떻게 돌아가는지로 이어졌다. 질문은 자막에 거의 없고 답만 들린다. 답에서 알 수 있는 것을 주제별로 묶었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>주제</th><th>발표자의 답</th><th>위치</th></tr></thead>
+            <tbody>
+              <tr><td>스키마 크기</td><td>최근 본 스키마 하나는 필드가 156개였다. 중첩은 4~5단계가 한계지만, 원하는 것을 다 넣어도 보통 들어간다</td><td><span class="ts">15:40</span></td></tr>
+              <tr><td>엔티티 연결과 인용</td><td>추출 뒤에 엔티티를 서로 잇는 후처리를 한다. 추출 모델과 별도로 <strong>인용 모델</strong>이 있어, 추출된 값이 문서 어디서 나왔는지 찾는다. NVIDIA가 인용 위치를 빨리 찾는 논문을 냈다고 언급했다(제목은 "find everything"으로 들림, 추정)</td><td><span class="ts">16:30</span></td></tr>
+              <tr><td>그림</td><td>그림을 판별하는 전용 모델이 있다. 결과에 그림을 포함하려면 옵션을 켜고 다시 돌린다</td><td><span class="ts">17:40</span></td></tr>
+              <tr><td>하이브리드 OCR</td><td>동료 Alvin이 만든 설정이다. 이미지에서 읽은 글자와 PDF 안의 글자 데이터 중 무엇을 우선할지 상황에 맞게 고른다. 단순한 답이 아니고 따로 발표 하나가 필요한 주제라고 했다</td><td><span class="ts">18:20</span></td></tr>
+              <tr><td>파싱이 기초</td><td>추출은 파싱 결과를 받아 뒤에서 처리한다. 분할도 마찬가지다. 예를 들어 수학 교과서를 장 단위로 나누고 장마다 요약을 뽑는 식이다. 파싱이 다른 모든 기능의 토대다</td><td><span class="ts">19:20</span></td></tr>
+              <tr><td>학습 데이터</td><td>특정 종류 문서에서 약하면 그 종류를 모아 학습한다. 추출은 "건초 더미 속 바늘 하나"가 아니라 <strong>"건초 더미 속 모든 바늘"</strong> 문제라 어렵다</td><td><span class="ts">20:50</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 자신이 ML 쪽과는 조금 떨어져 있다고 밝혔다. 모델 내부에 관한 답은 그 점을 감안해 읽자. 모델 학습에 관한 한 질문에는 "답하면 내일 해고될 수 있다"며 웃어넘겼다 <span class="ts">20:40</span>.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="benchmark">
+        <header><span class="num">08</span><h2>벤치마크는 결국 직접 만든다 <span class="ts">21:30</span></h2></header>
+        <p>벤치마크 질문에 두 사람이 답했다. 공개 벤치마크는 곧 낼 예정이라고 했다. 업계 전체가 직접 시험하지 않고도 비교할 수 있는 공통 기준이 필요하다는 이유다. 하지만 더 깊은 답은 따로 있었다.</p>
+        <blockquote>안타깝게도 보통은 자기 벤치마크를 직접 만들어야 한다.<cite>발표자의 표현을 옮김 <span class="ts">22:30</span></cite></blockquote>
+        <p>고객들은 대개 자기 벤치마크를 갖고 여러 문서 업체를 나란히 비교한다. 그런데 설정을 잘못 써서 API를 제대로 못 쓰는 경우가 있어, Reducto 팀이 "이 옵션을 켜면 이런 트레이드오프가 있다"고 알려 주고 판단은 고객에게 맡긴다고 했다. 발표자는 그런 비교에서 자주 이긴다고 말했다.</p>
+        <div class="callout">
+          <span class="title">발표자가 권하는 평가 순서</span>
+          <span>1) 작은 데이터 묶음을 모은다. 2) Studio에서 결과를 눈으로 보며 느낌을 잡는다. 3) 규모를 키우고 싶으면 100장, 1,000장으로 늘려 체계적으로 잰다. 4) 필요하면 Reducto 팀과 함께 평가를 설계한다.</span>
+        </div>
+        <p class="note">"자주 이긴다"는 주장은 발표자 회사의 제품에 관한 것이다. 공개된 비교 자료는 발표 시점에 아직 없었다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="product">
+        <header><span class="num">09</span><h2>RAG 챗봇은 왜 실패했나 <span class="ts">23:30</span></h2></header>
+        <p>파싱 결과를 어떻게 제품으로 보여 줄지 묻는 질문에 발표자는 솔직하게 답했다. 처음 만든 것은 <strong>이메일에 무엇이든 물어볼 수 있는 RAG 챗봇</strong>이었고, 스스로 "꽤 조악했다"고 평가했다. 기자에게는 유용했을지 몰라도 널리 쓰이지는 않았다.</p>
+        <div class="shift" aria-label="제품 형태의 변화">
+          <div><span class="tag">처음</span><b>이메일에 질문하는 RAG 챗봇</b><span class="muted">파싱 결과를 보여 주는 "그럴듯한" 방법</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">결국</span><b>Gmail을 그대로 베낀 받은편지함</b><span class="muted">수억 명이 방문하고, 수천만 명이 매주 돌아온다</span></div>
+        </div>
+        <p>발표자의 결론은 <strong>좋은 추출과 좋은 제품이 함께 있어야 한다</strong>는 것이다. Palak Agarwal이 덧붙였다. 스캔 문서 300만 장을 직접 읽겠느냐고 물으면 자신도 "아니오"다. 문서가 공개됐을 때는 "너무 일이 많다"고 느꼈지만, JMail이 생기자 로그인해서 유명인 이름을 검색하며 놀았다. 비정형 데이터는 어디에나 있고, 꺼내 놓기만 하면 뭐든 할 수 있다. 발표자는 JMail이 재미있는 예시지만 고객들이 매일 하는 일과 개념적으로 같다고 말했다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="custom">
+        <header><span class="num">10</span><h2>라벨링과 맞춤 설정 <span class="ts">25:10</span></h2></header>
+        <h3>데이터 라벨링은 그냥 힘든 일이다 <span class="ts">25:10</span></h3>
+        <p>모델을 어떻게 좋게 만드느냐는 질문에 발표자는 돌려 말하지 않았다. Reducto에는 데이터 라벨링 팀이 있고, 새 모델을 학습하려면 수많은 문서를 손으로 거쳐야 한다. 데이터의 순수성을 확신할 수 있어야 하기 때문이다. 지루하고 성가신 분류 작업이 쌓여 모델 학습으로 이어진다. <strong>결국 누군가는 데이터에 라벨을 붙여야 한다.</strong></p>
+
+        <h3>문서 종류별로 로직을 바꾸고 싶다면 <span class="ts">26:00</span></h3>
+        <p>마지막 질문은 문서마다 다른 처리 논리가 필요할 때였다. 답은 설정의 "에이전트" 영역이다. 별도 모델 위에 <strong>시스템 프롬프트</strong>를 얹어, 요청한 처리에 맞춘 동작을 시킬 수 있다. 발표자가 든 예시는 두 가지다.</p>
+        <ul class="plain">
+          <li><strong>로고 구분</strong>: 여러 회사 로고를 서로 구분해야 한다면, 그림 추출 프롬프트에 설명을 더 적는다.</li>
+          <li><strong>건설 도면</strong>: 레이아웃이 읽기 어려운 도면이라면, 레이아웃 프롬프트를 다듬는 데 시간을 쓴다. 현재 설정이 여러 도면에 얼마나 잘 맞는지 보면서 조정한다.</li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section id="workshop">
+        <header><span class="num">11</span><h2>실습 안내 <span class="ts">27:50</span></h2></header>
+        <p>남은 30분은 실습이다. Studio에 가입하고 문서 추출을 시작하면 된다. 화면의 QR 코드에는 Claude Code나 Codex 같은 코딩 에이전트에 그대로 붙여 넣어 바로 시작할 수 있는 내용이 들어 있다. 종료 5분 전에 각자 만든 것을 공유하면 기념품과 상품을 준다고 했다. 아이디어나 프롬프트 한 줄만 있어도 괜찮다. 발표자들은 돌아다니며 질문을 받고, 채용 중이라고 했다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>JMail은 Epstein 문서 공개 당일 밤 <strong>5시간 만에</strong> 만들어졌다. 제품은 쉬웠고 문서가 어려웠다.</li>
+          <li>Reducto는 문서를 <strong>사람처럼 이미지로 읽고</strong>, 모델이 확신 없는 부분을 표시해 다시 확인하는 방식을 쓴다.</li>
+          <li>기능은 다섯 가지다. 파싱, 분할, 추출, 편집, 분류. 그중 <strong>파싱이 나머지의 토대</strong>다.</li>
+          <li>작업 흐름은 <strong>스키마 만들기 → 결과 확인 → 배포</strong>다. 큰 규모로 돌리기 전에 작은 캔버스에서 맞춘다.</li>
+          <li><strong>추출 스키마가 결과를 결정한다.</strong> 급하면 기본 생성, 미묘함이 중요하면 문서를 먼저 파싱하는 강화 생성을 쓴다.</li>
+          <li>일부 정부 문서는 검은 상자만 얹은 상태였다. <strong>파서가 가린 글자를 그대로 읽어</strong> JMail 팀이 다시 가려야 했다.</li>
+          <li>추출 뒤에는 엔티티 연결과 <strong>인용 위치 찾기</strong>를 별도 모델이 맡는다. 하이브리드 OCR은 이미지 글자와 PDF 글자 데이터 중 무엇을 믿을지 고른다.</li>
+          <li>벤치마크는 <strong>직접 만든다.</strong> 소량으로 느낌을 보고 100장, 1,000장으로 늘려 체계적으로 잰다. 설정이 틀리면 비교가 틀린다.</li>
+          <li>처음 만든 <strong>RAG 챗봇은 조악했다.</strong> 익숙한 Gmail 화면을 씌우자 수억 명이 썼다. 좋은 추출에는 좋은 제품이 필요하다.</li>
+          <li>모델을 좋게 만드는 건 결국 <strong>손으로 하는 라벨링</strong>이다. 문서 종류별 특수 처리는 모델 위에 시스템 프롬프트를 얹어 해결한다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>JMail은 누가, 얼마 만에 만들었나?</span></summary><div class="answer">Riley Walz와 Luke가 작년 11월 Epstein 문서 공개 당일 5시간 만에 만들었다. Gmail을 베낀 화면으로 Epstein의 받은편지함을 보는 개념이다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Reducto가 말하는 "래스터화 기반" 접근은 무엇인가?</span></summary><div class="answer">PDF 안에 든 글자 데이터를 읽는 대신, 사람이 보듯 페이지를 그림으로 놓고 읽는 방식이다. 스캔본이나 돌아간 페이지처럼 글자 데이터가 없거나 틀린 문서에 강하다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>"에이전트형 OCR"은 한 번 읽는 OCR과 무엇이 다른가?</span></summary><div class="answer">한 번 읽고 답을 확정하지 않는다. 모델이 확신 없는 부분을 표시하고, 고친 다음 다음 단계로 넘어간다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>JMail 묶음 제품들을 만들기 전에 반드시 먼저 풀어야 했던 문제는?</span></summary><div class="answer">문서 파싱이다. 표지 한 장도 레이아웃과 읽는 순서를 잡기 어려웠다. 파싱된 문서 묶음을 기준 데이터로 삼은 뒤에야 JFlights, JCal 같은 파생 제품을 빠르게 만들 수 있었다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>발표자가 "하나만 가져가라"고 한 작업 흐름 세 단계는?</span></summary><div class="answer">스키마를 만들고, 결과가 기대와 맞는지 눈으로 확인하고, 그대로 배포한다. 배포는 직접 API 호출이나 파이프라인 코드 조각으로 받는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>기본 스키마 생성과 강화 스키마 생성의 차이는?</span></summary><div class="answer">기본은 설명만 보고 LLM 호출 한 번으로 JSON 스키마를 만든다. 강화는 문서를 먼저 파싱하고 그 내용에 맞춰 필드 설명을 다듬는다. 급하면 기본, 미묘함이 중요하면 강화를 쓴다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>가림 처리 사고는 왜 일어났고, 누가 수습했나?</span></summary><div class="answer">일부 문서가 글자 위에 검은 상자만 얹은 상태였다. Reducto는 PDF 글자 데이터도 읽기 때문에 가린 이름이 그대로 나왔다. JMail 팀이 직접 다시 가림 처리를 해야 했다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>추출 결과가 문서 어디서 왔는지는 어떻게 찾나?</span></summary><div class="answer">추출 모델과 별도의 인용 모델이 후처리로 위치를 찾는다. 엔티티를 서로 잇는 후처리도 같은 단계에서 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>하이브리드 OCR은 무엇을 고르는 설정인가?</span></summary><div class="answer">이미지에서 읽은 글자와 PDF 안의 글자 데이터 중 상황에 따라 무엇을 우선할지 고른다. 단순한 규칙이 아니라고 발표자는 말했다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>발표자가 권하는 평가 방법은?</span></summary><div class="answer">공개 벤치마크를 기다리지 말고 직접 만든다. 작은 묶음으로 Studio에서 느낌을 보고, 100장, 1,000장으로 늘려 체계적으로 잰다. 설정을 잘못 쓰면 비교 자체가 틀어진다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>처음 만든 제품은 무엇이었고, 왜 바꿨나?</span></summary><div class="answer">이메일에 질문하는 RAG 챗봇이었다. 발표자 스스로 조악했다고 평가했다. 익숙한 Gmail 화면으로 바꾸자 수억 명이 썼다. 좋은 추출에는 좋은 제품이 함께 필요하다는 교훈이다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>문서 종류마다 다른 처리가 필요할 때 Reducto에서는 어떻게 하나?</span></summary><div class="answer">설정의 에이전트 영역에서 별도 모델 위에 시스템 프롬프트를 얹는다. 예를 들어 로고 구분은 그림 추출 프롬프트에, 건설 도면은 레이아웃 프롬프트에 설명을 더한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 프로젝트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>가장 지저분한 문서 한 장을 골라 범용 모델에 넣어 본다<span class="how">발표자의 표지 실험처럼, 어디서 깨지는지 먼저 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>원하는 데이터 모양을 스키마로 먼저 적는다<span class="how">스키마가 결과를 결정한다. 필드마다 설명을 붙인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>대량으로 돌리기 전에 소량으로 결과를 눈으로 확인한다<span class="how">확인: 기대와 다른 필드가 있는가. 있으면 스키마를 고친다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>자기 문서로 평가 묶음을 만든다<span class="how">소량 → 100장 → 1,000장. 업체 비교 전에 설정이 맞는지 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>가림 처리된 문서는 글자 데이터까지 지워졌는지 확인한다<span class="how">상자만 얹은 PDF는 파서가 그대로 읽는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>추출 값마다 출처 위치를 남긴다<span class="how">확인: 값이 틀렸을 때 원문 어디를 봐야 하는지 바로 알 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>문서 종류별 특수 처리는 프롬프트 설정으로 먼저 시도한다<span class="how">레이아웃 프롬프트, 그림 프롬프트부터. 코드 분기는 그다음</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>추출 결과를 보여 줄 화면은 사용자가 이미 아는 형태로 만든다<span class="how">챗봇보다 받은편지함이 통했다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>비정형 문서</td><td>Unstructured document. 표나 필드로 정리되지 않은 문서. 스캔본, 손글씨, 돌아간 페이지, 차트 등</td></tr>
+              <tr><td>파싱</td><td>Parse. 문서를 읽어 글자, 표, 그림, 레이아웃을 구조화된 형태로 바꾸는 것</td></tr>
+              <tr><td>추출</td><td>Extract. 파싱된 내용에서 스키마에 맞는 값만 뽑아내는 것</td></tr>
+              <tr><td>분할</td><td>Split. 긴 문서를 장이나 구역 단위로 나누는 것</td></tr>
+              <tr><td>분류</td><td>Classify. 문서가 어떤 종류인지 정하는 것</td></tr>
+              <tr><td>스키마</td><td>Schema. 뽑고 싶은 데이터의 이름, 형식, 설명을 정의한 틀. 보통 JSON으로 적는다</td></tr>
+              <tr><td>OCR</td><td>Optical Character Recognition. 이미지 속 글자를 읽어 텍스트로 바꾸는 기술</td></tr>
+              <tr><td>래스터화</td><td>Rasterization. 문서를 픽셀 이미지로 바꾸는 것. 여기서는 "글자 데이터 대신 그림으로 읽는다"는 뜻</td></tr>
+              <tr><td>PDF 메타데이터</td><td>PDF 파일 안에 들어 있는 글자, 폰트, 위치 정보. 보이는 그림과 다를 수 있다</td></tr>
+              <tr><td>가림 처리</td><td>Redaction. 문서에서 민감한 부분을 지우는 것. 글자 데이터까지 지워야 진짜 가려진다</td></tr>
+              <tr><td>VLM</td><td>Vision Language Model. 이미지와 글을 함께 이해하는 모델</td></tr>
+              <tr><td>기준 데이터</td><td>Ground truth. 정답으로 삼는 데이터</td></tr>
+              <tr><td>엔티티 연결</td><td>Entity resolution. 서로 다른 곳에 나온 같은 사람이나 사물을 하나로 묶는 것</td></tr>
+              <tr><td>인용</td><td>Citation. 추출된 값이 원문 어디에서 왔는지 가리키는 위치 정보</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 질문과 관련된 문서를 찾아 모델에 넣고 답하게 하는 방식</td></tr>
+              <tr><td>벤치마크</td><td>Benchmark. 성능을 비교하기 위한 공통 시험 묶음</td></tr>
+              <tr><td>데이터 라벨링</td><td>Data labeling. 학습용 데이터에 사람이 정답을 붙이는 일</td></tr>
+              <tr><td>시스템 프롬프트</td><td>System prompt. 모델의 역할과 규칙을 미리 지시하는 글</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>Palak Agarwal 소개, Reducto 개요</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>래스터화 기반, 에이전트형 OCR, 다섯 가지 기능</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>JMail 소개: 5시간, 4억 5천만 방문, 300만 쪽</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>Omar Alhait로 교대</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>11월 그날 밤, 아이디어의 시작</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>표지 한 장을 ChatGPT에 넣어 보라</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>JFlights와 손글씨 비행 일지</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>Studio 파이프라인 시연: 파싱 후 추출</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>당직 Alvin과 인프라 부하 일화</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>기준 데이터 위에 파생 제품들, JCal</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>스키마 → 확인 → 배포</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>질문: 스키마 만들기. "캔버스 위의 붓"</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>여러 모델과 VLM의 묶음</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>기본 스키마 생성과 강화 스키마 생성</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>가림 처리 사고</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>필드 156개 스키마, 중첩 4~5단계</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>엔티티 연결, 인용 모델, NVIDIA 논문</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>그림 모델</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>하이브리드 OCR</td></tr>
+              <tr><td><span class="ts">19:20</span></td><td>파싱이 토대, 분할과 추출의 관계</td></tr>
+              <tr><td><span class="ts">20:40</span></td><td>학습 데이터, "건초 더미 속 모든 바늘"</td></tr>
+              <tr><td><span class="ts">21:30</span></td><td>벤치마크 계획과 "직접 만들어라"</td></tr>
+              <tr><td><span class="ts">23:30</span></td><td>RAG 챗봇에서 Gmail 화면으로</td></tr>
+              <tr><td><span class="ts">24:30</span></td><td>Palak Agarwal: 300만 장을 직접 읽겠는가</td></tr>
+              <tr><td><span class="ts">25:10</span></td><td>데이터 라벨링은 힘든 일</td></tr>
+              <tr><td><span class="ts">26:00</span></td><td>문서 종류별 맞춤 설정: 로고, 건설 도면</td></tr>
+              <tr><td><span class="ts">27:50</span></td><td>실습 안내, QR 코드, 상품</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'HGfsfKaVuGY:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MCP와 CLI 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#rise">MCP의 짧은 역사</a></li>
+      <li><a href="#backlash">쏟아진 비판</a></li>
+      <li><a href="#harness">진짜 문제는 하네스</a></li>
+      <li><a href="#fixes">이미 나온 해결책 세 가지</a></li>
+      <li><a href="#cli">CLI가 에이전트와 잘 맞는 이유</a></li>
+      <li><a href="#remote">CLI의 약점: 원격 접근</a></li>
+      <li><a href="#combine">둘을 합치기</a></li>
+      <li><a href="#mcpc">mcpc: MCP용 CLI</a></li>
+      <li><a href="#demo">데모로 본 기능</a></li>
+      <li><a href="#evals">연결 방식끼리 비교하기</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 에이전트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-02 · 19분 · 영어 발표 한글 정리</span>
+      <h1>MCP가 아니라 에이전트가 문제다</h1>
+      <p class="lead">MCP가 컨텍스트를 낭비한다는 비판은 프로토콜이 아니라 에이전트를 만든 방식의 문제다. 발표자는 원격 연결은 MCP에, 에이전트가 쓰는 인터페이스는 CLI에 맡기자고 제안한다. 그 둘을 잇는 도구로 Apify가 만든 mcpc를 소개한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=pAnLpiAG6Es" target="_blank" rel="noopener">MCP Doesn't Suck. Your Agent Does.</a></span>
+        <span>발표: Jan Čurn (Apify 창업자, CEO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 인용은 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>MCP는 에이전트가 도구에 접근하는 표준이다. 크게 퍼진 만큼 <strong>"MCP는 끝났다"는 비판</strong>도 쏟아졌다.</li>
+        <li>가장 큰 비판은 컨텍스트 낭비다. 발표자는 이것이 <strong>프로토콜이 아니라 하네스의 문제</strong>라고 본다. 도구를 처음부터 전부 올리는 순진한 구현 탓이다.</li>
+        <li>해결책은 이미 있다. <strong>서브에이전트, 점진적 도구 탐색, code mode</strong>다. 하지만 대부분의 클라이언트가 아직 지원하지 않는다.</li>
+        <li>CLI는 <strong>필요할 때만 부르기</strong>와 <strong>코드로 실행하기</strong>를 처음부터 갖고 있다. 모델은 셸을 학습 데이터로 이미 잘 안다.</li>
+        <li>대신 CLI는 표준 인증과 전송 방식이 없어 <strong>원격 접근에 약하다.</strong> 원격 연결은 MCP가 낫다.</li>
+        <li>제안: <strong>원격은 MCP, 에이전트 쪽 인터페이스는 CLI.</strong> 그 다리로 Apify가 mcpc를 만들었다.</li>
+        <li>Apify 자체 평가에서 mcpc는 CLI와 비슷했고, MCP를 그대로 붙인 방식은 토큰을 더 썼다. 결론은 <strong>CLI냐 MCP냐가 아니라 MCP + CLI</strong>다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="rise">
+        <header><span class="num">01</span><h2>MCP의 짧은 역사 <span class="ts">00:40</span></h2></header>
+        <p>MCP <span class="en">Model Context Protocol</span>는 에이전트가 도구와 리소스에 안전하게 접근하는 방법을 정한 표준이다. 에이전트와 도구 사이의 연결 규격이라고 보면 된다.</p>
+        <p>발표자에 따르면 Anthropic이 거의 2년 전에 내놓았다. 작년에는 AI 업계에서 가장 주목받는 기술이 됐다.</p>
+        <ul class="plain">
+          <li>발표자 추산으로 MCP 서버는 1만~1만 5천 개다. <span class="ts">01:00</span></li>
+          <li>Claude, ChatGPT 같은 클라이언트가 도구와 커넥터를 붙이는 표준으로 MCP를 쓴다.</li>
+          <li>서버가 너무 많아 서버 목록인 레지스트리 <span class="en">registry</span>가 생겼다. 레지스트리가 너무 많아지자 레지스트리의 레지스트리까지 생겼다. <span class="ts">01:10</span></li>
+        </ul>
+      </section>
+
+      <!-- 2 -->
+      <section id="backlash">
+        <header><span class="num">02</span><h2>쏟아진 비판 <span class="ts">01:30</span></h2></header>
+        <p>그런데 작년부터 MCP를 깎아내리는 글이 쏟아졌다. 발표자가 화면에 띄운 글들은 이런 내용이다.</p>
+        <ul class="plain">
+          <li>"Anthropic도 MCP가 형편없다고 인정했다", "MCP는 잘못된 추상화다"</li>
+          <li>"MCP는 실수였다. CLI 만세", "MCP는 시작부터 죽은 거나 마찬가지다"</li>
+          <li>"OpenClaw를 보니 API와 CLI가 이긴다" <span class="ts">01:50</span></li>
+          <li>"OpenClaw에 MCP 지원을 넣지 않은 데는 이유가 있다." MCP를 CLI로 바꿔 주는 MCPorter를 거칠 때만 쓴다는 글이다. <span class="ts">02:00</span></li>
+          <li>"MCP는 대부분 쓸모없다. 모든 MCP는 결정적 <span class="en">deterministic</span> CLI였어도 됐다." 같은 입력이면 늘 같은 결과를 내는 CLI로 충분했다는 뜻이다.</li>
+          <li><strong>Garry Tan</strong>: "솔직히 MCP는 별로다" <span class="ts">02:10</span></li>
+          <li><strong>Pieter Levels</strong>: "MCP가 죽어서 다행이다"</li>
+        </ul>
+        <p class="note">인용문은 발표 화면의 글을 발표자가 읽은 것이다. 작성자는 발표에서 이름이 나온 경우만 적었다.</p>
+        <p>발표자는 비판이 가리키는 증상은 맞다고 인정한다. 다만 원인을 잘못 짚었다고 본다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="harness">
+        <header><span class="num">03</span><h2>진짜 문제는 하네스 <span class="ts">02:30</span></h2></header>
+        <p>가장 많이 나온 비판은 MCP가 컨텍스트 <span class="en">context window</span>를 너무 많이 먹는다는 것이다. 컨텍스트는 모델이 한 번에 보고 기억하는 작업 공간이다. 발표자는 이 비판이 사실이라고 인정한다.</p>
+        <p>문제는 초기 에이전트가 MCP를 붙인 방식이다. MCP 서버를 연결하면 그 서버의 도구 설명을 처음부터 전부 컨텍스트에 등록했다.</p>
+
+        <figure class="chart" aria-label="컨텍스트에 미리 등록되는 도구 수와 한 작업에 보통 필요한 도구 수 비교: 100개 대 1~2개">
+          <span class="chart-title">컨텍스트에 올라가는 도구 수 (발표자가 든 예)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>MCP 서버 10개 × 도구 10개를 처음부터 전부 등록</span><span class="val">100개</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="처음부터 등록한 도구: 100개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>한 작업에 보통 필요한 도구</span><span class="val">1~2개</span></div>
+              <div class="track"><div class="fill" style="width:2%" title="실제로 필요한 도구: 1~2개"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자가 설명을 위해 든 숫자다. "1~2개"는 2에 맞춰 그렸다.</span>
+        </figure>
+
+        <ul class="plain">
+          <li>질문을 하나도 하기 전에 컨텍스트의 3분의 1 정도가 도구 설명으로 찰 수 있다고 발표자는 말한다.</li>
+          <li>도구를 부를 때마다 그 결과도 컨텍스트에 쌓인다.</li>
+          <li>컨텍스트가 길어질수록 정확도가 떨어진다. 이를 컨텍스트 부패 <span class="en">context rot</span>라고 부른다.</li>
+          <li>비용이 늘고 속도도 느려진다.</li>
+        </ul>
+
+        <h3>프로토콜이 아니라 하네스의 문제 <span class="ts">03:20</span></h3>
+        <p>발표자는 이것이 MCP의 문제가 아니라 하네스 <span class="en">harness</span>의 문제라고 말한다. 하네스는 모델을 감싸 도구 호출과 컨텍스트 관리를 맡는 실행 틀이다.</p>
+        <p>MCP 명세는 하네스를 어떻게 만들지 아무것도 정하지 않는다. 그건 구현하는 쪽의 몫이다. MCP를 효율적으로 쓰게 만드는 건 에이전트를 만드는 사람의 일이다.</p>
+        <div class="callout">
+          <span class="title">발표 제목의 뜻</span>
+          <span>"MCP Doesn't Suck. Your Agent Does." MCP가 형편없는 게 아니라, MCP를 쓰는 에이전트가 형편없다는 말이다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="fixes">
+        <header><span class="num">04</span><h2>이미 나온 해결책 세 가지 <span class="ts">03:40</span></h2></header>
+        <p>컨텍스트 문제를 푸는 방법은 이미 세 가지가 나와 있다. 뒤로 갈수록 효과가 크다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">해결책 1 · 서브에이전트 <span class="ts">03:50</span></span>
+            <p>작업을 새 서브에이전트 <span class="en">sub-agent</span>에게 맡긴다. 서브에이전트는 자기 컨텍스트에서 일한다. 그래서 메인 컨텍스트가 덜 어지럽다.</p>
+            <ul>
+              <li>그래도 그 토큰 값은 그대로 낸다</li>
+              <li>도구가 비밀번호 같은 민감한 값을 돌려주면 컨텍스트에 남는다</li>
+              <li>남은 값은 다른 도구 호출이 악용할 수 있다</li>
+            </ul>
+            <p class="verdict"><b>한계</b>: 컨텍스트는 민감한 값이나 큰 데이터를 넘기기에 나쁜 곳이다. 서브에이전트는 이 문제를 조금 뒤로 미룰 뿐 없애지 못한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">해결책 2 · 점진적 도구 탐색 <span class="ts">04:40</span></span>
+            <p>도구를 처음부터 다 올리지 않고 필요할 때만 올린다. 점진적 도구 탐색 <span class="en">progressive tool discovery</span>이라고 부른다. 발표자에 따르면 작년 말 Anthropic이 먼저, 이어서 Cursor가 도입했다.</p>
+            <ul>
+              <li>Claude에는 다른 도구를 찾아 주는 도구 <span class="en">tool search tool</span>가 있다</li>
+              <li>찾은 도구만 그때 컨텍스트에 올린다</li>
+              <li>한 작업에 필요한 도구는 보통 한두 개라 컨텍스트를 크게 아낀다</li>
+            </ul>
+            <p class="verdict"><b>효과</b>: 더 정확하고, 더 싸고, 더 빠르다. 모두가 해야 할 방법인데 실제로는 그렇지 않다고 발표자는 말한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">해결책 3 · code mode <span class="ts">05:40</span></span>
+            <p>발표자에 따르면 작년 말 Cloudflare가 내놓았다. MCP 도구를 컨텍스트에 올리는 함수 목록으로 보지 않고 코드로 다룬다. MCP 서버와 도구를 코드로 바꿔, 모델이 코드처럼 읽고 부르게 한다.</p>
+            <ul>
+              <li>모델은 코드를 쓰고 읽는 데 강하다</li>
+              <li>grep으로 찾고 정의를 따라가며 코드를 잘 탐색한다</li>
+              <li>도구 설명도 같은 방식으로 탐색한다</li>
+            </ul>
+            <p class="verdict"><b>왜 통하나</b>: 도구 호출 <span class="en">tool calling</span>은 사람이 만든 인위적 형식이다. 실제 세상의 데이터에는 거의 없어서 합성한 데이터로 가르쳐야 한다. 그래서 모델은 도구를 직접 부르기보다 코드를 쓰는 쪽을 더 잘한다.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <span class="title">그런데 대부분의 클라이언트는 아직 못 쓴다 <span class="ts">06:50</span></span>
+          <span>발표자가 보기에 code mode는 기존 구현조차 쓰기 어렵고 특정 플랫폼에 묶여 있다. 그래서 실제로 쓰는 사람이 적다. 대부분의 에이전트와 MCP 클라이언트는 아직 "암흑기"에 머물러 있다. 프로토콜은 많이 발전했는데 클라이언트가 새 기능을 지원하지 않는다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="cli">
+        <header><span class="num">05</span><h2>CLI가 에이전트와 잘 맞는 이유 <span class="ts">07:10</span></h2></header>
+        <p>사람들이 MCP와 비교하는 대상은 CLI <span class="en">command-line interface</span>다. 터미널에서 명령어로 쓰는 프로그램이다. 발표자는 CLI가 앞의 해결책 두 가지를 처음부터 갖고 있다고 본다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>CLI가 기본으로 가진 것</th><th>어떻게</th></tr></thead>
+            <tbody>
+              <tr><td>점진적 탐색</td><td>에이전트는 CLI의 명령 전체를 컨텍스트에 미리 넣지 않는다. 필요할 때만 부른다. 모르는 도구는 <code>--help</code>를 읽고 배운다</td></tr>
+              <tr><td>이미 아는 도구</td><td>기본 리눅스 명령은 학습 데이터에서 오래 봐서 외우고 있다</td></tr>
+              <tr><td>code mode</td><td>CLI를 돌리려면 샌드박스나 머신 같은 실행 환경이 있어야 한다. 거기서 실행하는 bash 명령도 코드다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>CLI는 처음부터 code mode였다. MCP는 나중에야 그쪽으로 자라야 했다.</p>
+
+        <h3>모델은 셸을 외우고 있다 <span class="ts">08:30</span></h3>
+        <p>Unix 계열 셸 <span class="en">shell</span>은 1969년부터 있었다. Ken Thompson과 Dennis Ritchie가 만들었다.</p>
+        <p class="note">발표에서는 두 사람이 1969년에 "Linux"를 만들었다고 말했다. 이때 만든 것은 Unix다. Linux는 1991년에 Linus Torvalds가 만들었다.</p>
+        <p>80열, 25행짜리 검은 터미널 화면은 컴퓨터에서 일어나는 일을 아주 압축해서 보여 준다. 40년 넘게 다듬어져 글자 하나하나가 중요한 정보만 전한다. 사람을 위해 다듬은 형식이지만 에이전트에게도 잘 맞는다.</p>
+        <ul class="plain">
+          <li>모델은 명령을 부르고 파이프 <span class="en">pipe</span>로 잇는 법을 잘 안다. 학습 데이터에 셸이 아주 많기 때문이다.</li>
+          <li>AI 연구소는 셸 학습 데이터를 거의 무한히 합성할 수 있다. 명령을 이어 붙이고, 명령을 탐색하고, 매뉴얼 페이지에서 정보를 뽑으면 된다.</li>
+        </ul>
+      </section>
+
+      <!-- 6 -->
+      <section id="remote">
+        <header><span class="num">06</span><h2>CLI의 약점: 원격 접근 <span class="ts">09:30</span></h2></header>
+        <p>CLI에도 약점이 있다. CLI는 로컬에서 도는 블랙박스다. 인증과 전송을 위한 표준 프로토콜이 없다.</p>
+        <ul class="plain">
+          <li>기업이 CLI 사용을 관측하려면 안을 직접 들여다봐야 한다. API를 쓰는지 웹소켓을 쓰는지 밖에서는 알 수 없다.</li>
+          <li>자격 증명 <span class="en">credentials</span>을 밖에서 넣어 줄 수도 없다.</li>
+        </ul>
+        <p>그래서 발표자는 CLI는 로컬 인터페이스에 좋고, 원격 접근은 MCP가 낫다고 정리한다. "CLI 커넥터"를 쓰는 에이전트는 본 적이 없다고 했다. 원격 서비스를 붙이는 커넥터는 MCP다. <span class="ts">10:00</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>MCP</th><th>CLI</th></tr></thead>
+            <tbody>
+              <tr><td>강한 곳</td><td>표준 원격 접근, 인증, 세션</td><td>점진적 탐색과 코드 실행이 기본이다. 모델이 이미 잘 안다</td></tr>
+              <tr><td>약한 곳</td><td>순진한 클라이언트는 도구를 한꺼번에 올린다. 새 기능을 지원하는 클라이언트가 적다</td><td>표준 인증과 전송이 없는 블랙박스다. 기업이 관측하고 통제하기 어렵다</td></tr>
+              <tr><td>맞는 자리</td><td>원격 서비스 연결</td><td>에이전트 쪽 로컬 인터페이스</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="combine">
+        <header><span class="num">07</span><h2>둘을 합치기 <span class="ts">10:10</span></h2></header>
+        <p>발표자의 제안은 역할을 나누는 것이다. 원격 접근은 표준인 MCP로 한다. 에이전트가 쓰는 로컬 인터페이스는 CLI로 한다.</p>
+        <div class="shift" aria-label="에이전트 쪽은 CLI, 원격 쪽은 MCP로 나누는 구조">
+          <div><span class="tag">에이전트 쪽 · CLI</span><b>bash 도구 하나로 부른다</b><span class="muted">모델이 이미 아는 셸 문법, 파이프, JSON</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">원격 쪽 · MCP</span><b>표준 프로토콜로 서버와 통신한다</b><span class="muted">세션, 인증, 비동기 작업 같은 MCP 기능 전부</span></div>
+        </div>
+        <p>이렇게 하면 MCP의 모든 기능을 에이전트가 이미 아는 도구 하나로 쓸 수 있다. 그 도구는 bash다. MCP의 복잡함은 bash 호출 하나 뒤에 숨는다. 에이전트는 세션, 인가, OAuth를 신경 쓰지 않아도 된다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="mcpc">
+        <header><span class="num">08</span><h2>mcpc: MCP용 CLI <span class="ts">10:40</span></h2></header>
+        <p>이 제안을 구현한 것이 Apify의 mcpc다. MCP 서버에 붙는 범용 CLI 클라이언트다.</p>
+        <ul class="plain">
+          <li>작년 12월 취미 프로젝트로 시작했다.</li>
+          <li>발표자는 지금 나온 MCP CLI 클라이언트 중 기능이 가장 많을 것이라고 말한다.</li>
+          <li>npm이나 Bun으로 설치한다.</li>
+        </ul>
+        <p class="note">발표자는 Apify의 창업자이고 mcpc는 Apify가 만든 도구다. "기능이 가장 많다"는 말과 뒤의 비교 결과는 그 점을 감안해 읽자.</p>
+
+        <h3>설계 목표 <span class="ts">11:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>목표</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>프로토콜 전부 지원</td><td>작업(tasks), 리소스, 프롬프트 등 MCP가 제공하는 기능을 전부 지원한다</td></tr>
+              <tr><td>최대 호환</td><td>어디서든 언제든 바로 돌아가게 한다</td></tr>
+              <tr><td>가벼움</td><td>안에 LLM이 없다. MCP 프로토콜을 CLI로 감싼 것뿐이다</td></tr>
+              <tr><td>사람과 에이전트 모두</td><td>둘 다 쉽게 쓸 수 있어야 한다</td></tr>
+              <tr><td>code mode 끝까지</td><td>모든 명령에 <code>--json</code> 옵션이 있다. MCP 명세를 따르는 순수 JSON을 돌려준다. jq와 파이프로 묶어 여러 도구 호출을 코드로 이어 붙인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="demo">
+        <header><span class="num">09</span><h2>데모로 본 기능 <span class="ts">12:10</span></h2></header>
+        <p>발표자는 터미널에서 mcpc를 직접 돌려 보였다. 대부분의 MCP 클라이언트가 아직 지원하지 않는 기능이 여럿 나온다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>기능</th><th>본 것</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">12:10</span></td><td>에이전트용 도움말</td><td>외부 스킬 없이 에이전트가 바로 익히도록 도움말을 많이 다듬었다</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>로컬 서버 연결</td><td>stdio로 내 컴퓨터의 로컬 프로세스에 붙는다. 파일 시스템 서버(fs)에 연결하자 서버 이름, 프로토콜, 기능, 도구, 명령이 바로 보였다. 도구 목록은 JSON으로도 받는다</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>원격 서버 로그인</td><td>Apify MCP 서버에 로그인하면 브라우저가 열려 인증한다. 자격 증명은 OS 키체인에 안전하게 저장된다</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>서버 안내문</td><td>MCP에는 서버가 자기 역할을 설명하는 instructions가 있다. 대부분의 클라이언트는 이 기본 기능도 지원하지 않는다. mcpc는 보여 준다</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>세션 유지</td><td>열어 둔 MCP 세션 3개가 그대로 살아 있었다. 한 번 설정하면 Claude Code나 Codex가 같은 설정을 함께 쓴다</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>grep으로 도구 찾기</td><td>점진적 탐색 기능이다. "find"로 찾자 fs 서버에서 3개, Apify 서버에서 4개 도구가 나왔다</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>비동기 작업</td><td>Apify의 웹 검색 도구 RAG Web Browser를 작업(task)으로 실행했다. 서버에서 도는 동안 로컬에서 다른 일을 한다. 진행 상황을 보다가 결과를 나중에 받거나, 떼어 놓고(detach) 다른 일로 넘어간다</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>JSON 파이프</td><td><code>--json</code> 출력을 파이프로 이어 셸 스크립트를 만든다. MCP 서버를 백그라운드에서 돌리므로 컨텍스트 토큰을 쓰지 않는다</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>x402 지원</td><td>로컬 지갑을 관리하는 도구가 드물어서 넣었다. 샌드박스용 프록시 같은 명령도 있지만 발표에서 자세히 다루지 않았다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="evals">
+        <header><span class="num">10</span><h2>연결 방식끼리 비교하기 <span class="ts">16:50</span></h2></header>
+        <p>보통 벤치마크는 에이전트끼리 비교한다. 예를 들어 Terminal-Bench는 Codex와 Claude Code 중 어느 쪽이 나은지 본다.</p>
+        <p>Apify는 이를 뒤집었다. 에이전트는 그대로 두고 도구를 붙이는 방식만 바꿔 비교하는 평가 틀을 만들었다. 이름은 connector evals다. CLI, MCP, mcpc 중 무엇이 더 효과적인지 본다.</p>
+
+        <h3>결과 <span class="ts">17:20</span></h3>
+        <p>모든 테스트는 Claude Code와 Sonnet 5로 돌렸다. 그래프의 가로축은 작업을 끝내는 데 걸린 시간, 세로축은 토큰 비용이다.</p>
+        <ul class="plain">
+          <li><strong>테스트 1</strong>: mcpc와 CLI의 성적이 비슷했다. MCP를 그대로 붙인 방식(raw MCP)은 더 빨리 끝났지만 토큰을 더 썼다.</li>
+          <li><strong>테스트 2</strong>: mcpc와 CLI가 비슷했다. raw MCP는 더 나빴다.</li>
+          <li><strong>테스트 3</strong>: 비슷한 결과가 나왔다.</li>
+        </ul>
+        <p>발표자는 아직 초기 결과라고 밝혔다. 직접 확인하고 기여해 달라고 했다.</p>
+        <p class="note">발표에서 그래프의 구체적 수치는 읽어 주지 않아 차트로 옮기지 않았다. 이 평가는 mcpc를 만든 Apify가 직접 만들고 돌린 것이다. 결과는 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="conclusion">
+        <header><span class="num">11</span><h2>결론 <span class="ts">18:10</span></h2></header>
+        <p>발표자는 "CLI가 MCP보다 낫다"는 말을 그만하자며 발표를 마친다.</p>
+        <blockquote>MCP와 CLI를 함께 쓰는 것이 가장 좋다.<cite>발표자의 마지막 말을 옮김</cite></blockquote>
+        <ul class="plain">
+          <li>MCP가 받는 비판 대부분은 프로토콜이 아니라 순진한 하네스와 클라이언트를 향한 것이다.</li>
+          <li>CLI의 강점은 에이전트 쪽에 있다. 필요할 때만 부르고, 코드로 실행하고, 모델이 이미 잘 안다.</li>
+          <li>MCP의 강점은 원격 쪽에 있다. 표준 인증, 세션, 비동기 작업을 제공한다.</li>
+          <li>그래서 하나를 고르기보다 MCP를 CLI 뒤에 두고 함께 쓰는 쪽이 낫다.</li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>MCP는 에이전트가 도구에 접근하는 표준이다. 크게 퍼진 만큼 "MCP는 끝났다"는 비판도 컸다.</li>
+          <li>핵심 비판은 컨텍스트 낭비다. 원인은 도구를 전부 미리 올리고 결과를 계속 쌓는 <strong>순진한 하네스</strong>다.</li>
+          <li>MCP 명세는 하네스 설계를 정하지 않는다. <strong>MCP를 효율적으로 쓰는 건 에이전트를 만드는 쪽의 일</strong>이다.</li>
+          <li>서브에이전트는 문제를 미룰 뿐이다. 토큰 비용과 민감한 값 노출이 그대로 남는다.</li>
+          <li>점진적 도구 탐색은 필요한 도구만 그때 올린다. code mode는 도구를 코드로 다룬다.</li>
+          <li>모델은 도구 호출보다 코드 작성을 잘한다. 도구 호출은 실제 데이터에 거의 없는 인위적 형식이다.</li>
+          <li>CLI는 점진적 탐색과 code mode를 처음부터 갖고 있다. 모델은 셸을 외우고 있다.</li>
+          <li>CLI는 표준 인증과 전송이 없어 원격 접근에 약하다. <strong>원격 연결은 MCP가 낫다.</strong></li>
+          <li>제안: <strong>원격은 MCP, 로컬 인터페이스는 CLI.</strong> mcpc는 MCP 전체를 bash 호출 뒤에 숨긴다.</li>
+          <li>Apify 자체 평가에서 mcpc는 CLI와 비슷했고 raw MCP는 토큰을 더 썼다. 결론은 <strong>MCP + CLI</strong>다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>MCP는 무엇을 위한 표준인가?</span></summary><div class="answer">에이전트가 도구와 리소스에 안전하게 접근하는 방법을 정한 표준이다. 에이전트와 도구 사이의 연결 규격이다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>MCP를 향한 가장 흔한 비판과, 발표자가 보는 실제 원인은?</span></summary><div class="answer">컨텍스트를 너무 많이 먹는다는 비판이다. 원인은 하네스가 도구를 전부 미리 등록하고 도구 결과를 계속 쌓는 순진한 구현이다. MCP 명세는 하네스 설계를 정하지 않는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>MCP 서버 10개에 도구가 10개씩이면 어떤 일이 생기나?</span></summary><div class="answer">질문을 하기도 전에 도구 100개가 컨텍스트에 올라간다. 발표자는 이때 컨텍스트의 3분의 1 정도가 사라질 수 있다고 했다. 실제로 필요한 도구는 보통 한두 개다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>서브에이전트로 컨텍스트를 나눠도 남는 문제 두 가지는?</span></summary><div class="answer">토큰 비용은 그대로 낸다. 비밀번호 같은 민감한 값이나 큰 데이터가 여전히 컨텍스트를 거쳐 남는다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>점진적 도구 탐색은 어떻게 동작하나?</span></summary><div class="answer">다른 도구를 찾아 주는 도구(tool search tool)로 필요한 도구를 찾는다. 찾은 도구만 그때 컨텍스트에 올린다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>code mode가 효과적인 이유는?</span></summary><div class="answer">모델은 코드를 쓰고 탐색하는 데 강하다. 반면 도구 호출은 실제 데이터에 거의 없는 인위적 형식이라 합성 데이터로 가르쳐야 한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>CLI가 처음부터 갖고 있는 두 가지 장점은?</span></summary><div class="answer">점진적 탐색과 code mode다. 필요할 때만 부르고 모르면 <code>--help</code>로 배운다. 그리고 bash 명령 자체가 코드라서 코드로 실행된다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>모델이 셸을 특히 잘 아는 이유는?</span></summary><div class="answer">학습 데이터에 셸이 아주 많다. 게다가 AI 연구소는 명령을 잇고 매뉴얼을 읽는 식으로 셸 학습 데이터를 거의 무한히 합성할 수 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>CLI가 원격 접근에 약한 이유는?</span></summary><div class="answer">표준 인증과 전송 프로토콜이 없는 로컬 블랙박스다. 기업이 안을 들여다보거나 자격 증명을 밖에서 넣어 주기 어렵다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>발표자가 제안하는 역할 분담은?</span></summary><div class="answer">원격 접근은 MCP, 에이전트가 쓰는 로컬 인터페이스는 CLI다. MCP의 복잡함을 에이전트가 이미 아는 bash 호출 하나 뒤에 숨긴다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>mcpc의 <code>--json</code> 옵션은 무슨 일을 하나?</span></summary><div class="answer">MCP 명세를 따르는 순수 JSON을 돌려준다. jq와 파이프로 여러 도구 호출을 셸 스크립트로 묶을 수 있어 컨텍스트 토큰을 아낀다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>connector evals는 보통 벤치마크와 무엇이 다르고, 결과는 어땠나?</span></summary><div class="answer">에이전트 대신 연결 방식을 비교한다. mcpc와 CLI는 비슷했고, raw MCP는 토큰을 더 썼다. 첫 테스트에서는 raw MCP가 더 빨리 끝났다. Apify가 직접 만든 초기 평가라는 점을 감안해야 한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 에이전트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>MCP 도구 설명이 컨텍스트를 얼마나 차지하는지 잰다<span class="how">확인: 질문 전 첫 요청의 토큰 수</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>도구를 한꺼번에 올리지 않고 필요할 때 찾게 한다<span class="how">쓰는 클라이언트가 점진적 도구 탐색을 지원하는지 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>큰 결과와 민감한 값이 컨텍스트를 거치지 않게 한다<span class="how">파일이나 파이프로 넘기고, 모델에는 필요한 부분만 보여 준다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>자주 반복하는 도구 호출은 셸 스크립트로 묶는다<span class="how">JSON 출력과 jq로 여러 호출을 코드로 이어 붙인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>원격 서비스는 MCP로 연결하고 인증을 한 곳에 모은다<span class="how">자격 증명은 키체인 같은 안전한 저장소에 두고, 여러 에이전트가 같은 설정을 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>쓰는 MCP 클라이언트가 최신 기능을 지원하는지 확인한다<span class="how">서버 안내문(instructions), 비동기 작업(tasks), 리소스, 프롬프트</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>직접 만든 CLI의 도움말을 에이전트가 읽기 쉽게 다듬는다<span class="how">확인: 별도 설명 없이 에이전트가 도움말만 보고 쓸 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>연결 방식을 바꾸기 전에 같은 작업으로 시간과 토큰을 비교한다<span class="how">CLI, MCP 직접 연결, CLI를 거친 MCP</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>MCP</td><td>Model Context Protocol. 에이전트가 도구와 리소스에 접근하는 방법을 정한 표준</td></tr>
+              <tr><td>MCP 서버 / 클라이언트</td><td>서버는 도구를 제공하는 쪽, 클라이언트는 그 도구를 부르는 에이전트 쪽 프로그램</td></tr>
+              <tr><td>컨텍스트</td><td>모델이 한 번에 보고 기억하는 작업 공간. 길이에 한계가 있고 토큰만큼 비용이 든다</td></tr>
+              <tr><td>컨텍스트 부패</td><td>Context rot. 컨텍스트가 길어질수록 모델의 정확도가 떨어지는 현상</td></tr>
+              <tr><td>하네스</td><td>모델을 감싸 도구 호출, 컨텍스트 관리, 실행 순서를 맡는 틀</td></tr>
+              <tr><td>서브에이전트</td><td>메인 에이전트가 일을 맡기는 하위 에이전트. 자기 컨텍스트를 따로 쓴다</td></tr>
+              <tr><td>점진적 도구 탐색</td><td>Progressive tool discovery. 도구를 처음부터 다 올리지 않고 필요할 때 찾아 올리는 방식</td></tr>
+              <tr><td>code mode</td><td>MCP 도구를 함수 목록이 아니라 코드로 다뤄, 모델이 코드를 써서 도구를 부르게 하는 방식</td></tr>
+              <tr><td>도구 호출</td><td>Tool calling. 모델이 정해진 형식으로 도구 이름과 인자를 내보내 도구를 부르는 방식</td></tr>
+              <tr><td>CLI</td><td>Command-line interface. 터미널에서 명령어로 쓰는 프로그램</td></tr>
+              <tr><td>셸 / bash</td><td>명령어를 받아 실행하는 프로그램. bash는 가장 널리 쓰이는 셸 중 하나</td></tr>
+              <tr><td>파이프</td><td>한 명령의 출력을 다른 명령의 입력으로 바로 넘기는 셸 기능. <code>|</code> 기호를 쓴다</td></tr>
+              <tr><td>jq</td><td>JSON을 걸러 내고 모양을 바꾸는 명령줄 도구</td></tr>
+              <tr><td>stdio</td><td>표준 입출력. 내 컴퓨터의 로컬 프로세스와 주고받는 MCP 연결 방식</td></tr>
+              <tr><td>OAuth</td><td>비밀번호를 넘기지 않고 다른 서비스에 대한 접근 권한을 받는 인증 방식</td></tr>
+              <tr><td>키체인</td><td>운영체제가 비밀번호와 인증 정보를 안전하게 보관하는 저장소</td></tr>
+              <tr><td>instructions</td><td>MCP 서버가 자기가 무엇을 하는지 클라이언트에게 설명하는 안내문</td></tr>
+              <tr><td>비동기 작업</td><td>Tasks. 서버가 오래 걸리는 일을 하는 동안 클라이언트는 다른 일을 하고, 결과는 나중에 받는 MCP 기능</td></tr>
+              <tr><td>x402</td><td>HTTP 402(결제 필요) 응답을 이용해 API 사용료를 결제하는 방식. 발표에서는 로컬 지갑 관리 기능으로 언급됐다</td></tr>
+              <tr><td>raw MCP</td><td>이 노트에서는 MCP 도구를 에이전트에 그대로 붙인 방식을 가리킨다</td></tr>
+              <tr><td>connector evals</td><td>Apify가 만든 평가 틀. 같은 에이전트에서 연결 방식(CLI, MCP, mcpc)만 바꿔 가며 비교한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표 소개</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>MCP란 무엇인가</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>서버 1만~1만 5천 개, 레지스트리의 레지스트리</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>MCP를 향한 비판들</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>문제: 도구를 한꺼번에 올려 컨텍스트를 먹는다</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>프로토콜이 아니라 하네스의 문제</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>해결책 1: 서브에이전트</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>해결책 2: 점진적 도구 탐색</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>해결책 3: code mode</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>대부분의 클라이언트는 아직 지원하지 않는다</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>CLI는 무엇이 다른가</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>모델은 셸을 외우고 있다</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>CLI의 약점: 표준 인증과 전송이 없다</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>원격은 MCP, 로컬은 CLI</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>mcpc 소개</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>mcpc 설계 목표</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>데모: 도움말과 로컬 서버 연결</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>데모: 원격 서버 로그인과 키체인</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>데모: 서버 안내문과 세션 유지</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>데모: grep으로 도구 찾기</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>데모: 비동기 작업</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>JSON 파이프와 x402 지원</td></tr>
+              <tr><td><span class="ts">16:50</span></td><td>connector evals</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>결과: mcpc와 CLI는 비슷, raw MCP는 토큰을 더 씀</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>결론: MCP + CLI</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'pAnLpiAG6Es:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 신뢰의 조건</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#questions">작동하는 것과 믿는 것은 다르다</a></li>
+      <li><a href="#scenario">시나리오: 인수 후 통합 보고서</a></li>
+      <li><a href="#value">질문 1: 어떤 가치를 만드나</a></li>
+      <li><a href="#accountability">질문 2: 누가 책임지나</a></li>
+      <li><a href="#evidence">질문 3: 어떤 증거로 자율성을 주나</a></li>
+      <li><a href="#stages">자율성 4단계와 4단계의 함정</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-13 · 15분 · 영어 발표 한글 정리</span>
+      <h1>에이전트는 돌아간다. 그런데 누가 믿나</h1>
+      <p class="lead">파일럿을 통과한 에이전트가 실제 업무에 들어가면 시험 내용이 바뀐다. 소프트웨어가 작동하는지가 아니라, 경영진이 정한 통제 안에서 가치를 내는지를 묻는다. 발표자는 M&amp;A 통합 경험을 바탕으로 경영진이 답해야 할 질문 세 가지와, 엔지니어가 만들어야 할 증거 세 가지를 제시한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=-a2oTS9J67U" target="_blank" rel="noopener">The Agent Works. Does Anyone Trust It?</a></span>
+        <span>발표: Michele Grant (Leading at Scale 창립자, 기업 전환·M&amp;A 통합 20년)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 든 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 단어는 문맥이 확실할 때만 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>출시는 시스템이 <strong>존재한다</strong>는 것만 증명한다. 사람들이 그걸 <strong>쓴다</strong>는 것도, 돈이 <strong>나온다</strong>는 것도 증명하지 못한다.</li>
+        <li>신뢰는 출시 뒤에 기대하는 게 아니라 <strong>출시 전에 설계</strong>한다. M&amp;A 통합에서 변화 관리와 위험 관리로 해 온 일이다.</li>
+        <li>경영진이 답할 질문은 셋이다. <strong>어떤 가치를 만드나, 누가 책임지나, 어떤 증거로 더 큰 자율성을 주나.</strong></li>
+        <li>가치는 <strong>문서로 합의한 지표 3개</strong>로 잰다. 처리 기간, 분석가 시간, 그리고 가장 중요한 <strong>이상 감지 시간</strong>. 출시 전 기준값이 없으면 배포하지 않는다.</li>
+        <li>책임은 <strong>3선 모델</strong>로 나누고, 매일 지켜보는 담당자 한 명을 정한다. 결정은 사람이 하고 에이전트는 그 앞에서 멈춘다. <strong>주인 없는 결정</strong>만이 배포를 미룰 이유다.</li>
+        <li>증거는 엔지니어가 만든다. <strong>감사 가능한 결정 로그, 모델 목록 기록, 자율성 점수표</strong> 세 가지다. 핵심 계산은 LLM이 아니라 결정적 코드가 한다.</li>
+        <li>자율성은 <strong>4단계</strong>로 올린다. 마지막 단계에서 가장 위험한 것은 <strong>에이전트가 표시하지 못한 문제</strong>다. 독립 표본 검사로 그걸 잡는다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="questions">
+        <header><span class="num">01</span><h2>작동하는 것과 믿는 것은 다르다 <span class="ts">00:00</span></h2></header>
+        <p>발표자는 20년 넘게 기업 전환 일을 했고 10년 넘게 미디어, 테크, 소비재 분야의 M&amp;A 통합을 이끌었다. 그 경험에서 얻은 결론은 하나다. 플랫폼이 켜지는 날 현장이 실제로 그걸 쓰게 하려면, 신뢰를 출시 전에 변화 관리와 위험 관리로 만들어 둬야 한다. AI 에이전트도 똑같은 근육을 요구한다.</p>
+        <p>에이전트가 신뢰를 얻는 조건은 두 가지다. 회사가 예산에 잡은 가치를 실제로 내고, 동시에 회사가 승인한 위험 허용 범위<span class="en">risk appetite</span>, 정책, 규제 안에 머무는 것이다.</p>
+
+        <div class="shift" aria-label="파일럿과 일상 운영의 시험 내용 차이">
+          <div><span class="tag">파일럿</span><b>소프트웨어가 작동하나</b><span class="muted">샌드박스 안에서 기능을 확인한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">일상 운영</span><b>통제 안에서 가치를 내나</b><span class="muted">경영진이 정한 범위 안에서 돈이 되는지 확인한다</span></div>
+        </div>
+
+        <h3>경영진이 에이전트마다 정할 네 가지 <span class="ts">02:00</span></h3>
+        <p>기존 AI 위험 프레임워크는 원칙은 주지만, 그 원칙을 에이전트 하나하나에 어떻게 적용할지는 알려주지 않는다. 그래서 에이전트마다 다음 네 가지를 경영진이 정해야 한다.</p>
+        <ol class="plain">
+          <li>무엇을 하도록 허용되는가</li>
+          <li>누가 소유하는가</li>
+          <li>어떤 증거를 기록하는가</li>
+          <li>무엇이 상부 보고<span class="en">escalation</span>를 촉발하는가</li>
+        </ol>
+        <p>발표자는 이것을 엔지니어링 과제가 아니라 <strong>경영진의 운영 지시</strong><span class="en">executive operating mandate</span>라고 부른다. 이 네 가지가 뒤의 질문 세 개로 풀린다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="scenario">
+        <header><span class="num">02</span><h2>시나리오: 인수 후 통합 보고서 <span class="ts">02:40</span></h2></header>
+        <p>발표는 가상의 M&amp;A 사례 하나로 끝까지 설명한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>거래</td><td>150억 달러 규모 인수. 순 시너지 목표 4억 달러. 이미 거래가 끝나 통합이 진행 중</td></tr>
+              <tr><td>조직</td><td>통합 관리 사무국<span class="en">IMO, Integration Management Office</span>이 워크스트림 40개를 이끈다. 공급사 계약 정리부터 ERP 통합까지</td></tr>
+              <tr><td>책임</td><td>모든 과제에 손익에 책임지는 사업 담당자가 한 명씩 있다</td></tr>
+              <tr><td>매주 하는 일</td><td>분석가들이 숫자를 총계정원장과 맞추고, 리더 40명에게 진행 상황을 받고, 실적을 계획과 비교해, 운영위원회용 보고 자료를 만든다</td></tr>
+              <tr><td>운영위원회</td><td>CFO, 최고위험책임자<span class="en">CRO</span>, 사업부장들, 통합 리드</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>엔지니어링 팀이 이 보고서의 <strong>초안</strong>을 만드는 에이전트를 만든다. 주간 업데이트를 읽고, 원장과 맞추고, 계획 대비 차이를 계산하고, 뒤처진 과제를 표시한다. 4주 파일럿을 돌리니 에이전트의 초안이 분석가의 보고서와 한 줄 한 줄 일치했다.</p>
+        <div class="callout">
+          <span class="title">기술은 된다. 그 다음 질문</span>
+          <span>운영위원회가 이 에이전트에게 실제 업무를 맡기려면 무엇이 더 필요한가. 이것이 나머지 발표의 질문이다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="value">
+        <header><span class="num">03</span><h2>질문 1: 어떤 가치를 만드나 <span class="ts">04:30</span></h2></header>
+        <p>운영위원회는 에이전트가 운영 데이터에 손대기 전에 <strong>문서로 합의한 가치 근거</strong><span class="en">value case</span>를 요구해야 한다. 이 사례에서는 지표 세 개로 정리된다.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>뜻</th><th>이 사례에서</th></tr></thead>
+            <tbody>
+              <tr><td>처리 기간<span class="en">cycle time</span></td><td>주간 보고서를 만드는 데 걸리는 시간</td><td>지금 영업일 5일. 목표는 2일처럼 멀리 잡는다</td></tr>
+              <tr><td>분석가 시간<span class="en">analyst capacity</span></td><td>에이전트가 돌려주는 사람 시간</td><td>분석가 4명이 주의 절반을 쓰면 주당 80시간. 단서가 두 개 붙는다 (아래)</td></tr>
+              <tr><td>감지 시간<span class="en">detection time</span></td><td>데이터에 첫 이상 신호가 나타난 때부터 운영위원회가 그걸 보는 때까지</td><td>가장 중요한 지표. 보고서가 빨라져도 이상을 더 빨리 보는 건 아니다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <figure class="chart" aria-label="주간 보고서 처리 기간 비교: 현재 영업일 5일, 목표 2일">
+          <span class="chart-title">주간 보고서 처리 기간 (영업일)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>지금</span><span class="val">5일</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="지금: 영업일 5일"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>목표</span><span class="val">2일</span></div>
+              <div class="track"><div class="fill key" style="width:40%" title="목표: 영업일 2일"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>5</span></div>
+          <span class="caption">발표자가 든 예시 수치다. 목표는 "멀리 잡으라"는 취지로 2일을 들었다.</span>
+        </figure>
+
+        <h3>분석가 시간은 두 조건을 넘어야 가치다 <span class="ts">05:10</span></h3>
+        <ul class="plain">
+          <li>통합 리드가 그 시간을 <strong>시너지 목표에 뒤처진 워크스트림</strong>에 실제로 배정했을 때만 가치로 센다. 남는 시간 자체는 가치가 아니다.</li>
+          <li>에이전트를 돌리는 <strong>컴퓨팅, 라이선스, 사람 검토 비용</strong>을 뺀 뒤에만 가치로 센다.</li>
+        </ul>
+
+        <h3>감지 시간이 가장 중요한 이유 <span class="ts">05:40</span></h3>
+        <p>보고서를 5일에서 2일로 줄여도, 운영위원회가 이상 신호를 더 빨리 보게 된다는 보장은 없다. 에이전트가 그 신호를 <strong>잡아내야</strong> 하고, 가치 근거는 그걸 직접 잰다.</p>
+
+        <div class="callout warn">
+          <span class="title">기준값이 없으면 배포하지 않는다</span>
+          <span>세 지표 모두 배포 전 기준값이 필요하다. 통합 사무국이 오늘의 기준값을 말하지 못하면 배포하지 않는다. 어디서 시작했는지 모르면 에이전트가 무엇을 바꿨는지 영원히 증명할 수 없다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="accountability">
+        <header><span class="num">04</span><h2>질문 2: 누가 책임지나 <span class="ts">06:30</span></h2></header>
+        <p>운영위원회는 에이전트가 만드는 위험을 누가 소유하는지 알아야 한다. 발표자는 금융·감사 분야의 <strong>3선 모델</strong><span class="en">three lines model</span>을 에이전트에 그대로 적용한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>선</th><th>누가</th><th>무엇을</th></tr></thead>
+            <tbody>
+              <tr><td>1선</td><td>경영 (통합 리드)</td><td>통제를 소유한다. 통합 리드는 수작업 데이터를 책임지던 것과 똑같이 에이전트의 산출물을 책임지는 임원이다</td></tr>
+              <tr><td>2선</td><td>위험·컴플라이언스</td><td>에이전트를 감독하고 운영 방식에 이의를 제기한다. 얼마나 깊이 보는지는 에이전트의 노출 정도에 따른다</td></tr>
+              <tr><td>3선</td><td>내부 감사</td><td>독립적으로 보증한다. 위험이 얼마나 중대한지에 따라 언제 어떻게 연간 감사 계획에 넣을지 정한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>2선의 검토 수준은 에이전트가 어디까지 노출되느냐로 달라진다. 선임 분석가가 걸러 내는 내부 초안과, 이사회에 숫자를 바로 올리는 자율 에이전트는 완전히 다른 기준으로 본다.</p>
+
+        <h3>매일 지켜보는 사람 한 명 <span class="ts">07:30</span></h3>
+        <p>에이전트에는 매일 감독하는 직원이 한 명 있어야 한다. 이 사례에서는 운영위원회에 가기 전 초안을 검토하는 <strong>선임 분석가</strong>다. 이 역할에는 네 가지 능력이 필요하다.</p>
+        <ol class="plain">
+          <li>에이전트의 운영 경계를 이해한다</li>
+          <li>산출물을 맥락과 함께 해석한다</li>
+          <li>결과를 뒤집거나 되돌릴 권한이 있다</li>
+          <li>이상하게 동작하면 안전하게 끌 수 있는 명확한 정지 스위치<span class="en">kill switch</span>가 있다</li>
+        </ol>
+
+        <h3>사람 작업 기준: 에이전트의 권한이 멈추는 곳 <span class="ts">08:10</span></h3>
+        <p>책임을 정한다는 것은 에이전트의 권한이 어디서 멈추는지 정하는 일이기도 하다. 발표자는 이것을 <strong>사람 작업 기준</strong><span class="en">human work standard</span>이라는 한 장짜리 정책으로 문서화한다. 업무 흐름의 갈림길마다 네 가지를 적는다. 결정, 그 결정을 내릴 권한이 있는 사람의 역할, 필요한 증거, 상부 보고 경로.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>결정</th><th>누가 내리나</th></tr></thead>
+            <tbody>
+              <tr><td>이 차이가 회계상 시점 차이인가, 실제 현금 부족인가</td><td>선임 분석가</td></tr>
+              <tr><td>그 부족을 어떻게 메울 것인가</td><td>워크스트림 리드</td></tr>
+              <tr><td>이 과제를 운영위원회에 "위험"으로 공식 표시할 것인가</td><td>통합 리드</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>에이전트는 이 모든 결정의 <strong>분석을 준비하고 거기서 멈춘다.</strong> 결정을 내린 사람이 결과를 책임진다. 결정을 사람에게 남겨 둬도 에이전트가 느려지지 않는다. 각 역할이 권한을 지킨 채로 에이전트를 쓰기 시작할 수 있다.</p>
+        <div class="callout">
+          <span class="title">배포를 미룰 유일한 이유</span>
+          <span>주인이 없는 결정이다. 어떤 과제를 "궤도 이탈"로 선언할 사람을 경영진이 합의하지 않았다면, 에이전트가 아무리 표시해도 아무 행동으로 이어지지 않는다.</span>
+        </div>
+        <p class="note">사람 작업 기준은 발표자가 자기 컨설팅 업무에서 쓰는 문서 형식이다. 일반 표준이 아니라 발표자의 방법론으로 읽는다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="evidence">
+        <header><span class="num">05</span><h2>질문 3: 어떤 증거로 자율성을 주나 <span class="ts">09:50</span></h2></header>
+        <p>세 번째 질문이 엔지니어의 몫이다. 더 큰 자율성을 허락할 증거는 <strong>에이전트를 어떻게 만들었는지</strong>에서 나온다. 발표자는 산출물 세 가지를 찾는다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">산출물 1 · 감사 가능한 결정 로그 <span class="ts">10:00</span></span>
+            <p>에이전트가 평가하는 워크스트림마다 다음을 기록한다.</p>
+            <ul>
+              <li>읽어 들인 원본 데이터</li>
+              <li>실행한 도구 호출</li>
+              <li>프롬프트와 모델 버전</li>
+              <li>생성한 산출물</li>
+              <li>사람의 승인 서명</li>
+            </ul>
+            <p class="verdict"><b>원칙</b>: 보고된 절감액이 총계정원장과 맞지 않으면 에이전트는 숫자를 건드리지 않는다. 불일치를 표시하고 위로 올린다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">산출물 2 · 모델 목록 기록 <span class="ts">11:10</span></span>
+            <p>에이전트 한 개의 신상 명세다.</p>
+            <ul>
+              <li>책임 임원</li>
+              <li>데이터 계보<span class="en">data lineage</span></li>
+              <li>원천 시스템 간 의존성</li>
+              <li>검증 결과</li>
+              <li>상부 보고 경로</li>
+              <li>정지 스위치 실행 절차서<span class="en">runbook</span></li>
+            </ul>
+            <p class="verdict"><b>가장 중요한 항목</b>: 재검증 촉발 조건. 기반 모델이나 원천 API가 바뀌면 운영에 다시 넣기 전에 전체 재검증을 요구한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">산출물 3 · 자율성 점수표 <span class="ts">11:50</span></span>
+            <p>운영위원회가 자율성을 4단계로 올릴 때 쓰는 한 장짜리 표다. 통제 지표와 가치 지표를 나란히 둔다.</p>
+            <ul>
+              <li>통제 지표: 놓친 중대 문제, 오류 심각도, 사람이 뒤집은 비율</li>
+              <li>가치 지표: 처리 기간, 배정한 분석가 시간, 감지 시간</li>
+            </ul>
+            <p class="verdict"><b>결정</b>: 이 한 장을 보고 승격, 유지, 한 단계 후퇴, 감독 검토 단계로 복귀 중 하나를 고른다.</p>
+          </div>
+        </div>
+
+        <h3>로그를 빈틈없이 만드는 엔지니어링 선택 두 가지 <span class="ts">10:20</span></h3>
+        <ol class="plain">
+          <li><strong>핵심 계산과 대조 규칙은 결정적<span class="en">deterministic</span>이고 재무팀이 승인한 코드로 돌린다.</strong> LLM이 대화체로 만들어 내는 숫자가 아니다.</li>
+          <li><strong>모델이 쓴 요약은 설명이지 증거가 아니다.</strong> 진짜 증거는 텔레메트리에 있다. 어떤 레코드를 가져왔나, 어떤 결정적 도구가 돌았나, 누가 검토에 서명했나.</li>
+        </ol>
+      </section>
+
+      <!-- 6 -->
+      <section id="stages">
+        <header><span class="num">06</span><h2>자율성 4단계와 4단계의 함정 <span class="ts">11:50</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>이름</th><th>사람이 하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>그림자 모드<span class="en">shadow mode</span></td><td>분석가가 지금처럼 보고서를 만든다. 에이전트는 옆에서 같이 돌고, 팀이 둘을 비교한다</td></tr>
+              <tr><td>2</td><td>감독 초안<span class="en">supervised draft</span></td><td>에이전트가 초안을 만들고, 선임 분석가가 모든 항목을 검토한다</td></tr>
+              <tr><td>3</td><td>예외 + 표본 검토 (자막에는 exception ensemble로 들림, 추정)</td><td>뒤처진 과제와, 나머지 중 무작위 표본만 검토한다</td></tr>
+              <tr><td>4</td><td>예외만<span class="en">exceptions only</span></td><td>고위험 이상만 검토한다. 주기적인 독립 표본 검사가 받쳐 준다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout warn">
+          <span class="title">4단계의 가장 큰 취약점 <span class="ts">12:50</span></span>
+          <span>사람이 예외만 보기 시작하면, 가장 위험한 것은 <strong>에이전트가 표시하지 못한 문제</strong>다. 예외 목록에 없으니 아무도 보지 않는다.</span>
+        </div>
+        <p>그래서 발표자는 세 가지를 추적하라고 한다. 독립 표본 검사로 잡아낸 <strong>놓친 중대 문제</strong>, <strong>오류 심각도</strong>, 그리고 <strong>사람이 뒤집은 비율</strong><span class="en">override rate</span>이다.</p>
+        <blockquote>뒤집는 비율이 떨어진다고 에이전트가 똑똑해진 건 아니다. 검토의 깊이가 얕아진 것일 수도 있다.<cite>발표자의 말을 옮김 <span class="ts">13:00</span></cite></blockquote>
+        <p>두 경우 중 어느 쪽인지는 독립 표본 검사가 알려준다. 점수표는 이 통제 지표를 가치 지표 옆에 두고, 운영위원회가 데이터에 근거해 승격·유지·후퇴를 결정하게 한다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="conclusion">
+        <header><span class="num">07</span><h2>결론 <span class="ts">13:50</span></h2></header>
+        <p>만들거나, 예산을 대거나, 관리하는 모든 에이전트에 세 질문을 던진다. 어떤 가치를 만드나. 누가 책임지나. 어떤 증거가 자율 운영을 허락하나.</p>
+        <p>이 사례의 에이전트는 4억 달러 시너지를 마법처럼 만들어 내지 않았다. 그 가치는 조달, 공급망, 운영 리더들이 통합의 힘든 실무로 거둔 것이다. 에이전트가 준 것은 분명하다. <strong>검증된 증거를 몇 주 먼저</strong> 내놓아, 시너지를 아직 잡을 수 있을 때 경영진이 개입할 여유를 준 것이다.</p>
+        <div class="callout">
+          <span class="title">한 줄로</span>
+          <span>작동하는 에이전트를 만드는 것은 첫걸음이다. 세 질문에 답하는 것이 에이전트가 규모 있게 돌아갈 신뢰를 얻는 길이다.</span>
+        </div>
+        <p class="note">발표자는 기업 전환 컨설팅을 하는 Leading at Scale의 창립자다. 발표 전체가 그 방법론의 소개이기도 하다는 점을 감안해 읽는다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="recap">
+        <header><span class="num">08</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>출시는 시스템이 존재한다는 증명이지, 쓰인다거나 돈이 된다는 증명이 아니다.</li>
+          <li>신뢰는 출시 전에 설계한다. 파일럿은 작동 여부를, 일상 운영은 <strong>통제 안에서의 가치</strong>를 시험한다.</li>
+          <li>경영진은 에이전트마다 네 가지를 정한다. 허용 범위, 소유자, 기록할 증거, 상부 보고 촉발 조건.</li>
+          <li>가치 지표 셋: 처리 기간, 분석가 시간, <strong>감지 시간</strong>. 배포 전 기준값이 없으면 배포하지 않는다.</li>
+          <li>분석가 시간은 뒤처진 워크스트림에 실제로 배정하고, 운영 비용을 뺀 뒤에만 가치로 센다.</li>
+          <li>책임은 3선 모델로 나눈다. 경영이 통제를 소유하고, 위험·컴플라이언스가 감독하고, 내부 감사가 보증한다.</li>
+          <li>매일 지켜보는 담당자 한 명이 경계를 알고, 맥락으로 해석하고, 뒤집을 권한이 있고, 정지 스위치를 쥔다.</li>
+          <li>에이전트는 분석을 준비하고 멈춘다. 결정은 사람이 하고 그 사람이 책임진다. <strong>주인 없는 결정</strong>만이 배포를 미룰 이유다.</li>
+          <li>증거 산출물 셋: 결정 로그, 모델 목록 기록, 자율성 점수표. 핵심 계산은 결정적 코드로, 모델 요약은 설명일 뿐.</li>
+          <li>자율성은 4단계로 올린다. 예외만 보는 단계에서는 <strong>표시되지 않은 문제</strong>가 가장 위험하므로 독립 표본 검사와 뒤집기 비율을 같이 본다.</li>
+        </ol>
+      </section>
+
+      <!-- 9 -->
+      <section id="quiz">
+        <header><span class="num">09</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 "출시가 증명하는 것"과 "증명하지 못하는 것"은?</span></summary><div class="answer">증명하는 것은 시스템이 존재한다는 사실. 증명하지 못하는 것은 사람들이 실제로 그걸 쓴다는 것과 거래 모델이 기대한 돈이 나온다는 것.</div></details>
+          <details><summary><span class="qn">Q2</span><span>경영진이 답해야 할 세 질문은?</span></summary><div class="answer">어떤 가치를 만드나. 누가 책임지나. 어떤 증거가 더 큰 자율성을 허락하나.</div></details>
+          <details><summary><span class="qn">Q3</span><span>파일럿과 일상 운영은 각각 무엇을 시험하나?</span></summary><div class="answer">파일럿은 소프트웨어가 작동하는지를 시험한다. 일상 운영은 경영진이 정한 통제 안에서 가치를 만드는지를 시험한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>가치 지표 세 개 중 가장 중요한 것과 그 이유는?</span></summary><div class="answer">감지 시간. 보고서를 5일에서 2일로 줄여도 운영위원회가 이상 신호를 더 빨리 본다는 보장이 없다. 에이전트가 신호를 잡아내는지를 직접 재야 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>주당 80시간의 분석가 시간이 "가치"로 인정되는 조건 두 가지는?</span></summary><div class="answer">통합 리드가 그 시간을 시너지 목표에 뒤처진 워크스트림에 실제로 배정했을 때. 그리고 컴퓨팅, 라이선스, 사람 검토 비용을 뺀 뒤.</div></details>
+          <details><summary><span class="qn">Q6</span><span>"기준값을 말하지 못하면 배포하지 말라"는 이유는?</span></summary><div class="answer">어디서 시작했는지 모르면 에이전트가 무엇을 바꿨는지 증명할 수 없기 때문이다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>3선 모델에서 각 선은 누구이고 무엇을 하나?</span></summary><div class="answer">1선은 경영(통합 리드)이 통제를 소유한다. 2선은 위험·컴플라이언스가 감독하고 이의를 제기한다. 3선은 내부 감사가 독립적으로 보증하고 감사 계획에 넣는다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>매일 감독하는 담당자에게 필요한 네 가지 능력은?</span></summary><div class="answer">운영 경계 이해, 맥락과 함께 산출물 해석, 뒤집거나 되돌릴 권한, 안전하게 끌 수 있는 정지 스위치.</div></details>
+          <details><summary><span class="qn">Q9</span><span>발표자가 말한 "배포를 미룰 유일한 이유"는?</span></summary><div class="answer">주인이 정해지지 않은 결정. 누가 과제를 궤도 이탈로 선언하는지 합의되지 않았다면 에이전트의 표시는 아무 행동으로 이어지지 않는다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>결정 로그를 빈틈없이 만드는 엔지니어링 선택 두 가지는?</span></summary><div class="answer">핵심 계산과 대조 규칙은 재무팀이 승인한 결정적 코드로 돌린다. 모델의 요약은 설명으로만 다루고 증거는 텔레메트리(가져온 레코드, 실행한 도구, 서명한 사람)에서 찾는다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>모델 목록 기록에서 발표자가 가장 중요하다고 한 항목은?</span></summary><div class="answer">재검증 촉발 조건. 기반 모델이나 원천 API가 바뀌면 운영에 다시 넣기 전에 전체 재검증을 해야 한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>자율성 4단계에서 뒤집기 비율이 떨어질 때 가능한 두 해석과, 구분하는 방법은?</span></summary><div class="answer">에이전트가 좋아졌거나, 검토 깊이가 얕아졌거나. 독립 표본 검사 결과가 어느 쪽인지 알려준다.</div></details>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="apply">
+        <header><span class="num">10</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트가 운영 데이터에 닿기 전에 가치 근거를 문서로 합의한다<span class="how">지표 3개: 처리 기간, 돌려받는 사람 시간, 이상 감지 시간</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>세 지표의 현재 기준값을 숫자로 적는다<span class="how">확인: 기준값을 말하지 못하는 지표가 하나라도 있으면 배포를 멈춘다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>돌려받는 시간을 어디에 쓸지와 운영 비용을 미리 정한다<span class="how">남는 시간 자체는 가치가 아니다. 배정처와 컴퓨팅·라이선스·검토 비용을 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>에이전트 산출물에 책임지는 임원과 매일 감독할 담당자 한 명을 정한다<span class="how">담당자에게 경계 문서, 뒤집을 권한, 정지 스위치가 있는지 확인</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>업무 흐름의 갈림길마다 결정·결정권자·필요 증거·보고 경로를 한 장에 적는다<span class="how">주인 없는 결정이 하나라도 남아 있으면 배포하지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>핵심 계산을 LLM 밖의 결정적 코드로 뺀다<span class="how">확인: 숫자가 원장과 안 맞을 때 에이전트가 고치지 않고 표시만 하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>결정 로그에 원본 데이터, 도구 호출, 프롬프트, 모델 버전, 산출물, 승인자를 남긴다<span class="how">모델의 요약문을 증거로 쓰지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>기반 모델·원천 API 변경 시 재검증 절차를 문서로 둔다<span class="how">모델 목록 기록에 재검증 촉발 조건과 정지 절차서를 포함</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>자율성을 그림자 → 감독 초안 → 예외+표본 → 예외만 순서로 올린다<span class="how">예외만 단계에서는 독립 표본 검사, 오류 심각도, 뒤집기 비율을 같이 본다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section id="glossary">
+        <header><span class="num">11</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>M&amp;A 통합</td><td>인수·합병 뒤 두 회사의 조직, 시스템, 계약을 하나로 합치는 작업</td></tr>
+              <tr><td>시너지</td><td>합병으로 기대하는 비용 절감이나 매출 증가. "순 시너지"는 통합 비용을 뺀 값</td></tr>
+              <tr><td>통합 관리 사무국 (IMO)</td><td>Integration Management Office. 통합 과제 전체를 조율하는 조직</td></tr>
+              <tr><td>워크스트림</td><td>통합 과제를 주제별로 나눈 작업 단위. 예: 공급사 계약 정리, ERP 통합</td></tr>
+              <tr><td>총계정원장</td><td>General ledger. 회사의 모든 거래가 기록되는 회계 장부</td></tr>
+              <tr><td>운영위원회</td><td>Steering committee. 통합 방향을 결정하는 임원 모임</td></tr>
+              <tr><td>위험 허용 범위</td><td>Risk appetite. 회사가 목표를 위해 감수하기로 정한 위험의 정도</td></tr>
+              <tr><td>상부 보고</td><td>Escalation. 현장에서 처리할 수 없는 문제를 윗선으로 올리는 것</td></tr>
+              <tr><td>가치 근거</td><td>Value case. 이 투자가 어떤 가치를 어떻게 낼지 지표와 함께 적은 문서</td></tr>
+              <tr><td>기준값</td><td>Baseline. 변화를 재기 위한 출발점의 측정값</td></tr>
+              <tr><td>3선 모델</td><td>Three lines model. 위험 관리 책임을 경영, 위험·컴플라이언스, 내부 감사 세 겹으로 나누는 틀</td></tr>
+              <tr><td>정지 스위치</td><td>Kill switch. 시스템을 즉시 안전하게 멈추는 장치나 절차</td></tr>
+              <tr><td>결정적 코드</td><td>Deterministic. 같은 입력에 항상 같은 결과를 내는 코드. LLM 출력과 대비되는 말</td></tr>
+              <tr><td>텔레메트리</td><td>시스템이 실제로 무엇을 했는지 자동으로 남긴 기록</td></tr>
+              <tr><td>데이터 계보</td><td>Data lineage. 어떤 데이터가 어디서 와서 어떻게 변형됐는지의 추적 기록</td></tr>
+              <tr><td>실행 절차서</td><td>Runbook. 특정 상황에서 따라야 할 단계를 적은 문서</td></tr>
+              <tr><td>재검증 촉발 조건</td><td>Regression trigger. 기반 모델이나 원천 API 변경처럼 전체 재검증을 요구하는 사건</td></tr>
+              <tr><td>그림자 모드</td><td>Shadow mode. 새 시스템을 기존 방식과 나란히 돌리되 결과는 비교에만 쓰는 운영 방식</td></tr>
+              <tr><td>뒤집기 비율</td><td>Override rate. 에이전트의 판단을 사람이 바꾼 비율</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="timeline">
+        <header><span class="num">12</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>출시가 증명하는 것과 못 하는 것</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>발표자 소개, M&amp;A 통합에서 신뢰를 설계한 경험</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>에이전트가 신뢰를 얻는 조건과 세 질문</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>파일럿과 일상 운영의 시험 차이</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>에이전트마다 정할 네 가지, 경영진의 운영 지시</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>시나리오: 150억 달러 인수, 4억 달러 시너지, 워크스트림 40개</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>보고서 초안 에이전트와 4주 파일럿</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>질문 1: 문서로 합의한 가치 근거</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>처리 기간 5일 → 2일, 분석가 시간 80시간</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>감지 시간이 가장 중요한 이유</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>기준값이 없으면 배포하지 않는다</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>질문 2: 3선 모델 적용</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>매일 감독하는 선임 분석가의 네 능력</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>사람 작업 기준: 결정, 역할, 증거, 보고 경로</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>에이전트는 분석을 준비하고 멈춘다, 주인 없는 결정</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>질문 3: 엔지니어가 만드는 증거</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>산출물 1: 감사 가능한 결정 로그, 결정적 코드</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>산출물 2: 모델 목록 기록, 재검증 촉발 조건</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>산출물 3: 자율성 점수표와 4단계</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>4단계의 함정: 표시되지 않은 문제, 뒤집기 비율</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>점수표로 승격·유지·후퇴 결정</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>결론: 세 질문, 에이전트가 실제로 준 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '-a2oTS9J67U:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

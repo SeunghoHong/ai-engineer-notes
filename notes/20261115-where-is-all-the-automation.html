@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>자동화는 어디 갔나</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#camps">두 진영, 같은 사실</a></li>
+      <li><a href="#jagged">잘하는 일과 못 하는 일</a></li>
+      <li><a href="#rlhf">RLHF가 사람을 루프에 넣었다</a></li>
+      <li><a href="#lesson">가장 쓴 교훈: 맞는 과제</a></li>
+      <li><a href="#leap">과제를 바꾼 효과</a></li>
+      <li><a href="#reliable">믿고 맡길 수 있는 지능</a></li>
+      <li><a href="#software">소프트웨어는 왜 그대로인가</a></li>
+      <li><a href="#led">파란 LED와 네 번째 게이트</a></li>
+      <li><a href="#research">소프트웨어 연구</a></li>
+      <li><a href="#kv">KV 캐시에 묶인 에이전트</a></li>
+      <li><a href="#spirit">규칙의 취지를 담는 소프트웨어</a></li>
+      <li><a href="#slop">슬롭은 왜 생기나</a></li>
+      <li><a href="#future">무엇을 자동화할 수 없을까</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 일에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-15 · 23분 · 영어 발표 한글 정리</span>
+      <h1>자동화는 다 어디 갔나</h1>
+      <p class="lead">AI는 벤치마크에서 사람을 넘는데, 회계 같은 단순한 일은 혼자 맡지 못한다. 발표자는 지금의 LLM이 사람을 돕는 일에 맞춰 학습됐기 때문이라고 보고, 믿고 맡길 수 있는 지능을 소프트웨어의 새 부품으로 쓰자고 제안한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=Cyt3LU8TyNc" target="_blank" rel="noopener">Where is all the automation?</a></span>
+        <span>발표: Diogo Almeida (TypeSafe AI. 발표자 소개로는 ChatGPT, RLHF, InstructGPT 공동 개발자)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에 "Diego"로 잡힌 이름은 영상 정보를 따라 Diogo로 적었다. 발표자 회사의 모델 이름은 자막에 들린 대로 "Jev"로 적었다(추정). <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI는 <strong>벤치마크에서는 사람을 넘지만 현실의 자동화는 거의 못 한다.</strong> 발표자는 같은 사실을 보는 업계가 이 모순을 설명할 수 있어야 한다고 말한다.</li>
+        <li>발표자의 답: AI가 잘하는 일은 모두 <strong>사람이 결과를 읽고 판단하는 일</strong>이다. 사람 없이 맞아야 하는 일에는 약하다.</li>
+        <li>원인은 <strong>RLHF</strong>다. 사람의 평가로 학습시켰으니 사람을 만족시키는 데 최적화됐다. 발표자는 RLHF를 함께 만든 사람으로서 이 점을 인정한다.</li>
+        <li>큰 도약은 알고리즘이나 연산량보다 <strong>맞는 과제를 고르는 데서</strong> 나온다. RLHF가 그 예다.</li>
+        <li>자동화에 필요한 건 가끔 나오는 천재성이 아니라 <strong>매번 믿을 수 있는 지능</strong>이다. 95%가 아인슈타인이어도 5%가 미스터 빈이면 아무것도 맡길 수 없다.</li>
+        <li>믿을 수 있는 지능은 소프트웨어의 <strong>네 번째 논리 게이트</strong>가 된다. 파란 LED가 조명을 바꿨듯 소프트웨어가 할 수 있는 일이 크게 넓어진다고 본다.</li>
+        <li>발표자는 바이브 코딩 대신 <strong>진짜 소프트웨어 엔지니어링</strong>으로 이 경계를 탐험하자고 한다. 예: KV 캐시에 묶이지 않는 에이전트, 의미를 검사하는 타입, 슬롭 막기.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="camps">
+        <header><span class="num">01</span><h2>두 진영, 같은 사실 <span class="ts">01:30</span></h2></header>
+        <p>발표자는 ChatGPT, RLHF, InstructGPT를 함께 만들었다고 소개했다. 그런데도 ChatGPT를 비판하는 몇 안 되는 사람이라고 말한다.</p>
+        <p>ChatGPT가 싫은 것은 아니다. 발표자는 챗봇과 코딩 에이전트를 즐겨 쓴다. 다만 한계가 크다고 본다. 업계가 <strong>크게 약속하고 적게 내놓는</strong> <span class="en">overpromise, underdeliver</span> 쪽으로 기운 것을 특히 안타까워한다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">벤치마크를 보는 진영</span>
+            <p>발표자는 효과적 이타주의 <span class="en">EA, Effective Altruism</span> 쪽 사람들을 예로 들었다.</p>
+            <ul>
+              <li>LLM이 거의 모든 벤치마크에서 사람을 넘었다고 본다</li>
+              <li>그 상태가 이미 2년째라고 본다</li>
+              <li>"AGI가 3개월 남았다"는 말이 2년째 나온다</li>
+            </ul>
+            <p class="verdict">발표자는 o3 시절을 OpenAI 내부의 AGI 기대가 가장 높던 때로 기억한다. 지금은 아무도 그 모델을 신경 쓰지 않는다고 말한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">현실을 보는 진영</span>
+            <p>벤치마크 밖의 현실을 본다.</p>
+            <ul>
+              <li>샌프란시스코를 벗어나면 세상은 거의 그대로다</li>
+              <li>AI가 이렇게 멋진데도 그렇다</li>
+            </ul>
+            <p class="verdict">발표자는 두 쪽 다 맞다고 본다. AI는 세상을 바꿀 기술이다. 동시에 지금은 기대에 못 미친다. 둘을 함께 믿는 사람은 드물다고 했다.</p>
+          </div>
+        </div>
+
+        <figure class="chart" aria-label="AGI까지 남았다고 말한 시간 3개월, 그 말을 해 온 기간 24개월">
+          <span class="chart-title">AGI까지 남았다는 시간과 그 말을 해 온 기간 (개월)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>"AGI까지 남았다"고 말한 시간</span><span class="val">3</span></div>
+              <div class="track"><div class="fill" style="width:12.5%" title="남았다고 말한 시간: 3개월"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>그 말을 해 온 기간</span><span class="val">24</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="그 말을 해 온 기간: 24개월"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>12</span><span>24</span></div>
+          <span class="caption">발표자의 말 "AGI가 3개월 남았다고 2년째 발표하고 있다"를 개월로 바꿔 그렸다.</span>
+        </figure>
+
+        <div class="callout">
+          <span class="title">발표자가 던진 질문</span>
+          <span>같은 업계가 같은 사실을 보는데 왜 결론이 갈리나. AI는 왜 어떤 일은 아주 잘하고 어떤 일은 전혀 못 하나. 이런 성질을 <strong>들쭉날쭉하다</strong> <span class="en">jagged</span>고 한다. 발표자는 업계가 이를 설명할 가장 단순한 답(오컴의 면도날 <span class="en">Occam's razor</span>)을 갖고 있어야 한다고 말한다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="jagged">
+        <header><span class="num">02</span><h2>잘하는 일과 못 하는 일 <span class="ts">03:00</span></h2></header>
+        <p>발표자는 양 끝의 예를 들었다. 한쪽은 그냥 잘하는 정도가 아니고, 다른 쪽은 그냥 못하는 정도가 아니다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">초인적으로 잘하는 일</span>
+            <ul>
+              <li>수학 밀레니엄 난제급 문제 (발표자의 예)</li>
+              <li>딥 리서치 <span class="en">deep research</span>: 자료를 찾아 읽고 보고서를 쓰는 일</li>
+              <li>챗봇에게 묻는 질문에 답하기</li>
+            </ul>
+            <p class="verdict"><b>공통점</b>: 사람이 결과를 받아 읽고 판단한다. 발표자는 이런 일이 본래 <b>사람이 루프 안에 있는 일</b> <span class="en">human in the loop</span>이라고 본다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">아직 쓸모없는 일</span>
+            <ul>
+              <li>회계</li>
+              <li>드라이브스루 주문 받기. 해마다 유명한 실패 사례가 나온다고 한다</li>
+            </ul>
+            <p class="verdict"><b>공통점</b>: 사람이 확인하지 않아도 맞아야 한다. 곧 <b>자동화</b> <span class="en">automation</span>다.</p>
+          </div>
+        </div>
+        <p>사람에게는 오른쪽이 훨씬 쉽다. 발표자는 수학 경시대회 선수 출신이지만 밀레니엄 난제는 못 푼다. 회계는 할 수 있다.</p>
+
+        <h3>딥 리서치와 발표자 중 누구를 고르나 <span class="ts">03:30</span></h3>
+        <p>발표자는 딥 리서치보다 조사를 잘하지 못한다고 인정한다. 모델이 그만큼 잘한다.</p>
+        <p>그런데 조건을 바꾸면 답이 달라진다. 잘 쓴 글이 아니라 반드시 맞는 답이 필요하다고 하자. 발표자는 그러면 사람들이 매번 발표자를 고를 것이라고 말한다.</p>
+        <p>이것이 <strong>보조</strong> <span class="en">assistance</span>와 <strong>자동화</strong>의 차이다. 자동화는 대개 더 쉽고 단순한 일이다. 그런데도 AI는 자동화에서 계속 실패한다. 발표자는 이 사실이 더 충격적으로 받아들여져야 한다고 말한다.</p>
+
+        <div class="callout">
+          <span class="title">자동화에서 AI가 맡을 몫 <span class="ts">04:00</span></span>
+          <span>자동화에서는 사람을 만족시키는 것이 일을 해내는 것과 아무 관계가 없다. AI는 한 겹의 추상화로만 들어가면 된다. 판단을 내리면 바로 일반 자동화로 돌아간다. 발표자는 자동화의 언어가 코드라고 본다. 그래서 AI는 코드와 맞물려야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="rlhf">
+        <header><span class="num">03</span><h2>RLHF가 사람을 루프에 넣었다 <span class="ts">04:20</span></h2></header>
+        <p>RLHF <span class="en">Reinforcement Learning from Human Feedback</span>는 사람이 매긴 평가를 보상으로 삼아 모델을 학습시키는 방법이다. 발표자는 RLHF를 함께 만들었다. 그런데 RLHF가 문제의 일부라고 말한다.</p>
+        <ul class="plain">
+          <li>지금의 AI가 모두 사람의 확인을 필요로 하는 이유가 RLHF다.</li>
+          <li>사람의 피드백을 학습에 직접 넣었기 때문이다. 그게 RLHF의 "HF"다.</li>
+          <li>예외는 아주 쉽게 검증할 수 있는 일이다. 이런 일은 혼자 돌 수 있다. 그래도 끝난 뒤에는 사람이 확인해야 한다.</li>
+        </ul>
+
+        <h3>발표자의 진단 <span class="ts">04:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>발표자의 주장</th></tr></thead>
+            <tbody>
+              <tr><td>최적화 대상</td><td>지금의 LLM은 100% 보조용으로 최적화됐다</td></tr>
+              <tr><td>RLVR은?</td><td>RLVR <span class="en">Reinforcement Learning with Verifiable Rewards</span>은 정답을 기계로 확인할 수 있는 보상으로 학습시키는 방법이다. 하지만 RLHF를 거치지 않은 RLVR 모델은 사람이 쓰기에 아주 나쁘다</td></tr>
+              <tr><td>보조</td><td>믿기 어려울 만큼 잘한다. ChatGPT에 물을 질문이라면 발표자보다 ChatGPT를 고르는 게 맞다</td></tr>
+              <tr><td>자동화</td><td>백그라운드에서 혼자 도는 판단 작업에는 LLM을 전혀 믿으면 안 된다. 그 일에 맞춰 최적화하지 않았기 때문이다</td></tr>
+              <tr><td>가치</td><td>자동화가 보조보다 훨씬 가치 있다고 추측한다. 지금은 겉만 건드리는 중이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="shift" aria-label="발표자가 제안하는 방향 전환">
+          <div><span class="tag">지금</span><b>사람을 돕는 AI</b><span class="muted">RLHF로 사람을 만족시키게 학습했다. 결과는 사람이 확인한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 방향</span><b>기계 네이티브 AI</b><span class="muted">사람 대신 코드와 맞물려, 확인 없이 믿고 맡길 수 있게 학습한다</span></div>
+        </div>
+
+        <p>발표자는 이 방향을 "Jevolution"이라고 불렀다 <span class="ts">05:30</span>. RLHF 대신 다른 방법이 필요하다고 말한다. 첫 원리부터 다시 생각해야 한다는 것이다. 질문은 기계 네이티브 AI <span class="en">machine native AI</span>를 어떻게 최적화하느냐다. 발표자 회사가 Jev로 하는 일이 이것이라고 한다. RLHF를 만들 때처럼 AI를 만드는 방식 자체를 다시 생각한다는 뜻이다.</p>
+        <p class="note">"기계 네이티브 AI"는 발표자가 따로 정의하지 않았다. 위 그림의 풀이는 발표 흐름에서 끌어낸 이 노트의 해석이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="lesson">
+        <header><span class="num">04</span><h2>가장 쓴 교훈: 맞는 과제 <span class="ts">06:10</span></h2></header>
+        <p>발표자는 Rich Sutton의 "쓴 교훈"에서 출발해 교훈을 두 단계 더 쌓았다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>교훈</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>쓴 교훈 <span class="en">The Bitter Lesson</span></td><td>알고리즘보다 규모와 연산량이 중요하다. Sutton의 글을 발표자가 일부러 느슨하게 옮긴 것이다</td></tr>
+              <tr><td>더 쓴 교훈</td><td>연산량보다 데이터가 언제나 중요하다</td></tr>
+              <tr><td>가장 쓴 교훈</td><td>맞는 과제를 고르는 것이 가장 중요하다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>가장 쓴 교훈은 맞는 과제를 하는 것이다.<cite>발표자 · 06:40</cite></blockquote>
+        <p>머신러닝 연구자는 알고리즘을 좋아한다. 지표 숫자가 좋은 쪽으로 움직이는 것만 보고 싶어 한다. 현실 세계는 생각하고 싶어 하지 않는다. 하지만 발표자는 큰 도약이 언제나 맞는 과제에서 나왔다고 말한다.</p>
+
+        <h3>세 가지 사례 <span class="ts">07:00</span></h3>
+        <ul class="plain">
+          <li><strong>고전 RL 게임</strong>: 체스 같은 게임은 규칙이 과제를 정해 준다. 데이터도 연산으로 만든다. 모델이 직접 두어 보는 롤아웃 <span class="en">rollout</span>이 곧 데이터다. 그래서 RL에서는 과제를 고민할 필요가 없었다. 발표자는 Sutton의 교훈이 이런 환경에서 나왔다고 본다.</li>
+          <li><strong>사전 학습</strong> <span class="ts">07:20</span>: BERT 시절에는 마스크 언어 모델링 <span class="en">masked language modeling</span>을 썼다. 다음 토큰 예측 <span class="en">next token prediction</span>이 낫다는 걸 알기까지 오래 걸렸다. 다음 토큰 예측이 빈칸 맞히기를 더 잘해서 이긴 게 아니다. 글을 생성하는 데 뛰어났기 때문이다. 발표자는 오늘의 연산량과 알고리즘을 써도 마스크 언어 모델링은 GPT-3만큼 흥미롭지 않았을 거라고 말한다. 과제가 달랐기 때문이다.</li>
+          <li><strong>데이터</strong> <span class="ts">07:50</span>: 인터넷 데이터는 이미 큰 병목이다. 발표자는 데이터를 더 얻으려고 "책을 태우는" 지경이라고 과장해 말했다. 업계는 데이터가 연산량보다 중요하다는 사실을 계속 다시 발견한다. LLM을 쓸모 있게 만드는 데는 더 그렇다.</li>
+        </ul>
+        <p>발표자의 요점은 이렇다. 학습 목표 자체는 특별하지 않다. 그걸로 나중에 무엇을 할 수 있느냐가 중요하다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="leap">
+        <header><span class="num">05</span><h2>과제를 바꾼 효과 <span class="ts">08:10</span></h2></header>
+        <p>RLHF가 생기기 전에는 RLHF용 데이터 자체가 없었다. 발표자는 그 데이터가 생긴 뒤의 차이를 "밤과 낮"이라고 표현했다.</p>
+        <p>발표자는 RLHF 논문(InstructGPT 논문으로 추정)의 결과를 이렇게 요약했다.</p>
+        <ul class="plain">
+          <li>가장 단순한 알고리즘에 GPT-2 크기 모델을 썼다.</li>
+          <li>그래도 지시 따르기 <span class="en">instruction following</span>에서는 엄청난 성능이 나왔다.</li>
+          <li>사전 학습만으로 같은 수준을 내려면 GPT-7~9 정도가 필요하다.</li>
+        </ul>
+        <p>여기서 GPT 번호는 예전 의미다. 번호가 하나 오를 때마다 사전 학습의 유효 연산량 <span class="en">effective compute</span>이 100배 는다는 뜻이다. 발표자는 지금은 그렇게 늘릴 수 없어서 업계가 이 의미를 버렸다고 본다.</p>
+        <div class="callout">
+          <span class="title">발표자의 기준으로 계산하면</span>
+          <span>GPT-2에서 GPT-7까지는 번호가 다섯 칸 오른다. 100배를 다섯 번 곱하면 10<sup>10</sup>배, 곧 100억 배다. GPT-9까지는 일곱 칸이라 10<sup>14</sup>배, 곧 100조 배다. 맞는 과제를 고른 효과가 이만한 연산량과 맞먹는다는 것이 발표자의 주장이다.</span>
+        </div>
+        <p class="note">위 배수는 발표자의 "번호 하나 = 100배" 기준을 그대로 적용한 이 노트의 계산이다. 발표자는 GPT-2를 "2018년쯤" 모델이라고 했지만, GPT-2는 2019년에 공개됐다.</p>
+        <p>발표자는 Jev도 같은 원리로 만들었다고 말한다 <span class="ts">09:00</span>. 맞는 과제에 최적화해서 아무도 예상하지 못한 도약을 이뤘다는 것이다. 맞는 과제를 고민하는 사람은 아주 드물다고 덧붙였다.</p>
+        <p class="note">Jev는 발표자 회사의 제품이다. 이 대목은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="reliable">
+        <header><span class="num">06</span><h2>믿고 맡길 수 있는 지능 <span class="ts">09:20</span></h2></header>
+        <p>발표자의 원칙은 "최적화한 것을 얻는다" <span class="en">You get what you optimize for</span>이다. 지금의 LLM에 빠진 것은 지능의 신뢰성이다. 발표자는 "신뢰성"보다 나은 단어를 찾는 중이라고 했다.</p>
+        <blockquote>95%는 아인슈타인, 5%는 미스터 빈.<cite>발표자가 지금의 LLM을 묘사한 말 · 09:30</cite></blockquote>
+
+        <figure class="chart" aria-label="발표자의 비유: 아인슈타인처럼 답하는 비율 95%, 미스터 빈처럼 답하는 비율 5%">
+          <span class="chart-title">같은 모델이 내놓는 답의 품질 (발표자의 비유, %)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>아인슈타인처럼 답한다</span><span class="val">95</span></div>
+              <div class="track"><div class="fill" style="width:95%" title="아인슈타인처럼 답한다: 95%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>미스터 빈처럼 답한다</span><span class="val">5</span></div>
+              <div class="track"><div class="fill key" style="width:5%" title="미스터 빈처럼 답한다: 5%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">측정값이 아니라 비유로 든 숫자다. 5% 막대는 작지만, 어느 답이 그 5%인지 모르면 모든 답을 사람이 확인해야 한다.</span>
+        </figure>
+
+        <p>어느 답이 아인슈타인이고 어느 답이 미스터 빈인지 구별할 수 없으면 아무것도 자동화할 수 없다.</p>
+        <div class="shift" aria-label="신뢰성에 대한 발표자의 제안">
+          <div><span class="tag">지금의 방식</span><b>가끔 나오는 똑똑함</b><span class="muted">넓게 잘하지만 들쭉날쭉하다. 사람이 답을 하나씩 검증한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 제안</span><b>좁은 범위의 확실한 신뢰성</b><span class="muted">범위를 아주 좁히고, 그 안에서는 매번 똑똑하게 답한다</span></div>
+        </div>
+        <p>이런 신뢰성은 벤치마크에 나타나지 않는다.</p>
+
+        <h3>개발자에게서 온 뜻밖의 반응 <span class="ts">10:00</span></h3>
+        <p>발표자는 사람들이 Jev를 좋아하는 이유가 바로 이 신뢰성이라고 말한다.</p>
+        <p>회사는 개발자 사이의 "ChatGPT 모멘트"를 준비하지 않았다. 그런데 그런 반응이 왔다고 한다. 발표자는 AI 업계가 너무 크게 약속하고 적게 내놓아서, 약속을 지키는 모델이 오히려 놀라웠다고 해석한다.</p>
+        <p>발표자는 그 이유가 속도, 비용, 인터페이스가 아니라고 강조한다. 믿을 수 있는 지능이 이유라는 것이다. 팀은 장기적인 우위를 위해 이 이야기를 하지 말라고 했다고 한다. 그래도 발표자는 청중에게 이런 모델을 만들어 달라고 부탁했다. 발표자 회사 모델이 아니어도 좋다고 했다.</p>
+        <p class="note">이 대목은 발표자 회사 제품에 대한 주장이다. 사용자 반응을 뒷받침하는 자료는 발표에 나오지 않았다. 감안해 읽자.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="software">
+        <header><span class="num">07</span><h2>소프트웨어는 왜 그대로인가 <span class="ts">10:30</span></h2></header>
+        <p>발표자는 Jev를 스마트 소프트웨어의 기반으로 본다. 그리고 소프트웨어가 화려하게 돌아올 것이라고 말한다.</p>
+        <p>AI 때문에 SaaS가 망한다는 이야기 <span class="en">SaaS apocalypse</span>는 틀렸다고 본다. 동시에 변화의 크기로 보면 "종말"이라는 말도 모자라다고 덧붙였다. 발표자는 이 부분을 자세히 풀지 않았다.</p>
+        <p>발표자는 스마트 소프트웨어와 그때그때 만드는 소프트웨어 <span class="en">just-in-time software</span>를 구별하자고 했다 <span class="ts">10:50</span>. 두 말을 따로 정의하지는 않았다. 앞뒤 흐름으로 보면 후자는 코딩 에이전트가 싸게 찍어 내는 코드를 가리키는 듯하다. 전자는 실행 중인 소프트웨어 안에서 지능이 판단하는 것이다.</p>
+        <p class="note">위 두 용어의 풀이는 발표 흐름에서 끌어낸 이 노트의 추론이다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">지금 <span class="ts">11:00</span></span>
+            <p>AI가 이렇게 대단한데도 지난 10년간 소프트웨어는 거의 그대로다. 달라진 건 만드는 비용이 싸졌다는 것뿐이다.</p>
+            <p>지금 최선은 옆에 붙은 챗봇이다. 챗봇은 가끔 소프트웨어를 건드린다. 하지만 비용이 드는 판단을 대신 내리지는 못한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">발표자가 원하는 것</span>
+            <p>지능을 소프트웨어의 안쪽 루프 <span class="en">inner loop</span>에 넣는다. 소프트웨어가 돌아가는 핵심 경로 안에서 지능이 매번 판단하게 한다.</p>
+            <p class="verdict">발표자는 업계가 코딩 에이전트에만 너무 집중하고 이 부분은 소홀하다고 본다.</p>
+          </div>
+        </div>
+
+        <h3>LLM 스톡홀름 증후군 <span class="ts">11:40</span></h3>
+        <p>발표자는 Jev를 쓴 성공 사례가 많다고 말한다. 그래도 업계가 아직 충분히 밀어붙이지 않는다고 본다. 행사를 여는 swyx가 이 자리만의 행동 촉구를 부탁했고, 이것이 그 메시지라고 했다.</p>
+        <p>발표자는 세상이 아직 "LLM 스톡홀름 증후군"에 걸려 있다고 말한다 <span class="ts">11:50</span>. 쓰는 도구가 생각하는 방식을 바꾼다는 말이 있다. LLM이 우리 생각을 너무 많이 바꿔서, 소프트웨어를 새로 생각하지 못하게 됐다는 것이다.</p>
+        <p class="note">자막의 "Swix"는 AI Engineer 행사를 여는 swyx로 고쳤다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="led">
+        <header><span class="num">08</span><h2>파란 LED와 네 번째 논리 게이트 <span class="ts">12:20</span></h2></header>
+        <p>발표자는 소프트웨어의 미래를 LED에 빗댔다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">LED</span>
+            <p>파란 LED 전에는 빨강과 초록 LED만 있었다. 쓰임새는 표시등이나 시계 정도였다.</p>
+            <p>파란 LED가 생기자 색이 2개에서 3개가 됐다. 단순 계산이면 쓰임새가 50% 늘어야 한다.</p>
+            <p class="verdict"><b>실제로는</b> 흰색 조명, 지금 쓰는 디스플레이, 조명 혁명이 나왔다. 새 기본 요소가 기존 요소와 조합됐기 때문이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">소프트웨어 <span class="ts">13:30</span></span>
+            <p>소프트웨어는 단순한 기본 논리 게이트 세 가지로 이만큼 많은 것을 만들었다.</p>
+            <p>믿을 수 있는 기계 네이티브 지능은 네 번째 "의미 논리 게이트"가 된다. 단순 계산이면 표현력이 33% 는다.</p>
+            <p class="verdict"><b>발표자의 예상</b>: 파란 LED처럼 그보다 훨씬 크다. 상식, 의도, 사람의 이해로 프로그래밍하게 된다.</p>
+          </div>
+        </div>
+
+        <figure class="chart" aria-label="기본 요소를 하나 더할 때 단순 계산한 증가율: LED 색 2개에서 3개 50%, 논리 게이트 3개에서 4개 33%">
+          <span class="chart-title">기본 요소를 하나 더할 때 단순 계산한 증가율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>LED 색: 2개 → 3개</span><span class="val">+50</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="LED 색 2개에서 3개: +50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>논리 게이트: 3개 → 4개</span><span class="val">+33</span></div>
+              <div class="track"><div class="fill key" style="width:66.7%" title="논리 게이트 3개에서 4개: +33.3%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>25</span><span>50</span></div>
+          <span class="caption">발표자의 요점은 실제 효과가 이 단순 계산보다 훨씬 크다는 것이다. 파란 LED가 흰색 조명과 디스플레이를 낳았듯이. 두 계산 자체는 맞다(+50%, +33.3%).</span>
+        </figure>
+        <p class="note">발표자는 기본 게이트의 예로 "크다, 작다, 같다" 같은 비교를 들었다. 흔히 기본 논리 게이트로는 AND, OR, NOT 세 가지를 꼽는다. 크기 비교는 이 게이트들을 조합해 만든다.</p>
+
+        <p>발표자가 든 예가 있다 <span class="ts">14:00</span>. 이메일 주소를 검사할 때 복잡한 정규식 <span class="en">regex</span>을 짜는 대신 이렇게 적으면 된다. "Gmail 주소, 또는 진짜처럼 보이는 주소."</p>
+        <p>이렇게 하려면 모델이 더 싸고, 더 똑똑하고, 더 빨라져야 한다.</p>
+        <p>무엇이 나올지는 예측하기 어렵다. 인터넷이 얼마나 강력해질지 미리 알 수 없었던 것과 같다. 이런 변화는 아래에서부터, 흩어진 많은 사람이 마음껏 시도할 때 나온다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="research">
+        <header><span class="num">09</span><h2>소프트웨어 연구 <span class="ts">14:40</span></h2></header>
+        <p>발표자는 새 경계를 탐험하는 일을 "소프트웨어 연구" <span class="en">software research</span>라고 부른다. 농담이 아니라고 했다.</p>
+        <ul class="plain">
+          <li>가치가 있어서가 아니라 할 수 있어서 탐험한다.</li>
+          <li>초기 인터넷이 그랬다. 그 웹사이트들이 다 있어야 했던 건 아니다. 그래도 거기서 멋진 것이 많이 나왔다.</li>
+          <li>OpenAI와 Anthropic이 내놓는 것에 끌려다니는 "LLM 래퍼" <span class="en">LLM wrapper</span>로만 남지 말자.</li>
+        </ul>
+
+        <h3>바이브 코딩이 아닌 진짜 엔지니어링 <span class="ts">15:20</span></h3>
+        <div class="shift" aria-label="발표자가 말하는 엔지니어링 방식의 전환">
+          <div><span class="tag">아니다</span><b>바이브 코딩</b><span class="muted">AI에게 말로 시켜 코드를 만든다 <span class="en">vibe coding</span></span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이렇게</span><b>진짜 소프트웨어 엔지니어링</b><span class="muted">결과물에 진심인 사람이 구조를 설계한다</span></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>원칙</th><th>발표자의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>분해 <span class="en">decomposition</span></td><td>작업을 잘게 나눈다</td></tr>
+              <tr><td>단계</td><td>작업을 단계로 나눈다. 가능하면 단계마다 검증할 수 있게 한다</td></tr>
+              <tr><td>캡슐화 <span class="en">encapsulation</span></td><td>검증할 수 있는 단계가 있어야 진짜 캡슐화가 된다. 안을 몰라도 믿고 쓸 수 있는 단위다</td></tr>
+              <tr><td>상태 관리 <span class="en">state management</span></td><td>모든 것이 KV 캐시 안의 전역 상태라고 가정하지 않는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>소프트웨어 엔지니어라면 다 아는 원칙이다. 발표자는 결과물에 진심인 사람이 하는 진짜 엔지니어링을 원한다. 가치가 없어도 된다. 멋지면 된다고 했다.</p>
+        <p>발표자 회사는 투자를 많이 받았고, 이런 시도를 지원하고 싶다고 했다. 다만 그 일을 맡을 운영 인력은 아직 없다고 한다. 다음 장부터는 발표자가 꼽은 아이디어다 <span class="ts">15:50</span>.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="kv">
+        <header><span class="num">10</span><h2>KV 캐시에 묶인 에이전트 <span class="ts">16:10</span></h2></header>
+        <p>KV 캐시 <span class="en">KV cache</span>는 모델이 앞서 읽은 토큰의 중간 계산 결과를 저장해 두는 곳이다. 같은 앞부분을 다시 계산하지 않으려고 쓴다.</p>
+        <p>발표자는 지금의 에이전트가 "KV 캐시의 독재" 때문에 설계가 경직됐다고 본다. 많은 시도가 KV 캐시와 부딪혀 비효율적이 되면서 실패했다고 한다. 발표자가 던진 질문은 세 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>발표자의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>기억은 왜 O(N)인가 <span class="ts">16:30</span></td><td>기억이 늘어나는 만큼 비용도 그대로 는다. 코딩 에이전트의 모든 기록을 매 호출에 넣을 수 있다면 그게 지속 학습 <span class="en">continual learning</span>이다. 기억할 자료는 이미 있다. 무엇을 기억하고 버릴지 맵리듀스 <span class="en">map reduce</span>로 골라낼 지능이 없을 뿐이다. O(log N)이나 그보다 빠른 조회 방법도 많다고 본다</td></tr>
+              <tr><td>에이전트끼리 왜 상태를 공유하지 못하나</td><td>에이전트 여러 개를 동시에 돌리면, 각자 코드베이스의 같은 패턴을 처음부터 다시 찾는다</td></tr>
+              <tr><td>서브에이전트 라우팅은 왜 안 되나</td><td>똑똑한 라우팅은커녕 단순한 라우팅도 잘 안 된다. 큰 연구소들도 서브에이전트가 효과가 있는지 오락가락한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 이런 설계가 공학적으로는 깔끔하다고 본다. 다만 KV 캐시와 맞지 않는다. 이 제약을 피해 가도록 에이전트를 설계하면 훨씬 많은 걸 할 수 있다고 말한다.</p>
+        <p class="note">자막의 "login"은 앞의 O(N)과 이어지는 말이라 "log N"으로 고쳤다. KV 캐시의 뜻풀이는 발표에 없던 것으로, 이 노트가 붙였다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="spirit">
+        <header><span class="num">11</span><h2>규칙의 취지를 담는 소프트웨어 <span class="ts">17:20</span></h2></header>
+        <p>발표자가 스스로 가장 모호하다고 한 아이디어다. 그래도 가장 강하게 믿는다고 했다.</p>
+        <h3>주인-대리인 문제</h3>
+        <ol class="plain">
+          <li>세상에는 주인-대리인 문제 <span class="en">principal-agent problem</span>가 가득하다. 일을 맡긴 쪽과 맡은 쪽의 속셈이 다른 상황이다. 발표자가 든 대표 예는 시민과 선출직 공무원이다.</li>
+          <li>이런 어긋남은 사회 모든 층에 있다. 그 결과 낭비와 부정이 생긴다.</li>
+          <li>공정함을 지키려면 규칙의 취지보다 글자를 앞세워야 한다.</li>
+          <li>그러면 허점이 생기고, 돈을 내는 쪽이 이기는 구조가 된다.</li>
+          <li>발표자는 뿌리가 "취지를 기록할 수 없다"는 데 있다고 본다. 소프트웨어도 원래 뜻 대신 비트만 기록한다.</li>
+        </ol>
+        <p>취지를 곳곳에 기록할 수 있게 되면 많은 조직과 사회가 바뀔 수 있다는 것이 발표자의 주장이다.</p>
+
+        <h3>실시간 보안 <span class="ts">18:10</span></h3>
+        <p>발표자는 "OpenAI·Hugging Face 샌드박스" 사례를 이름만 짧게 언급했다. 무슨 일이었는지는 설명하지 않았다.</p>
+        <ul class="plain">
+          <li>막지 못한 이유는 지능이 모자라서가 아니라고 본다.</li>
+          <li>나쁜 짓을 알아채는 것이 나쁜 짓을 하는 것보다 쉽기 때문이다.</li>
+          <li>문제는 실시간으로 돌릴 만큼 빠르고, 싸고, 믿을 만하지 않았다는 것이다.</li>
+          <li>회사마다 똑똑한 실시간 보안을 갖게 되면 어떨지 발표자는 묻는다.</li>
+        </ul>
+
+        <h3>그 밖의 아이디어 <span class="ts">18:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>아이디어</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>생성형 UI <span class="en">generative UI</span></td><td>다음 발표자들이 다룰 주제라며 넘어갔다</td></tr>
+              <tr><td>의미를 아는 타입 <span class="en">semantic dependent typing</span></td><td>타입 시스템이 코드의 의미를 안다. 원하는 성질을 그 자리에서 선언하면, 깊은 의존성 사슬을 따라 읽지 않아도 된다. 린트 검사기에서 Jev 같은 모델을 돌려 그 성질이 지켜지는지 확인하는 식이다</td></tr>
+              <tr><td>새 인터페이스 <span class="ts">19:10</span></td><td>발표자는 트위터에서 본 음성 인터페이스 영상을 예로 들었다. "내 뜻대로 해" <span class="en">DWIM, do what I mean</span>가 돌아온다고 본다. 예전에도 유행했지만, 뜻을 알아내려면 손으로 짠 규칙이 너무 많이 필요해서 제대로 된 적이 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자 회사 이름은 TypeSafe다. 타입 검사 아이디어는 회사 방향과 맞닿아 있으니 감안해 읽자.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="slop">
+        <header><span class="num">12</span><h2>슬롭은 왜 생기나 <span class="ts">19:40</span></h2></header>
+        <p>AI 슬롭 <span class="en">AI slop</span>은 AI가 대량으로 만든 질 낮은 결과물이다. 슬롭 막기는 이 행사의 큰 주제다. 발표자는 "Stop Gen AI"라고 적힌 야구 방망이 소품을 들고 나왔다.</p>
+        <p>발표자가 본 슬롭의 뿌리는 이렇다 <span class="ts">19:50</span>.</p>
+        <ol class="plain">
+          <li>AI는 믿을 수 없다.</li>
+          <li>그래서 회사도 개인도 비용이 드는 판단에는 AI를 쓰지 못한다.</li>
+          <li>하지만 비용을 남에게 떠넘기는 데 쓰는 건 아무 문제가 없다. 이것을 외부 비용 <span class="en">externalized cost</span>이라고 한다.</li>
+          <li>그렇게 떠넘긴 결과물이 슬롭이다. 누군가 읽고 걸러서 품질을 챙기면 슬롭이 되지 않는다.</li>
+          <li>신경 쓰지 않는 나쁜 행위자가 비대칭적으로 이득을 본다. 그래서 세상이 슬롭으로 가득하다.</li>
+        </ol>
+        <p>발표자는 믿을 수 있는 AI로 적어도 "받은편지함 지옥" <span class="en">inbound hell</span>에서는 세상을 구할 수 있다고 본다.</p>
+
+        <h3>저주받은 소프트웨어 <span class="ts">20:30</span></h3>
+        <p>발표자는 일부러 이상하게 만든 "저주받은 소프트웨어" <span class="en">cursed software</span>도 멋지다고 말한다.</p>
+        <ul class="plain">
+          <li>예: Reddit의 r/badUIbattles. 최악의 인터페이스를 일부러 만들어 겨루는 곳이다.</li>
+          <li>"계정을 삭제하시겠습니까?"를 운에 맡기는 게임으로 만드는 식이다.</li>
+          <li>발표자는 할 수 있어서 하는 것이 소프트웨어 엔지니어링의 본질이라고 본다.</li>
+          <li>이런 아이디어 중 1%만 멋진 것으로 이어져도 된다.</li>
+          <li>나쁜 아이디어까지 키우는 것이 장난기 있는 해커의 태도라고 말한다.</li>
+        </ul>
+      </section>
+
+      <!-- 13 -->
+      <section id="future">
+        <header><span class="num">13</span><h2>무엇을 자동화할 수 없을까 <span class="ts">21:20</span></h2></header>
+        <p>소프트웨어 엔지니어는 비트의 세계에서 생각한다. 소프트웨어로 되는 일과 안 되는 일을 당연하게 나눈다.</p>
+        <p>발표자는 그 제약이 사라지면 어떨지 묻는다. 지금은 아니어도 6개월이나 1년 뒤라면, 무엇을 자동화하지 못할까 <span class="ts">21:40</span>.</p>
+        <div class="shift" aria-label="자동화에 대한 질문의 변화">
+          <div><span class="tag">지금의 질문</span><b>자동화할 수 있나?</b><span class="muted">소프트웨어로 안 되는 일이 따로 있다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자가 그리는 미래</span><b>일이 얼마나 드나?</b><span class="muted">지금 자동화할 수 있는 일들이 이미 이런 질문을 받는다</span></div>
+        </div>
+        <div class="callout">
+          <span class="title">마무리 인사에서 <span class="ts">22:10</span></span>
+          <span>발표자는 초기 지지자들에게 감사했다. 처음에는 발표자 팀이 이상한 쪽인 줄 알았는데, AI가 훨씬 더 될 수 있다고 본 사람이 오히려 다수였다고 한다.</span>
+          <span>신뢰성을 현실적으로 보는 사람들에게도 감사했다. 발표자는 벤치마크를 싫어한다. 벤치마크는 벤치마크 말고는 볼 시간이 없는 사람에게 가장 큰 피해를 준다고 말한다.</span>
+          <span>목표는 AI를 네 번째 논리 게이트만큼 믿을 만하게 만드는 것이다. 발표자는 아주 높은 기준이고 할 일이 많다고 인정했다.</span>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>AI는 벤치마크에서는 사람을 넘지만 현실의 자동화는 거의 못 한다. 발표자는 이 모순에 단순한 설명이 필요하다고 본다.</li>
+          <li>AI가 잘하는 일은 <strong>사람이 결과를 읽고 판단하는 일</strong>이다. 사람 없이 맞아야 하는 일에는 약하다.</li>
+          <li>원인은 <strong>RLHF</strong>다. 사람의 피드백으로 학습시켜 사람을 만족시키는 데 최적화됐다.</li>
+          <li>자동화에서 사람을 만족시키는 것은 일과 상관없다. AI는 판단만 내리고 나머지는 <strong>코드</strong>가 맡아야 한다.</li>
+          <li>알고리즘보다 연산량, 연산량보다 데이터, 무엇보다 <strong>맞는 과제</strong>. 큰 도약은 맞는 과제에서 나온다.</li>
+          <li>발표자에 따르면 RLHF를 쓴 GPT-2 크기 모델이 지시 따르기에서 GPT-7~9급과 맞먹었다.</li>
+          <li>95%가 아인슈타인이어도 5%가 미스터 빈이면 자동화할 수 없다. 필요한 건 <strong>좁은 범위에서 매번 믿을 수 있는 지능</strong>이다.</li>
+          <li>믿을 수 있는 지능은 소프트웨어의 <strong>네 번째 논리 게이트</strong>다. 파란 LED처럼 단순 계산(+33%)보다 훨씬 큰 변화를 낸다고 본다.</li>
+          <li>바이브 코딩 대신 분해, 검증되는 단계, 캡슐화, 상태 관리 같은 <strong>진짜 엔지니어링</strong>으로 소프트웨어의 경계를 탐험하자.</li>
+          <li>슬롭은 AI를 믿을 수 없어서 생긴다. 비용을 남에게 떠넘길 때만 쓰이기 때문이다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말한 두 진영의 모순은 무엇인가?</span></summary><div class="answer">한쪽은 LLM이 2년째 거의 모든 벤치마크에서 사람을 넘었다고 본다. 다른 쪽은 현실 세상이 거의 그대로라고 본다. 같은 업계가 같은 사실을 보는데 결론이 갈린다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>AI가 잘하는 일과 못 하는 일을 가르는 기준은?</span></summary><div class="answer">사람이 결과를 받아 읽고 판단하는가. 딥 리서치나 챗봇 답변은 그렇다. 회계나 드라이브스루 주문은 사람 없이 맞아야 한다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>"딥 리서치와 발표자 중 누구를 고르나"라는 예가 보여 주는 것은?</span></summary><div class="answer">잘 쓴 글이 필요하면 딥 리서치를, 반드시 맞는 답이 필요하면 사람을 고른다. 보조와 자동화가 요구하는 것이 다르다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>발표자가 RLHF를 문제의 일부라고 보는 이유는?</span></summary><div class="answer">사람의 피드백을 학습에 직접 넣어서, 모델이 사람을 만족시키는 쪽으로 최적화됐다. 그래서 지금의 AI는 사람이 확인해야 한다. RLVR 모델도 RLHF를 거치지 않으면 사람이 쓰기에 아주 나쁘다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>쓴 교훈, 더 쓴 교훈, 가장 쓴 교훈은 각각 무엇인가?</span></summary><div class="answer">알고리즘보다 연산량이 중요하다. 연산량보다 데이터가 중요하다. 무엇보다 맞는 과제를 고르는 것이 중요하다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>다음 토큰 예측이 마스크 언어 모델링을 이긴 이유는?</span></summary><div class="answer">빈칸 맞히기를 더 잘해서가 아니다. 글을 생성하는 데 뛰어났기 때문이다. 학습 목표 자체보다 그걸로 무엇을 할 수 있느냐가 중요하다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>발표자 기준에서 GPT 번호 하나는 무엇을 뜻하나? GPT-2에서 GPT-7은 몇 배인가?</span></summary><div class="answer">사전 학습 유효 연산량 100배. 다섯 칸이니 10<sup>10</sup>배, 곧 100억 배다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>"95% 아인슈타인, 5% 미스터 빈"이 자동화에 치명적인 이유는?</span></summary><div class="answer">어느 답이 그 5%인지 구별할 수 없다. 구별하려면 사람이 모든 답을 확인해야 하고, 그러면 자동화가 아니다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>파란 LED 비유의 요점은?</span></summary><div class="answer">색이 2개에서 3개가 되면 단순 계산은 +50%다. 실제로는 흰색 조명과 디스플레이가 나왔다. 새 기본 요소는 기존 요소와 조합돼 훨씬 큰 변화를 낸다. 발표자는 믿을 수 있는 지능도 네 번째 논리 게이트로서 그럴 것이라고 본다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>발표자가 말한 진짜 소프트웨어 엔지니어링의 네 요소는?</span></summary><div class="answer">분해, 검증할 수 있는 단계, 캡슐화, 상태 관리. 상태 관리는 모든 것을 KV 캐시 속 전역 상태에 맡기지 않는다는 뜻이다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>KV 캐시에 묶인 에이전트에 대해 발표자가 던진 세 질문은?</span></summary><div class="answer">기억은 왜 O(N)인가. 에이전트끼리 왜 상태를 공유하지 못하나. 서브에이전트 라우팅은 왜 안 되나.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 본 슬롭의 뿌리는?</span></summary><div class="answer">AI를 믿을 수 없어서 비용이 드는 판단에는 못 쓴다. 대신 비용을 남에게 떠넘기는 데 쓰인다. 신경 쓰지 않는 나쁜 행위자가 그만큼 이득을 본다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 일에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>AI에게 맡기려는 작업을 "보조"와 "자동화"로 나눈다<span class="how">확인: 사람이 결과를 읽고 고르는 일인가, 사람 없이 맞아야 하는 일인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>자동화 작업에서는 AI에게 판단만 맡기고 실행은 코드로 한다<span class="how">예시: AI는 정해진 선택지 중 하나만 고르고, 그 뒤 처리는 일반 코드가 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>같은 입력을 여러 번 돌려 결과가 얼마나 흔들리는지 잰다<span class="how">확인: "미스터 빈" 답이 몇 번에 한 번 나오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>AI에게 맡길 범위를 좁힌다<span class="how">넓게 가끔 잘하는 쪽보다 좁게 매번 맞는 쪽을 고른다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트 작업을 검증할 수 있는 단계로 나눈다<span class="how">확인: 단계마다 입력과 출력을 따로 확인할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>에이전트가 알아낸 것을 대화 기록 밖에도 남긴다<span class="how">예시: 코드베이스 패턴을 파일로 적어, 다른 에이전트가 처음부터 다시 찾지 않게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>하드코딩 규칙 중 의미로 표현하면 나은 곳을 찾는다<span class="how">발표자의 예: 복잡한 이메일 정규식 대신 "진짜처럼 보이는 주소"</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>AI 결과물을 남에게 보내기 전에 직접 읽고 거른다<span class="how">비용을 받는 사람에게 떠넘기면 슬롭이 된다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>모델을 고를 때 벤치마크 점수보다 내 작업에서의 신뢰성을 본다<span class="how">확인: 우리 작업 샘플로 직접 돌려 봤는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>자동화</td><td>Automation. 사람이 확인하지 않아도 일이 끝까지 맞게 처리되는 것</td></tr>
+              <tr><td>보조</td><td>Assistance. AI가 결과를 내고 사람이 읽고 고르는 방식</td></tr>
+              <tr><td>사람이 루프 안에 있음</td><td>Human in the loop. 일하는 과정 중간에 사람이 결과를 확인하거나 승인하는 구조</td></tr>
+              <tr><td>들쭉날쭉함</td><td>Jagged. 어떤 일은 초인적으로 잘하면서 쉬워 보이는 일은 못 하는 AI의 성질</td></tr>
+              <tr><td>오컴의 면도날</td><td>Occam's razor. 여러 설명 중 가장 단순한 것을 고르라는 원칙</td></tr>
+              <tr><td>EA</td><td>효과적 이타주의(Effective Altruism). 발표자는 벤치마크를 근거로 AGI가 가깝다고 보는 진영의 예로 들었다</td></tr>
+              <tr><td>AGI</td><td>범용 인공지능. 사람처럼 거의 모든 지적 작업을 해내는 AI</td></tr>
+              <tr><td>RLHF</td><td>사람이 매긴 평가를 보상으로 삼아 모델을 강화학습시키는 방법</td></tr>
+              <tr><td>RLVR</td><td>정답 여부를 기계로 확인할 수 있는 보상으로 강화학습시키는 방법. 예시: 수학 답 맞히기, 테스트 통과</td></tr>
+              <tr><td>InstructGPT</td><td>사람의 지시를 따르도록 RLHF로 학습시킨 OpenAI 모델. ChatGPT로 이어졌다</td></tr>
+              <tr><td>딥 리서치</td><td>Deep research. AI가 여러 자료를 찾아 읽고 보고서를 써 주는 기능</td></tr>
+              <tr><td>기계 네이티브 AI</td><td>발표자의 표현. 사람이 아니라 코드와 맞물려 일하도록 최적화한 AI로 읽힌다(이 노트의 해석)</td></tr>
+              <tr><td>쓴 교훈</td><td>The Bitter Lesson. Rich Sutton의 글. 사람의 지식을 넣은 방법보다 연산을 키우는 일반적인 방법이 결국 이긴다는 주장</td></tr>
+              <tr><td>사전 학습</td><td>Pretraining. 대량의 글로 모델의 기초 능력을 먼저 학습시키는 단계</td></tr>
+              <tr><td>마스크 언어 모델링</td><td>문장 일부를 가리고 가린 단어를 맞히게 하는 학습 방식. BERT가 썼다</td></tr>
+              <tr><td>다음 토큰 예측</td><td>앞 내용을 보고 다음 토큰을 맞히게 하는 학습 방식. GPT 계열이 쓴다</td></tr>
+              <tr><td>롤아웃</td><td>Rollout. 강화학습에서 모델이 직접 끝까지 행동해 보며 데이터를 만드는 것</td></tr>
+              <tr><td>유효 연산량</td><td>Effective compute. 알고리즘 개선까지 감안해 환산한 학습 연산량</td></tr>
+              <tr><td>KV 캐시</td><td>모델이 앞서 처리한 토큰의 중간 계산 결과를 저장해 다시 쓰는 곳</td></tr>
+              <tr><td>O(N), O(log N)</td><td>데이터 크기 N이 늘 때 비용이 느는 정도. O(N)은 N과 같은 비율로, O(log N)은 훨씬 느리게 는다</td></tr>
+              <tr><td>지속 학습</td><td>Continual learning. 쓰는 동안 새로 겪은 것을 계속 배워 반영하는 것</td></tr>
+              <tr><td>맵리듀스</td><td>Map reduce. 큰 데이터를 조각마다 처리한 뒤 결과를 모으는 방식</td></tr>
+              <tr><td>서브에이전트, 라우팅</td><td>서브에이전트는 메인 에이전트가 일을 나눠 맡기는 하위 에이전트다. 라우팅은 어느 에이전트에게 일을 보낼지 정하는 것이다</td></tr>
+              <tr><td>주인-대리인 문제</td><td>Principal-agent problem. 일을 맡긴 쪽과 맡은 쪽의 이해가 어긋나는 상황</td></tr>
+              <tr><td>의존 타입</td><td>Dependent type. 값에 따라 정해지는 타입. 예시: "길이가 3인 리스트"</td></tr>
+              <tr><td>DWIM</td><td>Do What I Mean. 명령을 글자 그대로가 아니라 뜻대로 처리해 주는 방식</td></tr>
+              <tr><td>정규식</td><td>Regex. 문자열 패턴을 기호로 적어 검사하는 표현식</td></tr>
+              <tr><td>바이브 코딩</td><td>Vibe coding. 코드를 꼼꼼히 설계하거나 읽지 않고 AI에게 말로 시켜 만드는 방식</td></tr>
+              <tr><td>캡슐화</td><td>Encapsulation. 안쪽 구현을 몰라도 겉의 약속만 보고 믿고 쓸 수 있게 묶는 것</td></tr>
+              <tr><td>LLM 래퍼</td><td>남의 모델 API 위에 얇은 기능만 얹은 제품</td></tr>
+              <tr><td>SaaS</td><td>Software as a Service. 인터넷으로 빌려 쓰는 소프트웨어</td></tr>
+              <tr><td>생성형 UI</td><td>Generative UI. AI가 상황에 맞춰 화면을 그때그때 만들어 주는 인터페이스</td></tr>
+              <tr><td>AI 슬롭</td><td>AI slop. AI가 대량으로 만든 질 낮은 결과물</td></tr>
+              <tr><td>외부 비용</td><td>Externalized cost. 내가 한 일의 비용을 남이 떠안는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 발표 제목</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>첫 주제: 자동화는 다 어디 갔나</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>ChatGPT를 만든 사람이 ChatGPT를 비판하는 이유</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>두 진영: 벤치마크와 현실</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>AI는 왜 들쭉날쭉한가</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>수학 난제와 회계</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>답: 사람이 루프 안에 있는 일, 딥 리서치의 예</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>자동화의 언어는 코드</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>RLHF가 문제의 일부</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>모든 LLM은 보조용으로 최적화됐다</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>"Jevolution": 기계 네이티브 AI</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>쓴 교훈, 더 쓴 교훈</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>가장 쓴 교훈: 맞는 과제</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>RL 게임과 사전 학습의 사례</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>데이터 병목</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>RLHF 논문: GPT-2 크기 모델과 GPT-7~9</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>Jev도 맞는 과제에 최적화했다</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>최적화한 것을 얻는다: 신뢰성</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>95% 아인슈타인, 5% 미스터 빈</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>개발자에게 온 "ChatGPT 모멘트"</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>스마트 소프트웨어, SaaS 종말론</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>지난 10년 소프트웨어는 그대로</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>업계는 아직 충분히 밀어붙이지 않는다</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>LLM 스톡홀름 증후군</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>파란 LED 비유</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>세 가지 논리 게이트와 네 번째 의미 게이트</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>정규식 대신 의미로 쓰기</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>소프트웨어 연구</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>바이브 코딩이 아닌 진짜 엔지니어링</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>KV 캐시에 묶인 에이전트</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>주인-대리인 문제와 취지 기록하기</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>실시간 보안</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>생성형 UI, 의미를 아는 타입</td></tr>
+              <tr><td><span class="ts">19:10</span></td><td>새 인터페이스와 DWIM</td></tr>
+              <tr><td><span class="ts">19:40</span></td><td>슬롭 막기와 슬롭의 뿌리</td></tr>
+              <tr><td><span class="ts">20:30</span></td><td>저주받은 소프트웨어</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>모든 것을 자동화하기</td></tr>
+              <tr><td><span class="ts">21:20</span></td><td>무엇을 자동화할 수 없을까</td></tr>
+              <tr><td><span class="ts">22:10</span></td><td>감사 인사와 벤치마크 비판</td></tr>
+              <tr><td><span class="ts">22:50</span></td><td>네 번째 논리 게이트만큼 믿을 만하게</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'Cyt3LU8TyNc:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

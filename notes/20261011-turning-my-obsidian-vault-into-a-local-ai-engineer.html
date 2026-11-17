@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>옵시디언 로컬 AI 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#why">왜 만들었나: 프라이버시, 토큰, 적응성</a></li>
+      <li><a href="#bottleneck">병목은 저장이 아니라 추론</a></li>
+      <li><a href="#why-mcp">스킬이 아니라 MCP 서버인 이유</a></li>
+      <li><a href="#tiers">세 층 구조와 MCP 통신</a></li>
+      <li><a href="#tools">제공하는 도구들</a></li>
+      <li><a href="#demo">데모: NDA 가리기와 스캔 OCR</a></li>
+      <li><a href="#engine">뒤에서 일하는 추론 엔진</a></li>
+      <li><a href="#benchmark">성능 주장: 임베딩 가격과 품질</a></li>
+      <li><a href="#future">앞으로: 모델 라우팅과 모델 회의</a></li>
+      <li><a href="#takeaway">발표자의 핵심 메시지</a></li>
+      <li><a href="#qa">질의응답: 프라이버시는 정말 지켜지나</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 환경에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-11 · 47분 · 영어 발표 한글 정리</span>
+      <h1>옵시디언 볼트를 로컬 AI 엔지니어로 만들기</h1>
+      <p class="lead">옵시디언에 모아 둔 민감한 문서를 Claude Code에 그대로 열지 않는다. 내 클라우드에 둔 오픈소스 모델이 먼저 읽고 개인정보를 가린 뒤 결과만 돌려준다. 발표자는 이 설계를 MCP 서버로 만들었고, 진짜 병목은 저장이 아니라 추론 인프라였다고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=Ndp5VaqFrl0" target="_blank" rel="noopener">Turning My Obsidian Vault Into a Local AI Engineer</a></span>
+        <span>발표: Filip Makraduli (Superlinked)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 제품 이름이 자막에서 "Sci", "Sai"로 섞여 들려 이 노트에서는 "Sci(추정)"로 적는다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 Superlinked 소속이고, 발표 내용 대부분이 자사 오픈소스 추론 엔진과 그 위에 만든 MCP 서버다. 성능과 가격 주장은 그 점을 감안해 읽는다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>출발점은 <strong>프라이버시와 토큰 비용</strong>이다. 옵시디언 마크다운 파일을 에이전트에 그대로 열면 허용하지 않는 기관이 있다.</li>
+        <li>해법은 <strong>무거운 전처리를 내 클라우드에 떠넘기기</strong>다. OCR과 개인정보 가리기를 내 VPC의 오픈소스 모델이 하고, Claude Code에는 가려진 결과만 돌아온다.</li>
+        <li>스킬이나 플러그인이 아니라 <strong>MCP 서버</strong>로 만들었다. 서버는 도구만 노출하고, 클라이언트 쪽으로 요청을 되돌리는 기능은 일부러 쓰지 않는다.</li>
+        <li>도구는 여섯 종류다. <strong>문서→마크다운(OCR), 엔티티 추출, 캡션·태그, 구조화 생성, 요약, 질의응답</strong>.</li>
+        <li>데모에서 NDA 문서의 <strong>10개 구간</strong>을 가렸고, 스캔 이미지 계약서를 OCR로 읽어 마크다운으로 바꾸면서 동시에 가렸다.</li>
+        <li>뒤에서 일하는 추론 엔진이 핵심이다. 한 GPU에서 여러 모델을 <strong>핫스왑</strong>하고, <strong>워커마다 배칭</strong>해 전체 지연 시간을 줄인다.</li>
+        <li>발표자의 결론: 겉보기에 Claude Code 친화적인 설계라도 <strong>바탕은 추론 인프라</strong>다. 인프라가 생각보다 훨씬 중요하다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="why">
+        <header><span class="num">01</span><h2>왜 만들었나: 프라이버시, 토큰, 적응성 <span class="ts">00:30</span></h2></header>
+        <p>발표자는 옵시디언 <span class="en">Obsidian</span>에 마크다운 파일을 모아 두고 있었다. 파일끼리 연결한 그래프도 보기 좋았다. 많은 사람이 이런 지식 그래프를 에이전트의 기억으로 쓴다. 문제는 파일 정리가 아니라 그 다음이었다.</p>
+        <p>Claude Code나 Cowork 같은 에이전트에 파일을 열면 내용이 바깥으로 나간다. 어떤 기관과 사람에게는 이것이 허용되지 않는 조건이었다. 그래서 목표는 <strong>비공개로, 직접 호스팅하면서, 쓰기 편하게</strong>였다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">목표 1 · 토큰 절약 <span class="ts">02:30</span></span>
+            <p>Fable 출시 초기의 API 전용 가격 정책 때문에 토큰 경제가 주목받았다고 발표자는 말한다. 특히 스캔과 이미지가 많은 민감 문서를 OCR 하면 토큰이 빠르게 쌓인다.</p>
+            <p class="verdict"><b>덤</b>: 결과물이 작아지면 컨텍스트가 덜 차서 맥락 손실도 줄어든다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">목표 2 · 프라이버시 <span class="ts">03:30</span></span>
+            <p>모든 것을 Claude Code에 붙여 넣어도 괜찮은 상황이 있다. 하지만 민감 문서는 내 VPC나 내 클라우드에서 먼저 처리하고 결과만 돌려받을 수 있어야 한다.</p>
+            <p class="verdict"><b>VPC</b>: 가상 사설 클라우드 <span class="en">Virtual Private Cloud</span>. 내가 통제하는 클라우드 안의 격리된 네트워크.</p>
+          </div>
+          <div class="card">
+            <span class="tag">목표 3 · 적응성 <span class="ts">03:50</span></span>
+            <p>여러 모델을 바꿔 가며 시험하고, 과제별로 미세 조정한 LoRA를 올릴 수 있어야 한다. 민감한 영역일수록 그 분야에 맞춘 조정이 따라붙기 때문이다.</p>
+            <p class="verdict"><b>LoRA</b>: 큰 모델 전체 대신 작은 추가 가중치만 학습하는 저비용 미세 조정 방식.</p>
+          </div>
+        </div>
+        <p>이 세 가지를 한 번에 충족한 것이 Superlinked의 오픈소스 추론 엔진 Sci(추정)였다. 클러스터와 모델 추론을 함께 제공한다. 저장소는 GitHub에 전부 공개돼 있고, 오늘 이야기의 중심인 MCP 통합은 그 안의 하위 패키지다.</p>
+        <p class="note">발표 제목은 "옵시디언 볼트"지만, 발표자는 슬라이드 내용이 제목과 조금 다르다고 처음에 밝혔다. 실제 내용은 옵시디언 자체보다 그 문서를 안전하게 처리하는 MCP 서버와 추론 인프라에 집중한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="bottleneck">
+        <header><span class="num">02</span><h2>병목은 저장이 아니라 추론 <span class="ts">05:10</span></h2></header>
+        <p>데이터를 옵시디언에 두고 연결하는 일은 쉬웠다. API를 쓰면 더 쉬웠다. 어려워진 지점은 따로 있었다.</p>
+        <ul class="plain">
+          <li>오픈소스 모델로 <strong>규모 있게</strong> 추론을 돌리는 것</li>
+          <li>여러 모델을 <strong>바꿔 가며 시험</strong>하는 것</li>
+          <li>그것을 <strong>프로덕션에 배포</strong>하는 것</li>
+        </ul>
+        <p>Sci(추정)는 클러스터와 모델을 함께 배포할 수 있다. 발표자는 이 인프라 이점이 결정적이었다고 말한다.</p>
+        <div class="callout">
+          <span class="title">직접 써 보는 방법 <span class="ts">06:10</span></span>
+          <span>발표자는 데모에 관리형 클러스터를 썼다. 청중은 웹사이트에서 추론 보조금 <span class="en">inference grant</span>을 신청해 API 키를 받거나, Docker 컨테이너로 로컬에서 돌릴 수 있다. 로컬은 느리다. 발표자는 단계별 설명 글을 따로 낼 예정이라고 했다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="why-mcp">
+        <header><span class="num">03</span><h2>스킬이 아니라 MCP 서버인 이유 <span class="ts">07:10</span></h2></header>
+        <p>발표자가 원한 것은 평소 작업 흐름을 깨지 않는 것이다. Claude Code에서 일하다가 민감하거나 토큰이 많이 드는 작업만 내 클라우드로 떠넘기고 계속 일한다. 처음 떠오른 형태는 스킬이나 플러그인이었다. 그러나 결국 MCP 서버 전체를 만들었다.</p>
+        <div class="shift" aria-label="플러그인에서 MCP 서버로">
+          <div><span class="tag">플러그인만 쓰면</span><b>내 노트북에서 돈다</b><span class="muted">같은 경험이지만 무거운 일도 기기 안에서 한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">MCP 서버 + 전용 엣지</span><b>내 클라우드에서 돈다</b><span class="muted">무거운 일은 전용 서버가 맡고, 스킬은 그 도구를 부르기만 한다</span></div>
+        </div>
+        <h3>MCP를 고른 세 가지 이유 <span class="ts">09:00</span></h3>
+        <ul class="plain">
+          <li><strong>책임 분리</strong>: 전용 클러스터가 있으니 역할을 나누는 편이 낫다. 이 뼈대 위에 기능을 더 쌓을 수 있다.</li>
+          <li><strong>내가 통제하는 서버</strong>: 워커 풀과 GPU를 고르고, 어떤 모델이 어디에 고정되는지 알 수 있다.</li>
+          <li><strong>필요한 도구만 노출</strong>: 에이전트가 보는 것은 도구 목록뿐이다.</li>
+        </ul>
+        <p>토큰 절약의 대표 예가 OCR이다. 이미지가 섞인 PDF 10쪽을 좋은 오픈소스 OCR 모델로 먼저 읽고 결과만 에이전트에 돌려주면, 맥락은 얻고 토큰은 덜 쓴다. 개인정보 <span class="en">PII</span>를 가리는 도구도 핵심 쓰임새다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="tiers">
+        <header><span class="num">04</span><h2>세 층 구조와 MCP 통신 <span class="ts">10:40</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>무엇</th><th>어디</th></tr></thead>
+            <tbody>
+              <tr><td>MCP 클라이언트 · 호스트</td><td>Claude Code, Cowork, Claude 데스크톱 등 에이전트 쪽</td><td>내 기기</td></tr>
+              <tr><td>Sci(추정) MCP 서버</td><td>도구를 노출하고 요청을 받아 클러스터에 넘긴다</td><td>내 VPC</td></tr>
+              <tr><td>Sci(추정) 클러스터</td><td>GPU와 워커 풀이 실제 추론을 한다. 큐잉 장치가 있다</td><td>내 VPC</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>MCP의 취지는 통신 창구를 하나로 모으는 것이다. 지금 버전은 도구 호출 중심이지만, 발표자 팀은 평가 결과와 비용에 따라 모델을 고르는 <strong>모델 라우팅</strong>을 만들고 있다. 모든 모델은 오픈소스이고 내 GPU에서 돈다.</p>
+        <h3>통신 방식 <span class="ts">12:10</span></h3>
+        <ul class="plain">
+          <li>호스트, 클라이언트, 서버가 JSON-RPC로 대화한다. 메시지는 요청, 응답, 알림 세 가지다. 초기 악수 <span class="en">handshake</span>에서 인증과 도구 목록 교환이 이루어진다.</li>
+          <li>MCP 표준에서는 클라이언트도 샘플링 <span class="en">sampling</span>이나 유도 <span class="en">elicitation</span>을 열어 양방향 통신을 할 수 있다. <strong>이 프로젝트는 프라이버시 때문에 일부러 쓰지 않는다.</strong> 서버는 악수 때 등록한 도구만 노출하고 응답만 한다.</li>
+          <li>전송은 로컬 개발용 표준 입출력 <span class="en">stdio</span> 대신 스트리밍 HTTP를 쓴다. 예전에는 스트리밍과 HTTP 악수를 엔드포인트 두 개로 나눴지만, 지금은 하나로 합친 표준이 있어 매끄럽다.</li>
+        </ul>
+      </section>
+
+      <!-- 5 -->
+      <section id="tools">
+        <header><span class="num">05</span><h2>제공하는 도구들 <span class="ts">14:30</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>도구</th><th>하는 일</th><th>쓰는 모델</th></tr></thead>
+            <tbody>
+              <tr><td>문서 → 마크다운</td><td>스캔, 이미지, PDF를 텍스트로 바꾼다</td><td>오픈소스 OCR 모델</td></tr>
+              <tr><td>엔티티 추출</td><td>문서에서 사람, 이메일 같은 항목을 뽑는다</td><td>NER 모델</td></tr>
+              <tr><td>캡션 · 태그</td><td>이미지나 문서에 설명과 꼬리표를 붙인다</td><td>비전·언어 모델</td></tr>
+              <tr><td>구조화 생성</td><td>정해진 형식으로 결과를 만든다</td><td>생성 모델</td></tr>
+              <tr><td>요약</td><td>긴 문서를 줄인다</td><td>생성 모델</td></tr>
+              <tr><td>질의응답</td><td>문서에 대해 묻고 답한다</td><td>생성 모델</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">오픈소스 OCR은 품질을 희생하지 않는다 <span class="ts">15:00</span></span>
+          <span>발표자는 OCR 영역에서는 오픈소스 모델이 매우 좋아서 일을 떠넘겨도 품질 손해가 없다고 말한다. 오픈소스 모델 전반이 따라잡고 있고, 그것을 프로덕션에 올리는 길을 만드는 것이 중요하다고 본다.</span>
+        </div>
+        <p>저장소가 공개돼 있으니 도구를 하나 더 만들어 PR을 보낼 수 있다. 새 도구도 같은 추론 엔진을 쓴다. 발표자는 콘텐츠 검사나 정책 점검 같은 도구를 기여하면 더 많은 크레딧을 준다고 했다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="demo">
+        <header><span class="num">06</span><h2>데모: NDA 가리기와 스캔 OCR <span class="ts">18:00</span></h2></header>
+        <p>Claude Code를 패키지 디렉터리에서 연다. 옵시디언에는 받은편지함 <span class="en">inbox</span> 폴더가 있고, 송장 관련 이메일과 전화번호, 사회보장번호가 든 NDA 문서가 들어 있다. 모두 합성 데이터다. 프로젝트의 계기가 된 실제 데이터는 쓰지 않았다.</p>
+        <ol class="plain">
+          <li><strong>"NDA 문서의 데이터를 가려 줘"</strong>라고 자연어로 요청한다. <span class="ts">19:10</span></li>
+          <li>스킬이 로드되고 NDA 파일을 찾는다. 엔드포인트와 API 키는 미리 설정해 두었다. <span class="ts">20:10</span></li>
+          <li>결과: <strong>10개 구간</strong>을 가렸고, 어떤 종류의 항목이 몇 개였는지 라벨 집계가 돌아온다. 이메일과 사람 이름 같은 항목이 마스킹된다.</li>
+          <li><strong>"스캔 문서를 전처리하고 같이 가려 줘"</strong>라고 요청한다. OCR 도구가 호출된다. <span class="ts">20:50</span></li>
+          <li>계약서 "before"는 글자가 아니라 이미지다. "after"는 글자를 추출한 마크다운이고, 개인정보는 이미 가려져 있다. <span class="ts">21:50</span></li>
+        </ol>
+        <div class="callout">
+          <span class="title">Claude Code는 무엇을 보나</span>
+          <span>모든 처리는 내 VPC에서 끝난다. Claude Code나 어떤 에이전트든 가려진 버전만 받는다. 상태 표시줄에 절약한 토큰 수가 뜨는데, 발표자는 이 계산을 더 손봐야 한다고 덧붙였다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="engine">
+        <header><span class="num">07</span><h2>뒤에서 일하는 추론 엔진 <span class="ts">23:00</span></h2></header>
+        <p>기능만 보면 단순해 보인다. 무거운 일은 추론 엔진과 클러스터가 한다. 발표자가 꼽은 설계 포인트는 네 가지다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">핫스왑 <span class="ts">23:20</span></span>
+            <p>여러 모델을 GPU 사이에서 바꿔 올린다. 세부 분야별로 미세 조정한 LoRA가 다섯 개 있다면 바꿔 가며 어느 것이 제일 나은지 시험할 수 있다.</p>
+            <p class="verdict"><b>효과가 큰 곳</b>: GPU 하나에 들어가는 작은 모델. NER, 작은 생성 모델, 임베딩 모델을 한 GPU에서 번갈아 돌린다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">워커별 배칭 <span class="ts">23:50</span></span>
+            <p>게이트웨이가 요청을 여러 워커 풀로 보낸다. 배칭은 앞단에서 한꺼번에 하지 않고 <strong>워커마다</strong> 한다.</p>
+            <p class="verdict"><b>발표자의 측정</b>: 공유 큐 하나를 모든 워커가 끌어가는 방식보다 성능이 좋았다. 모델이 달라도 전체 지연 시간이 줄었다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">워커 풀 나누기 <span class="ts">25:10</span></span>
+            <p>무거운 모델용 풀과, L4 스팟 인스턴스에서 충분히 잘 도는 모델용 풀을 따로 둔다. 비싼 하드웨어를 낭비하지 않는다.</p>
+            <p class="verdict"><b>L4 스팟</b>: 비교적 저렴한 GPU를 중단 가능 조건으로 더 싸게 빌린 것.</p>
+          </div>
+          <div class="card">
+            <span class="tag">오토스케일링 <span class="ts">25:30</span></span>
+            <p>쓰지 않을 때는 줄어든다.</p>
+            <p class="verdict"><b>운영 자산</b>: Helm 차트, Kubernetes 클러스터, Terraform 설정이 모두 공개돼 있다. 코드만이 아니라 배포 전체가 오픈소스다. <span class="ts">31:00</span></p>
+          </div>
+        </div>
+        <p>이 구조 위에 작업 묶음을 올릴 수 있다. 문서 파싱, 콘텐츠 임베딩, 코드 생성, 이미지 캡션, 가드레일, 정책 점검용 구조화 생성 등이다. 발표자 팀의 동료는 독일어 전용 LoRA를 싸게 미세 조정해 독일 법률 문서 같은 좁은 영역에서 성능을 올렸다. <span class="ts">28:40</span></p>
+      </section>
+
+      <!-- 8 -->
+      <section id="benchmark">
+        <header><span class="num">08</span><h2>성능 주장: 임베딩 가격과 품질 <span class="ts">27:00</span></h2></header>
+        <p>발표자 팀이 지금까지 벤치마크를 낸 영역은 임베딩 모델이다. 생성 모델도 있지만 수치는 아직이다.</p>
+        <figure class="chart" aria-label="프런티어 API를 100으로 놓은 비교: 가격은 Sci 약 10, 품질은 Sci 99.8">
+          <span class="chart-title">임베딩 모델 비교 (프런티어 API = 100, 발표자 인용)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>가격 · 프런티어 API</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="가격, 프런티어 API: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>가격 · Sci(추정) 오픈소스</span><span class="val">약 10</span></div>
+              <div class="track"><div class="fill key" style="width:10%" title="가격, Sci: 약 10 (대략 10분의 1)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>품질 · 프런티어 API</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="품질, 프런티어 API: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>품질 · Sci(추정) 과제별 최고 모델</span><span class="val">99.8</span></div>
+              <div class="track"><div class="fill key" style="width:99.8%" title="품질, Sci 과제별 최고 모델: 99.8"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자는 "대략 10배 싸다"고 말했고, 품질은 MTEB 과제로 쟀다고 했다. 가격 막대는 그 말에 맞춰 10으로 그렸다. 자세한 벤치마크는 곧 공개한다고 했다.</span>
+        </figure>
+        <p class="note">이 수치는 발표자 소속 회사의 자체 측정이다. 비교 대상인 "프런티어 모델"이 무엇인지, 어떤 과제였는지는 발표에서 밝히지 않았다.</p>
+        <div class="callout">
+          <span class="title">발표자가 얻은 깨달음 <span class="ts">28:00</span></span>
+          <span>모델 하나하나의 추론이 최적화되지 않았더라도, 인프라와 구조가 잘 짜여 있으면 전체 지연 시간과 성능이 좋아진다. 프로덕션 부하에서는 이 끝에서 끝까지의 개선이 더 중요했다. 발표자 팀은 둘 다 하고 있다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="future">
+        <header><span class="num">09</span><h2>앞으로: 모델 라우팅과 모델 회의 <span class="ts">31:50</span></h2></header>
+        <p>추론을 작업 흐름 속의 작은 상자 하나로 풀어 두면 문서 밖으로도 넓힐 수 있다. 녹취록, 그래프 데이터, 온톨로지 생성, 구조화 생성 등이다. 아래는 <strong>아직 만들지 않은 로드맵</strong>이다.</p>
+        <h3>과제에 따라 모델 고르기 <span class="ts">32:00</span></h3>
+        <ul class="plain">
+          <li>도구 호출이 도구 자체에 묶이지 않고, 그 밑에서 어떤 모델을 쓸지도 고른다. 예: "이 호출은 싼 OCR로".</li>
+          <li>의도 파악과 에이전트 혼합 <span class="en">mixture of agents</span> 방식도 실험 중이다.</li>
+        </ul>
+        <h3>따뜻한 모델을 먼저 친다 <span class="ts">33:20</span></h3>
+        <p>GPU에 이미 올라와 있는 모델은 바로 응답한다. 그래서 어느 모델이 올라와 있고 무엇이 방금 내려갔는지를 보고 라우팅할 수 있다. 때로는 <strong>비싸지만 이미 올라온 모델</strong>을 쓰는 편이, 싸지만 다시 올려야 하는 모델보다 저렴하다. 이 논리는 도구 수준을 넘어 비용과 사용량을 최적화한다.</p>
+        <h3>판사 모델과 모델 회의 <span class="ts">35:00</span></h3>
+        <p>모델끼리 서로 판정하는 판사 구조나 모델 회의 <span class="en">council of models</span>도 선택지다. 과제 난이도에 따라 추론 도구를 끼우거나 호출할 모델을 바꾸는 식이다.</p>
+        <div class="callout warn">
+          <span class="title">발표자가 실제로 겪은 문제 <span class="ts">35:30</span></span>
+          <span>요약 도구에 생각 토큰 <span class="en">thinking tokens</span>을 쓰는 모델을 붙였더니, 요약이 아주 짧거나 아예 나오지 않았다. 출력이 생각 쪽에서 다 소진됐기 때문이다. 어떤 모델을 쓰는지, 생각 토큰을 켜는지 끄는지를 확인해야 한다.</span>
+        </div>
+        <p>라우터와 회의 구조의 단점도 안다. GPU가 끝없는 추론에 낭비될 수 있다. 편향된 판사 모델이 생길 수 있다. 지표를 최적화하다 보면 지표가 진짜 목표에서 멀어지고 모델이 그것을 해킹해 평가로 쓸 수 없게 된다. 발표자 팀은 그래서 먼저 평가에 힘을 쏟는다고 말한다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="takeaway">
+        <header><span class="num">10</span><h2>발표자의 핵심 메시지 <span class="ts">37:20</span></h2></header>
+        <blockquote>인프라와 추론은 생각보다 훨씬 중요하다. Claude Code와 편하게 일하는 겉모습 아래에서 바탕은 결국 추론이다.<cite>발표자의 말을 옮김</cite></blockquote>
+        <h3>문서와 모델 카탈로그 <span class="ts">38:00</span></h3>
+        <ul class="plain">
+          <li>지원 파일 형식, LoRA가 들어가는 자리, 문제 해결 안내가 문서에 있다.</li>
+          <li>모델 카탈로그에서 출력 형식과 아키텍처별로 고를 수 있다. 모델 계열마다 어텐션 구현이 달라 같은 방식으로 순전파를 돌릴 수 없으므로, 계열별 런타임이 따로 있다.</li>
+          <li>모델은 인코딩용과 스코어링용으로 꼬리표가 붙어 있다. 스코어링 모델은 리랭킹에 쓴다. 이 MCP로 나만의 검색 파이프라인을 만들 수 있다.</li>
+          <li>퀵스타트와 모델 버전 안내가 있고, OpenAI API로 만든 흐름을 옮겨 오는 방법도 있다.</li>
+        </ul>
+        <p>런던에서 Tech Europe, DeepMind와 함께 해커톤을 열었다. 참가자들은 검색과 리랭킹, 생성 양쪽을 시험했다. <span class="ts">39:50</span></p>
+      </section>
+
+      <!-- 11 -->
+      <section id="qa">
+        <header><span class="num">11</span><h2>질의응답: 프라이버시는 정말 지켜지나 <span class="ts">42:00</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>발표자의 답</th></tr></thead>
+            <tbody>
+              <tr><td>Claude는 원본을 보나</td><td>보지 않는다. 가려진 버전만 받는다. 지금 구조에서는 그 쪽만 본다.</td></tr>
+              <tr><td>Claude가 엉뚱하게 원본에 접근하면</td><td>그런 일이 생기는지 평가할 수 있다. 발표자의 테스트에서는 MCP와 나머지를 VPC에 두었을 때 새지 않았다. 가드레일을 더 둘 수 있다. 최악의 경우 오픈소스 모델로 하네스를 직접 만들어도 된다. 그래도 토큰 절약과 맥락 개선은 유지된다.</td></tr>
+              <tr><td>클러스터는 꼭 Superlinked 것이어야 하나</td><td>아니다. 저장소의 Terraform으로 내 클러스터를 세울 수 있다. 관리형 클러스터는 데모와 해커톤용이다. GPU가 있으면 완전히 내 것으로 운영한다.</td></tr>
+              <tr><td>MCP 서버가 파일을 갖고 있나</td><td>파일은 메인 워커로 보내지고 거기서 처리된다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">질문자의 목소리는 자막에 거의 잡히지 않았다. 위 질문 문장은 발표자가 다시 읽어 준 내용으로 재구성한 것이다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>출발점은 프라이버시, 토큰 비용, 적응성 세 가지다. 옵시디언 정리는 쉬웠고 <strong>오픈소스 추론을 규모 있게 돌리는 것</strong>이 어려웠다.</li>
+          <li>무거운 전처리는 <strong>내 VPC</strong>에서 하고, 에이전트에는 작고 가려진 결과만 돌려준다.</li>
+          <li>플러그인은 내 기기에서 돈다. <strong>MCP 서버 + 전용 클러스터</strong>는 같은 경험을 내 클라우드로 옮긴다.</li>
+          <li>구조는 세 층이다. MCP 클라이언트(내 기기), MCP 서버(내 VPC), GPU 클러스터(내 VPC).</li>
+          <li>서버는 <strong>도구만 노출</strong>한다. 샘플링과 유도 같은 양방향 기능은 프라이버시 때문에 쓰지 않는다. 전송은 스트리밍 HTTP다.</li>
+          <li>도구는 OCR, 엔티티 추출, 캡션·태그, 구조화 생성, 요약, 질의응답 여섯 가지다. 새 도구는 PR로 더할 수 있다.</li>
+          <li>데모에서 NDA의 10개 구간을 가렸고, 스캔 이미지는 OCR로 읽으며 동시에 가렸다. Claude Code는 가려진 버전만 본다.</li>
+          <li>추론 엔진의 핵심은 <strong>핫스왑, 워커별 배칭, 워커 풀 나누기, 오토스케일링</strong>이다. 배포 설정까지 오픈소스다.</li>
+          <li>임베딩에서 가격 약 10분의 1, 품질 99.8%라고 발표자는 주장한다. 자사 측정이다.</li>
+          <li>로드맵은 모델 라우팅과 모델 회의다. 생각 토큰을 켠 모델은 요약을 망칠 수 있다. 결론은 <strong>바탕은 추론 인프라</strong>라는 것이다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 이 프로젝트를 시작한 세 가지 목표는?</span></summary><div class="answer">토큰 절약, 프라이버시(직접 호스팅), 적응성(여러 모델과 LoRA를 바꿔 쓰기).</div></details>
+          <details><summary><span class="qn">Q2</span><span>옵시디언 정리와 추론 중 어느 쪽이 병목이었나?</span></summary><div class="answer">추론. 데이터를 저장하고 연결하는 것은 쉬웠고, 오픈소스 모델을 규모 있게 돌리고 여러 모델을 시험하고 프로덕션에 배포하는 것이 어려웠다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>플러그인 대신 MCP 서버를 택한 이유 세 가지는?</span></summary><div class="answer">전용 클러스터가 있으니 책임을 나누는 편이 낫다. 워커 풀과 GPU를 내가 통제한다. 에이전트에는 필요한 도구만 노출한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>세 층 구조에서 각 층은 어디에 있나?</span></summary><div class="answer">MCP 클라이언트·호스트는 내 기기(Claude Code 등). MCP 서버와 GPU 클러스터는 내 VPC.</div></details>
+          <details><summary><span class="qn">Q5</span><span>MCP 표준의 샘플링과 유도를 이 프로젝트가 쓰지 않는 이유는?</span></summary><div class="answer">프라이버시. 클라이언트 쪽으로 요청을 되돌리는 양방향 통신 대신, 서버는 악수 때 등록한 도구만 노출하고 응답만 한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>토큰 절약이 가장 분명하게 드러나는 작업은?</span></summary><div class="answer">OCR. 이미지가 섞인 PDF 10쪽을 오픈소스 OCR로 먼저 읽고 텍스트만 돌려주면 토큰이 줄고 컨텍스트도 덜 찬다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>데모에서 Claude Code가 받은 것은 무엇이고 받지 않은 것은 무엇인가?</span></summary><div class="answer">가려진 마크다운과 라벨 집계를 받았다. 원본 NDA와 스캔 이미지는 받지 않았다. 처리는 VPC 안에서 끝났다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>배칭을 앞단 공유 큐가 아니라 워커마다 한 이유는?</span></summary><div class="answer">발표자 팀의 측정에서 공유 큐 하나를 모든 워커가 끌어가는 방식보다 성능이 좋았고, 모델이 달라도 전체 지연 시간이 줄었다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>핫스왑이 특히 효과적인 모델 종류는?</span></summary><div class="answer">GPU 하나에 들어가는 작은 모델. NER, 작은 생성 모델, 임베딩 모델을 한 GPU에서 번갈아 올린다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>요약 도구에서 발표자가 겪은 문제와 원인은?</span></summary><div class="answer">요약이 아주 짧거나 아예 안 나왔다. 생각 토큰을 쓰는 모델이라 출력이 생각 쪽에서 소진됐기 때문이다. 모델 선택과 생각 토큰 설정을 확인해야 한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>"따뜻한 모델"에 따른 라우팅은 무슨 뜻인가?</span></summary><div class="answer">GPU에 이미 올라온 모델은 바로 응답하므로, 비싸지만 올라온 모델을 쓰는 편이 싸지만 다시 올려야 하는 모델보다 저렴할 수 있다는 것.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 말한 단 하나의 결론은?</span></summary><div class="answer">인프라와 추론이 생각보다 훨씬 중요하다. 에이전트 친화적인 겉모습 아래의 바탕은 추론이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 환경에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트에 그대로 열면 안 되는 문서 종류를 적는다<span class="how">예: 계약서, 송장, 개인정보가 든 이메일. 이것이 전처리 대상이다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>토큰이 많이 드는 전처리 작업을 뽑는다<span class="how">스캔 OCR, 이미지 캡션, 긴 문서 요약. 작은 결과만 에이전트에 돌려줄 수 있는 것부터</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>전처리를 어디서 돌릴지 정한다<span class="how">로컬 Docker(느림), 내 클라우드(Terraform), 관리형 클러스터(시험용). 민감도에 따라 고른다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>MCP 서버가 도구만 노출하는지 확인한다<span class="how">샘플링과 유도가 꺼져 있는지, 악수 때 등록한 도구 외에 열린 것이 없는지</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트가 원본을 못 보는지 직접 시험한다<span class="how">가려진 결과만 받는지, 에이전트가 원본 파일 경로를 열려고 하는지 로그로 확인</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>요약·생성 도구에 쓰는 모델의 생각 토큰 설정을 확인한다<span class="how">출력이 비정상적으로 짧으면 생각 토큰이 출력을 먹고 있는지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>절약한 토큰을 잰다<span class="how">전처리 전후의 입력 토큰 수를 비교한다. 발표자도 상태 표시줄 계산을 손보는 중이라고 했다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>작은 모델은 한 GPU에 여러 개 올려 핫스왑한다<span class="how">NER, 임베딩, 작은 생성 모델. 무거운 모델은 풀을 따로 둔다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>옵시디언 볼트</td><td>Obsidian vault. 마크다운 파일을 모아 둔 폴더. 파일끼리 링크로 연결해 그래프로 본다</td></tr>
+              <tr><td>VPC</td><td>Virtual Private Cloud. 내가 통제하는 클라우드 안의 격리된 네트워크</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 에이전트가 외부 도구와 데이터를 한 가지 방식으로 부르게 하는 표준</td></tr>
+              <tr><td>호스트 / 클라이언트 / 서버</td><td>호스트는 에이전트 앱, 클라이언트는 그 안에서 서버와 연결을 맺는 부분, 서버는 도구를 제공하는 쪽</td></tr>
+              <tr><td>JSON-RPC</td><td>JSON 형식으로 요청, 응답, 알림을 주고받는 통신 규약</td></tr>
+              <tr><td>stdio / 스트리밍 HTTP</td><td>MCP 전송 방식. stdio는 같은 기기 안의 로컬 개발용, 스트리밍 HTTP는 네트워크 너머 서버용</td></tr>
+              <tr><td>샘플링 / 유도</td><td>Sampling / Elicitation. 서버가 클라이언트에 모델 호출이나 사용자 입력을 되묻는 MCP 기능. 이 프로젝트는 쓰지 않는다</td></tr>
+              <tr><td>OCR</td><td>Optical Character Recognition. 이미지 속 글자를 텍스트로 읽는 기술</td></tr>
+              <tr><td>NER</td><td>Named Entity Recognition. 문장에서 사람, 조직, 이메일 같은 항목을 찾아내는 기술</td></tr>
+              <tr><td>PII</td><td>Personally Identifiable Information. 개인을 알아볼 수 있는 정보. 이름, 전화번호, 사회보장번호 등</td></tr>
+              <tr><td>LoRA</td><td>Low-Rank Adaptation. 큰 모델 전체 대신 작은 추가 가중치만 학습하는 저비용 미세 조정</td></tr>
+              <tr><td>핫스왑</td><td>Hot swapping. 서비스를 멈추지 않고 GPU에 올린 모델을 바꾸는 것</td></tr>
+              <tr><td>배칭</td><td>Batching. 여러 요청을 묶어 한 번에 처리해 GPU 효율을 높이는 것</td></tr>
+              <tr><td>워커 풀</td><td>Worker pool. 같은 종류의 작업을 맡는 처리 단위의 묶음. 하드웨어별로 나눌 수 있다</td></tr>
+              <tr><td>L4 스팟 인스턴스</td><td>비교적 저렴한 NVIDIA L4 GPU 서버를 중단 가능 조건으로 더 싸게 빌린 것</td></tr>
+              <tr><td>오토스케일링</td><td>Auto scaling. 부하에 따라 서버 수를 자동으로 늘리고 줄이는 것</td></tr>
+              <tr><td>임베딩</td><td>Embedding. 텍스트를 숫자 벡터로 바꿔 의미 비교와 검색에 쓰는 것</td></tr>
+              <tr><td>리랭킹 / 스코어링</td><td>Re-ranking. 검색으로 뽑은 후보를 다시 점수 매겨 순서를 고치는 것</td></tr>
+              <tr><td>MTEB</td><td>Massive Text Embedding Benchmark. 임베딩 모델을 여러 과제로 평가하는 공개 벤치마크</td></tr>
+              <tr><td>모델 라우팅</td><td>Model routing. 과제, 비용, 평가 결과에 따라 어떤 모델에 요청을 보낼지 고르는 것</td></tr>
+              <tr><td>생각 토큰</td><td>Thinking tokens. 모델이 답하기 전에 내부 추론에 쓰는 출력. 켜 두면 실제 답이 짧아질 수 있다</td></tr>
+              <tr><td>모델 회의</td><td>Council of models. 여러 모델이 서로 판정하거나 합의해 답을 정하는 구조</td></tr>
+              <tr><td>Helm / Kubernetes / Terraform</td><td>컨테이너 배포 패키지, 컨테이너 운영 플랫폼, 클라우드 인프라를 코드로 세우는 도구</td></tr>
+              <tr><td>하네스</td><td>모델을 감싸 도구, 순서, 규칙, 검사를 정해 주는 실행 틀. Claude Code도 하네스다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>시작. 제목과 슬라이드가 조금 다르다는 안내</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>옵시디언에서 출발, 프라이버시 요구</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>목표 1: 토큰 절약, OCR 비용</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>목표 2: VPC에서 전처리</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>목표 3: 여러 모델과 LoRA</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>Superlinked Sci(추정) 저장소와 MCP 패키지</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>병목은 추론이었다</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>관리형 클러스터, 추론 보조금, Docker</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>작업 흐름을 깨지 않고 떠넘기기</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>PDF 10쪽 OCR 예시</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>왜 API나 플러그인이 아니라 MCP인가</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>PII 가리기 도구</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>세 층 구조</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>모델 라우팅 방향</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>JSON-RPC, 악수, 인증</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>샘플링·유도를 쓰지 않는 이유</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>stdio 대신 스트리밍 HTTP</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>도구 목록</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>PR로 도구 추가, 설정 방법</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>데모 시작: 받은편지함 폴더</td></tr>
+              <tr><td><span class="ts">19:10</span></td><td>NDA 가리기 요청</td></tr>
+              <tr><td><span class="ts">20:10</span></td><td>10개 구간 가림, 라벨 집계</td></tr>
+              <tr><td><span class="ts">20:50</span></td><td>스캔 OCR + 가리기</td></tr>
+              <tr><td><span class="ts">21:50</span></td><td>계약서 before/after</td></tr>
+              <tr><td><span class="ts">23:00</span></td><td>추론 엔진: 핫스왑, 배칭</td></tr>
+              <tr><td><span class="ts">24:10</span></td><td>MCP 아키텍처, VPC 경계</td></tr>
+              <tr><td><span class="ts">25:10</span></td><td>워커 풀, L4 스팟, 오토스케일링</td></tr>
+              <tr><td><span class="ts">26:20</span></td><td>작업 묶음과 기여 요청</td></tr>
+              <tr><td><span class="ts">27:00</span></td><td>임베딩 벤치마크: 가격 10분의 1, 품질 99.8%</td></tr>
+              <tr><td><span class="ts">28:00</span></td><td>인프라가 주는 끝에서 끝까지의 개선</td></tr>
+              <tr><td><span class="ts">28:40</span></td><td>독일어 LoRA 사례</td></tr>
+              <tr><td><span class="ts">30:00</span></td><td>같은 엣지가 모든 문서 작업을 처리</td></tr>
+              <tr><td><span class="ts">31:00</span></td><td>Helm, Kubernetes, Terraform</td></tr>
+              <tr><td><span class="ts">31:50</span></td><td>로드맵: 모델 라우팅</td></tr>
+              <tr><td><span class="ts">33:20</span></td><td>따뜻한 모델 기준 라우팅</td></tr>
+              <tr><td><span class="ts">35:00</span></td><td>판사 모델, 모델 회의</td></tr>
+              <tr><td><span class="ts">35:30</span></td><td>생각 토큰이 요약을 망친 경험</td></tr>
+              <tr><td><span class="ts">36:20</span></td><td>라우터와 회의 구조의 단점, 평가 중시</td></tr>
+              <tr><td><span class="ts">37:20</span></td><td>핵심 메시지: 바탕은 추론 인프라</td></tr>
+              <tr><td><span class="ts">38:00</span></td><td>문서, 모델 카탈로그, 런타임</td></tr>
+              <tr><td><span class="ts">39:50</span></td><td>런던 해커톤</td></tr>
+              <tr><td><span class="ts">40:30</span></td><td>퀵스타트, OpenAI API에서 옮기기</td></tr>
+              <tr><td><span class="ts">42:00</span></td><td>질의응답: Claude는 가려진 버전만 본다</td></tr>
+              <tr><td><span class="ts">43:00</span></td><td>데이터 유출 가능성과 가드레일</td></tr>
+              <tr><td><span class="ts">45:00</span></td><td>직접 호스팅과 Terraform</td></tr>
+              <tr><td><span class="ts">46:00</span></td><td>파일은 메인 워커에서 처리</td></tr>
+              <tr><td><span class="ts">47:00</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'Ndp5VaqFrl0:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

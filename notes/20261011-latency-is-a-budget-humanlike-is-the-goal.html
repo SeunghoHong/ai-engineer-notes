@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>음성 에이전트 지연 예산</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#speed">빠르기만 하면 될까</a></li>
+      <li><a href="#pipeline">음성 에이전트의 세 칸</a></li>
+      <li><a href="#leaderboard">리더보드 함정</a></li>
+      <li><a href="#perceived">측정 지연과 체감 지연</a></li>
+      <li><a href="#tools">오래 걸리는 도구</a></li>
+      <li><a href="#demo">데모: 호텔 예약 전화</a></li>
+      <li><a href="#turns">언제 말할까: 턴 감지</a></li>
+      <li><a href="#window">1.5초 창 안에 넣기</a></li>
+      <li><a href="#benchmark">대화를 시험하는 벤치마크</a></li>
+      <li><a href="#model">LiveKit이 내놓은 모델</a></li>
+      <li><a href="#conclusion">결론과 체크리스트</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 에이전트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-11 · 17분 · 영어 발표 한글 정리</span>
+      <h1>지연은 예산, 목표는 사람다움</h1>
+      <p class="lead">음성 AI는 사람이 말을 겹쳐 하면 무너진다. 업계는 더 빠른 모델로 풀려고 한다. 발표자는 응답 시간을 넘지 말아야 할 예산으로 보고, 그 안에서 가장 사람답게 구는 시스템을 골라 대화 단위로 시험하라고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=j4AmIK6OvHc" target="_blank" rel="noopener">Latency Is a Budget. Humanlike Is the Goal.</a></span>
+        <span>발표: Jesse Hall (LiveKit)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에 "Gemini 4 31B"로 한 번 적힌 모델은 바로 뒤에서 Gemma 4 31B로 다시 불려 Gemma 4 31B로 적었다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>실시간 음성 에이전트는 사람이 끼어들면 무너진다. 업계의 흔한 답은 "더 빠르게"인데, 발표자는 <strong>틀린 답</strong>이라고 한다.</li>
+        <li><strong>지연은 지켜야 할 예산이고, 목표는 사람다움이다.</strong> 말하면서 듣고, 생각 중인지 말이 끝났는지 구분하고, 말을 바꿔도 따라가야 한다.</li>
+        <li>리더보드는 부품을 깨끗한 오디오로 채점한다. 실제로 내보내는 건 <strong>STT → LLM → TTS가 이어진 파이프라인</strong>이라 앞 칸의 오류가 뒤로 흘러간다.</li>
+        <li>대시보드 숫자 말고 <strong>사람이 듣는 지연</strong>을 잰다. 어떤 TTS는 오디오 앞에 최대 0.75초의 무음을 붙인다.</li>
+        <li>1초 넘게 걸리는 도구는 <strong>비동기</strong>로 돌린다. 에이전트는 "잠시만요" 하며 대화를 이어간다.</li>
+        <li>마지막 음절부터 첫 소리까지 <strong>1.5초가 한계, 600ms면 사람답다.</strong> 오디오로 턴 끝을 감지하고 미리 답을 만들기 시작해 이 창 안에 맞춘다.</li>
+        <li><strong>부품이 아니라 대화를 시험한다.</strong> LiveKit은 흉내 발신자로 결과를 채점하는 오픈소스 벤치마크를 내놨다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="speed">
+        <header><span class="num">01</span><h2>빠르기만 하면 될까 <span class="ts">00:10</span></h2></header>
+        <p>지금 만드는 에이전트는 대부분 <strong>배경 에이전트</strong><span class="en">background agent</span>다. 코드를 쓰거나 리서치를 한다. 일을 맡기고 자리를 비웠다가 돌아오면 된다. 10초, 10분 늦어도 아무도 신경 쓰지 않는다.</p>
+        <p>다른 종류도 있다. 약국 처방 재조제, 항공사, 자동차 대리점에 전화하면 받는 <strong>실시간 에이전트</strong><span class="en">real-time agent</span>다. 이 통화에서 사람은 가장 사람다운 행동을 한다. AI가 말하는 중에 말을 겹쳐 한다. 그러면 음성 에이전트가 무너지고 대화가 어색해진다.</p>
+
+        <div class="shift" aria-label="문제를 보는 관점의 이동">
+          <div><span class="tag">업계의 흔한 답</span><b>더 빠르게</b><span class="muted">더 빠른 모델, 지연 시간 100ms 더 줄이기</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 답</span><b>예산 안에서 가장 사람답게</b><span class="muted">모델 선택과 파이프라인 구성으로 사람다운 행동을 만든다</span></div>
+        </div>
+
+        <h3>목표는 사람다움 <span class="ts">01:20</span></h3>
+        <p>지연 시간<span class="en">latency</span>은 넘지 말아야 할 <strong>예산</strong>이다. 목표는 따로 있다. 음성 AI가 최대한 사람처럼 구는 것이다.</p>
+        <ul class="plain">
+          <li>말하면서 동시에 듣는다</li>
+          <li>상대가 말을 마쳤는지, 아직 생각 중인지 구분한다</li>
+          <li>상대가 마음을 바꾸면 그대로 따라간다</li>
+        </ul>
+        <p>속도만으로는 이 중 아무것도 얻지 못한다. 얻는 길은 <strong>어떤 모델을 고르고 파이프라인을 어떻게 구성하느냐</strong>다. 그런데 첫 문제가 여기서 나온다. 모델을 어떻게 골라야 하는지 아무도 알려주지 않는다. 리더보드도, 모델 업체도 도와주지 못한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="pipeline">
+        <header><span class="num">02</span><h2>음성 에이전트의 세 칸 <span class="ts">02:30</span></h2></header>
+        <p>LiveKit은 오픈소스 실시간 프레임워크이자 인프라다. 상대의 말을 듣고, 보고, 말하는 에이전트를 만든다. 음성뿐 아니라 영상, 데이터, 물리 AI까지 다룬다. 발표자는 OpenAI가 ChatGPT 고급 음성 모드에 LiveKit을 골랐다고 소개했다.</p>
+        <p class="note">발표자는 LiveKit 소속이다. 회사 소개와 사례는 그 점을 감안해 읽자.</p>
+
+        <h3>세 모델이 하나의 시스템으로 돈다 <span class="ts">03:10</span></h3>
+        <p>이 발표는 가장 어려운 음성만 다룬다. 음성 에이전트에는 칸이 세 개 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>칸</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>음성 인식 <span class="en">STT</span></td><td>사람의 말을 글로 바꾼다</td></tr>
+              <tr><td>언어 모델 <span class="en">LLM</span></td><td>글을 읽고 답을 글로 만든다</td></tr>
+              <tr><td>음성 합성 <span class="en">TTS</span></td><td>답을 소리로 바꾼다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">실시간 모델은?</span>
+          <span>세 칸을 하나로 처리하는 실시간 모델<span class="en">real-time model</span>도 있다. 발표자는 새로 나와 빠르게 좋아지고 있지만 모든 경우에 맞지는 않는다고 했다. 선택지가 하나 더 생기니 모델 고르기는 오히려 더 복잡해진다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="leaderboard">
+        <header><span class="num">03</span><h2>리더보드 함정 <span class="ts">03:50</span></h2></header>
+        <p>고를 수 있는 모델은 수백 개, 업체는 수십 곳이다. 많은 사람이 리더보드 맨 위에 있다는 이유로 모델을 고른다. 실시간 에이전트에서는 이 방법이 통하지 않는다.</p>
+        <p>리더보드는 <strong>부품</strong>을 채점한다. 우리가 내보내는 건 부품이 줄줄이 이어진 <strong>파이프라인</strong><span class="en">cascade</span>이다.</p>
+
+        <div class="callout warn">
+          <span class="title">오류는 아래로 흐른다 <span class="ts">04:10</span></span>
+          <span>발신자가 "3일 화요일"에 예약하고 싶다고 한다. STT는 "30일"로 듣는다. 그 순간부터 LLM이 아무리 똑똑해도 소용없다. LLM은 틀린 날짜로 자신 있게 예약한다. 뒤 칸들은 무엇이 잘못됐는지 모른다.</span>
+        </div>
+
+        <p>리더보드 점수는 <strong>조용한 방의 깨끗한 오디오</strong>로 잰 것이다. 실제 발신자는 스피커폰으로, 차 안에서, 뒷좌석 아이들 소리 속에서 전화한다. 리더보드는 내 사용자를 만나 본 적이 없다. 발표자는 이것을 <strong>리더보드 함정</strong><span class="en">leaderboard trap</span>이라 부른다. 점수는 모델을 재지만, 우리가 내보내는 건 대화다.</p>
+
+        <div class="shift" aria-label="질문 바꾸기">
+          <div><span class="tag">흔한 질문</span><b>가장 좋은 STT, LLM, TTS는?</b><span class="muted">리더보드가 있다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">물어야 할 질문 <span class="ts">05:00</span></span><b>어떤 스택을 내보낼까?</b><span class="muted">지금까지 리더보드가 없었다</span></div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="perceived">
+        <header><span class="num">04</span><h2>측정 지연과 체감 지연 <span class="ts">05:30</span></h2></header>
+        <p>리더보드를 보고 모델을 골랐다고 하자. 이제 지연을 재기 시작한다. 다음 문제는 <strong>엉뚱한 것을 잰다</strong>는 점이다.</p>
+        <p>TTS 업체는 <strong>첫 바이트까지 시간</strong><span class="en">TTFB, time to first byte</span>을 보고한다. 대시보드에서는 아주 좋아 보인다. 하지만 바이트는 소리가 아니다.</p>
+        <div class="callout warn">
+          <span class="title">앞에 붙은 무음</span>
+          <span>발표자 팀이 재 보니 인기 있는 TTS 업체 중에 오디오 앞부분에 무음을 수백 ms씩 붙여 보내는 곳이 있었다. 최악은 첫 소리 전에 약 0.75초가 통째로 무음이었다.</span>
+        </div>
+        <p>발신자가 듣는 건 <strong>첫 소리까지 시간</strong><span class="en">time to first audio</span>이다. 이 발표 전체가 이 구분 위에 서 있다. <strong>측정 지연</strong><span class="en">measured latency</span>은 대시보드가 말하는 숫자다. <strong>체감 지연</strong><span class="en">perceived latency</span>은 사용자가 듣는 시간이다. 대시보드는 빠르다고 해도 귀는 느리다고 한다.</p>
+
+        <h3>LLM도 같다 <span class="ts">06:20</span></h3>
+        <p><strong>첫 토큰까지 시간</strong><span class="en">TTFT, time to first token</span>은 글을 기준으로 한 숫자다. TTS는 토큰 하나로 말을 시작할 수 없다. 첫 문장이 통째로 있어야 한다. 그래서 음성에서는 첫 문장이 완성되는 시간이 중요하다. 이 기준으로 재면 모델 순위가 달라진다. 토큰을 가장 빨리 흘려보내는 모델이 첫 문장을 가장 먼저 끝내는 모델은 아니다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>칸</th><th>대시보드가 재는 것</th><th>사람이 겪는 것</th></tr></thead>
+            <tbody>
+              <tr><td>TTS</td><td>첫 바이트까지 시간</td><td>첫 소리까지 시간. 앞에 붙은 무음까지 포함한다</td></tr>
+              <tr><td>LLM</td><td>첫 토큰까지 시간</td><td>첫 문장이 완성되기까지 시간. TTS는 이때부터 말할 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="tools">
+        <header><span class="num">05</span><h2>오래 걸리는 도구 <span class="ts">07:00</span></h2></header>
+        <p>지연을 완벽하게 재도, 벤치마크가 완전히 무시하는 부분이 남는다. 실제 에이전트는 수다만 떨지 않는다. 주문을 조회하고, 빈 자리를 확인하고, 객실을 예약한다. 이런 <strong>도구</strong><span class="en">tool</span> 호출은 시간이 걸린다.</p>
+
+        <figure class="chart" aria-label="도구 실행 시간 비교: 2초, 10초, 40초. 비동기 기준 1초">
+          <span class="chart-title">도구 하나가 걸리는 시간과 비동기 기준 (초)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>짧은 도구</span><span class="val">2</span></div>
+              <div class="track"><div class="fill" style="width:5%" title="짧은 도구: 2초"></div><div class="baseline" style="left:2.5%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>중간 도구</span><span class="val">10</span></div>
+              <div class="track"><div class="fill" style="width:25%" title="중간 도구: 10초"></div><div class="baseline" style="left:2.5%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>긴 도구</span><span class="val">40 이상</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="긴 도구: 40초 이상"></div><div class="baseline" style="left:2.5%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 1초 (비동기 기준)</span><span>40</span></div>
+          <span class="caption">발표자가 예로 든 도구 시간이다. 1초 기준은 발표 끝 체크리스트에서 나왔다. 40초 막대는 "40초 이상"이라 40에 맞춰 그렸다.</span>
+        </figure>
+
+        <p>어떤 모델을 골라도 40초가 넘는 지연은 숨길 수 없다.</p>
+
+        <h3>사람 접수원처럼 시간을 번다 <span class="ts">07:20</span></h3>
+        <p>사람 접수원은 예약 시스템이 뜨는 동안 얼어붙지 않는다. "잠시만요, 계정을 찾아볼게요"라고 말한다. 시간을 벌고, 일하면서 계속 듣는다. 이게 우리가 원하는 사람다운 행동이다.</p>
+        <p>에이전트도 할 수 있다. 발표에서 보여 준 유일한 코드가 이 부분이다. 평범한 도구와 <strong>딱 한 줄</strong>만 다르다. 그 줄에서 보내는 <strong>첫 업데이트</strong>가 마이크를 에이전트에게 돌려준다. 도구는 뒤에서 계속 일한다.</p>
+
+        <div class="shift" aria-label="동기 도구에서 비동기 도구로">
+          <div><span class="tag">보통의 도구</span><b>도구가 끝날 때까지 대화가 멈춘다</b><span class="muted">40초 동안 침묵. 발신자는 끊긴 줄 안다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">비동기 도구 <span class="ts">07:50</span></span><b>첫 업데이트로 대화를 돌려준다</b><span class="muted">"잠시만요" 하고 대화를 이어간다. 도구는 뒤에서 계속 돈다</span></div>
+        </div>
+        <p>요령은 이것 하나다. <strong>대화와 도구가 같은 실행 흐름<span class="en">thread</span>을 함께 쓰지 않게 한다.</strong></p>
+      </section>
+
+      <!-- 6 -->
+      <section id="demo">
+        <header><span class="num">06</span><h2>데모: 호텔 예약 전화 <span class="ts">08:20</span></h2></header>
+        <p>가상의 Live Oak 호텔에 전화해 객실을 예약하는 데모다.</p>
+        <ol class="plain">
+          <li>발신자가 객실 예약을 요청한다. 에이전트가 날짜를 묻는다. 10월 10~12일이다.</li>
+          <li>에이전트가 인원을 묻는다. 2명이다.</li>
+          <li>에이전트가 객실 종류와 전망을 묻는다. 바다 전망이다.</li>
+          <li>에이전트가 예약자 이름을 묻는다. Jesse Hall이다.</li>
+          <li>에이전트가 확인한다. 10월 10~12일, 킹룸, 바다 전망, $582.40, 끝자리 1111 카드.</li>
+          <li>발신자가 말을 바꾼다. "12월 20~24일로 바꿔 주세요."</li>
+          <li>에이전트가 금액을 $1,164.80으로 다시 계산한다. 확인 질문이 끝나기 전에 발신자가 "네"라고 끼어든다. 예약이 끝난다.</li>
+        </ol>
+        <p class="note">2박(10~12일)이 4박(20~24일)으로 늘어 금액이 정확히 두 배가 됐다. 데모 속 계산은 맞다.</p>
+
+        <h3>한 모델이 아니라 시스템이 잘한 것 <span class="ts">09:30</span></h3>
+        <p>발표 시간 때문에 일부 구간은 빠르게 돌렸다. 그래서 데모의 응답 속도는 실제 그대로가 아니다. 발표자가 보여 주려 한 건 행동이다.</p>
+        <ul class="plain">
+          <li>어색한 멈춤 없이 대화가 이어졌다</li>
+          <li>발신자가 끼어들어도 계속 진행했다</li>
+          <li>발신자가 중간에 마음을 바꿔도 그대로 따라갔다</li>
+        </ul>
+        <p>이건 모델 하나가 잘한 결과가 아니다. <strong>인프라, 프레임워크, 모델이 함께 맞물린 시스템 전체</strong>가 잘한 결과다. 부품이나 모델 하나를 재는 벤치마크는 이걸 보지 못한다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="turns">
+        <header><span class="num">07</span><h2>언제 말할까: 턴 감지 <span class="ts">10:00</span></h2></header>
+        <p>리더보드가 완전히 놓치는 축이 하나 더 있다. <strong>언제 말하고 언제 말하지 말아야 하는지</strong> 아는 것이다.</p>
+        <p>사람은 약 200ms 안에 말할 차례를 주고받는다<span class="en">turn-taking</span>. 단서는 대부분 말투다. 전사가 다 돌아올 때까지 기다리는 파이프라인은 그 시점에 이미 늦다.</p>
+        <p>그래서 LiveKit은 <strong>오디오 자체를 듣는 턴 감지기</strong><span class="en">turn detector</span>를 만들었다. 말의 리듬, 음높이, 억양을 듣는다. <span class="ts">10:20</span></p>
+
+        <figure class="chart" aria-label="같은 지연 예산에서 사용자 말을 끊은 비율: 다른 최선의 방법 9.9%, LiveKit 오디오 기반 턴 감지 4.5%">
+          <span class="chart-title">같은 지연 예산에서 사용자 말을 끊은 비율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>다른 방법 중 가장 나은 것</span><span class="val">9.9</span></div>
+              <div class="track"><div class="fill" style="width:99%" title="다른 방법 중 가장 나은 것: 9.9%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>LiveKit 오디오 기반 턴 감지</span><span class="val">4.5</span></div>
+              <div class="track"><div class="fill key" style="width:45%" title="LiveKit 오디오 기반 턴 감지: 4.5%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>5</span><span>10</span></div>
+          <span class="caption">낮을수록 좋다. 사용자 말을 끊는 비율이 절반 이하로 줄었다.</span>
+        </figure>
+
+        <p>평가 하네스<span class="en">eval harness</span>는 오픈소스다. 발표자는 자기 말을 믿지 말고 내 데이터를 직접 넣어 보라고 했다.</p>
+        <p class="note">LiveKit이 자사 턴 감지기에 대해 공개한 수치다. "다른 방법 중 가장 나은 것"이 무엇인지는 발표에서 밝히지 않았다. 하네스가 공개돼 있으니 직접 돌려 확인할 수 있다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="window">
+        <header><span class="num">08</span><h2>1.5초 창 안에 넣기 <span class="ts">11:00</span></h2></header>
+        <p>한 단계 더 들어가 보자. 발신자의 마지막 음절과 에이전트의 첫 소리 사이의 간격이다. 잘 짠 파이프라인에서는 단계들이 겹쳐 돈다.</p>
+        <ol class="plain">
+          <li>발신자가 마지막 음절을 말한다.</li>
+          <li><strong>턴 끝 감지</strong><span class="en">end-of-turn detection</span>가 오디오만 보고 신호를 낸다. 전사가 도착하기 전이다.</li>
+          <li>LLM은 이미 <strong>임시 전사</strong><span class="en">provisional transcript</span>로 답을 만들기 시작한다. 최종 전사가 임시 전사와 같으면 약 0.5초를 번다.</li>
+          <li>TTS는 마지막 토큰이 아니라 <strong>첫 완성 문장</strong>에서 바로 말을 시작한다.</li>
+          <li>첫 소리가 들리는 순간 발신자의 기다림이 끝난다.</li>
+        </ol>
+
+        <h3>창의 크기는 정해져 있다 <span class="ts">11:30</span></h3>
+        <p>고르는 모델 하나하나가 모두 이 창 안에 나타난다. 그리고 창의 크기는 고정이다.</p>
+        <ul class="plain">
+          <li><strong>1.5초 이내</strong>: 대화가 유지된다. 하지만 아슬아슬하다.</li>
+          <li><strong>600ms 근처</strong>: 정말 사람처럼 느껴지기 시작한다.</li>
+        </ul>
+
+        <figure class="chart" aria-label="응답 창 비교: 한계 1500ms, 최악의 TTS 앞 무음 750ms, 미리 생성으로 아끼는 시간 500ms. 사람다운 목표 600ms">
+          <span class="chart-title">마지막 음절부터 첫 소리까지: 창과 발표에 나온 시간들 (ms)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>대화가 버티는 한계</span><span class="val">1,500</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="대화가 버티는 한계: 1500ms"></div><div class="baseline" style="left:40%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>최악의 TTS 앞부분 무음</span><span class="val">750</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="최악의 TTS 앞부분 무음: 750ms"></div><div class="baseline" style="left:40%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>임시 전사로 미리 만들어 아끼는 시간</span><span class="val">약 500</span></div>
+              <div class="track"><div class="fill" style="width:33.3%" title="미리 생성으로 아끼는 시간: 약 500ms"></div><div class="baseline" style="left:40%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 600 (사람다운 목표)</span><span>1,500</span></div>
+          <span class="caption">750ms 무음은 05:50, 나머지는 11:10~11:40에 나온 숫자다. 두 숫자를 나란히 놓으면 TTS 앞의 무음 하나만으로도 600ms 목표를 넘는다.</span>
+        </figure>
+
+        <p>그래서 물어야 할 질문은 "얼마나 빨리 갈 수 있나"가 아니다. <strong>"이 창 안에 들어가는 가장 사람다운 에이전트는 무엇인가"</strong>다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="benchmark">
+        <header><span class="num">09</span><h2>대화를 시험하는 벤치마크 <span class="ts">12:10</span></h2></header>
+        <p>처음 질문 "어떤 모델을 골라야 하나"는 이렇게 놓고 보면 원래 답할 수 없는 질문이었다. 그래서 LiveKit은 있었으면 했던 것을 직접 만들었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>에이전트</td><td>완성된 에이전트 하나를 쓴다. 첫 번째는 데모의 호텔 접수원이다. 실제로 예약을 받고, 실제 백엔드가 있고, 오픈소스다</td></tr>
+              <tr><td>발신자</td><td>시뮬레이션 발신자 수백 명이 전화를 건다. 실제 발신자처럼 끼어들고, 웅얼거리고, 말을 바꾼다 <span class="ts">12:40</span></td></tr>
+              <tr><td>채점</td><td>느낌이 아니라 결과로 채점한다. 사람 직원에게 쓰는 기준과 같은 방식이다</td></tr>
+              <tr><td>감점</td><td>쓸데없는 질문, 2단계면 될 일을 10단계로 하는 것 <span class="ts">13:10</span></td></tr>
+              <tr><td>비교</td><td>에이전트와 시나리오는 그대로 두고 모델만 바꾼다. 모든 모델이 바이트 단위까지 같은 입력을 받는다 <span class="ts">13:30</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">결과로 확인하는 것</span>
+            <ul>
+              <li>올바른 예약이 데이터베이스에 들어갔나</li>
+              <li>발신자의 말이 중간에 끊겼나</li>
+              <li>이름과 날짜가 맞나</li>
+              <li>지어낸 도구 호출이 있었나</li>
+              <li>개인정보가 새어 나갔나</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">완료율만 보면 안 되는 이유</span>
+            <p>완료율은 속일 수 있다. 모델이 대충 추측해서 완료에 도달할 수 있기 때문이다. 그래서 완료율이 보지 못하는 것을 따로 감점한다.</p>
+            <p class="verdict">기준은 <b>사람이 같은 일을 했을 때의 행동</b>이다.</p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <span class="title">벤치마크는 내 것이다 <span class="ts">13:50</span></span>
+          <span>이 벤치마크는 특정 에이전트를 기준으로 만든다. 그래서 에이전트 수만큼 벤치마크가 있다. 방법론, 평가 세트, 에이전트가 모두 오픈소스라서 내 에이전트를 같은 틀에 넣어 내 점수를 얻을 수 있다. 예상하지 못한 결과는 이렇게 잡는다.</span>
+        </div>
+        <p class="note">LiveKit이 만든 벤치마크다. 방법이 공개돼 있다는 점은 장점이지만, 만든 회사의 기준이 들어가 있다는 점은 감안하자.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="model">
+        <header><span class="num">10</span><h2>LiveKit이 내놓은 모델 <span class="ts">14:20</span></h2></header>
+        <p>발표자는 LiveKit이 STT, LLM, TTS 모델을 직접 만들지 않는다고 강조했다. 모든 업체가 LiveKit 스택에 꽂혀 돌아간다. 그래서 특정 모델 편을 들 이유가 없고, 많이 돌려 보니 승자를 자신 있게 고를 수 있다고 했다.</p>
+        <p>이어서 <strong>LiveKit Inference</strong>에 올라갈 모델을 미리 보여 줬다. <span class="ts">14:40</span> Gemma 4 31B를 그대로 쓴 것이 아니다. 실제 서비스용 음성 에이전트에 맞춰 튜닝했다. 긴 프롬프트, 많은 도구, 빠듯한 지연 예산을 견디도록 했다.</p>
+        <ul class="plain">
+          <li>음성 평가 통과율 <strong>88%</strong></li>
+          <li>말을 시작하기까지 <strong>약 380ms</strong></li>
+          <li>다음으로 빠른 모델보다 <strong>2배 넘게</strong> 빠르다</li>
+          <li>발표 다음 날 LiveKit Inference에 출시 예정</li>
+        </ul>
+
+        <figure class="chart" aria-label="말을 시작하기까지 걸리는 시간: 튜닝한 Gemma 4 31B 약 380ms, 다음으로 빠른 모델 760ms 이상">
+          <span class="chart-title">말을 시작하기까지 걸리는 시간 (ms, 발표자 주장)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>튜닝한 Gemma 4 31B</span><span class="val">약 380</span></div>
+              <div class="track"><div class="fill key" style="width:38%" title="튜닝한 Gemma 4 31B: 약 380ms"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>다음으로 빠른 모델</span><span class="val">760 이상</span></div>
+              <div class="track"><div class="fill" style="width:76%" title="다음으로 빠른 모델: 760ms 이상"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>500</span><span>1,000</span></div>
+          <span class="caption">다음 모델 값은 발표에 나오지 않았다. "2배 넘게 빠르다"는 말로 계산한 최소값(380 × 2)이라 760에 맞춰 그렸다.</span>
+        </figure>
+
+        <p class="note">자사 서비스에 올릴 모델을 자사 벤치마크로 소개한 대목이다. "편들 이유가 없다"는 말 바로 뒤에 나온 홍보라는 점을 감안해 읽자. 어떤 조건에서 380ms를 쟀는지, 비교 대상이 무엇인지는 발표에서 밝히지 않았다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="conclusion">
+        <header><span class="num">11</span><h2>결론과 체크리스트 <span class="ts">15:20</span></h2></header>
+        <p>발표자가 하나만 기억하라고 한 말이다.</p>
+        <blockquote>음성 에이전트는 챗봇에 스피커를 얹은 것이 아니다. 사람다운 인프라다.<cite>발표자의 표현을 옮김 (15:30)</cite></blockquote>
+        <p>음성 에이전트는 사람처럼 감지하고 반응하는 실시간 시스템이다. 이렇게 보는 순간 결정이 분명해진다. 예산, 지표, 모델, 시험 기준이 모두 정리된다.</p>
+
+        <h3>발표자의 체크리스트 <span class="ts">15:50</span></h3>
+        <ol class="plain">
+          <li><strong>지연 예산을 먼저 정한다.</strong></li>
+          <li><strong>체감 지연을 잰다.</strong> 대시보드 숫자가 아니라 사람이 듣는 시간이다.</li>
+          <li><strong>남은 예산은 모델 품질에 쓴다.</strong> 체감되지 않는 속도에 쓰지 않는다.</li>
+          <li><strong>1초 넘게 걸리는 일은 비동기로 돌린다.</strong> 대화가 멈추지 않게 한다.</li>
+          <li><strong>부품이 아니라 대화를 시험한다.</strong></li>
+          <li><strong>프로덕션에서도 계속 시험한다.</strong></li>
+        </ol>
+        <div class="callout">
+          <span class="title">마무리 <span class="ts">16:20</span></span>
+          <span>머지않아 음성 에이전트에게 말을 겹쳐 해도 무너지지 않는 날이 온다. 에이전트는 그 상황에서 사람처럼 반응할 것이다. 발표자는 그걸 만들라고 하며 끝맺었다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>배경 에이전트는 늦어도 괜찮지만, 실시간 음성 에이전트는 사람이 끼어들면 무너진다.</li>
+          <li>"더 빠르게"는 틀린 답이다. <strong>지연은 예산, 목표는 사람다움</strong>이다.</li>
+          <li>사람다움은 세 가지다. 말하면서 듣기, 생각 중인지 끝났는지 구분하기, 말을 바꿔도 따라가기.</li>
+          <li>음성 에이전트는 STT → LLM → TTS 파이프라인이다. <strong>앞 칸의 오류는 뒤 칸이 모른 채 흘러간다.</strong></li>
+          <li>리더보드는 부품을 깨끗한 오디오로 잰다. 물어야 할 질문은 <strong>"어떤 스택을 내보낼까"</strong>다.</li>
+          <li>TTFB와 TTFT는 대시보드 숫자다. <strong>사람이 듣는 건 첫 소리와 첫 문장이다.</strong> 어떤 TTS는 앞에 0.75초 무음을 붙인다.</li>
+          <li>도구는 2초에서 40초 넘게 걸린다. <strong>1초 넘는 도구는 비동기</strong>로 돌리고 대화를 이어간다.</li>
+          <li>턴 끝은 전사보다 <strong>오디오</strong>로 먼저 알 수 있다. LiveKit 수치로 끊는 비율이 9.9%에서 4.5%로 줄었다.</li>
+          <li>마지막 음절부터 첫 소리까지 <strong>1.5초가 한계, 600ms면 사람답다.</strong> 이 창에 들어가는 가장 사람다운 조합을 고른다.</li>
+          <li><strong>대화를 시험한다.</strong> 흉내 발신자로 결과를 채점하고, 같은 입력으로 모델만 바꿔 비교하고, 프로덕션에서도 계속 시험한다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 "더 빠르게"를 틀린 답이라고 한 이유는?</span></summary><div class="answer">속도만으로는 말하면서 듣기, 끝났는지 생각 중인지 구분하기, 말 바꿈 따라가기를 하나도 얻지 못한다. 이걸 얻는 길은 모델 선택과 파이프라인 구성이다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>"3일"이 "30일"로 들린 예는 무엇을 보여 주나?</span></summary><div class="answer">파이프라인에서 앞 칸의 오류는 뒤로 흐른다. LLM이 아무리 똑똑해도 틀린 날짜로 자신 있게 예약하고, 뒤 칸들은 잘못을 모른다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>리더보드 점수가 내 사용자에게 맞지 않는 이유 두 가지는?</span></summary><div class="answer">부품을 따로 채점하는데 우리는 파이프라인을 내보낸다. 또 조용한 방의 깨끗한 오디오로 쟀는데 실제 발신자는 스피커폰, 차 안, 아이들 소리 속에서 전화한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>TTS의 첫 바이트까지 시간이 좋아도 느리게 들릴 수 있는 이유는?</span></summary><div class="answer">바이트는 소리가 아니다. 오디오 앞부분에 무음이 수백 ms, 최악이면 약 0.75초 붙어 있을 수 있다. 첫 소리까지 시간을 재야 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>음성에서 LLM의 첫 토큰까지 시간 대신 봐야 할 숫자는? 왜?</span></summary><div class="answer">첫 문장이 완성되기까지의 시간이다. TTS는 토큰 하나로 말을 시작할 수 없고 문장이 필요하다. 토큰을 가장 빨리 내는 모델이 첫 문장을 가장 먼저 끝내는 건 아니다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>40초 걸리는 도구를 다루는 방법은?</span></summary><div class="answer">비동기 도구로 만든다. 첫 업데이트로 마이크를 에이전트에게 돌려줘 "잠시만요" 하며 대화를 이어가고, 도구는 뒤에서 계속 일한다. 대화와 도구가 같은 실행 흐름을 쓰지 않는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>호텔 데모가 보여 준 사람다운 행동 세 가지는?</span></summary><div class="answer">어색한 멈춤 없이 대화를 이어갔다. 발신자가 끼어들어도 계속 진행했다. 날짜를 바꿔도 따라가 금액을 다시 계산했다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>전사를 기다리는 턴 감지가 늦는 이유와 LiveKit의 방법은?</span></summary><div class="answer">사람은 약 200ms 안에 주로 말투로 차례를 주고받는다. 전사를 다 기다리면 이미 늦다. LiveKit은 오디오의 리듬, 음높이, 억양을 듣는 턴 감지기를 만들었다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>응답 창의 두 기준값은 무엇이고 각각 무슨 뜻인가?</span></summary><div class="answer">1.5초 이내면 대화가 유지되지만 아슬아슬하다. 600ms에 가까우면 사람처럼 느껴진다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>임시 전사로 미리 답을 만들면 무엇을 얻나?</span></summary><div class="answer">턴 끝을 오디오로 감지하자마자 LLM이 임시 전사로 답을 만들기 시작한다. 최종 전사가 같으면 약 0.5초를 번다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>벤치마크가 완료율만으로 채점하지 않는 이유와 대신 감점하는 것은?</span></summary><div class="answer">완료율은 추측으로 채울 수 있다. 그래서 쓸데없는 질문과 2단계면 될 일을 10단계로 하는 것을 감점한다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 "벤치마크는 당신 것"이라고 한 이유는?</span></summary><div class="answer">벤치마크는 특정 에이전트를 기준으로 만들어서 에이전트 수만큼 있다. 내 에이전트로 돌려야 내 답이 나온다. 방법론, 평가 세트, 에이전트가 모두 오픈소스다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 에이전트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>마지막 음절부터 첫 소리까지의 지연 예산을 먼저 정한다<span class="how">발표 기준: 1.5초는 한계, 600ms는 사람다운 목표</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>TTS는 첫 소리까지 시간으로 잰다<span class="how">확인: 오디오 앞에 붙은 무음이 몇 ms인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>LLM은 첫 문장이 완성되는 시간으로 잰다<span class="how">확인: 첫 토큰 순위와 첫 문장 순위가 다른가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>1초 넘게 걸리는 도구를 비동기로 바꾼다<span class="how">첫 업데이트로 "잠시만요"를 말하게 하고, 도구는 뒤에서 돌린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>턴 감지가 사용자 말을 끊는 비율을 내 통화 데이터로 잰다<span class="how">LiveKit의 공개 평가 하네스를 쓸 수 있다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>끼어들기, 웅얼거림, 말 바꾸기가 들어간 대화 시나리오로 시험한다<span class="how">확인: 부품 점수가 아니라 대화 결과를 보는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>결과로 채점한다<span class="how">데이터 반영, 이름과 날짜, 말 끊김, 지어낸 도구 호출, 개인정보 유출</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>쓸데없는 질문과 불필요한 단계를 감점한다<span class="how">완료율만 보면 추측으로 끝낸 대화도 성공으로 잡힌다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>모델을 바꿀 때 같은 입력으로 비교한다<span class="how">에이전트와 시나리오는 그대로, 모델만 바꾼다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>프로덕션에서도 계속 시험한다<span class="how">확인: 실제 통화에서 같은 지표를 계속 보고 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>지연 시간</td><td>Latency. 요청한 뒤 반응이 오기까지 걸리는 시간</td></tr>
+              <tr><td>지연 예산</td><td>Latency budget. 응답 전체가 넘지 말아야 할 시간. 각 단계가 이 안에서 시간을 나눠 쓴다</td></tr>
+              <tr><td>배경 에이전트</td><td>Background agent. 일을 맡기면 혼자 오래 작업하는 에이전트. 늦어도 문제가 적다</td></tr>
+              <tr><td>실시간 에이전트</td><td>Real-time agent. 사람과 바로 대화하는 에이전트. 몇백 ms가 대화의 질을 가른다</td></tr>
+              <tr><td>STT</td><td>Speech-to-text. 말을 글로 바꾸는 음성 인식 모델</td></tr>
+              <tr><td>TTS</td><td>Text-to-speech. 글을 소리로 바꾸는 음성 합성 모델</td></tr>
+              <tr><td>실시간 모델</td><td>Real-time model. 세 칸으로 나누지 않고 음성을 받아 바로 음성으로 답하는 모델</td></tr>
+              <tr><td>캐스케이드</td><td>Cascade. 앞 단계의 출력이 다음 단계의 입력이 되는 줄줄이 이어진 파이프라인</td></tr>
+              <tr><td>리더보드 함정</td><td>Leaderboard trap. 부품 순위만 보고 골랐다가 실제 대화에서 기대만큼 안 되는 것</td></tr>
+              <tr><td>TTFB</td><td>Time to first byte. 첫 데이터 바이트가 도착하기까지 시간</td></tr>
+              <tr><td>첫 소리까지 시간</td><td>Time to first audio. 실제로 들리는 소리가 나오기까지 시간. 앞의 무음까지 포함한다</td></tr>
+              <tr><td>TTFT</td><td>Time to first token. LLM이 첫 토큰을 내보내기까지 시간</td></tr>
+              <tr><td>측정 지연 / 체감 지연</td><td>Measured / perceived latency. 대시보드가 보여 주는 숫자와 사용자가 실제로 겪는 시간</td></tr>
+              <tr><td>비동기 도구</td><td>Asynchronous tool. 도구가 뒤에서 도는 동안 대화를 계속할 수 있게 만든 도구</td></tr>
+              <tr><td>턴 테이킹</td><td>Turn-taking. 대화에서 말할 차례를 주고받는 일</td></tr>
+              <tr><td>턴 끝 감지</td><td>End-of-turn detection. 상대가 말을 마쳤는지 판단하는 일</td></tr>
+              <tr><td>임시 전사</td><td>Provisional transcript. STT가 최종 결과 전에 먼저 내놓는 잠정 텍스트</td></tr>
+              <tr><td>평가 하네스</td><td>Eval harness. 같은 데이터로 시스템을 반복해서 돌리고 채점하는 실행 틀</td></tr>
+              <tr><td>지어낸 도구 호출</td><td>Invented tool call. 필요 없거나 존재하지 않는 도구를 모델이 멋대로 부르는 것</td></tr>
+              <tr><td>LiveKit Inference</td><td>LiveKit이 운영하는 모델 실행 서비스. 발표에서 소개한 튜닝 모델이 여기에 올라간다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>배경 에이전트와 실시간 에이전트</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>말을 겹쳐 하면 음성 AI가 무너진다</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>흔한 답 "더 빠르게"는 틀렸다</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>목표는 사람다움: 세 가지 행동</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>모델 고르는 법을 아무도 알려주지 않는다</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>LiveKit 소개, ChatGPT 음성 모드</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>STT, LLM, TTS 세 칸과 실시간 모델</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>리더보드 함정</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>"3일"이 "30일"로: 오류는 아래로 흐른다</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>"어떤 스택을 내보낼까"</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>첫 바이트와 첫 소리, 최악 0.75초 무음</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>측정 지연과 체감 지연</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>첫 토큰과 첫 문장</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>도구는 2초에서 40초 넘게 걸린다</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>사람 접수원처럼 시간 벌기</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>비동기 도구: 한 줄의 차이</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>데모: Live Oak 호텔 예약</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>데모 해설: 시스템 전체가 잘했다</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>언제 말하고 언제 기다릴까</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>오디오 기반 턴 감지기</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>말 끊는 비율 9.9% 대 4.5%</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>마지막 음절부터 첫 소리까지</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>1.5초 한계, 600ms 목표</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>벤치마크를 만든 방법</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>시뮬레이션 발신자와 결과 채점</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>완료율의 함정과 감점 기준</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>같은 입력으로 모델만 바꿔 비교</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>벤치마크는 내 에이전트의 것, 전부 오픈소스</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>LiveKit은 모델을 만들지 않는다</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>튜닝한 Gemma 4 31B: 88%, 약 380ms</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>기억할 한 가지: 사람다운 인프라</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>체크리스트</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>벤치마크 안내와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'j4AmIK6OvHc:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

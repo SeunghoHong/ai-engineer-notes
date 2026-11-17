@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>이웃으로 판단하는 사기 탐지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#same-row">같은 거래, 두 개의 점수</a></li>
+      <li><a href="#two-problems">두 개의 문제, 고정된 알림 예산</a></li>
+      <li><a href="#ceiling">피처를 두 배 늘려도 1점</a></li>
+      <li><a href="#gnn">GNN은 이웃에서 배운다</a></li>
+      <li><a href="#results">XGBoost를 바꾼 게 아니라 먹였다</a></li>
+      <li><a href="#sampling">결정 1: 그래프를 깨지 않는 샘플링</a></li>
+      <li><a href="#leakage">결정 2: 누수를 구조로 막는다</a></li>
+      <li><a href="#features">202개 피처와 파생 32개</a></li>
+      <li><a href="#aggregate">평균만 쓰면 위험한 이웃이 묻힌다</a></li>
+      <li><a href="#numbers">채널별 숫자</a></li>
+      <li><a href="#explain">결정 3: 점수에 증거를 붙인다</a></li>
+      <li><a href="#serving">결정 4: 3밀리초 안에 서빙</a></li>
+      <li><a href="#edge">노드 대신 엣지를 예측한다</a></li>
+      <li><a href="#latency">요청 경로와 지연</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-13 · 20분 · 영어 발표 한글 정리</span>
+      <h1>거래는 어울리는 이웃으로 판단한다</h1>
+      <p class="lead">카드 사기는 거래 한 건의 속성이 아니라 그 거래가 놓인 이웃의 속성이다. EXL 팀은 그래프 신경망으로 이웃 정보를 임베딩해 XGBoost에 먹였고, 같은 알림 예산 안에서 사기 적발률을 27~33% 올리면서 요청당 3밀리초 안에 점수를 냈다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=SHvwutPSeZg" target="_blank" rel="noopener">Judge a Transaction by the Company It Keeps</a></span>
+        <span>발표: Somya Rai (EXL AI 엔지니어링 VP), MD Sharique (EXL 프린시펄 AI 아키텍트)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>같은 거래 한 건이 피처 198개로는 <strong>0.04점</strong>, 이웃을 보게 하면 <strong>0.91점</strong>이다. 신호는 행이 아니라 <strong>행 사이의 연결</strong>에 있었다.</li>
+        <li>대면 거래와 온라인 거래는 사기 비율이 12배 다르고 신호가 사는 곳도 다르다. 그래서 <strong>모델은 두 개</strong>다.</li>
+        <li>분석가가 볼 수 있는 알림은 상위 0.5~1.5%로 고정이다. 목표는 AUC가 아니라 <strong>그 구간 안에서의 적발률</strong>이고, 지연은 그대로여야 한다.</li>
+        <li>피처를 2~5배 늘려도 적발률은 1점쯤 오른다. 한 행과 그 카드의 이력만 보는 피처의 <strong>천장</strong>이다.</li>
+        <li>GNN 임베딩을 <strong>기존 XGBoost에 추가 입력</strong>으로 넣었다. 적발률 상대 상승 27~33%, 연환산 추가 사기 적발액 약 6,500만 달러, P99 지연 3밀리초.</li>
+        <li>샘플링은 사기 비율을 자연 비율의 10배만 올리고, 뽑힌 사용자의 <strong>거래 이력은 통째로</strong> 남긴다. 그래프를 끊으면 라벨이 쓸모없어진다.</li>
+        <li>누수는 사후 검사가 아니라 <strong>구조로 막는다</strong>. 달력 월마다 서로 끊긴 그래프를 만들고, 과거 시각의 이웃만 모은다.</li>
+        <li>이웃을 합칠 때 평균만 쓰면 위험한 이웃 하나가 묻힌다. <strong>평균·최대·표준편차</strong>를 이어 붙인다.</li>
+        <li>점수마다 어느 연결이 근거인지 보여 준다. 규제 대응, 분석가 신뢰, 모델 디버깅, 라벨 품질 때문이다.</li>
+        <li>서빙은 사용자와 가맹점 임베딩만 미리 계산해 캐시하고, 거래별 임베딩은 만들지 않는다. 메모리가 60GB에서 2~3GB로 줄었다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="same-row">
+        <header><span class="num">01</span><h2>같은 거래, 두 개의 점수 <span class="ts">00:00</span></h2></header>
+        <p>Somya Rai는 같은 온라인 구매 한 건을 두 번 점수 매긴 화면으로 시작한다.</p>
+        <div class="shift" aria-label="같은 거래의 두 점수">
+          <div><span class="tag">행만 본다</span><b>0.04</b><span class="muted">금액, 가맹점, 업종 코드, 기기 종류, 시간대 등 피처 198개. 어떤 경보 기준에도 걸리지 않는다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이웃을 본다</span><b>0.91</b><span class="muted">행은 한 바이트도 바뀌지 않았다. 사용자, 가맹점, 다른 거래 둘 중 셋이 최근 한 시간 안에 사기로 판정된 이웃이다.</span></div>
+        </div>
+        <blockquote>신호는 애초에 행 안에 없었다. 연결에 있었다.<cite>Somya Rai의 표현을 옮김, 00:50</cite></blockquote>
+        <p>그래서 이 발표의 전제는 하나다. <strong>사기는 거래의 속성이 아니라 그 거래가 놓인 이웃의 속성이다.</strong></p>
+      </section>
+
+      <!-- 2 -->
+      <section id="two-problems">
+        <header><span class="num">02</span><h2>두 개의 문제, 고정된 알림 예산 <span class="ts">01:00</span></h2></header>
+        <p>카드 사기는 이름은 하나지만 실제로는 두 문제다.</p>
+
+        <figure class="chart" aria-label="자연 사기 비율 비교: 대면 거래 0.05%, 온라인 거래 0.6%">
+          <span class="chart-title">자연 사기 비율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>대면 거래 (가맹점 단말)</span><span class="val">0.05</span></div>
+              <div class="track"><div class="fill" style="width:8.3%" title="대면 거래: 0.05% (2,000건 중 1건)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>온라인 거래</span><span class="val">0.6</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="온라인 거래: 0.6%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>0.3</span><span>0.6</span></div>
+          <span class="caption">온라인이 12배 높다. 대면은 2,000건 중 1건이다.</span>
+        </figure>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>대면 거래 <span class="en">card-present</span></th><th>온라인 거래 <span class="en">card-not-present</span></th></tr></thead>
+            <tbody>
+              <tr><td>사기 비율</td><td>0.05%</td><td>0.6%</td></tr>
+              <tr><td>신호의 성격</td><td>좁고 잡음이 적다</td><td>양이 많고 잡음이 크다</td></tr>
+              <tr><td>신호가 사는 곳</td><td>그 카드 자체의 거래 속도</td><td>가맹점과 이웃 맥락</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>기준 비율도 다르고 신호의 모양도 다르다. 그래서 실무에서는 <strong>모델 두 개</strong>를 쓴다.</p>
+
+        <div class="callout">
+          <span class="title">이걸 엔지니어링 문제로 만드는 제약 <span class="ts">01:40</span></span>
+          <span>알림 예산은 고정이다. 분석가는 점수 상위 0.5~1.5%만 검토한다. 그래서 목표는 AUC(곡선 아래 면적)가 아니라 <strong>정해진 상위 K개 안에서의 정밀도</strong>다. 모델이 쓸모 있으려면 진짜 사기를 그 좁은 구간 안으로 밀어 넣어야 하고, 지연 시간은 지금과 같아야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="ceiling">
+        <header><span class="num">03</span><h2>피처를 두 배 늘려도 1점 <span class="ts">02:10</span></h2></header>
+        <p>당연한 질문이 먼저 나온다. 그냥 XGBoost를 더 잘 만들면 안 되나. 팀은 실제로 해 봤다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>채널</th><th>피처 수</th><th>적발률 변화</th></tr></thead>
+            <tbody>
+              <tr><td>대면</td><td>원본 속성 40개 → 가공 피처 87개</td><td>35.5% → 36.6% (선택과 누수 검사 후)</td></tr>
+              <tr><td>온라인</td><td>가공 피처 약 200개</td><td>약 1점 상승</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>피처 표면을 2~5배 늘려서 얻은 건 적발률 1점이다. 발표자는 이걸 튜닝 실패가 아니라 <strong>천장</strong>이라고 부른다. 모든 가공 피처는 결국 같은 행과 같은 카드의 이력을 다른 식으로 계산한 것이다. 이미 갖고 있던 정보를 다시 투영할 뿐이다.</p>
+        <ul class="plain">
+          <li>표 형태 피처가 답하는 질문: <strong>이 거래는 어떻게 생겼나.</strong></li>
+          <li>답하지 못하는 질문: <strong>이 거래는 누구와 연결돼 있고, 그들은 지금 무엇을 하고 있나.</strong></li>
+        </ul>
+        <p>기기 하나를 여러 카드가 공유하는 링, 카드를 넘나드는 거래 속도 사슬, 40분 전에 나빠진 가맹점. 이런 것은 행 사이의 연결에 산다. 행을 하나씩 보는 모델은 열을 아무리 더해도 설계상 이걸 볼 수 없다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="gnn">
+        <header><span class="num">04</span><h2>GNN은 이웃에서 배운다 <span class="ts">03:10</span></h2></header>
+        <p>그래프 신경망 <span class="en">graph neural network, GNN</span>은 노드를 그 노드의 피처만으로 배우지 않는다. 이웃으로부터 배운다. 한 층은 세 가지 연산이다.</p>
+        <ol class="plain">
+          <li><strong>모으기 <span class="en">gather</span></strong>: 거래→사용자, 거래→가맹점 같은 연결을 따라 각 이웃의 숨은 상태를 끌어온다.</li>
+          <li><strong>합치기 <span class="en">aggregate</span></strong>: 노드마다 크기가 다른 이웃 집합을 고정 길이 벡터 하나로 접는다. 이때 이웃의 순서에 영향받지 않는 함수를 쓴다. 어떤 함수를 고르느냐가 예상보다 훨씬 중요했다. 9번 절에서 다시 본다.</li>
+          <li><strong>갱신 <span class="en">update</span></strong>: 합친 벡터를 노드 자신의 상태와 이어 붙이고 학습된 가중치를 통과시킨다.</li>
+        </ol>
+        <p>이 층을 두 번 쌓는다. 그러면 분류기가 보기 전에 모든 거래가 <strong>이웃과 이웃의 이웃</strong>까지 알고 있는 상태가 된다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="results">
+        <header><span class="num">05</span><h2>XGBoost를 바꾼 게 아니라 먹였다 <span class="ts">04:00</span></h2></header>
+        <p>비교 대상을 정확히 해 두자. 팀은 XGBoost를 GNN으로 교체하지 않았다. GNN이 임베딩을 만들고, 그 임베딩을 <strong>같은 그래디언트 부스팅 모델</strong>에 추가 입력으로 넣는다. 비교는 "XGBoost 단독"과 "XGBoost + GNN 임베딩"이다. 알림 비율, 평가 기간, 사용 가능한 피처를 둘 다 똑같이 맞췄다.</p>
+        <div class="pair">
+          <div class="card"><span class="tag">적발률</span><p><strong>27~33% 상대 상승</strong></p><p class="verdict">같은 알림 비율에서의 진양성률 <span class="en">true positive rate</span>. 채널별 숫자는 10번 절.</p></div>
+          <div class="card"><span class="tag">금액</span><p><strong>약 6,500만 달러</strong></p><p class="verdict">두 채널 합산, 연환산 추가 사기 적발액 추정치.</p></div>
+          <div class="card"><span class="tag">지연</span><p><strong>P99 3밀리초</strong></p><p class="verdict">요청 100건 중 99건이 이 안에 끝난다.</p></div>
+        </div>
+        <p class="note">두 발표자는 EXL 소속이고 이 결과는 EXL이 만든 시스템의 자체 보고치다. 금액 추정은 특히 그 점을 감안해 읽자.</p>
+
+        <h3>네 가지 결정, 순서가 중요하다 <span class="ts">05:00</span></h3>
+        <ol class="plain">
+          <li><strong>샘플링</strong>: 사기는 2,000건 중 1건이라 원래 분포로는 학습할 수 없다. 하지만 행이 독립적인 표 데이터가 아니다. 음성 하나를 버리면 그 연결도 같이 사라진다.</li>
+          <li><strong>누수 없는 그래프 피처</strong>: 연결마다 시각이 붙어 있어서 생각보다 어렵다. 여기에 사기 탐지용 파생 피처 32개를 더했다.</li>
+          <li><strong>설명 가능성</strong>: 분석가는 숫자만으로 움직이지 않는다. 규제 영역이라 증거 없는 점수는 출시하지 못한다.</li>
+          <li><strong>3밀리초 서빙</strong>: 합치는 방법과, 노드 예측에서 엣지 예측으로 바꾼 결정이 열쇠였다.</li>
+        </ol>
+        <p>출시 후 검증한 개선이 하나 더 있다. 롤링 윈도로 학습하고 연결에 시간 감쇠를 적용했더니 숫자가 다시 움직였다. 여기서부터 MD Sharique가 세부를 맡는다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="sampling">
+        <header><span class="num">06</span><h2>결정 1: 그래프를 깨지 않는 샘플링 <span class="ts">06:50</span></h2></header>
+        <p>Sharique는 대부분의 팀이 처음 틀리는 곳이 데이터 샘플링이라고 말한다. 팀은 사기 비율을 자연 비율의 <strong>약 10배</strong>로만 올린 부드러운 목표를 쓴다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>채널</th><th>자연 비율</th><th>학습 목표 비율</th></tr></thead>
+            <tbody>
+              <tr><td>대면</td><td>0.05%</td><td>0.5%</td></tr>
+              <tr><td>온라인</td><td>0.6%</td><td>6%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>표 데이터 파이프라인이 흔히 쓰는 공격적인 오버·언더샘플링보다 훨씬 온건하다. 이유는 <strong>뽑힌 사용자의 거래 이력을 통째로 그래프에 남기기 위해서</strong>다.</p>
+        <ul class="plain">
+          <li>클래스 비율을 맞추려고 정상 사용자의 이력을 잘라내면, 그 사용자의 이웃이 기대는 연결이 끊긴다.</li>
+          <li>사기 사용자의 정상 거래도 남긴다. 결정 경계에 가장 쓸모 있는 <strong>어려운 음성 예시</strong>이기 때문이다.</li>
+          <li>상한이 걸리더라도 줄어드는 건 정상 사용자의 예산뿐이다. 사기 사용자는 절대 자르지 않는다.</li>
+          <li>클래스 불균형은 학습기 안의 <strong>균형 배치 샘플링</strong>으로 나중에 처리한다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">검증 <span class="ts">07:50</span></span>
+          <span>대면 채널의 학습 시 사용자 평균 차수(연결 개수)는 11.5~14로, 추론 시 모델이 보는 것과 같다. 학습 때 보던 이웃과 추론 때 보는 이웃이 다르면 모델은 엉뚱한 것을 배운다. 자연 비율 0.05%와 0.6%에서 테스트한 12개월 내내 안정적이었고, 보정할 드리프트가 없었다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="leakage">
+        <header><span class="num">07</span><h2>결정 2: 누수를 구조로 막는다 <span class="ts">08:20</span></h2></header>
+        <p>누수 <span class="en">leakage</span>는 모델이 실전에서는 알 수 없는 정보를 학습 중에 엿보는 일이다. 팀은 이걸 나중에 검사하지 않고 그래프 자체에 박아 넣었다.</p>
+        <ul class="plain">
+          <li><strong>달력 월 하나가 그래프 하나</strong>다. 어떤 연결도 월 경계를 넘지 않는다.</li>
+          <li>거래가 중심 노드다. 그 사용자와 가맹점으로 연결이 나가고, 자기 최근 이력으로 <strong>5홉</strong>짜리 사슬이 이어진다.</li>
+          <li>월끼리 연결되지 않으니 한 분할에서 다른 분할로 정보가 흐를 길이 없다.</li>
+        </ul>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>막은 누수</th><th>어떻게</th></tr></thead>
+            <tbody>
+              <tr><td>미래 누수</td><td>거래는 자기보다 이른 시각의 이웃만 합친다</td></tr>
+              <tr><td>학습·검증·테스트 누수</td><td>월 단위로 그래프가 끊겨 있다</td></tr>
+              <tr><td>라벨 누수</td><td>사기 플래그는 정답일 뿐, 피처나 연결로 쓰지 않는다</td></tr>
+              <tr><td>분포 누수</td><td>스케일러와 어휘집을 학습 월에서만 맞춘 뒤 고정한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>네 가지 모두 사후 감사가 아니라 <strong>구조로 보장</strong>된다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="features">
+        <header><span class="num">08</span><h2>202개 피처와 파생 32개 <span class="ts">09:30</span></h2></header>
+        <p>모델 피처는 노드 종류 셋에 걸쳐 202개다. 사용자 73개, 거래 109개, 가맹점 20개. 거래 피처 중 32개는 사기 탐지용으로 만든 파생 피처이고 세 차례에 걸쳐 추가됐다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>묶음</th><th>개수</th><th>예시</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td>개체 이력</td><td>10</td><td>과거 거래 건수, 마지막 활동 후 일수, 최근 5건 금액의 평균·표준편차·최대</td><td>사용자와 가맹점마다 행동 기준선</td></tr>
+              <tr><td>위험 집계</td><td>8</td><td>이력 대비 금액 z점수, 최근 대 과거 비율, 하루 거래 건수</td><td>전역 임계값이 아니라 <strong>자기 기준선에서의 이탈</strong></td></tr>
+              <tr><td>롤링 속도·시간</td><td>14</td><td>5분·1시간·24시간 건수와 금액, 하루 내 거래 상대 수, 마지막 거래 후 초, 국가 변경 비율</td><td>불가능한 이동 같은 패턴</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>그래프는 거래가 <strong>누구와 연결됐는지</strong>를 알려 준다. 파생 피처는 그 개체가 <strong>평소와 얼마나 다르게 행동하는지</strong>를 알려 준다. 겹치는 신호가 아니라 보완하는 신호다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="aggregate">
+        <header><span class="num">09</span><h2>평균만 쓰면 위험한 이웃이 묻힌다 <span class="ts">11:00</span></h2></header>
+        <p>구조는 GraphSAGE다. 네 단계다.</p>
+        <ol class="plain">
+          <li><strong>샘플</strong>: 홉마다 최근 것을 우선해 정해진 수의 이웃만 뽑는다. 거대 가맹점 노드 하나가 모든 메시지를 지배하지 못하게 한다.</li>
+          <li><strong>합치기</strong>: 평균만 내지 않는다. 순서에 무관한 통계 셋, <strong>평균·최대·표준편차</strong>를 이어 붙인다.</li>
+          <li><strong>결합</strong>: 노드 자신의 벡터와 학습된 가중치로 합친다.</li>
+          <li><strong>임베딩</strong>: 고정 길이 벡터, 2홉.</li>
+        </ol>
+        <p>귀납적 <span class="en">inductive</span> 방식이다. 노드마다 고정 벡터를 외우는 게 아니라 합치는 가중치를 배우기 때문에, 처음 보는 사용자나 가맹점도 재학습 없이 그 자리에서 임베딩된다.</p>
+
+        <h3>왜 통계 셋인가 <span class="ts">11:50</span></h3>
+        <p>거래 하나에 이웃이 넷이라고 하자. 셋은 점수 0.1 근처로 멀쩡하고, 하나는 사기 링에 연결돼 0.92다.</p>
+        <figure class="chart" aria-label="이웃 넷을 합친 값: 평균 0.32, 최대 0.92">
+          <span class="chart-title">이웃 넷(0.1, 0.1, 0.1, 0.92)을 하나로 합친 값</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>평균</span><span class="val">0.32</span></div>
+              <div class="track"><div class="fill" style="width:32%" title="평균: 0.32"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>최대</span><span class="val">0.92</span></div>
+              <div class="track"><div class="fill key" style="width:92%" title="최대: 0.92"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>0.5</span><span>1</span></div>
+          <span class="caption">발표의 예시 값. 평균을 내면 링에 연결된 이웃이 군중 속에 희석된다.</span>
+        </figure>
+        <ul class="plain">
+          <li><strong>최대</strong>: 위험한 이웃 하나가 그대로 통과한다. 많은 정상 이웃 사이에 위험한 이웃 하나가 섞인 것이 바로 사기 링이 만드는 패턴이고, 평균은 정확히 그걸 숨기는 연산이다.</li>
+          <li><strong>표준편차</strong>: 이웃끼리 얼마나 엇갈리는지 보여 준다. 고르고 심심한 이웃과 튀는 하나가 있는 이웃은 전혀 다르게 보인다.</li>
+          <li>서빙 비용은 늘지 않는다. 학습 파라미터가 추가되지 않고, 이웃 수와 상관없이 출력 크기가 고정이다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">임베딩 차원 <span class="ts">13:10</span></span>
+          <span>128이 적정점이다. 64는 근접하지만 약간 과소적합이고, 256은 GPU만 더 쓰고 얻는 게 없다. 검증 성능은 128을 지나면 평평해졌다가 과적합으로 넘어간다. 철학이 아니라 스윕 결과다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="numbers">
+        <header><span class="num">10</span><h2>채널별 숫자 <span class="ts">13:40</span></h2></header>
+        <figure class="chart" aria-label="알림 비율 0.5%에서의 적발률: 대면 XGBoost 36%, GNN+XGBoost 48%, 온라인 XGBoost 48%, GNN+XGBoost 61%">
+          <span class="chart-title">알림 비율 0.5%에서의 적발률 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>대면 · XGBoost 단독</span><span class="val">36</span></div>
+              <div class="track"><div class="fill" style="width:36%" title="대면, XGBoost 단독: 36%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>대면 · GNN + XGBoost</span><span class="val">48 · +33%</span></div>
+              <div class="track"><div class="fill key" style="width:48%" title="대면, GNN+XGBoost: 48%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>온라인 · XGBoost 단독</span><span class="val">48</span></div>
+              <div class="track"><div class="fill" style="width:48%" title="온라인, XGBoost 단독: 48%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>온라인 · GNN + XGBoost</span><span class="val">61 · +27%</span></div>
+              <div class="track"><div class="fill key" style="width:61%" title="온라인, GNN+XGBoost: 61%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">퍼센트 표시는 상대 상승이다. 36→48은 12/36으로 33%, 48→61은 13/48으로 27%다.</span>
+        </figure>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>채널</th><th>적발액</th><th>적발 비율</th></tr></thead>
+            <tbody>
+              <tr><td>대면</td><td>566만 달러</td><td>83%</td></tr>
+              <tr><td>온라인</td><td>3,540만 달러</td><td>71%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>6,500만 달러의 대부분은 온라인에서 나온다. 온라인의 사기 비율이 대면의 12배이기 때문이다.</p>
+        <p class="note">채널별 적발액을 더하면 약 4,100만 달러라 앞서 말한 연환산 6,500만 달러와 맞지 않는다. 평가 기간과 연환산 기준이 다른 것으로 보이지만 발표에서 설명하지 않았다. 대면 적발액은 자막이 뭉개져 "566만 달러"로 읽었다(추정).</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="explain">
+        <header><span class="num">11</span><h2>결정 3: 점수에 증거를 붙인다 <span class="ts">14:30</span></h2></header>
+        <p>팀은 채널마다 플래그된 사례 200건에 서브그래프 귀속 <span class="en">subgraph attribution</span>을 돌렸다. 점수에 어느 연결이 얼마나 기여했는지 재는 방법이다.</p>
+        <figure class="chart" aria-label="연결 종류별 평균 중요도: 거래 간 속도 연결 대면 0.94 온라인 0.62, 가맹점 연결 대면 0.04 온라인 0.19">
+          <span class="chart-title">연결 종류별 평균 중요도 (0~1)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>거래 간 속도 연결 · 대면</span><span class="val">0.94</span></div>
+              <div class="track"><div class="fill key" style="width:94%" title="거래 간 속도 연결, 대면: 0.94"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>거래 간 속도 연결 · 온라인</span><span class="val">0.62</span></div>
+              <div class="track"><div class="fill key" style="width:62%" title="거래 간 속도 연결, 온라인: 0.62"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>가맹점 연결 · 대면</span><span class="val">0.04</span></div>
+              <div class="track"><div class="fill" style="width:4%" title="가맹점 연결, 대면: 0.04"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>가맹점 연결 · 온라인</span><span class="val">0.19</span></div>
+              <div class="track"><div class="fill" style="width:19%" title="가맹점 연결, 온라인: 0.19"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>0.5</span><span>1</span></div>
+          <span class="caption">대면 200건 전부에서 속도 연결이 1순위 증거였다. 대면 사기는 결제 지점이 아니라 카드 자체의 속도를 탄다.</span>
+        </figure>
+        <p>차이는 이것이다. "모델이 91이라고 한다"와 "<strong>최근 40분 안에 연결된 거래 세 건 때문에</strong> 모델이 91이라고 한다".</p>
+        <h3>사기 영역에서 특히 중요한 이유 <span class="ts">15:30</span></h3>
+        <ol class="plain">
+          <li><strong>규제와 모델 리스크 관리</strong>: 금융사는 자동 판단에 문서화된 근거를 요구하는 틀 아래 있다. 선택이 아니다.</li>
+          <li><strong>분석가 신뢰와 조사 속도</strong>: 설명 없는 높은 점수는 도장만 찍히거나 무시된다. 연결 단위 증거가 있으면 "처음부터 다시 계산"이 "연결된 거래 세 건 확인"으로 바뀐다.</li>
+          <li><strong>모델 디버깅</strong>: 귀속 패턴은 모델이 가짜 신호나 식어 가는 신호에 기대는 것을 성능이 눈에 띄게 떨어지기 전에 보여 준다.</li>
+          <li><strong>피드백 루프 품질</strong>: 설명이 분석가의 짐작과 맞으면 경계선 사례도 믿고 제대로 라벨링한다. 다음 학습 데이터가 좋아진다.</li>
+        </ol>
+        <blockquote>정확한 블랙박스는 그냥 쓰이지 않는다.<cite>MD Sharique의 표현을 옮김, 16:40</cite></blockquote>
+      </section>
+
+      <!-- 12 -->
+      <section id="serving">
+        <header><span class="num">12</span><h2>결정 4: 3밀리초 안에 서빙 <span class="ts">16:50</span></h2></header>
+        <p>진짜 싸움은 여기다. 핵심은 요청마다 그래프를 만들지 않는 것이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">오프라인</span>
+            <ul>
+              <li>GPU 여러 대에 나눠 그래프 전체에 층별 GraphSAGE 순전파를 돌린다. 메모리에 묶이는 작업이다.</li>
+              <li>목적지 노드 기준으로 배치를 나눈다. 그래서 전체 그래프 순전파와 수치가 같고, 한 번에 몇 GB만 쓴다.</li>
+              <li>사용자, 가맹점, 최근 거래의 층별 표현을 저지연 임베딩 저장소에 캐시한다.</li>
+              <li>사용자마다 최근 거래 5건을 링 버퍼에 둔다.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">온라인 (요청 시)</span>
+            <ul>
+              <li>가벼운 조립 단계가 캐시에서 이웃 상태를 바로 복원한다. 그래프 생성도, 샘플링도 없다.</li>
+              <li>최근 것에 더 무게를 두는 지수 감쇠를 쓰고, 학습 때와 정확히 같게 재현한다.</li>
+              <li>실시간 점수 서비스는 <strong>새 거래 자신의 2층 순전파</strong>와 XGBoost 헤드만 돌린다.</li>
+            </ul>
+            <p class="verdict"><b>원칙</b>: 그래프 크기에 비례하는 작업은 요청마다 돌리지 않는다.</p>
+          </div>
+        </div>
+        <h3>작은 트릭 셋 <span class="ts">18:00</span></h3>
+        <ul class="plain">
+          <li>무거운 라이브러리를 불러오기 전에 수학 라이브러리의 스레드 풀을 1로 고정한다. 이것만으로 30밀리초와 1밀리초가 갈린다.</li>
+          <li>시작할 때 모델을 예열해 첫 실제 요청이 느리지 않게 한다.</li>
+          <li>지금은 단일 인메모리 프로세스다. 같은 인터페이스가 분산 캐시로 그대로 옮겨진다.</li>
+        </ul>
+      </section>
+
+      <!-- 13 -->
+      <section id="edge">
+        <header><span class="num">13</span><h2>노드 대신 엣지를 예측한다 <span class="ts">18:30</span></h2></header>
+        <p>함정이 하나 있다. 위 방식은 <strong>모든 노드</strong>, 즉 모든 거래의 표현까지 캐시해야 한다.</p>
+        <figure class="chart" aria-label="임베딩 캐시 크기: 거래별 캐시 60GB, 사용자·가맹점만 2~3GB">
+          <span class="chart-title">임베딩 캐시 크기 (GB)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>거래 노드까지 모두 캐시</span><span class="val">60</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="거래 노드까지 모두 캐시: 60GB"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>사용자·가맹점만 캐시</span><span class="val">2~3</span></div>
+              <div class="track"><div class="fill key" style="width:5%" title="사용자·가맹점만 캐시: 2~3GB"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>30</span><span>60</span></div>
+          <span class="caption">약 20배 작다. 막대는 3GB 기준으로 그렸다.</span>
+        </figure>
+        <div class="callout warn">
+          <span class="title">거래별 캐시의 비용</span>
+          <span>프로덕션 규모에서 60GB다. 비싼 고메모리 서버가 필요하고, 임베딩이 하루 늦는다. 그 지연 때문에 실시간 적발률이 48%에서 44%로 떨어진다.</span>
+        </div>
+        <p>해결은 <strong>노드가 아니라 엣지를 예측</strong>하는 것이다. 사용자와 가맹점 임베딩만 미리 계산하고, 거래별 임베딩은 만들지 않는다. 그러면 XGBoost 모델과 같은 CPU급 서버에서 나란히 돌릴 만큼 싸진다. 발표자는 Nvidia도 독립적으로 같은 접근을 권했고 노드 모델과 같은 성능을 기대한다고 전했다.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="latency">
+        <header><span class="num">14</span><h2>요청 경로와 지연 <span class="ts">19:20</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>소요</th></tr></thead>
+            <tbody>
+              <tr><td>전처리</td><td>1밀리초 미만</td></tr>
+              <tr><td>캐시 조회</td><td>1밀리초 미만</td></tr>
+              <tr><td>GNN 2층 순전파</td><td>1.61밀리초 (가장 큰 조각)</td></tr>
+              <tr><td>XGBoost 헤드</td><td>1밀리초 미만</td></tr>
+              <tr><td>끝에서 끝까지</td><td>중앙값 2.3밀리초, P99 3.1밀리초</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>SLA는 3~4밀리초이고 그 안에 여유 있게 들어간다. 여유가 더 필요해지면 GNN 순전파를 먼저 재컴파일하거나 양자화한다.</p>
+        <p class="note">앞부분에서는 "P99 3밀리초"라고 했고 여기서는 3.1밀리초다. 반올림 차이로 보인다.</p>
+      </section>
+
+      <!-- 15 -->
+      <section id="recap">
+        <header><span class="num">15</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>사기 신호는 행이 아니라 <strong>행 사이의 연결</strong>에 있다. 같은 거래가 0.04에서 0.91이 됐다.</li>
+          <li>대면(0.05%)과 온라인(0.6%)은 기준 비율도 신호 위치도 달라서 <strong>모델 두 개</strong>다.</li>
+          <li>알림 예산은 상위 0.5~1.5%로 고정이다. 목표는 <strong>그 구간 안의 적발률</strong>, 지연은 그대로.</li>
+          <li>한 행과 카드 이력만 보는 피처는 2~5배 늘려도 <strong>1점</strong>. 천장이다.</li>
+          <li>GNN은 교체가 아니라 <strong>XGBoost의 추가 입력</strong>이다. 적발률 36→48%, 48→61%.</li>
+          <li>샘플링은 사기 비율을 10배만 올리고, 뽑힌 사용자의 <strong>이력 전체</strong>를 남긴다. 사기 사용자는 자르지 않는다.</li>
+          <li>누수는 <strong>월별로 끊긴 그래프</strong>와 과거 시각 이웃만 모으는 규칙으로 구조적으로 막는다.</li>
+          <li>이웃을 합칠 때 <strong>평균·최대·표준편차</strong>를 이어 붙인다. 평균만 쓰면 위험한 이웃 하나가 묻힌다. 차원은 128.</li>
+          <li>점수마다 <strong>어느 연결이 근거인지</strong> 보여 준다. 대면은 카드 자체 속도, 온라인은 가맹점 연결 비중이 더 크다.</li>
+          <li>서빙은 <strong>사용자·가맹점 임베딩만 캐시</strong>하고 거래별 임베딩은 만들지 않는다. 60GB→2~3GB, P99 3.1밀리초.</li>
+        </ol>
+      </section>
+
+      <!-- 16 -->
+      <section id="quiz">
+        <header><span class="num">16</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>같은 거래가 0.04에서 0.91이 된 이유는?</span></summary><div class="answer">행은 그대로였다. 모델이 이웃을 보게 했더니 사용자, 가맹점, 다른 거래 둘 중 셋이 최근 한 시간 안에 사기로 판정된 이웃이었다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>왜 모델이 두 개인가?</span></summary><div class="answer">대면 거래는 사기 비율 0.05%에 신호가 카드 자체 속도에 있고, 온라인은 0.6%에 신호가 가맹점과 이웃 맥락에 있다. 기준 비율과 신호 모양이 다르다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>이 문제에서 AUC 대신 보는 지표는?</span></summary><div class="answer">분석가가 보는 상위 0.5~1.5% 구간 안에서의 정밀도 또는 적발률. 알림 예산이 고정이라 그 구간에 진짜 사기를 밀어 넣어야 한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>피처를 40개에서 87개로 늘리면 적발률이 얼마나 올랐나? 왜 천장인가?</span></summary><div class="answer">35.5%에서 36.6%로 1점. 모든 가공 피처가 같은 행과 같은 카드의 이력만 다시 계산한 것이라 "누구와 연결됐나"는 답할 수 없다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>GNN 한 층의 세 연산은?</span></summary><div class="answer">모으기(이웃 상태 끌어오기), 합치기(순서 무관 함수로 고정 길이 벡터 만들기), 갱신(자기 상태와 결합해 가중치 통과). 두 층을 쌓아 이웃의 이웃까지 본다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>"XGBoost를 바꾼 게 아니라 먹였다"는 무슨 뜻인가?</span></summary><div class="answer">GNN이 만든 임베딩을 기존 XGBoost에 추가 입력으로 넣었다. 비교는 XGBoost 단독 대 XGBoost + GNN 임베딩이다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>샘플링에서 사기 사용자의 정상 거래를 남기는 이유는?</span></summary><div class="answer">결정 경계에 가장 쓸모 있는 어려운 음성 예시이기 때문이다. 상한이 걸려도 줄이는 건 정상 사용자 예산뿐이고 사기 사용자는 자르지 않는다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>그래프 구조로 막은 누수 네 가지는?</span></summary><div class="answer">미래 누수(과거 시각 이웃만), 학습·검증·테스트 누수(월별로 끊긴 그래프), 라벨 누수(사기 플래그는 정답으로만), 분포 누수(스케일러와 어휘집을 학습 월에서만 맞춤).</div></details>
+          <details><summary><span class="qn">Q9</span><span>이웃 넷이 0.1, 0.1, 0.1, 0.92일 때 평균과 최대는? 왜 둘 다 쓰나?</span></summary><div class="answer">평균 약 0.32, 최대 0.92. 평균은 위험한 이웃 하나를 희석하고, 최대는 그대로 통과시킨다. 표준편차는 이웃이 얼마나 엇갈리는지 더한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>대면과 온라인에서 가장 중요한 연결 종류가 어떻게 다른가?</span></summary><div class="answer">대면은 거래 간 속도 연결이 0.94로 200건 전부에서 1순위다. 온라인은 속도 연결 0.62에 가맹점 연결이 0.19로 대면(0.04)보다 훨씬 크다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>거래 노드까지 모두 캐시하면 생기는 문제와 해결은?</span></summary><div class="answer">60GB가 필요하고 임베딩이 하루 늦어 적발률이 48%에서 44%로 떨어진다. 해결은 엣지를 예측하는 것. 사용자와 가맹점 임베딩만 미리 계산해 2~3GB로 줄인다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>요청 경로에서 가장 오래 걸리는 단계와 끝까지의 지연은?</span></summary><div class="answer">GNN 2층 순전파 1.61밀리초. 끝에서 끝까지 중앙값 2.3밀리초, P99 3.1밀리초로 SLA 3~4밀리초 안이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="apply">
+        <header><span class="num">17</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 문제의 신호가 행 안에 있는지, 행 사이 연결에 있는지 먼저 따진다<span class="how">피처를 늘려도 지표가 1점 안팎만 움직이면 천장 신호다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>평가 지표를 운영 제약에 맞춘다<span class="how">검토 예산이 고정이면 AUC 대신 상위 K 구간의 정밀도를 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>기준 비율이 다른 하위 집단은 모델을 나눌지 검토한다<span class="how">확인: 집단별 사기 비율과 신호가 사는 곳이 다른가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>기존 모델을 버리지 말고 새 임베딩을 추가 입력으로 붙여 비교한다<span class="how">같은 알림 비율, 같은 기간, 같은 피처로 단독 대 결합을 비교</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>그래프 데이터를 샘플링할 때 개체의 이력을 통째로 남긴다<span class="how">확인: 학습 시 평균 차수가 추론 시와 같은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>누수를 사후 검사가 아니라 데이터 구조로 막는다<span class="how">시간 분할을 끊고, 과거 시각 이웃만 쓰고, 스케일러는 학습 구간에서만 맞춘다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>이웃을 합칠 때 평균 하나만 쓰지 않는다<span class="how">평균·최대·표준편차를 이어 붙이고 차원은 스윕으로 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>점수마다 근거가 되는 연결을 같이 내보낸다<span class="how">확인: 분석가가 "왜 이 점수인가"에 바로 답할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>요청마다 그래프 크기에 비례하는 작업을 돌리지 않는다<span class="how">개체 임베딩은 미리 계산해 캐시하고, 요청 시에는 새 항목의 순전파만 돌린다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>서빙 프로세스의 스레드 풀 설정과 예열을 확인한다<span class="how">수학 라이브러리 로드 전에 스레드 수를 고정하고, 시작 시 더미 요청을 돌린다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 18 -->
+      <section id="glossary">
+        <header><span class="num">18</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>대면 거래 / 온라인 거래</td><td>Card-present / card-not-present. 가맹점 단말에서 카드를 직접 쓰는 거래와, 카드 없이 번호만으로 하는 거래</td></tr>
+              <tr><td>MCC 코드</td><td>Merchant Category Code. 가맹점 업종 분류 번호</td></tr>
+              <tr><td>알림 비율</td><td>Alert rate. 전체 거래 중 분석가에게 검토 요청이 가는 비율</td></tr>
+              <tr><td>적발률 (진양성률)</td><td>True positive rate. 실제 사기 중 모델이 잡아낸 비율</td></tr>
+              <tr><td>상위 K 정밀도</td><td>Precision at K. 점수 상위 K개 안에서 실제 사기의 비율</td></tr>
+              <tr><td>AUC</td><td>Area under the curve. 임계값 전체에 걸친 분류 성능 지표. 검토 예산이 고정이면 덜 중요하다</td></tr>
+              <tr><td>XGBoost</td><td>표 데이터에 널리 쓰이는 그래디언트 부스팅 트리 모델</td></tr>
+              <tr><td>그래프 신경망 (GNN)</td><td>Graph neural network. 노드의 이웃 정보를 모아 노드 표현을 배우는 신경망</td></tr>
+              <tr><td>노드 / 엣지</td><td>그래프의 점과 선. 여기서는 거래·사용자·가맹점이 노드, 그 사이의 관계가 엣지</td></tr>
+              <tr><td>홉</td><td>Hop. 그래프에서 연결을 한 번 건너는 단위. 2홉이면 이웃의 이웃까지</td></tr>
+              <tr><td>임베딩</td><td>개체를 고정 길이 숫자 벡터로 표현한 것</td></tr>
+              <tr><td>GraphSAGE</td><td>이웃을 샘플링해 합치는 방식의 GNN. 처음 보는 노드도 임베딩할 수 있다</td></tr>
+              <tr><td>귀납적</td><td>Inductive. 노드별 벡터를 외우지 않고 합치는 규칙을 배워, 새 노드에도 적용되는 방식</td></tr>
+              <tr><td>순서 무관 함수</td><td>Permutation invariant. 입력 순서를 바꿔도 결과가 같은 함수. 평균, 최대, 표준편차 등</td></tr>
+              <tr><td>누수</td><td>Leakage. 실전에서는 알 수 없는 정보가 학습에 섞여 들어가는 것</td></tr>
+              <tr><td>어려운 음성</td><td>Hard negative. 사기처럼 보이지만 정상인 예시. 결정 경계를 배우는 데 유용하다</td></tr>
+              <tr><td>차수</td><td>Degree. 한 노드에 붙은 연결의 개수</td></tr>
+              <tr><td>z점수</td><td>어떤 값이 평균에서 표준편차 몇 배만큼 떨어졌는지</td></tr>
+              <tr><td>서브그래프 귀속</td><td>Subgraph attribution. 예측에 어느 노드와 연결이 얼마나 기여했는지 재는 설명 기법</td></tr>
+              <tr><td>링 버퍼</td><td>고정 크기 저장소. 가득 차면 가장 오래된 항목을 덮어쓴다</td></tr>
+              <tr><td>지수 감쇠</td><td>Exponential decay. 오래된 것일수록 가중치를 기하급수적으로 줄이는 방식</td></tr>
+              <tr><td>P99</td><td>요청 100건 중 99건이 그 시간 안에 끝나는 지연 값</td></tr>
+              <tr><td>SLA</td><td>Service level agreement. 지켜야 할 서비스 수준 약속. 여기서는 지연 상한</td></tr>
+              <tr><td>양자화</td><td>Quantization. 모델 숫자의 정밀도를 낮춰 더 빠르게 돌리는 기법</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 19 -->
+      <section id="timeline">
+        <header><span class="num">19</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>같은 거래, 0.04 대 0.91</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>대면과 온라인, 두 개의 문제</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>고정된 알림 예산과 상위 K 정밀도</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>피처를 늘려도 1점, 천장</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>GNN 한 층: 모으기, 합치기, 갱신</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>XGBoost에 임베딩을 먹이다, 결과 셋</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>네 가지 결정과 순서</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>MD Sharique 소개</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>샘플링: 10배 목표, 이력 통째로</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>평균 차수 11.5~14, 12개월 안정</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>월별 그래프와 5홉 사슬</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>누수 네 가지를 구조로 막다</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>202개 피처, 파생 32개 세 묶음</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>GraphSAGE: 샘플, 합치기, 결합, 임베딩</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>평균 대 최대, 0.32 대 0.92</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>임베딩 차원 128</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>채널별 적발률과 금액</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>서브그래프 귀속, 연결 중요도</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>설명이 중요한 네 가지 이유</td></tr>
+              <tr><td><span class="ts">16:50</span></td><td>서빙: 오프라인 캐시, 온라인 조립</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>스레드 풀 고정, 예열, 단일 프로세스</td></tr>
+              <tr><td><span class="ts">18:30</span></td><td>60GB의 함정, 엣지 예측으로 2~3GB</td></tr>
+              <tr><td><span class="ts">19:20</span></td><td>요청 경로: 1.61밀리초, 2.3 중앙값, 3.1 P99</td></tr>
+              <tr><td><span class="ts">20:10</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'SHvwutPSeZg:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

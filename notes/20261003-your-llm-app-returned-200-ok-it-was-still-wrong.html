@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>생성형 AI 모니터링 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#signals">골든 시그널로는 부족하다</a></li>
+      <li><a href="#differences">생성형 AI 앱이 다른 네 가지</a></li>
+      <li><a href="#cost-leaks">비용이 새는 세 가지 길</a></li>
+      <li><a href="#tagging">모든 호출에 태그 달기</a></li>
+      <li><a href="#safety">안전 지표 네 가지</a></li>
+      <li><a href="#quality">품질 지표 다섯 가지</a></li>
+      <li><a href="#conclusion">기존 지표 위에 한 층 더</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-03 · 18분 · 영어 발표 한글 정리</span>
+      <h1>200 OK가 말해 주지 않는 것</h1>
+      <p class="lead">LLM 앱은 서버가 200 OK를 돌려줘도 답이 틀렸을 수 있다. 지연·오류·트래픽·포화도라는 기존 지표 위에 비용, 안전, 품질을 재는 지표를 한 층 더 얹어야 앱이 정말 건강한지 알 수 있다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=rTojoVotlD8" target="_blank" rel="noopener">Your LLM App Returned 200 OK. It Was Still Wrong.</a></span>
+        <span>발표: Marina Petzel (Datadog 생성형 AI 애드버킷)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 고쳤고(예: Hi Cool → Haiku, Tropic → Anthropic), 확실하지 않은 곳에는 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>골든 시그널(지연·오류·트래픽·포화도)은 앱이 <strong>돌아가는지</strong> 알려 준다. 하지만 <strong>잘 돌아가는지</strong>는 알려 주지 않는다.</li>
+        <li>생성형 AI 앱은 출력이 매번 다르고, 비용이 들쭉날쭉하고, 새로운 공격을 받고, 품질이 주관적이다.</li>
+        <li>비용이 새는 길은 세 가지다. 컨텍스트가 조용히 커지면 <strong>최대 8배</strong>, 비싼 모델로 바꾸면 <strong>최대 15배</strong>, 캐시가 없으면 지출의 <strong>70%까지</strong> 중복이다.</li>
+        <li>처방은 <strong>모든 호출에 태그를 다는 것</strong>이다. 기능, 사용자, 모델, 엔드포인트 네 단계로 단다.</li>
+        <li>안전 지표는 프롬프트 인젝션, PII, 유해성, 탈옥 네 가지다. <strong>PII 노출은 0%, 탈옥은 100% 차단</strong>이 목표다.</li>
+        <li>품질 지표는 환각률, 관련성, 사용자 만족도, 답변 완전성, RAG 검색 품질 다섯 가지다. 만족도는 <strong>긍정 80~85% 이상</strong>이 목표다.</li>
+        <li>기존 지표를 버리지 않는다. 그 위에 <strong>비용·안전·품질 층</strong>을 더한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="signals">
+        <header><span class="num">01</span><h2>골든 시그널로는 부족하다 <span class="ts">00:10</span></h2></header>
+        <p>오랫동안 앱의 상태는 골든 시그널 <span class="en">golden signals</span> 네 가지로 봤다.</p>
+        <ul class="plain">
+          <li><strong>지연 시간</strong> <span class="en">latency</span>: 응답이 얼마나 빨리 오나</li>
+          <li><strong>오류</strong> <span class="en">error</span>: 요청이 얼마나 실패하나</li>
+          <li><strong>트래픽</strong> <span class="en">traffic</span>: 요청이 얼마나 들어오나</li>
+          <li><strong>포화도</strong> <span class="en">saturation</span>: 자원이 얼마나 꽉 찼나</li>
+        </ul>
+        <p>발표자는 네 지표의 첫 글자를 따서 <strong>LETS</strong>라고 부른다. 이 지표들은 지금도 필수이고 앞으로도 그렇다.</p>
+        <p>하지만 생성형 AI 앱의 건강을 판단하기에는 부족하다. 발표는 그 빈자리를 채울 지표를 <strong>비용, 안전, 품질</strong> 세 갈래로 정리한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="differences">
+        <header><span class="num">02</span><h2>생성형 AI 앱이 다른 네 가지 <span class="ts">01:10</span></h2></header>
+        <p>발표자는 기존 앱과 생성형 AI 앱의 차이를 네 가지로 꼽는다. 각각이 새 지표가 필요한 이유가 된다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>차이</th><th>기존 앱</th><th>생성형 AI 앱</th><th>그래서 필요한 것</th></tr></thead>
+            <tbody>
+              <tr><td>출력 <span class="ts">01:10</span></td><td>같은 입력이면 늘 같은 출력</td><td>같은 프롬프트도 실행할 때마다 다른 답</td><td>회귀 테스트만으로는 부족하다. 운영 환경에서 품질을 계속 평가한다</td></tr>
+              <tr><td>비용 <span class="ts">01:40</span></td><td>코드를 돌리는 기계값이라 예측 가능</td><td>토큰 수, 모델, 컨텍스트 창 크기에 따라 변한다</td><td>실시간으로 잘게 나눈 비용 추적</td></tr>
+              <tr><td>공격 <span class="ts">02:10</span></td><td>SQL 인젝션, 크로스 사이트 스크립팅</td><td>프롬프트 인젝션, 탈옥, 출력 속 개인정보 유출</td><td>새로운 보안 모니터링. 이런 문제는 500 에러로 잡히지 않는다</td></tr>
+              <tr><td>품질 <span class="ts">02:40</span></td><td>되거나 안 되거나</td><td>관련 있나, 정확한가, 빠짐없나를 정도로 판단</td><td>모니터링 도구 안에 품질 평가를 계속 돌린다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">돌아가는가와 잘 돌아가는가 <span class="ts">03:20</span></span>
+          <span>기존 지표는 시스템이 살아 있는지 알려 준다. 얼마나 잘 일하는지는 알려 주지 않는다. 서버가 200 OK를 돌려줬다고 해서 사용자에게 도움이 되는 맞는 답이었다는 뜻은 아니다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="cost-leaks">
+        <header><span class="num">03</span><h2>비용이 새는 세 가지 길 <span class="ts">03:50</span></h2></header>
+        <p>기존 앱은 사용량과 비용이 거의 비례했다. 사용자가 늘면 자원 사용이 늘고, 그만큼 비용이 는다.</p>
+        <p>LLM 비용은 그렇지 않다. 토큰 수, 모델, 컨텍스트 크기에 따라 크게 움직인다. 따로 추적하지 않으면 무엇이 비용을 키우는지 보이지 않는다. 발표자는 비용이 새는 길을 세 가지로 꼽는다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">토큰 크립 · token creep <span class="ts">05:00</span></span>
+            <p>품질을 높이려는 엔지니어나 PM이 컨텍스트 창을 조금씩 늘린다. 비용 검토는 거치지 않는다.</p>
+            <ul>
+              <li>4,000토큰이던 컨텍스트가 32,000토큰(추정)으로 커진다</li>
+              <li>비용은 컨텍스트 크기에 크게 좌우된다</li>
+              <li>비용이 최대 8배가 된다. 한 달이면 수천 달러다</li>
+            </ul>
+            <p class="verdict"><b>왜 위험한가</b>: 비용을 늘리려던 사람은 없다. 품질을 위한 작은 결정이 검토 없이 쌓인 결과다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">모델 교체 · model drift <span class="ts">05:40</span></span>
+            <p>팀이 싸고 빠른 모델에서 비싸고 강한 모델로 옮겨 간다. 발표자가 든 예는 Claude Haiku 4.5에서 Opus 4.8(추정)로 바꾸는 경우다.</p>
+            <ul>
+              <li>더 나은 품질을 기대하고 바꾼다</li>
+              <li>발표자 예시로 요청당 비용이 최대 15배다</li>
+              <li>사용량이 그대로여도 한 달 안에 비용이 크게 불어난다</li>
+            </ul>
+            <p class="verdict"><b>왜 위험한가</b>: 사용량은 그대로라서 트래픽 지표만 봐서는 원인이 드러나지 않는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">캐시 없는 호출 · uncached calls (추정) <span class="ts">06:10</span></span>
+            <p>같은 질문이 API를 몇 번이고 다시 부른다. 효과적인 캐싱 계층 <span class="en">caching layer</span>이 없으면 생긴다.</p>
+            <ul>
+              <li>같은 비싼 응답을 매번 새로 산다</li>
+              <li>발표자가 인용한 Datadog 자체 조사로는 지출의 70%가 중복일 때가 있다</li>
+            </ul>
+            <p class="verdict"><b>왜 위험한가</b>: 돈은 나가는데 새로 얻는 것이 없다.</p>
+          </div>
+        </div>
+
+        <figure class="chart" aria-label="바꾸기 전 비용을 1배로 놓은 비교: 토큰 크립 최대 8배, 모델 교체 최대 15배">
+          <span class="chart-title">비용이 몇 배가 되나 (바꾸기 전 = 1배)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>토큰 크립 · 컨텍스트 4,000 → 32,000(추정)</span><span class="val">최대 8배</span></div>
+              <div class="track"><div class="fill" style="width:53.3%" title="토큰 크립: 최대 8배"></div><div class="baseline" style="left:6.7%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>모델 교체 · Haiku 4.5 → Opus</span><span class="val">최대 15배</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="모델 교체: 최대 15배"></div><div class="baseline" style="left:6.7%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 바꾸기 전 (1배)</span><span>15배</span></div>
+          <span class="caption">두 배수 모두 발표자가 든 예시다. 사용량이 같아도 설정 하나, 모델 하나로 이만큼 달라진다.</span>
+        </figure>
+
+        <p class="note">자막에서 늘어난 컨텍스트 크기는 "132"로 들린다. 발표자가 말한 "최대 8배"와 맞는 값은 4,000의 8배인 32,000이라 그렇게 적었다(추정). 세 번째 항목의 이름은 자막에 "on hash code"로 들린다. 바로 뒤에 캐싱 이야기가 나와서 uncached calls로 추정했다.</p>
+        <p class="note">15배는 발표자가 든 예시다. 실제 배수는 모델과 요금표마다 다르니, 쓰는 모델의 요금표로 직접 계산해 보자. 70%는 관측 도구를 파는 발표자 회사의 자체 조사로 소개됐으니 그 점을 감안해 읽자.</p>
+        <p>발표자는 이 세 가지를 나눠서 볼 수 있어야 비용이 빠르게 불어나는 걸 막을 수 있다고 말한다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="tagging">
+        <header><span class="num">04</span><h2>모든 호출에 태그 달기 <span class="ts">07:00</span></h2></header>
+        <p>에이전트와 주고받는 호출은 엄청나게 쌓인다. 그런데 모두 한 덩어리로 기록되면 무엇이 비용을 키우는지 알 수 없다.</p>
+        <p>발표자의 처방은 비용 귀속 <span class="en">cost attribution</span>이다. 모든 호출에 태그를 달아 비용을 원인별로 나눠 붙인다. 태그는 네 단계로 단다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>무엇을 태그하나</th><th>무엇을 알 수 있나</th><th>태그 모양 (예시)</th></tr></thead>
+            <tbody>
+              <tr><td>기능 <span class="ts">07:30</span></td><td>기능의 용도. 예: 채팅, 요약</td><td>제품 영역별 비용. 어떤 기능이 예산을 많이 먹는지 알 수 있어 로드맵 결정에도 쓴다</td><td><code>feature:summarization</code></td></tr>
+              <tr><td>사용자 <span class="ts">07:50</span></td><td>사용자 ID, 조직 이름</td><td>차지백과 정확한 청구. 예산을 빨아들이는 남용 패턴을 일찍 찾는다</td><td><code>user_id:…</code> <code>org:…</code></td></tr>
+              <tr><td>모델 <span class="ts">08:10</span></td><td>모델 이름(예: GPT-5.5), 제공사(OpenAI, Anthropic)</td><td>모델끼리 실제 비용 비교. 비용을 줄일 큰 지점이 보인다</td><td><code>model:gpt-5.5</code> <code>provider:openai</code></td></tr>
+              <tr><td>엔드포인트 <span class="ts">08:30</span></td><td>지역, 환경(프로덕션, 스테이징)</td><td>인프라 계획. 지역이나 환경이 전체 지출에 주는 영향</td><td><code>env:staging</code> <code>region:…</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">태그 모양 칸은 이해를 돕는 예시다. 태그 값은 발표에서 언급한 것을 썼고, 표기 형식은 노트에서 정했다.</p>
+        <p>핵심은 태그를 <strong>선택이 아닌 필수 규칙</strong>으로 만드는 것이다. 그래야 돈이 정확히 어디로 가는지 보이고, 통제할 수 있다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="safety">
+        <header><span class="num">05</span><h2>안전 지표 네 가지 <span class="ts">09:10</span></h2></header>
+        <p>비용을 잡았다고 끝이 아니다. 싼 AI도 민감한 정보나 개인 정보를 흘릴 수 있다. LETS 지표가 모두 정상이어도 이런 사고는 드러나지 않는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>무엇을 보나</th><th>재는 법</th><th>목표</th></tr></thead>
+            <tbody>
+              <tr><td>프롬프트 인젝션 비율 <span class="ts">09:50</span></td><td>사용자 프롬프트 속 조작 시도. 가드레일이 없는 구조라면 특히 위험하다</td><td>패턴 매칭, 전용 분류 모델</td><td>매우 엄격한 임계값</td></tr>
+              <tr><td>PII 탐지 비율 <span class="ts">10:20</span></td><td>모델 출력 속 민감 정보. 사회보장번호, 카드 번호, 개인 정보</td><td>정규식 <span class="en">regex</span>, 개체명 인식 <span class="en">NER</span></td><td><strong>프로덕션 출력의 0%</strong>. 하나도 허용하지 않는다</td></tr>
+              <tr><td>콘텐츠 모더레이션 점수 <span class="ts">11:00</span></td><td>출력이 유해하거나, 해롭거나, 특정 주제에 편향됐나</td><td>모든 출력을 유해성 분류기에 통과시켜 점수를 매긴다</td><td>분명한 임계값을 정하고 최대한 낮춘다</td></tr>
+              <tr><td>탈옥 시도 <span class="ts">11:30</span></td><td>정교한 상황극 등으로 안전장치를 우회하려는 끈질긴 시도. 시스템 프롬프트를 덮어쓰려는 패턴</td><td>그런 패턴을 추적한다</td><td><strong>100% 차단</strong>. 무조건 막는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">입력 쪽과 출력 쪽 (노트 정리)</span>
+          <span>프롬프트 인젝션과 탈옥은 사용자가 보내는 입력을 본다. PII와 유해성은 모델이 내보내는 출력을 본다. 들어오는 공격과 나가는 사고를 둘 다 지켜야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="quality">
+        <header><span class="num">06</span><h2>품질 지표 다섯 가지 <span class="ts">12:10</span></h2></header>
+        <p>발표자는 품질을 사용자에게 가장 중요한 차원으로 꼽는다. LETS는 서비스가 살아 있다고 말해 준다. 비용과 안전 지표는 예산 안이고 안전하다고 말해 준다. 남은 질문은 하나다. 답이 좋았나.</p>
+        <blockquote>서버의 200 OK 응답은 답이 환각이라면 거짓말일 수 있다.<cite>Marina Petzel, <span class="ts">12:50</span></cite></blockquote>
+        <p>AI는 자신 있게 틀린 말을 한다. 발표자는 지금 바로 넣을 수 있는 품질 지표 다섯 가지를 권한다. <span class="ts">13:20</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>묻는 질문</th><th>재는 법</th><th>목표</th></tr></thead>
+            <tbody>
+              <tr><td>환각률 <span class="ts">13:20</span></td><td>응답에 근거 데이터로 뒷받침되지 않는 주장이 있나</td><td>사람 검토와 자동 사실 확인을 섞는다</td><td>엄격하게</td></tr>
+              <tr><td>관련성 점수 <span class="ts">13:40</span></td><td>응답이 사용자 질문에 답했나</td><td>BERT 기반 유사도(BERTScore), 임베딩 유사도</td><td>발표에서 숫자 없음</td></tr>
+              <tr><td>사용자 만족도 <span class="ts">14:10</span></td><td>사용자가 만족했나</td><td>좋아요/싫어요, 별점, NPS</td><td><strong>긍정 80~85% 이상</strong></td></tr>
+              <tr><td>답변 완전성 <span class="ts">14:30</span></td><td>사용자 의도를 빠짐없이 다뤘나</td><td>주로 LLM-as-a-judge</td><td>발표에서 숫자 없음</td></tr>
+              <tr><td>RAG 검색 품질 <span class="ts">14:50</span></td><td>가져온 문서가 질문과 관련 있나</td><td>Top-K 정확도, NDCG</td><td>발표에서 숫자 없음</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">자막에서 관련성 측정법은 "bird"로 들린다. 유사도 측정 맥락이라 BERT로 고쳤다.</p>
+        <p>RAG를 쓴다면 검색 품질은 꼭 따로 잰다. 컨텍스트가 커질수록 그중 가장 관련 있는 문서를 고르기가 점점 어려워지기 때문이다.</p>
+        <div class="callout">
+          <span class="title">관련성과 완전성의 차이 (예시)</span>
+          <span>사용자가 환불 방법과 환불 기간을 함께 물었다. 답이 환불 방법만 설명했다면 관련성은 높지만 완전성은 낮다. 주제는 맞췄지만 질문을 다 해결하지 못했다.</span>
+        </div>
+        <p>다섯 지표를 함께 보면 품질을 여러 방향에서 볼 수 있다. 어디를 고쳐야 앱이 나아지는지도 그만큼 분명해진다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="conclusion">
+        <header><span class="num">07</span><h2>기존 지표 위에 한 층 더 <span class="ts">15:40</span></h2></header>
+        <p>발표자는 기존 지표를 버리자는 게 아니라고 분명히 한다. LETS는 계속 본다. 그 위에 생성형 AI에 맞는 층을 하나 더 얹는다.</p>
+        <div class="shift" aria-label="모니터링 범위의 확장">
+          <div><span class="tag">지금까지 · LETS</span><b>시스템이 돌아가는가</b><span class="muted">지연 시간, 오류, 트래픽, 포화도</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">앞으로 · LETS + 한 층</span><b>시스템이 잘 돌아가는가</b><span class="muted">비용, 안전, 품질 지표를 더한다</span></div>
+        </div>
+        <p>엔지니어의 일도 늘었다. 앱을 만들어 프로덕션에서 돌아가게 하는 것으로 끝나지 않는다. 이 추가 층까지 챙겨야 한다. <span class="ts">16:10</span></p>
+        <div class="callout">
+          <span class="title">이 발표가 다루지 않는 것</span>
+          <span>여러 지표의 목표가 "엄격하게", "최대한 낮게"에서 멈춘다. 프롬프트 인젝션, 유해성, 환각률에는 구체적인 숫자가 없다. 지표를 어떻게 구현하고 어디서 볼지도 다루지 않는다. 자기 팀의 기준은 직접 정해야 한다.</span>
+        </div>
+        <p>발표 끝에서는 Datadog의 에이전트 관측 <span class="en">agent observability</span> 제품을 소개하고, 부스와 무료 체험을 안내한다. <span class="ts">16:30</span></p>
+        <p class="note">발표자는 관측 도구를 파는 Datadog 소속이다. "지켜볼 지표가 더 필요하다"는 주장 전체가 회사 제품과 맞닿아 있으니 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="recap">
+        <header><span class="num">08</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>200 OK는 서버가 응답했다는 뜻이다. 답이 맞았다는 뜻이 아니다.</li>
+          <li>골든 시그널(지연·오류·트래픽·포화도)은 여전히 필요하지만 생성형 AI 앱에는 부족하다.</li>
+          <li>같은 프롬프트도 매번 다른 답을 낸다. 회귀 테스트만으로는 안 되고 운영 중에 품질을 계속 평가해야 한다.</li>
+          <li>LLM 비용은 토큰 수, 모델, 컨텍스트 크기에 따라 변한다. 사용량과 비례하지 않는다.</li>
+          <li><strong>토큰 크립</strong>: 비용 검토 없이 컨텍스트를 늘리면 비용이 최대 8배가 된다.</li>
+          <li><strong>모델 교체</strong>: 사용량이 같아도 비싼 모델로 바꾸면 요청당 비용이 최대 15배가 된다(발표자 예시).</li>
+          <li><strong>캐시 없는 호출</strong>: 같은 답에 반복해서 돈을 낸다. 발표자는 지출의 70%가 중복일 때가 있다고 인용했다.</li>
+          <li>기능·사용자·모델·엔드포인트 네 단계로 <strong>모든 호출에 태그</strong>를 달아야 돈이 어디로 가는지 보인다.</li>
+          <li>안전은 입력(프롬프트 인젝션, 탈옥)과 출력(PII, 유해성)을 함께 본다. <strong>PII는 0%, 탈옥은 100% 차단</strong>이 목표다.</li>
+          <li>품질은 환각률, 관련성, 만족도, 완전성, RAG 검색 품질 <strong>다섯 방향</strong>에서 잰다.</li>
+        </ol>
+      </section>
+
+      <!-- 9 -->
+      <section id="quiz">
+        <header><span class="num">09</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>LETS는 무엇의 약자이고, 무엇을 알려 주지 못하나?</span></summary><div class="answer">지연 시간, 오류, 트래픽, 포화도. 시스템이 돌아가는지는 알려 주지만, 답이 좋았는지는 알려 주지 않는다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>생성형 AI 앱에서 회귀 테스트만으로 부족한 이유는?</span></summary><div class="answer">같은 프롬프트도 실행할 때마다 다른 답을 낸다. 그래서 운영 환경에서 품질을 계속 평가해야 한다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>"200 OK인데 틀렸다"는 무슨 뜻인가?</span></summary><div class="answer">서버는 정상 응답했지만 답이 환각이거나, 질문과 어긋나거나, 빠진 게 있을 수 있다. 상태 코드는 답의 품질을 말해 주지 않는다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>토큰 크립이란? 컨텍스트가 4,000에서 32,000토큰으로 늘면 비용은?</span></summary><div class="answer">품질을 높이려고 비용 검토 없이 컨텍스트 창을 조금씩 늘리는 현상. 최대 8배가 된다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>사용량이 그대로인데 한 달 만에 비용이 크게 늘 수 있는 경우는?</span></summary><div class="answer">싼 모델(예: Haiku 4.5)에서 비싼 모델(예: Opus)로 바꿀 때. 발표자 예시로 요청당 최대 15배다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>캐싱 계층이 없으면 무엇이 문제인가?</span></summary><div class="answer">같은 질문에 같은 비싼 응답을 반복해서 산다. 발표자는 Datadog 자체 조사를 들어 지출의 70%가 중복일 때가 있다고 했다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>비용 태그 네 단계와 각각의 쓰임은?</span></summary><div class="answer">기능(제품 영역별 비용, 로드맵 결정), 사용자(차지백, 청구, 남용 발견), 모델(모델 간 실제 비용 비교), 엔드포인트(지역·환경별 인프라 계획).</div></details>
+          <details><summary><span class="qn">Q8</span><span>안전 지표 네 가지를 입력 쪽과 출력 쪽으로 나누면? 목표가 0%와 100%로 정해진 것은?</span></summary><div class="answer">입력 쪽은 프롬프트 인젝션과 탈옥, 출력 쪽은 PII와 유해성이다. PII는 프로덕션 출력의 0%, 탈옥 시도는 100% 차단이 목표다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>PII를 찾는 두 가지 방법은?</span></summary><div class="answer">정규식, 그리고 글에서 이름·번호 같은 항목을 찾아내는 개체명 인식(NER).</div></details>
+          <details><summary><span class="qn">Q10</span><span>품질 지표 다섯 가지는?</span></summary><div class="answer">환각률, 관련성 점수, 사용자 만족도, 답변 완전성, RAG 검색 품질.</div></details>
+          <details><summary><span class="qn">Q11</span><span>관련성과 완전성은 어떻게 다르고, 각각 어떻게 재나?</span></summary><div class="answer">관련성은 응답이 질문 주제에 맞는지 본다. BERTScore나 임베딩 유사도로 잰다. 완전성은 사용자 의도를 빠짐없이 다뤘는지 본다. 주로 LLM-as-a-judge로 잰다.</div></details>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="apply">
+        <header><span class="num">10</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>모든 LLM 호출에 기능·사용자·모델·환경 태그를 단다<span class="how">확인: 비용 화면에서 태그 없는 호출이 남아 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>컨텍스트 창이나 프롬프트를 키울 때 비용 검토를 거친다<span class="how">바꾸기 전후의 요청당 토큰 수와 월 비용을 비교한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>모델을 바꾸기 전에 같은 사용량으로 월 비용을 계산한다<span class="how">지금 모델과 바꿀 모델의 요금표로 직접 계산한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>같은 질문이 반복되는 비율을 재고 캐시를 둔다<span class="how">확인: 같은 입력으로 같은 비싼 호출을 되풀이하고 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>사용자 입력에서 프롬프트 인젝션과 탈옥 시도를 탐지하고 기록한다<span class="how">패턴 매칭이나 전용 분류 모델. 탈옥은 차단이 목표</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>모든 출력에서 PII를 검사한다<span class="how">정규식과 개체명 인식. 목표는 프로덕션 출력의 0%</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>출력에 유해성 분류기를 돌리고 임계값을 정한다<span class="how">확인: 임계값을 넘은 출력이 알림으로 오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>환각률을 사람 검토와 자동 사실 확인으로 함께 잰다<span class="how">근거 데이터로 뒷받침되지 않는 주장이 든 응답의 비율</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>사용자 피드백을 받고 긍정 비율을 추적한다<span class="how">좋아요/싫어요나 별점. 발표자 기준은 긍정 80~85% 이상</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>RAG를 쓰면 검색 결과의 관련성을 따로 잰다<span class="how">Top-K 정확도, NDCG</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section id="glossary">
+        <header><span class="num">11</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>골든 시그널</td><td>Golden signals. 서비스 상태를 보는 기본 지표 네 가지. 지연 시간, 오류, 트래픽, 포화도</td></tr>
+              <tr><td>LETS</td><td>네 지표의 영어 첫 글자. Latency, Error, Traffic, Saturation</td></tr>
+              <tr><td>포화도</td><td>Saturation. CPU, 메모리 같은 자원이 얼마나 꽉 찼는지</td></tr>
+              <tr><td>200 OK</td><td>HTTP 요청이 성공했다는 응답 코드. 답의 내용이 맞는지는 말해 주지 않는다</td></tr>
+              <tr><td>회귀 테스트</td><td>새 변경 뒤에도 기존 동작이 그대로인지 확인하는 테스트</td></tr>
+              <tr><td>토큰</td><td>모델이 글을 잘게 나눠 처리하는 단위. LLM 비용은 보통 토큰 수로 매긴다</td></tr>
+              <tr><td>컨텍스트 창</td><td>Context window. 모델에 한 번에 넣는 입력의 길이</td></tr>
+              <tr><td>토큰 크립</td><td>Token creep. 비용 검토 없이 컨텍스트가 조금씩 커지는 현상</td></tr>
+              <tr><td>모델 드리프트</td><td>Model drift. 이 발표에서는 더 비싼 모델로 옮겨 가 비용이 커지는 것. 다른 맥락에서는 시간이 지나며 모델 성능이 변하는 현상을 가리키기도 한다</td></tr>
+              <tr><td>캐싱 계층</td><td>Caching layer. 같은 요청의 결과를 저장해 두고 다시 쓰는 층</td></tr>
+              <tr><td>비용 귀속</td><td>Cost attribution. 비용을 기능, 사용자, 모델 같은 원인별로 나눠 붙이는 것</td></tr>
+              <tr><td>차지백</td><td>Chargeback. 쓴 만큼 해당 팀이나 고객에게 비용을 청구하는 것</td></tr>
+              <tr><td>프롬프트 인젝션</td><td>입력 안에 지시문을 숨겨 AI가 원래 지시 대신 그걸 따르게 만드는 공격</td></tr>
+              <tr><td>탈옥</td><td>Jailbreak. 상황극 같은 우회로 모델의 안전장치를 풀려는 시도</td></tr>
+              <tr><td>가드레일</td><td>Guardrail. 위험한 입력과 출력을 걸러 내는 안전장치</td></tr>
+              <tr><td>PII</td><td>Personally Identifiable Information. 이름, 신분 번호, 카드 번호처럼 개인을 알아볼 수 있는 정보</td></tr>
+              <tr><td>개체명 인식</td><td>Named Entity Recognition (NER). 글에서 사람 이름, 번호, 장소 같은 항목을 찾아내는 기법</td></tr>
+              <tr><td>콘텐츠 모더레이션</td><td>Content moderation. 유해하거나 편향된 콘텐츠를 걸러 내는 일</td></tr>
+              <tr><td>환각</td><td>Hallucination. 모델이 사실이 아닌 내용을 그럴듯하게 지어내는 것</td></tr>
+              <tr><td>근거 데이터</td><td>Grounding data. 답의 근거로 삼는 문서나 데이터</td></tr>
+              <tr><td>임베딩 유사도</td><td>문장을 숫자 벡터로 바꾼 뒤 벡터끼리 얼마나 가까운지 재는 방법</td></tr>
+              <tr><td>BERTScore</td><td>BERT 모델의 임베딩으로 두 글의 의미가 얼마나 비슷한지 재는 점수</td></tr>
+              <tr><td>NPS</td><td>Net Promoter Score. "추천하겠는가"를 물어 고객 충성도를 재는 점수</td></tr>
+              <tr><td>LLM-as-a-judge</td><td>LLM에게 다른 모델의 답을 채점하게 하는 평가 방법</td></tr>
+              <tr><td>RAG</td><td>Retrieval-Augmented Generation. 관련 문서를 먼저 찾아 모델 입력에 넣고 답하게 하는 방식</td></tr>
+              <tr><td>Top-K 정확도</td><td>검색 결과 상위 K개 안에 정답 문서가 들어 있는 비율</td></tr>
+              <tr><td>NDCG</td><td>Normalized Discounted Cumulative Gain. 관련 있는 문서가 검색 결과 위쪽에 있을수록 점수를 높게 주는 순위 지표</td></tr>
+              <tr><td>관측 가능성</td><td>Observability. 시스템이 내보내는 기록과 지표로 안에서 무슨 일이 일어나는지 알아내는 능력</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="timeline">
+        <header><span class="num">12</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>골든 시그널(LETS)</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>차이 1: 출력이 매번 다르다</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>차이 2: 비용이 변한다</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>차이 3: 새로운 공격</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>차이 4: 품질이 주관적이다</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>기존 지표는 "잘 돌아가는가"를 모른다</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>비용 모니터링</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>토큰 크립: 최대 8배</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>모델 교체: 최대 15배</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>캐시 없는 호출: 지출 70% 중복</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>비용 귀속: 모든 것에 태그</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>기능 단위 태그</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>사용자 단위 태그</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>모델 단위 태그</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>엔드포인트 단위 태그</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>안전 지표</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>프롬프트 인젝션 비율</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>PII 탐지 비율: 목표 0%</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>콘텐츠 모더레이션 점수</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>탈옥 시도: 100% 차단</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>품질 지표</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>200 OK가 거짓말할 때</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>환각률</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>관련성 점수</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>사용자 만족도: 긍정 80~85% 이상</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>답변 완전성</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>RAG 검색 품질</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>정리: 기존 지표 위에 한 층 더</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>Datadog 제품 소개</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'rTojoVotlD8:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

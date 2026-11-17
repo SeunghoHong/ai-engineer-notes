@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 정확도 끌어올리기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#problem">경쟁사 피자 가격 조사</a></li>
+      <li><a href="#results">41%에서 97%로</a></li>
+      <li><a href="#framework">여섯 단계 한눈에</a></li>
+      <li><a href="#kickoff">1단계: 킥오프</a></li>
+      <li><a href="#ontology">2단계: 온톨로지</a></li>
+      <li><a href="#evals">3단계: 벤치마크와 평가</a></li>
+      <li><a href="#first-agent">4단계: 좁은 첫 에이전트</a></li>
+      <li><a href="#iterate">5단계: 고치고 다시 재기</a></li>
+      <li><a href="#handoff">6단계: 루프째 넘기기</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-05 · 13분 · 영어 발표 한글 정리</span>
+      <h1>에이전트 정확도를 41%에서 97%로</h1>
+      <p class="lead">도미노 피자의 경쟁사 가격 조사 에이전트는 첫 버전에서 41%만 맞혔다. 용어 정의, 규칙, 채점 방식을 고치며 11번째 버전에서 97%에 닿았다. 비용과 실행 시간은 거의 절반이 됐다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=4VmugsE-iP0" target="_blank" rel="noopener">How We Took an AI Agent From 41% to 97% Accurate</a></span>
+        <span>발표: Milind Sunil Shah (Brainbase Labs 기술 스태프. Brainbase는 기업이 내부 에이전트를 배포하고 운영하도록 돕는 회사)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 anthology로 들린 말은 ontology(온톨로지), emails는 evals(평가), LM as a judge는 LLM as a judge로 옮겼다. all text는 alt text(대체 텍스트)로 보고 옮겼다(추정). <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>도미노의 경쟁사 가격 조사 에이전트는 <strong>v1 41% → v11 97%</strong>가 됐다. 소스당 비용은 2달러에서 1달러로, 실행 시간은 129분에서 71분으로 줄었다.</li>
+        <li>바꾼 것은 <strong>지시문, 스킬, 플레이북</strong>뿐이다.</li>
+        <li>방법은 여섯 단계다. <strong>킥오프 → 온톨로지 → 벤치마크와 평가 → 첫 에이전트 → 반복 → 인계.</strong></li>
+        <li>킥오프에서는 성공의 모습과 <strong>에이전트가 혼자 하면 안 되는 일</strong>을 먼저 합의한다.</li>
+        <li>온톨로지의 핵심은 하나다. <strong>모든 용어에 정의를 단다.</strong> 적지 않으면 에이전트는 추측한다.</li>
+        <li>채점은 세 층이다. <strong>코드, LLM 판사, 에이전트 판사.</strong></li>
+        <li><strong>v1의 일은 측정되는 것이다.</strong> 가장 좁게 시작하고, 한 번에 하나만 바꾸고, 모델보다 지시문을 먼저 고친다.</li>
+        <li>마지막에는 에이전트가 아니라 <strong>개선 루프 전체</strong>를 고객에게 넘긴다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="problem">
+        <header><span class="num">01</span><h2>경쟁사 피자 가격 조사 <span class="ts">00:30</span></h2></header>
+        <p>발표자의 고객은 도미노 피자<span class="en">Domino's</span>다. 발표자에 따르면 매장은 2만 곳이 넘고, 90개가 넘는 시장에서 영업한다. 프로젝트는 한 지역의 마케팅 총괄(CMO) 조직에서 시작했다.</p>
+        <p>이 조직은 같은 질문을 계속 던졌다. 길 건너 경쟁사의 피자는 얼마인가.</p>
+        <ul class="plain">
+          <li>경쟁사의 배달 앱에서는 얼마인가</li>
+          <li>경쟁사의 웹사이트에서는 얼마인가</li>
+          <li>프로모션을 적용하면 얼마이고, 적용하지 않으면 얼마인가</li>
+        </ul>
+        <p>원하는 결과물은 스프레드시트 하나였다. 여러 품목마다 찾을 수 있는 가장 낮은 가격을 채운 표다.</p>
+
+        <h3>사람이 하던 일 <span class="ts">01:00</span></h3>
+        <p>에이전트를 만들기 전에는 분석가가 손으로 했다.</p>
+        <ol class="plain">
+          <li>경쟁사 웹사이트를 연다</li>
+          <li>맞는 매장을 고른다</li>
+          <li>배달 가격과 포장 가격을 비교한다</li>
+          <li>맞는 프로모션을 찾는다</li>
+          <li>가장 싼 가격을 찾는다</li>
+          <li>스프레드시트에 적는다</li>
+        </ol>
+        <div class="callout warn">
+          <span class="title">하나만 틀려도 티가 안 난다</span>
+          <span>단계를 하나씩 보면 다 쉽다. 그런데 한 단계만 틀려도 끝에는 다 채워진 것처럼 보이는 칸이 남는다. 그 칸의 값은 틀렸다.</span>
+        </div>
+
+        <h3>에이전트가 할 일 <span class="ts">01:20</span></h3>
+        <p>에이전트는 같은 일을 한다. 품목 목록을 읽고, 웹사이트를 찾고, 가격을 해석해 스프레드시트를 채운다. 확신이 없는 칸은 표시<span class="en">flag</span>해 사람에게 넘긴다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="results">
+        <header><span class="num">02</span><h2>41%에서 97%로 <span class="ts">01:30</span></h2></header>
+        <p>첫 버전(v1)의 정확도는 41%였다. 11번째 버전(v11)에서는 97%가 됐다.</p>
+
+        <figure class="chart" aria-label="정확도 비교: v1 41%, v11 97%">
+          <span class="chart-title">가격 조사 에이전트의 정확도 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>v1</span><span class="val">41</span></div>
+              <div class="track"><div class="fill" style="width:41%" title="v1: 41%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>v11</span><span class="val">97</span></div>
+              <div class="track"><div class="fill key" style="width:97%" title="v11: 97%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+        </figure>
+
+        <figure class="chart" aria-label="v1을 100으로 놓은 비교: 소스당 비용 2달러에서 1달러로 50, 실행 시간 129분에서 71분으로 55">
+          <span class="chart-title">비용과 실행 시간 (각 지표의 v1 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>소스당 비용 · v1</span><span class="val">$2</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="소스당 비용 v1: 2달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>소스당 비용 · v11</span><span class="val">$1</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="소스당 비용 v11: 1달러 (v1의 50%)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>한 번 실행하는 시간 · v1</span><span class="val">129분</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="실행 시간 v1: 129분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>한 번 실행하는 시간 · v11</span><span class="val">71분</span></div>
+              <div class="track"><div class="fill key" style="width:55%" title="실행 시간 v11: 71분 (v1의 55%)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>v1 = 100</span></div>
+          <span class="caption">지표마다 v1 값을 막대 끝으로 놓았다. 비용은 v1의 50%, 시간은 v1의 55%다. 발표 뒷부분에서는 v1 비용을 "2달러 이상"이라고도 했다.</span>
+        </figure>
+
+        <p>여기서 <strong>소스 하나</strong>는 품목 하나, 경쟁사 하나, 웹사이트 하나의 조합이다. 비용은 이 조합 하나를 조사하는 데 드는 돈이다.</p>
+        <div class="callout">
+          <span class="title">모델이 아니라 지시문을 고쳤다</span>
+          <span>발표자에 따르면 이 개선은 모두 지시문, 스킬, 플레이북을 바꿔서 얻었다.</span>
+        </div>
+        <p class="note">발표자는 에이전트 구축과 운영을 파는 Brainbase 소속이고, 이 수치는 자사 고객 사례로 발표한 것이다. 정확도를 어떤 기준으로 셌는지도 발표에서 자세히 설명하지 않았다. 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="framework">
+        <header><span class="num">03</span><h2>여섯 단계 한눈에 <span class="ts">02:00</span></h2></header>
+        <p>발표자는 도미노뿐 아니라 다른 고객에게도 같은 여섯 단계를 쓴다고 했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>핵심</th><th>도미노에서 한 일</th></tr></thead>
+            <tbody>
+              <tr><td>1 킥오프</td><td>무엇이 성공인지 고객과 합의한다</td><td>분석가가 매일 2시간 쓰던 일을 브리프로 정리</td></tr>
+              <tr><td>2 온톨로지</td><td>에이전트가 알아야 할 용어와 규칙을 모두 정의한다</td><td>품목 테이블, 규칙 파일, 가격 관찰 테이블</td></tr>
+              <tr><td>3 벤치마크와 평가</td><td>무엇을 어떻게 채점할지 정한다</td><td>과거 스프레드시트, 스크린샷 환경, 채점 세 층</td></tr>
+              <tr><td>4 첫 에이전트</td><td>채점할 수 있는 가장 좁은 버전을 낸다</td><td>앱 1개, 품목 1개, 도시 1곳</td></tr>
+              <tr><td>5 반복</td><td>채점하고, 고치고, 다시 낸다</td><td>v1부터 v11까지</td></tr>
+              <tr><td>6 인계</td><td>에이전트가 아니라 개선 루프 전체를 넘긴다</td><td>분석가는 예외만 검토</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자는 2단계와 3단계의 순서는 조금 바뀌어도 된다고 했다. 5단계는 2~4단계를 되풀이하는 단계다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="kickoff">
+        <header><span class="num">04</span><h2>1단계: 킥오프 <span class="ts">02:20</span></h2></header>
+        <p>첫 단계는 고객이나 실제 사용자와 "이기면 어떤 모습인가"를 합의하는 일이다. 발표자는 다음 질문을 묻는다.</p>
+        <ul class="plain">
+          <li>지금 그 일은 정확히 무엇인가</li>
+          <li>일이 끝날 때 사람은 무엇에 승인<span class="en">sign-off</span>하나</li>
+          <li>시간은 얼마나 걸리고, 비용은 얼마인가</li>
+          <li>에이전트는 얼마나 정확해야 하나</li>
+          <li>결과물은 누가 판정하나</li>
+          <li>에이전트가 <strong>혼자 하면 안 되는 일</strong>은 무엇인가</li>
+          <li>에이전트가 <strong>절대 하면 안 되는 가정</strong>은 무엇인가</li>
+        </ul>
+
+        <h3>도미노 브리프 <span class="ts">02:40</span></h3>
+        <p>이 질문의 답을 모아 한 장짜리 브리프<span class="en">brief</span>를 만들었다. 발표자는 이 브리프가 잘 통했다고 했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>목표</td><td>지역 경쟁사 가격을 더 빠르고 반복 가능하게 모은다. 예외 상황에 필요한 판단은 잃지 않는다</td></tr>
+              <tr><td>지금 방식</td><td>분석가가 스프레드시트를 만들고, 가격팀이 최종 분석한다</td></tr>
+              <tr><td>드는 시간</td><td>분석가가 매일 2시간을 직접 들인다</td></tr>
+              <tr><td>확인</td><td>모든 칸을 사람이 확인한다</td></tr>
+              <tr><td>에이전트의 마무리</td><td>분석가에게 승인을 요청하고, 확신 없는 것을 표시한다</td></tr>
+              <tr><td>숫자로 본 성공</td><td>정확도는 최대로, 소스당 비용과 실행 시간은 최소로</td></tr>
+              <tr><td>열린 질문</td><td>시작 전에는 할인 검색이 가능한지조차 확신하지 못했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="ontology">
+        <header><span class="num">05</span><h2>2단계: 온톨로지 <span class="ts">03:30</span></h2></header>
+        <p>둘째 단계는 온톨로지<span class="en">ontology</span>다. 에이전트가 알아야 할 용어와 규칙을 모두 글로 적은 것이다. 목적은 에이전트가 추측하지 않게 하는 것이다.</p>
+        <ul class="plain">
+          <li>정확히 무엇을 모으나</li>
+          <li>답은 각각 어디서 오나</li>
+          <li>답은 어디에 적나</li>
+          <li>각 용어는 실제로 일하는 분석가에게 무슨 뜻인가</li>
+          <li>답을 못 찾으면 어떻게 하나</li>
+        </ul>
+        <blockquote>모든 용어에는 정의가 있어야 한다. 적어 두지 않으면 에이전트는 추측하고, 아마 틀린다.<cite>발표자의 말을 옮김 <span class="ts">03:50</span></cite></blockquote>
+
+        <h3>도미노에서 만든 구조 <span class="ts">04:00</span></h3>
+        <p>Brainbase에는 자체 메모리 기능이 있다. Postgres 데이터베이스처럼 생겼고, 에이전트가 자유롭게 읽고 쓸 수 있다. 도미노 에이전트는 이 메모리에 네 가지를 두고 일했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>이름</th><th>담는 것</th><th>ID 14의 경우</th></tr></thead>
+            <tbody>
+              <tr><td>대상 테이블</td><td>조사할 품목 전체</td><td>브랜드 B, 라지 피자, 배달, 앱 B</td></tr>
+              <tr><td>규칙 파일</td><td>실제 실패에서 나온 판단 규칙</td><td>결제 때 실제로 내는 가격을 적는다</td></tr>
+              <tr><td>가격 관찰 테이블 <span class="en">price observations</span></td><td>ID별로 본 가격, 정가, 출처</td><td>본 가격 19, 정가 24, 가격을 본 곳</td></tr>
+              <tr><td>스프레드시트</td><td>칸마다 품목 ID가 자리표시로 들어 있는 최종 표</td><td>ID 14 자리를 19로 바꾼다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표의 설명을 표로 옮긴 것이다. 메모리 기능은 Brainbase 자사 제품이니 감안해 읽자.</p>
+        <div class="callout">
+          <span class="title">24와 19 <span class="ts">04:30</span></span>
+          <span>에이전트가 브라우저로 ID 14의 가격을 찾았더니 24와 19가 함께 있었다. 24는 줄을 그은 정가, 19는 할인가다. 그래서 규칙 파일에 "결제 때 사용자가 실제로 내는 가격을 적어라"를 넣었다. 실제로 틀렸던 경우에서 나온 규칙이다.</span>
+        </div>
+        <p>이렇게 나눠 두면 틀린 칸을 거꾸로 추적할 수 있다. 칸 하나가 틀리면, 에이전트가 본 페이지와 그 가격을 고른 규칙이 남아 있다.</p>
+
+        <h3>실제 트레이스에서 나온 규칙 <span class="ts">05:10</span></h3>
+        <p>트레이스<span class="en">trace</span>는 에이전트가 한 단계씩 무엇을 했는지 남긴 기록이다. 도미노 규칙의 상당수는 여기서 나왔다.</p>
+        <ul class="plain">
+          <li><strong>라지 피자의 정의</strong>: 발표자에 따르면 단품 자체나 묶음 상품<span class="en">bundle</span>이 여기에 든다.</li>
+          <li><strong>배달 ≠ 포장</strong>: 에이전트가 둘을 헷갈렸다.</li>
+          <li><strong>프로모션 계산</strong>: 30% 할인이면 계산을 마친 값을 칸에 적는다.</li>
+          <li><strong>확인 못 하면 갭</strong>: 확인할 수 없는 값은 추측하지 말고 빈칸<span class="en">gap</span>으로 적는다.</li>
+        </ul>
+      </section>
+
+      <!-- 6 -->
+      <section id="evals">
+        <header><span class="num">06</span><h2>3단계: 벤치마크와 평가 <span class="ts">05:40</span></h2></header>
+        <p>셋째 단계는 벤치마크와 평가<span class="en">evals</span>를 정하는 일이다. 무엇을 오프라인 평가로 채점하고, 무엇을 온라인 평가로 채점할지 나눈다.</p>
+        <p>오프라인 평가는 고객에게 정답이 있는 과거 사례를 묻는 데서 시작한다. 도미노 분석가에게는 직접 만든 과거 스프레드시트가 있었다. 질문은 이것이다. 같은 입력을 다시 돌리면 같은 결과가 나오나.</p>
+
+        <h3>채점하는 세 가지 방법 <span class="ts">06:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방법</th><th>무엇을 보나</th><th>도미노에서 <span class="ts">07:00</span></th></tr></thead>
+            <tbody>
+              <tr><td>코드</td><td>규칙으로 맞고 틀림을 바로 가를 수 있는 것</td><td>모든 ID 칸이 가격으로 바뀌었나. 할인 계산이 맞나. 이전 실행보다 20% 넘게 오르내린 가격을 표시했나</td></tr>
+              <tr><td>LLM 판사</td><td>언어 모델이 기록을 읽고 판단하는 것</td><td>트레이스를 읽고 맞는 품목을 골랐는지, 맞는 프로모션을 적용했는지 본다</td></tr>
+              <tr><td>에이전트 판사</td><td>에이전트가 여러 턴 동안 도구를 부르며 결과물을 직접 확인하는 것</td><td>표시된 가격마다 직접 찾아가 그 표시가 타당했는지 확인한다</td></tr>
+              <tr><td>사람</td><td>최종 표시와 문제의 원인</td><td>분석가가 최종 표시를 보고, 잘못된 것이 있으면 이유를 찾는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 이 세 방법으로 채점할 수 있는 것을 최대한 많이 채점하라고 했다. 일이 잘못됐을 때와 표시가 떴을 때 어떻게 할지도 정해 둔다.</p>
+        <p class="note">에이전트 판사<span class="en">agent as a judge</span>는 발표자가 "조금 더 독특한 개념"이라고 소개한 것이다.</p>
+
+        <h3>벤치마크 환경 만들기 <span class="ts">06:40</span></h3>
+        <ol class="plain">
+          <li>분석가의 과거 스프레드시트를 정답으로 썼다.</li>
+          <li>입력 환경을 다시 만들려고 archive.org에서 그 날짜의 경쟁사 웹사이트 스냅숏을 가져왔다.</li>
+          <li>배달 앱에서는 이 방법이 통하지 않았다. 앱은 웹사이트와 같은 방식으로 데이터를 보여 주지 않았다.</li>
+          <li>그래서 v1부터 에이전트가 한 모든 행동의 브라우저 스크린샷을 저장했다. 이것이 내부 벤치마크 환경이 됐다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">실행할 때 본 화면을 남긴다</span>
+          <span>웹 페이지의 가격과 프로모션은 계속 바뀐다. 그때 본 화면을 남겨 두지 않으면 같은 문제를 나중에 다시 채점할 수 없다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="first-agent">
+        <header><span class="num">07</span><h2>4단계: 좁은 첫 에이전트 <span class="ts">07:40</span></h2></header>
+        <p>넷째 단계는 첫 에이전트를 내는 것이다. 첫날부터 채점할 수 있는 좁은 버전이어야 한다. 이 버전으로 다음을 알아낸다.</p>
+        <ul class="plain">
+          <li>채점할 가치가 있는 가장 작은 범위는 어디까지인가</li>
+          <li>얼마나 정확한가</li>
+          <li>한 번 돌리는 데 얼마나 걸리나</li>
+          <li>비용은 얼마인가</li>
+          <li>무엇을 틀리나</li>
+        </ul>
+        <blockquote>v1의 일은 측정되는 것이다. 잘하는 것이 아니다.<cite>발표자의 말을 옮김 <span class="ts">08:00</span></cite></blockquote>
+        <p>기준 점수가 나온 뒤에 범위를 넓힌다.</p>
+
+        <h3>도미노의 v1 <span class="ts">08:10</span></h3>
+        <p>v1은 41%만 맞혔다. 한 번 도는 데 2시간 넘게 걸렸고, 소스당 2달러가 들었다. 팀은 문제를 고치면서 범위를 이렇게 넓혔다.</p>
+        <ol class="plain">
+          <li>앱 1개, 품목 1개, 도시 1곳</li>
+          <li>버거와 포장 주문 추가</li>
+          <li>앱 하나 더 추가</li>
+          <li>다른 웹사이트들까지 추가</li>
+        </ol>
+        <p>발표자는 좁게 시작한 덕분에 무엇을 고칠지 찾기 쉬웠다고 했다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="iterate">
+        <header><span class="num">08</span><h2>5단계: 고치고 다시 재기 <span class="ts">08:40</span></h2></header>
+        <p>다섯째 단계는 반복이다. 채점하고, 고치고, 다시 낸다. 온톨로지, 평가와 벤치마크, 에이전트를 계속 고친다.</p>
+        <h3>고칠 때 묻는 것</h3>
+        <ul class="plain">
+          <li>어떤 실패가 가장 비싸고, 가장 자주 나나</li>
+          <li>그 실패를 고치려면 무엇을 바꿔야 하나</li>
+          <li>그 변경으로 실행 시간이나 비용이 늘어나나. 늘어난다면 받아들일 수 있나</li>
+          <li>이 실패로 벤치마크 케이스나 평가 기준을 하나 더 만들 수 있나</li>
+        </ul>
+        <div class="callout">
+          <span class="title">두 가지 원칙 <span class="ts">09:10</span></span>
+          <span><strong>한 번에 하나만 바꾼다.</strong> <strong>모델을 바꾸기 전에 지시문부터 고친다.</strong></span>
+        </div>
+
+        <h3>실제로 고친 두 사례 <span class="ts">09:40</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">사례 1 · 규칙 한 줄 <span class="ts">09:40</span></span>
+            <p>에이전트에게 브랜드 B 웹사이트에서 배달 라지 피자 가격을 찾으라며 링크를 줬다. 링크를 열자 해당 구역이 이미 강조돼 있었다. 에이전트는 그 구역에서 가격을 찾고 멈췄다.</p>
+            <p>같은 페이지 아래쪽에는 21달러짜리 할인 상품이 있었다. 분석가가 나중에 손으로 잡아냈다.</p>
+            <p class="verdict"><b>고친 것</b>: "링크된 구역에서 멈추지 말고 페이지 전체를 보라"는 규칙 하나를 넣었다. 같은 실수는 다시 나오지 않았다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">사례 2 · 브라우저 쓰는 방식 <span class="ts">10:20</span></span>
+            <p>브랜드 D의 프로모션 페이지는 가격을 모두 이미지 안에 넣어 두었다. 텍스트로는 읽을 수 없었다.</p>
+            <p>에이전트는 프로모션 이미지 26장을 모두 봤다. 다시 4배, 5배, 6배로 확대해 봤다. 13분째에 맞는 카드를 찾았지만, 확인한다며 계속 확대했다. 결국 루프에 빠졌고, 15분째에 사람이 직접 멈췄다.</p>
+            <p class="verdict"><b>고친 것</b>: 이미지를 읽기 전에 HTML DOM부터 본다. 이미지 제목이나 대체 텍스트 같은 정보다. 일정 배율을 넘으면 더 확대하지 않는다.</p>
+          </div>
+        </div>
+
+        <figure class="chart" aria-label="규칙을 바꾸기 전을 100으로 놓은 비교: 이미지 읽기 횟수 약 33, 비용 50 미만">
+          <span class="chart-title">"HTML DOM 먼저 보기" 규칙의 효과 (규칙 전 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>이미지 읽기 횟수</span><span class="val">약 33 · 1/3</span></div>
+              <div class="track"><div class="fill key" style="width:33.3%" title="이미지 읽기 횟수: 규칙 전의 1/3"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>비용</span><span class="val">&lt; 50</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="비용: 규칙 전의 50% 미만"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>규칙 전 = 100</span></div>
+          <span class="caption">발표자는 비용이 "50% 넘게 줄었다"고만 해서 50에 맞춰 그렸다. 실제 막대는 이보다 짧다. 어느 범위에서 잰 값인지는 발표에서 밝히지 않았다.</span>
+        </figure>
+        <p>이 규칙을 넣은 뒤로 에이전트는 실제 답을 내고 보고서를 끝까지 썼다.</p>
+
+        <div class="callout">
+          <span class="title">자동 검사가 다 잡지는 못한다 <span class="ts">11:30</span></span>
+          <span>브랜드 D 문제는 엔지니어가 트레이스와 웹사이트를 직접 보고서야 원인을 찾았다. 자동 검사와 평가 기준이 많은 것을 잡아 준다. 그래도 일부는 사람이 트레이스와 브라우저 도구 호출을 직접 봐야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="handoff">
+        <header><span class="num">09</span><h2>6단계: 루프째 넘기기 <span class="ts">11:50</span></h2></header>
+        <p>v11에서 97%에 닿은 뒤 남은 질문은 "고객에게 어떻게 넘기나"였다. 발표자는 다음 질문의 답을 글로 적어 두라고 했다.</p>
+        <ul class="plain">
+          <li>누가 에이전트를 돌리나</li>
+          <li>누가 결과물을 검토하나</li>
+          <li>누가 수정 사항을 규칙과 벤치마크 케이스로 바꾸나</li>
+          <li>새 버전을 낼 준비가 됐는지 누가 정하나</li>
+        </ul>
+        <div class="shift" aria-label="인계 대상의 변화">
+          <div><span class="tag">흔한 인계</span><b>에이전트를 넘긴다</b><span class="muted">돌아가는 프로그램 하나</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 인계</span><b>개선 루프 전체를 넘긴다</b><span class="muted">실행, 검토, 수정 반영, 출시 결정까지</span></div>
+        </div>
+        <p>변경이 작으면 사용자가 직접 고칠 수 있어야 한다.</p>
+
+        <h3>도미노의 지금 <span class="ts">12:20</span></h3>
+        <ul class="plain">
+          <li>에이전트는 도미노의 일정에 맞춰 매일 돈다. 이메일로 직접 실행할 수도 있다.</li>
+          <li>분석가는 예외만 검토한다.</li>
+          <li>분석가가 잡은 수정은 바로 벤치마크 케이스로 추가된다.</li>
+          <li>직접 고치기 어려운 것은 Brainbase가 지원한다.</li>
+          <li>지금은 더 많은 시장과 다른 업무 영역으로 넓히는 중이다.</li>
+        </ul>
+
+        <h3>이 틀이 잘 맞는 곳 <span class="ts">12:50</span></h3>
+        <p>발표자는 이 틀이 다른 사례에서도 잘 통했다고 했다. 특히 데이터 출처가 지저분하고, 그 속에서 맞는 답을 골라야 하는 일에 맞는다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="recap">
+        <header><span class="num">10</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>도미노의 가격 조사 에이전트는 v1 41%에서 v11 97%가 됐다. 비용은 소스당 2달러에서 1달러, 시간은 129분에서 71분이 됐다.</li>
+          <li>바꾼 것은 지시문, 스킬, 플레이북이다. <strong>모델 교체가 아니다.</strong></li>
+          <li>킥오프에서 성공의 모습, 사람이 승인하는 것, <strong>에이전트가 혼자 하면 안 되는 일</strong>을 먼저 합의한다.</li>
+          <li><strong>모든 용어에 정의를 단다.</strong> 적지 않으면 에이전트는 추측한다.</li>
+          <li>규칙은 실제 실패에서 나온다. 정가 대신 결제가, 배달 ≠ 포장, 확인 못 하면 빈칸.</li>
+          <li>채점은 <strong>코드, LLM 판사, 에이전트 판사</strong> 세 층이다. 마지막에 사람이 표시를 본다.</li>
+          <li>웹은 계속 바뀐다. 실행 때 스크린샷을 남겨 벤치마크 환경으로 쓴다.</li>
+          <li><strong>v1의 일은 측정되는 것이다.</strong> 가장 좁은 범위로 시작해 넓힌다.</li>
+          <li><strong>한 번에 하나만 바꾸고, 모델보다 지시문을 먼저 고친다.</strong> 자동 검사가 못 잡는 것은 트레이스를 직접 본다.</li>
+          <li>마지막에는 에이전트가 아니라 <strong>개선 루프 전체</strong>를 넘긴다.</li>
+        </ol>
+      </section>
+
+      <!-- 11 -->
+      <section id="quiz">
+        <header><span class="num">11</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>도미노가 에이전트로 답하고 싶었던 질문은?</span></summary><div class="answer">근처 경쟁사의 피자가 배달 앱과 웹사이트에서 얼마인지, 프로모션이 있을 때와 없을 때 각각 얼마인지. 결과물은 품목별 최저가를 채운 스프레드시트다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>v1과 v11의 정확도, 비용, 시간은? 무엇을 바꿔서 얻었나?</span></summary><div class="answer">정확도 41% → 97%, 소스당 비용 2달러 → 1달러, 실행 시간 129분 → 71분. 지시문, 스킬, 플레이북을 바꿨다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>이 발표에서 "소스 하나"는 무엇인가?</span></summary><div class="answer">품목 하나, 경쟁사 하나, 웹사이트 하나의 조합.</div></details>
+          <details><summary><span class="qn">Q4</span><span>킥오프 질문 중 에이전트의 경계를 정하는 두 가지는?</span></summary><div class="answer">에이전트가 혼자 하면 안 되는 일, 그리고 절대 하면 안 되는 가정.</div></details>
+          <details><summary><span class="qn">Q5</span><span>온톨로지 단계의 핵심 한 줄은?</span></summary><div class="answer">모든 용어에 정의가 있어야 한다. 적어 두지 않으면 에이전트는 추측하고, 아마 틀린다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>24와 19가 함께 보였을 때 어떤 규칙을 만들었나?</span></summary><div class="answer">결제 때 사용자가 실제로 내는 가격(19)을 적는다. 줄 그은 정가(24)는 적지 않는다. 실제로 틀렸던 경우에서 나온 규칙이다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>채점의 세 층과 도미노에서 각각 본 것은?</span></summary><div class="answer">코드: ID 칸이 다 바뀌었나, 할인 계산이 맞나, 20% 넘게 변한 가격을 표시했나. LLM 판사: 트레이스를 보고 품목과 프로모션이 맞는지. 에이전트 판사: 표시된 가격마다 직접 찾아가 표시가 타당한지.</div></details>
+          <details><summary><span class="qn">Q8</span><span>archive.org 방식이 막힌 곳과, 대신 쓴 방법은?</span></summary><div class="answer">배달 앱은 웹사이트와 같은 방식으로 데이터를 보여 주지 않아 스냅숏이 통하지 않았다. 대신 v1부터 에이전트가 한 모든 행동의 브라우저 스크린샷을 저장해 벤치마크 환경으로 썼다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>"v1의 일은 ___ 것이다"의 빈칸과, 도미노 v1의 범위는?</span></summary><div class="answer">측정되는 것. 잘하는 것이 아니다. 도미노 v1은 앱 1개, 품목 1개, 도시 1곳에서 시작했다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>반복 단계의 두 원칙은?</span></summary><div class="answer">한 번에 하나만 바꾼다. 모델을 바꾸기 전에 지시문부터 고친다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>브랜드 D 사례에서 무엇이 문제였고, 어떤 규칙으로 고쳤나?</span></summary><div class="answer">가격이 이미지 안에 있어 에이전트가 26장을 확대하며 루프에 빠졌고, 15분째에 사람이 멈췄다. 이미지보다 HTML DOM(이미지 제목, 대체 텍스트)을 먼저 보고 일정 배율에서 확대를 멈추게 했다. 이미지 읽기는 1/3로, 비용은 절반 아래로 줄었다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>인계할 때 넘기는 것은 무엇인가?</span></summary><div class="answer">에이전트만이 아니라 개선 루프 전체다. 누가 돌리고, 누가 검토하고, 누가 수정을 규칙과 벤치마크로 바꾸고, 누가 출시를 정하는지까지 넘긴다.</div></details>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="apply">
+        <header><span class="num">12</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>지금 사람이 하는 일, 걸리는 시간, 비용, 최종 승인 대상을 적는다<span class="how">킥오프 질문 목록을 그대로 쓴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트가 혼자 하면 안 되는 일과 하면 안 되는 가정을 적는다<span class="how">확인: 에이전트가 사람에게 넘길 조건이 글로 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트가 쓰는 모든 용어에 정의를 단다<span class="how">예: "가격 = 결제 때 실제로 내는 금액", "배달 ≠ 포장"</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>확인 못 한 값은 추측하지 말고 빈칸으로 남기게 한다<span class="how">확인: 빈칸과 표시가 사람에게 보이는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>정답이 있는 과거 사례로 오프라인 벤치마크를 만든다<span class="how">입력이 바뀌는 웹 작업이면 실행 때 스크린샷을 저장한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>채점 항목을 코드, LLM 판사, 에이전트 판사로 나눈다<span class="how">코드로 잴 수 있는 것부터 코드로 잰다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>채점할 수 있는 가장 작은 범위로 v1을 내고 기준 점수를 잰다<span class="how">정확도, 실행 시간, 비용, 틀린 유형을 같이 기록한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>한 번에 하나만 바꾸고, 모델 교체 전에 지시문을 고친다<span class="how">확인: 변경마다 점수 변화가 기록되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>사람이 잡은 수정이 벤치마크 케이스로 들어가는 길을 만든다<span class="how">같은 실패가 다시 나오면 자동으로 걸리는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>인계 전에 실행, 검토, 규칙 반영, 출시 결정 담당자를 적는다<span class="how">작은 변경은 사용자가 직접 할 수 있게 한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 13 -->
+      <section id="glossary">
+        <header><span class="num">13</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>힐 클라이밍</td><td>Hill climbing. 점수를 재고 조금씩 고쳐 점수를 올려 가는 방식</td></tr>
+              <tr><td>백오피스 에이전트</td><td>Back-office agent. 고객을 직접 상대하지 않고 회사 내부 업무를 처리하는 에이전트</td></tr>
+              <tr><td>소스</td><td>Source. 이 발표에서는 품목 하나, 경쟁사 하나, 웹사이트 하나의 조합</td></tr>
+              <tr><td>브리프</td><td>Brief. 목표, 지금 방식, 성공 기준을 짧게 정리한 합의 문서</td></tr>
+              <tr><td>온톨로지</td><td>Ontology. 에이전트가 쓰는 용어와 그 뜻, 규칙을 정리한 것</td></tr>
+              <tr><td>스킬 / 플레이북</td><td>Skill / Playbook. 에이전트가 특정 작업을 할 때 따르는 지침과 절차 문서</td></tr>
+              <tr><td>트레이스</td><td>Trace. 에이전트가 한 단계씩 무엇을 했는지 남긴 실행 기록</td></tr>
+              <tr><td>표시</td><td>Flag. 에이전트가 확신하지 못해 사람에게 확인을 맡긴 항목</td></tr>
+              <tr><td>갭</td><td>Gap. 확인하지 못해 비워 둔 값</td></tr>
+              <tr><td>벤치마크</td><td>정답이 있는 문제 묶음. 버전마다 같은 문제로 점수를 비교한다</td></tr>
+              <tr><td>평가 (eval)</td><td>에이전트의 결과 품질을 재는 테스트</td></tr>
+              <tr><td>오프라인 / 온라인 평가</td><td>오프라인: 정답이 있는 과거 사례로 미리 채점한다. 온라인: 실제 운영 중의 결과를 채점한다</td></tr>
+              <tr><td>LLM 판사</td><td>LLM as a judge. 언어 모델이 결과나 기록을 읽고 맞는지 판정하는 방식</td></tr>
+              <tr><td>에이전트 판사</td><td>Agent as a judge. 에이전트가 여러 번 도구를 부르며 결과물을 직접 확인해 판정하는 방식</td></tr>
+              <tr><td>브라우저 사용</td><td>Browser use. 에이전트가 웹 브라우저를 직접 열고 클릭하며 정보를 찾는 것</td></tr>
+              <tr><td>HTML DOM</td><td>웹 페이지의 구조를 나타낸 트리. 텍스트, 이미지 제목, 대체 텍스트가 들어 있다</td></tr>
+              <tr><td>대체 텍스트</td><td>Alt text. 이미지를 볼 수 없을 때 대신 읽히도록 이미지에 붙인 설명 글</td></tr>
+              <tr><td>archive.org</td><td>웹 페이지의 과거 모습을 날짜별로 저장해 두는 인터넷 아카이브</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="timeline">
+        <header><span class="num">14</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자와 Brainbase 소개</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>주제: 백오피스 에이전트 힐 클라이밍</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>고객 도미노와 경쟁사 가격 질문</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>분석가가 손으로 하던 단계</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>에이전트가 할 일</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>41% → 97%, 2달러 → 1달러, 129분 → 71분</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>여섯 단계 프레임워크</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>1단계 킥오프 질문</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>도미노 브리프</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>2단계 온톨로지</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>메모리 테이블과 ID 14 예시</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>24와 19: 규칙 파일과 가격 관찰 테이블</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>실제 트레이스에서 나온 규칙</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>3단계 벤치마크와 평가</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>코드, LLM 판사, 에이전트 판사</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>벤치마크 환경: archive.org와 스크린샷</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>도미노의 채점 세 층</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>4단계 좁은 첫 에이전트</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>v1 성적과 범위 넓히기</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>5단계 반복</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>버전별 진행 그래프</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>사례 1: 페이지 전체를 보라</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>사례 2: 이미지 속 가격과 확대 루프</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>HTML DOM 먼저 보기 규칙과 효과</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>트레이스는 사람이 직접 본다</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>6단계 인계</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>도미노의 지금 운영 방식</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>마무리: 이 틀이 맞는 곳</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '4VmugsE-iP0:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

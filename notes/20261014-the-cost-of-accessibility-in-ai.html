@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>접근성의 비용 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- example file (added for this note) ---------- */
+pre {
+  margin: 0; padding: 14px 16px; max-width: 68ch; overflow-x: auto;
+  background: var(--code-bg); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.6;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#useless">쓸 수 없으면 쓸모없다</a></li>
+      <li><a href="#experiment">스킬 하나로 비용 58% 절감</a></li>
+      <li><a href="#toddler">에이전트는 세 살 아이</a></li>
+      <li><a href="#no-guidance">지침이 없을 때 생기는 일</a></li>
+      <li><a href="#muffin">블루베리 머핀</a></li>
+      <li><a href="#cost">접근성을 빼면 드는 비용</a></li>
+      <li><a href="#steps">에이전트에게 접근성 가르치기</a></li>
+      <li><a href="#minimum">최소한의 접근성 스킬</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-14 · 10분 · 영어 발표 한글 정리</span>
+      <h1>접근성은 정말 비싼가</h1>
+      <p class="lead">AI가 코드를 쓰는 지금, 접근성을 미루면 오히려 시간과 돈이 더 든다. 발표자는 에이전트에게 접근성 기준을 스킬로 쥐여 주라고 제안한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=ZccJsdOE54M" target="_blank" rel="noopener">The Cost of Accessibility in AI</a></span>
+        <span>발표: Jemima Abu (CAIS 프로덕트 엔지니어, Google Developer Expert, Microsoft MVP)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 발표자 이름과 회사 이름은 영상 제목에 맞춰 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>발표자가 인용한 WebAIM 조사로는 상위 100만 개 웹사이트 홈페이지의 <strong>96%에 접근성 문제</strong>가 있다. 가장 흔한 핑계는 "시간이 오래 걸린다"이다.</li>
+        <li>발표자가 같은 프롬프트를 에이전트에게 두 번 줬다. 접근성 스킬을 준 쪽이 <strong>비용은 58% 적고 시간은 3분의 1</strong>이었다. 단, 한 번 해 본 실험이다.</li>
+        <li>에이전트는 세 살 아이처럼 주변을 그대로 배운다. 접근성 없는 코드베이스에 넣으면 <strong>사람의 편향이 AI의 편향이 된다.</strong></li>
+        <li>지침이 없으면 AI는 이미 있는 HTML 요소를 두고 <strong>컴포넌트를 처음부터 다시 만든다.</strong> 코드도 테스트도 늘어난다.</li>
+        <li>접근성은 머핀 속 블루베리처럼 <strong>처음부터 넣어 구워야 한다.</strong> 다 만든 뒤 붙이면 회귀 테스트와 리팩터링이 늘어난다.</li>
+        <li>접근성을 빼면 <strong>고객을 잃고, 법적 위험을 지고, 다시 만드는 시간</strong>을 쓴다.</li>
+        <li>오늘 할 일: 요구사항 정의, 기존 코드 감사, 재사용 컴포넌트, 그리고 <strong>에이전트가 반드시 쓰는 접근성 스킬</strong>.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="useless">
+        <header><span class="num">01</span><h2>쓸 수 없으면 쓸모없다 <span class="ts">00:00</span></h2></header>
+        <blockquote>쓸 수 없는 제품을 만드는 데 토큰을 낭비하지 마라.<cite>발표자가 이 발표에 붙인 다른 제목</cite></blockquote>
+        <p>접근성<span class="en">accessibility</span>은 장애 여부와 관계없이 누구나 쓸 수 있는 성질이다.</p>
+        <p>그래서 접근성이 없는 제품은 쓸 수 없는 사람에게 쓸모가 없다.</p>
+        <p>요즘은 말로 시켜 AI가 코드를 쓰게 하는 바이브 코딩<span class="en">vibe coding</span>이 흔하다. 하루에 앱 다섯 개를 만들어도 사람이 쓰지 못하면 의미가 없다. 코드를 AI가 써도 결국 사람을 위해 만드는 것이다.</p>
+
+        <h3>96%의 홈페이지에 문제가 있다 <span class="ts">00:40</span></h3>
+        <p>발표자가 인용한 WebAIM 조사에 따르면, 세계 상위 100만 개 웹사이트 홈페이지의 96%에 접근성 문제가 하나 이상 있다.</p>
+        <p>왜 접근성을 챙기지 않느냐고 물으면 가장 흔한 답은 "시간이 너무 오래 걸린다"이다. 발표자도 접근성 작업이 손과 시간이 많이 드는 일이라는 데는 동의한다.</p>
+        <p>하지만 AI가 코드 대부분을 쓰는 지금은 오히려 쉬워졌다고 본다. 발표자는 <strong>접근성 없는 사이트를 만드는 쪽이 시간과 돈이 더 든다</strong>고 주장한다.</p>
+        <p class="note">발표자의 예시는 대부분 웹이다. 발표자는 모바일이나 하드웨어 같은 다른 플랫폼에도 같은 원리가 적용된다고 했다. <span class="ts">02:20</span></p>
+      </section>
+
+      <!-- 2 -->
+      <section id="experiment">
+        <header><span class="num">02</span><h2>스킬 하나로 비용 58% 절감 <span class="ts">01:10</span></h2></header>
+        <p>발표자는 회사 코드베이스로 작은 실험을 했다. 아무 지침 없이 "이 디자인을 Figma에서 구현해"라는 단순한 프롬프트를 에이전트에게 두 번 줬다.</p>
+        <ul class="plain">
+          <li><strong>1회차</strong>: 접근성 스킬 없이 돌렸다.</li>
+          <li><strong>2회차</strong>: 발표자가 직접 쓴 접근성 스킬<span class="en">skill</span>을 쓰게 했다. 스킬은 에이전트가 특정 작업을 할 때 꺼내 쓰는 지침 묶음이다.</li>
+        </ul>
+
+        <figure class="chart" aria-label="스킬 없이 돌린 결과를 100으로 놓은 비교: 비용은 접근성 스킬을 쓴 쪽이 42, 시간은 약 33">
+          <span class="chart-title">같은 프롬프트, 접근성 스킬 유무 비교 (스킬 없음 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>비용 · 스킬 없음</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="비용, 스킬 없음: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>비용 · 접근성 스킬</span><span class="val">42 · −58%</span></div>
+              <div class="track"><div class="fill key" style="width:42%" title="비용, 접근성 스킬: 42 (58% 감소)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>시간 · 스킬 없음</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="시간, 스킬 없음: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>시간 · 접근성 스킬</span><span class="val">약 33 · 3분의 1</span></div>
+              <div class="track"><div class="fill key" style="width:33.3%" title="시간, 접근성 스킬: 약 33 (3분의 1)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자는 금액과 걸린 시간의 실제 값은 말로 밝히지 않았다. 말로 밝힌 비율만 "스킬 없음 = 100"으로 바꿔 그렸다.</span>
+        </figure>
+
+        <p>접근성 스킬을 쓴 쪽이 <strong>더 싸고 더 빨랐다.</strong></p>
+        <div class="callout warn">
+          <span class="title">발표자 본인이 단 단서 <span class="ts">01:40</span></span>
+          <span>한 번만 돌린 실험이고, 통제된 환경도 아니었다. 그래서 발표자는 이 결과를 실증 데이터로 쓸 수 없다고 했다. "접근성 있는 사이트가 더 싸다"고 결론 내리지도 않았다. 대신 스킬 없는 쪽이 왜 오래 걸렸는지를 보자고 한다. 그 이유는 <a href="#no-guidance">04절</a>에 있다.</span>
+        </div>
+        <p class="note">실험에 쓴 스킬은 발표자가 직접 쓴 것이다. 만든 사람이 직접 잰 결과라는 점도 감안해 읽자.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="toddler">
+        <header><span class="num">03</span><h2>에이전트는 세 살 아이 <span class="ts">02:30</span></h2></header>
+        <p>AI 에이전트는 거의 무엇이든 하는 똑똑한 도구다. 하지만 발표자 표현으로는 아직 "세 살"이다.</p>
+        <p>아기처럼 쉽게 영향을 받는다. 하늘이 빨갛다고 충분히 여러 번 말하면 결국 그렇다고 받아들인다.</p>
+        <p>그래서 책임은 개발자에게 있다. 원하는 제품을 만들도록 <strong>맞는 스킬과 지침을 줘야 한다.</strong></p>
+        <div class="callout">
+          <span class="title">비유: Netflix의 일본 프로그램 Old Enough <span class="ts">02:50</span></span>
+          <span>세 살 아이가 처음으로 혼자 심부름을 가는 프로그램이다. 보내기 전에 부모가 준비를 한다. 마트에 여러 번 같이 가 보고, 마트 위치와 살 것과 피할 길을 적은 목록을 준다. 에이전트도 같다. "이 디자인을 구현해"라고 시킬 때 맞는 스킬과 프롬프트를 주면, 엉뚱한 길로 빠지지 않고 의도한 결과에 가까워진다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="no-guidance">
+        <header><span class="num">04</span><h2>지침이 없을 때 생기는 일 <span class="ts">03:40</span></h2></header>
+        <p>접근성 지침 없이 에이전트에게 제품을 만들게 하면 두 가지 일이 생긴다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 사람의 편향이 AI의 편향이 된다 <span class="ts">03:40</span></span>
+            <p>개발자는 "내 컴퓨터에선 된다"<span class="en">it works for me</span>는 생각으로 일하기 쉽다.</p>
+            <ul>
+              <li>스크린 리더<span class="en">screen reader</span>로 쓸 수 있는지 확인하지 않는다</li>
+              <li>어두운 환경에서 보이는지 확인하지 않는다</li>
+              <li>"돌아가니까 끝"이라고 생각한다</li>
+            </ul>
+            <p>이런 코드베이스에 에이전트를 넣으면 그 편향을 그대로 흡수한다. "전에 아무도 접근성을 말하지 않았으니 필요 없겠지"라고 판단한다.</p>
+            <p class="verdict"><b>결과</b>: 에이전트로 코드를 만들수록 접근성 없는 코드베이스가 커진다. 처음부터 접근성이 제약 조건에 없었기 때문이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · AI는 장황한 코드를 기본으로 쓴다 <span class="ts">04:30</span></span>
+            <p>발표자가 실험에서 특히 눈여겨본 문제다. 지침이 없으면 AI는 바퀴를 몇 번이고 다시 만든다.</p>
+            <ul>
+              <li>아코디언이나 모달을 만들라고 하면</li>
+              <li>같은 기능을 하는 시맨틱 요소<span class="en">semantic element</span>가 이미 있는지 확인하지 않고</li>
+              <li>처음부터 직접 만든다</li>
+            </ul>
+            <p>브라우저가 기본으로 주는 기능을 흉내 내려면 기능을 더 구현하고 테스트도 더 해야 한다.</p>
+            <p class="verdict"><b>결과</b>: 시간과 비용이 늘어난다. 발표자가 스킬 없는 쪽이 오래 걸린 이유로 짚은 부분이다.</p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>만들 것</th><th>이미 있는 HTML 요소</th><th>직접 만들면 따로 구현할 것</th></tr></thead>
+            <tbody>
+              <tr><td>아코디언</td><td><code>&lt;details&gt;</code>, <code>&lt;summary&gt;</code></td><td>펼침 상태를 스크린 리더에 알리기, 키보드로 열고 닫기</td></tr>
+              <tr><td>모달</td><td><code>&lt;dialog&gt;</code></td><td>포커스를 모달 안에 가두기, Esc로 닫기, 뒤 화면 막기</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">예시: 발표에서 요소 이름을 말하지는 않았다. 아코디언과 모달에 대응하는 대표적인 HTML 요소를 덧붙였다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="muffin">
+        <header><span class="num">05</span><h2>블루베리 머핀 <span class="ts">05:10</span></h2></header>
+        <p>발표자가 인용한 비유다. 접근성 있는 웹사이트는 블루베리 머핀과 같다.</p>
+        <div class="shift" aria-label="접근성을 넣는 시점의 차이">
+          <div><span class="tag">얹은 머핀</span><b>다 만든 뒤 붙인다</b><span class="muted">완성된 사이트 여기저기에 ARIA 레이블을 끼워 넣는다. 플레인 머핀 위에 블루베리를 얹은 것이라 블루베리 머핀이 아니다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">구운 머핀</span><b>처음부터 넣어 굽는다</b><span class="muted">만드는 모든 단계에서 접근성을 맨 앞에 둔다.</span></div>
+        </div>
+
+        <h3>접근성은 모두의 일이다 <span class="ts">05:40</span></h3>
+        <p>개발자만의 일이 아니다. 사업 아이디어, 디자인, QA까지 모든 단계에서 "이 제품을 누구나 똑같이 쓸 수 있나"를 확인해야 한다.</p>
+
+        <h3>마지막에 챙기면 더 비싸다 <span class="ts">05:50</span></h3>
+        <p>다 만든 뒤에 테스트를 시작하면 회귀 테스트<span class="en">regression testing</span>에 시간을 많이 쓴다. 회귀 테스트는 고친 뒤에 원래 되던 기능이 망가지지 않았는지 다시 확인하는 일이다.</p>
+        <p>문제를 고치러 되돌아가면 리팩터링하고 다시 쓰는 코드가 늘어난다. 처음부터 접근성을 넣었다면 쓰지 않아도 됐을 코드다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="cost">
+        <header><span class="num">06</span><h2>접근성을 빼면 드는 비용 <span class="ts">06:10</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>비용</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>고객 손실</td><td>"우리 사용자 중엔 보조 기술을 쓰는 사람이 없다"는 말은 자기실현적 예언<span class="en">self-fulfilling prophecy</span>이다. 보조 기술 사용자가 없는 게 아니다. 애초에 그 제품을 쓸 수 없어서 오지 않은 것이다. 문 없는 가게에 손님이 없는 것과 같다.</td></tr>
+              <tr><td>법적 위험 <span class="ts">06:40</span></td><td>발표자에 따르면 미국 장애인법(ADA)은 대중에게 공개된 제품을 장애인도 쓸 수 있어야 한다고 정한다. 어기면 벌금을 물거나 소송을 당할 수 있다.</td></tr>
+              <tr><td>개발 시간</td><td>네이티브 기능을 흉내 내는 코드를 더 쓰고, 나중에 고치느라 리팩터링을 더 한다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>보조 기술<span class="en">assistive technology</span>은 스크린 리더처럼 장애가 있는 사람이 기기를 쓰도록 돕는 도구다.</p>
+        <p class="note">ADA 내용은 발표자가 요약한 것이다. 실제 적용 범위는 따로 확인하지 않았다.</p>
+        <div class="callout">
+          <span class="title">발표자의 정리 <span class="ts">07:00</span></span>
+          <span>접근성 없는 제품을 만드는 쪽이 훨씬 비싸다. 처음부터 접근성을 넣어 만들면 더 빠르고 더 싸다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="steps">
+        <header><span class="num">07</span><h2>에이전트에게 접근성 가르치기 <span class="ts">07:20</span></h2></header>
+        <p>코드베이스와 기술은 팀마다 다르다. 그래서 발표자는 어디에나 쓸 수 있는 큰 순서만 제시한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>할 일</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>1. 요구사항 정의 <span class="ts">07:30</span></td><td>내 플랫폼이 맞춰야 할 접근성 기준을 조사한다</td><td>웹, 모바일, 하드웨어마다 기준이 다르다</td></tr>
+              <tr><td>2. 기존 코드 감사 <span class="ts">07:50</span></td><td>자동 검사 도구나 에이전트로 기존 문제를 찾고, 새 기능을 만들기 전에 고친다</td><td>에이전트는 기존 문제를 "모범 사례"로 알고 따라 한다</td></tr>
+              <tr><td>3. 재사용 시스템 <span class="ts">08:10</span></td><td>디자인 시스템이나 공통 컴포넌트 라이브러리를 둔다</td><td>여러 파일의 같은 컴포넌트를 하나씩 고치는 것보다 한 곳을 고치는 게 빠르다. 발표자는 "있으면 좋은 것"이라고 했다</td></tr>
+              <tr><td>4. 접근성 스킬 의무화 <span class="ts">08:30</span></td><td>UI를 만들거나 접근성이 걸린 코드를 쓸 때마다 에이전트가 반드시 쓰는 스킬을 둔다</td><td>지침이 없으면 04절의 두 문제가 생긴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>감사<span class="en">audit</span>는 기존 코드가 기준을 지키는지 훑어 문제를 찾는 일이다. 디자인 시스템<span class="en">design system</span>은 여러 화면에서 같이 쓰는 컴포넌트와 규칙의 모음이다.</p>
+        <div class="callout">
+          <span class="title">발표자가 즐겨 쓰는 스킬</span>
+          <span>Chrome의 Modern Web Guidance 스킬(추정)이다. 에이전트가 직접 짠 JavaScript 대신 최신 HTML과 CSS 기능을 쓰게 한다.</span>
+        </div>
+        <p class="note">스킬 이름은 자막에 들린 대로 적었다. 정확한 이름과 배포처는 확인하지 않았다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="minimum">
+        <header><span class="num">08</span><h2>최소한의 접근성 스킬 <span class="ts">08:50</span></h2></header>
+        <p>바이브 코딩을 하거나 코드베이스가 크지 않을 때는 가벼운 스킬이 낫다. 에이전트가 깊은 조사 없이 빨리 참고할 수 있어야 한다. 발표자가 추천하는 최소 기준은 네 가지다.</p>
+        <ol class="plain">
+          <li><strong>시맨틱 HTML을 먼저 쓴다.</strong> ARIA는 시맨틱 HTML로 동작을 표현할 수 없을 때만 쓴다.</li>
+          <li><strong>마우스로 조작할 수 있는 요소는 키보드로도 조작할 수 있어야 한다.</strong></li>
+          <li><strong>요소마다 레이블을 제대로 단다.</strong> 스크린 리더가 읽을 수 있어야 한다.</li>
+          <li><strong>코드를 실행하기 전에 에이전트가 위 기준을 스스로 점검한다.</strong></li>
+        </ol>
+        <p>시맨틱 HTML<span class="en">semantic HTML</span>은 뜻에 맞는 HTML 요소를 쓰는 것이다. 버튼은 <code>button</code>, 제목은 <code>h1</code>처럼 쓴다. ARIA는 HTML만으로 표현할 수 없는 역할과 상태를 보조 기술에 알려 주는 속성 모음이다.</p>
+        <p class="note">예시: 위 네 가지를 스킬 파일로 옮겨 본 것이다. 발표에서 보여 준 파일이 아니다.</p>
+<pre><code>---
+name: accessibility-baseline
+description: UI를 만들거나 고칠 때 항상 쓴다. 접근성 최소 기준을 지키게 한다.
+---
+
+# 접근성 최소 기준
+
+1. 시맨틱 HTML을 먼저 쓴다.
+   ARIA는 HTML 요소로 동작을 표현할 수 없을 때만 쓴다.
+2. 마우스로 조작할 수 있는 요소는 키보드로도 조작할 수 있게 한다.
+3. 모든 요소에 스크린 리더가 읽을 레이블을 단다.
+4. 코드를 실행하기 전에 1~3번을 하나씩 점검하고 결과를 보고한다.</code></pre>
+        <div class="callout warn">
+          <span class="title">스킬만으로 완성되지 않는다 <span class="ts">09:20</span></span>
+          <span>이것만으로 완전히 접근성 있는 사이트가 되지는 않는다. 도구 하나로 접근성을 완성할 수는 없다. 사람이 직접 수동 테스트를 많이 해야 한다. 그래도 스킬이 있는 쪽이 없는 쪽보다 훨씬 낫다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="conclusion">
+        <header><span class="num">09</span><h2>결론 <span class="ts">09:40</span></h2></header>
+        <p>AI를 쓰는 이유가 무엇이든 목표는 대개 어떤 문제를 푸는 것이다. 그 해결책이 되도록 많은 사람에게 쓸모 있어야 한다.</p>
+        <div class="callout">
+          <span class="title">발표자가 제안하는 오늘 할 일</span>
+          <span><strong>에이전트에게 접근성 스킬을 쥐여 준다.</strong> 접근성을 마지막에 붙이지 말고 처음부터 넣는다. 에이전트가 장황한 코드를 덜 쓰니 토큰도 덜 든다.</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="recap">
+        <header><span class="num">10</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>접근성은 장애 여부와 관계없이 누구나 쓸 수 있는 성질이다. 쓸 수 없는 제품은 그 사람에게 쓸모가 없다.</li>
+          <li>발표자가 인용한 WebAIM 조사로는 상위 100만 개 홈페이지의 <strong>96%</strong>에 접근성 문제가 있다.</li>
+          <li>접근성 스킬을 준 에이전트가 <strong>비용 58% 적게, 시간 3분의 1</strong>로 끝냈다. 단, 한 번 해 본 실험이다.</li>
+          <li>에이전트는 코드베이스의 습관을 그대로 배운다. <strong>사람의 편향이 AI의 편향이 된다.</strong></li>
+          <li>지침이 없으면 AI는 이미 있는 HTML 요소 대신 컴포넌트를 처음부터 만든다. 그만큼 코드와 테스트가 늘어난다.</li>
+          <li>접근성은 머핀 속 블루베리처럼 <strong>처음부터 넣어야 한다.</strong> 마지막에 붙이면 회귀 테스트와 리팩터링이 늘어난다.</li>
+          <li>접근성은 개발자만이 아니라 기획, 디자인, QA 모두의 일이다.</li>
+          <li>접근성을 빼면 고객을 잃고, 법적 위험을 지고, 다시 만드는 시간을 쓴다.</li>
+          <li>순서: <strong>요구사항 정의 → 기존 코드 감사 → 재사용 컴포넌트 → 접근성 스킬 의무화.</strong></li>
+          <li>최소 스킬은 시맨틱 HTML, 키보드 조작, 레이블, 실행 전 점검이다. 그래도 <strong>사람의 수동 테스트는 필요하다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 11 -->
+      <section id="quiz">
+        <header><span class="num">11</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말한 접근성의 정의는?</span></summary><div class="answer">장애 여부와 관계없이 누구나 쓸 수 있는 성질. 그래서 접근성이 없는 제품은 쓸 수 없는 사람에게 쓸모가 없다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>WebAIM 조사에서 접근성 문제가 있던 홈페이지의 비율은?</span></summary><div class="answer">세계 상위 100만 개 웹사이트 홈페이지의 96%. 발표자가 인용한 수치다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>실험에서 접근성 스킬을 준 쪽은 비용과 시간이 어떻게 달랐나?</span></summary><div class="answer">비용은 58% 적었고, 시간은 3분의 1이었다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>이 실험 결과를 근거로 쓰기 어려운 이유는?</span></summary><div class="answer">한 번만 돌렸고 통제된 환경도 아니었다. 발표자 본인이 실증 데이터로 쓸 수 없다고 했다. 스킬도 발표자가 직접 쓴 것이다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>"사람의 편향이 AI의 편향이 된다"는 무슨 뜻인가?</span></summary><div class="answer">"내 컴퓨터에선 된다" 식으로 만든 접근성 없는 코드가 코드베이스에 쌓여 있으면, 에이전트는 그걸 정상으로 배운다. 그리고 같은 코드를 더 만든다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>지침 없는 에이전트가 아코디언이나 모달을 만들 때 생기는 문제는?</span></summary><div class="answer">이미 있는 시맨틱 요소를 찾지 않고 처음부터 만든다. 브라우저 기본 기능을 흉내 내려면 구현과 테스트가 늘어 시간과 비용이 더 든다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>블루베리 머핀 비유가 말하는 것은?</span></summary><div class="answer">다 만든 뒤 ARIA 레이블을 끼워 넣는 건 접근성이 아니다. 처음부터 모든 단계에 넣어야 한다. 마지막에 붙이면 회귀 테스트와 리팩터링이 늘어 더 비싸다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>"우리 사용자 중엔 보조 기술 쓰는 사람이 없다"가 왜 자기실현적 예언인가?</span></summary><div class="answer">보조 기술 사용자는 애초에 그 제품을 쓸 수 없어서 오지 않은 것이다. 문 없는 가게에 손님이 없는 것과 같다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>에이전트가 접근성을 지키게 하는 네 단계는?</span></summary><div class="answer">접근성 요구사항 정의, 기존 코드베이스 감사, 재사용 시스템(디자인 시스템) 마련, 접근성 스킬 의무화.</div></details>
+          <details><summary><span class="qn">Q10</span><span>새 기능 전에 기존 코드를 감사해야 하는 이유는?</span></summary><div class="answer">에이전트는 기존 코드의 문제를 모범 사례로 알고 따라 한다. 먼저 고쳐 두지 않으면 문제가 복제된다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>가벼운 접근성 스킬의 최소 기준 네 가지는? 이것만으로 충분한가?</span></summary><div class="answer">시맨틱 HTML 우선(ARIA는 필요할 때만), 마우스로 되는 조작은 키보드로도, 레이블을 달아 스크린 리더가 읽게, 실행 전 자체 점검. 충분하지 않다. 사람의 수동 테스트가 여전히 필요하다.</div></details>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="apply">
+        <header><span class="num">12</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 제품이 맞춰야 할 접근성 기준을 정한다<span class="how">웹, 모바일, 하드웨어마다 기준이 다르다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>기존 코드베이스를 접근성 기준으로 감사한다<span class="how">자동 검사 도구나 에이전트로 문제를 찾고, 새 기능 전에 고친다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>접근성을 한 곳에서 고칠 수 있게 공통 컴포넌트로 모은다<span class="how">디자인 시스템이나 컴포넌트 라이브러리</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>UI 작업에 쓰는 접근성 스킬을 만들고 반드시 쓰게 한다<span class="how">08절의 최소 기준 네 가지에서 시작한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>직접 만든 컴포넌트 중 HTML 요소로 바꿀 수 있는 것을 찾는다<span class="how">확인: 브라우저가 이미 주는 기능을 따로 구현하고 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>마우스 없이 키보드만으로 주요 화면을 써 본다<span class="how">확인: 마우스로 되는 조작이 키보드로 다 되는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>스크린 리더로 주요 화면을 직접 들어 본다<span class="how">자동 도구와 스킬만으로는 부족하다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>기획, 디자인, QA 단계에도 접근성 확인 항목을 넣는다<span class="how">접근성은 개발자만의 일이 아니다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>접근성 스킬의 효과를 내 코드베이스에서 재 본다<span class="how">같은 프롬프트를 스킬 있이·없이 여러 번 돌려 비용과 시간을 비교한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 13 -->
+      <section id="glossary">
+        <header><span class="num">13</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>접근성</td><td>Accessibility. 장애 여부와 관계없이 누구나 쓸 수 있는 성질</td></tr>
+              <tr><td>토큰</td><td>Token. 모델이 읽고 쓰는 글자 조각 단위. 사용량과 비용을 재는 단위이기도 하다</td></tr>
+              <tr><td>바이브 코딩</td><td>Vibe coding. 코드를 직접 쓰기보다 AI에게 말로 시켜 결과를 만드는 방식</td></tr>
+              <tr><td>WebAIM</td><td>웹 접근성 관련 조사를 내는 단체. 발표에서는 홈페이지 접근성 조사의 출처로 나온다</td></tr>
+              <tr><td>스킬</td><td>Skill. 에이전트가 특정 작업을 할 때 꺼내 쓰는 지침 묶음</td></tr>
+              <tr><td>스크린 리더</td><td>Screen reader. 화면 내용을 소리나 점자로 읽어 주는 프로그램</td></tr>
+              <tr><td>시맨틱 HTML</td><td>Semantic HTML. 뜻에 맞는 HTML 요소를 쓰는 것. 버튼은 button, 제목은 h1처럼</td></tr>
+              <tr><td>ARIA</td><td>HTML만으로 표현할 수 없는 역할과 상태를 보조 기술에 알려 주는 속성 모음</td></tr>
+              <tr><td>회귀 테스트</td><td>Regression testing. 고친 뒤에 원래 되던 기능이 망가지지 않았는지 다시 확인하는 테스트</td></tr>
+              <tr><td>보조 기술</td><td>Assistive technology. 스크린 리더처럼 장애가 있는 사람이 기기를 쓰도록 돕는 도구</td></tr>
+              <tr><td>자기실현적 예언</td><td>Self-fulfilling prophecy. 믿음 자체가 그 믿음을 사실로 만드는 것</td></tr>
+              <tr><td>ADA</td><td>Americans with Disabilities Act. 미국 장애인법</td></tr>
+              <tr><td>감사</td><td>Audit. 기존 코드가 기준을 지키는지 훑어 문제를 찾는 일</td></tr>
+              <tr><td>디자인 시스템</td><td>Design system. 여러 화면에서 같이 쓰는 컴포넌트와 규칙의 모음</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="timeline">
+        <header><span class="num">14</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>주제: 쓸 수 없는 제품에 토큰을 낭비하지 말자</td></tr>
+              <tr><td><span class="ts">00:10</span></td><td>접근성의 정의</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>바이브 코딩 시대에도 사람을 위해 만든다</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>WebAIM: 상위 100만 홈페이지의 96%에 문제</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>"시간이 오래 걸린다"는 핑계</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>실험: 같은 Figma 구현 프롬프트를 두 번</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>비용 58% 감소, 시간 3분의 1</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>단서: 한 번 해 본 실험</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>예시는 웹이지만 모든 플랫폼에 적용</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>에이전트는 세 살 아이</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>Old Enough 비유</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>지침이 없을 때 1: 사람의 편향이 AI의 편향이 된다</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>지침이 없을 때 2: 장황한 코드, 바퀴 재발명</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>블루베리 머핀 비유</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>접근성은 모두의 책임</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>마지막에 챙기면 회귀 테스트가 늘어난다</td></tr>
+              <tr><td><span class="ts">06:10</span></td><td>사업 측면: 자기실현적 예언, 문 없는 가게</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>법적 측면: ADA</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>정리: 접근성을 빼는 쪽이 더 비싸다</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>에이전트에게 접근성을 가르치는 법</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>1단계: 접근성 요구사항 정의</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>2단계: 기존 코드베이스 감사</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>3단계: 재사용 가능한 시스템</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>4단계: 접근성 스킬 의무화, Chrome 스킬</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>가벼운 접근성 스킬의 최소 기준</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>그래도 수동 테스트는 필요하다</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>맺음말</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>연락처 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'ZccJsdOE54M:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

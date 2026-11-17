@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>신뢰 하네스 다섯 원칙</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#trust">병목은 속도가 아니라 신뢰다</a></li>
+      <li><a href="#principles">다섯 원칙 한눈에</a></li>
+      <li><a href="#setup">워크숍 재료: 결혼식 예산</a></li>
+      <li><a href="#domain">원칙 1 · 공유된 도메인</a></li>
+      <li><a href="#consistency">원칙 2 · 일관성</a></li>
+      <li><a href="#evidence">원칙 3 · 증거</a></li>
+      <li><a href="#accountability">원칙 4 · 책임</a></li>
+      <li><a href="#verification">원칙 5 · 검증</a></li>
+      <li><a href="#when">하네스는 언제 지을까</a></li>
+      <li><a href="#leadership">경영진에게 설명하기</a></li>
+      <li><a href="#closing">마무리: 1%가 큰돈이다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 하네스에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-10-17 · 1시간 50분 · 영어 발표 한글 정리</span>
+      <h1>스프레드시트와 대화하지 마라</h1>
+      <p class="lead">돈 계산을 채팅창에 맡기면 매번 다른 답이 나온다. Monzo의 데이터 엔지니어 두 사람은 금융 분석 에이전트의 병목이 속도가 아니라 신뢰라고 말한다. 신뢰는 다섯 가지 설계 원칙을 하네스에 심어서 얻는다. 공유된 도메인, 일관성, 증거, 책임, 검증이다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=e9-br9hveRI" target="_blank" rel="noopener">Stop Chatting With Spreadsheets</a></span>
+        <span>발표: Francesco Galletta, Felippe Felisola Caso (Monzo 데이터팀)</span>
+      </div>
+      <p class="note">영어 워크숍의 자동 자막을 바탕으로 한글로 정리했다. 2시간짜리 실습이라 참가자 질문과 데모 조작이 많다. 이 노트는 원칙 설명과 질의응답을 중심으로 추렸다. 자막에서 이름이 뭉개진 곳은 확실할 때만 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>금융 분석에서 AI의 병목은 <strong>속도가 아니라 신뢰</strong>다. 결과가 나와도 믿지 못하면 위임할 수 없다.</li>
+        <li>신뢰는 추적, 평가, 루프 같은 부품으로 사지 않는다. <strong>설계 원칙</strong>으로 쌓는다. 다섯 원칙은 서로 위에 쌓인다.</li>
+        <li><strong>공유된 도메인</strong>: 모델이 아는 뜻과 내가 쓰는 뜻은 다르다. 하네스가 먼저 묻고, 계획을 결정 트리로 쪼개고, 각 항목이 누구 말인지 표시한다.</li>
+        <li><strong>일관성</strong>: 계산은 모델 머릿속이 아니라 코드로 한다. 한 번 쓰고 매번 같은 코드를 돌린다. 테스트와 버전으로 지킨다.</li>
+        <li><strong>증거</strong>: 모든 숫자에 영수증을 붙인다. 사실, 가정, 해석을 구분해 표시한다. 코드가 바뀐 이력도 증거다.</li>
+        <li><strong>책임</strong>: 에이전트는 결과를 책임지지 않는다. 사람이 진다. 그래서 관문은 적게, 신호는 높게 둔다. 변경 하나하나가 아니라 과업 단위로 검토한다.</li>
+        <li><strong>검증</strong>: 다른 관점으로 도전하게 한다. 단, 그 도전이 계획을 실제로 바꾸는 루프여야 한다. 심사만 하는 LLM 판사는 아무것도 바꾸지 못한다.</li>
+        <li>하네스는 <strong>같은 일을 서너 번 반복했을 때</strong>, 또는 여러 사람이 중요한 결정에 쓸 때 짓는다. 프롬프트와 스킬은 "실수하지 마세요"라는 부탁이고, 하네스는 그걸 코드로 강제한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="trust">
+        <header><span class="num">01</span><h2>병목은 속도가 아니라 신뢰다 <span class="ts">04:20</span></h2></header>
+        <p>두 발표자는 Monzo와 Nubank 같은 금융 회사의 데이터팀에서 일했다. 금융은 숫자와 전략과 각자의 상황이 얽힌 분야다. 금융 분석가라는 역할은 투자 리서치부터 개인 예산까지 폭이 넓지만, 다루는 것은 결국 같다. 돈이다.</p>
+        <p>요즘 분석을 뽑아내는 속도는 문제가 아니다. 청중 상당수가 이미 Claude나 ChatGPT로 백그라운드 작업을 돌리고 있을 것이다. 발표자 Francesco Galletta는 지난 몇 달의 경험을 근거로 <strong>병목은 결과가 사람과 어떻게 연결되는가</strong>, 즉 신뢰라고 말한다. 돈은 가장 위험이 큰 주제라서 신뢰를 당연하게 여길 수 없다.</p>
+        <div class="callout">
+          <span class="title">부품이 아니라 원칙</span>
+          <span>단위 테스트, 계획 모드, 평가<span class="en">eval</span>, 추적<span class="en">trace</span>, 관측, 루프, 그래프. 전부 익숙한 키워드고 전부 쓸모 있다. 하지만 이것들은 부품이다. 이 워크숍은 특정 기술이나 제품의 설명서를 읽지 않는다. 부품을 어떤 원칙으로 조립해야 돈 문제를 맡길 만한 하네스가 되는지를 다룬다.</span>
+        </div>
+        <p>발표자들은 Monzo를 대표해 말하는 것이 아니라고 선을 긋는다. 회사 도메인 지식을 설명할 필요가 없도록, 개인적인 예시 하나로 원칙을 보여 준다.</p>
+        <p class="note">두 발표자는 Monzo 소속이고, 발표 중에 다음날 열리는 Monzo의 사내 원격 에이전트 세션을 두 번 홍보한다. 세션 이름은 자막에서 "agent chip"으로 들리는데 정확한 표기는 확실하지 않다(추정). 회사와 관련된 대목은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="principles">
+        <header><span class="num">02</span><h2>다섯 원칙 한눈에 <span class="ts">08:30</span></h2></header>
+        <p>신뢰는 바닥부터 쌓는다. 다섯 원칙은 순서가 있고, 앞 원칙 위에 뒤 원칙이 올라간다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>원칙</th><th>한 줄 뜻</th><th>왜 앞 원칙이 필요한가</th></tr></thead>
+            <tbody>
+              <tr><td>1. 공유된 도메인 <span class="en">shared domain</span></td><td>나와 모델이 같은 말로 같은 것을 가리키게 만든다. 계획 모드가 여기 속한다</td><td>출발점</td></tr>
+              <tr><td>2. 일관성 <span class="en">consistency</span></td><td>숫자는 모델의 산수가 아니라 코드와 도구 호출에서 나온다. 매번 같은 결과</td><td>계획이 있어야 어떤 조각이 결정론적 계산인지 알 수 있다</td></tr>
+              <tr><td>3. 증거 <span class="en">evidence</span></td><td>영수증을 보여 준다. 어떤 결정이 어디서 왔는지 거슬러 올라갈 수 있다</td><td>테스트된 코드가 있어야 되짚을 자취가 생긴다</td></tr>
+              <tr><td>4. 책임 <span class="en">accountability</span></td><td>에이전트를 100개 돌려도 결과는 내가 책임진다. 블랙박스에 문제를 던지지 않는다</td><td>사실과 근거가 있어야 결정을 내릴 수 있다</td></tr>
+              <tr><td>5. 검증 <span class="en">verification</span></td><td>다른 관점이 내 생각을 흔들게 한다. 내 편향 밖의 기준점을 둔다</td><td>검토 결과까지 내가 책임진다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Francesco Galletta는 "1년에 세 번쯤 세상에서 제일 좋은 아이디어라고 믿는데, 그때마다 Felippe가 제발 구현하지 말라고 말린다"고 농담한다. 검증 원칙의 실제 모습이다.</p>
+        <p>발표자 Felippe Felisola Caso는 이것이 유일한 정답이 아니라고 강조한다. 여러 사용 사례에서 효과를 본 접근 방법 하나다. 원칙 없이 "Claude야, 100만 달러짜리 회사를 만들어 줘"라고 하면 아무리 반복해도 우연히 좋은 결과가 나오길 바라는 것과 같다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="setup">
+        <header><span class="num">03</span><h2>워크숍 재료: 결혼식 예산 <span class="ts">12:00</span></h2></header>
+        <p>Francesco Galletta는 숨은 동기를 고백한다. 참가자들이 자기 결혼식 비용 계획을 도와주길 바란다. 식사 단가만 보면 간단한 계산 같지만, 그 위에 변동비가 두 개 더 붙고 손님 수는 모른다. 결혼한 청중은 그 계산이 금방 복잡해지는 것을 안다.</p>
+        <h3>저장소 구성 <span class="ts">15:00</span></h3>
+        <ul class="plain">
+          <li><strong>시작 안내</strong>: 설정 방법.</li>
+          <li><strong>예시</strong>: 결혼식 예산 계획. 모든 원칙이 적용된 완성 예시다.</li>
+          <li><strong>하네스</strong>: 원칙을 구현한 코드와 UI. 발표자 말로는 대부분 바이브 코딩으로 만들었고 일부는 과하게 만들어졌다.</li>
+          <li><strong>내 작업 폴더</strong>: 예시에서 벗어나 자기 문제를 다루면 여기 저장된다. 결혼식 대신 여행, 투자 같은 금융 문제를 넣어도 된다.</li>
+          <li><strong>직접 만들기 안내 파일</strong>: 다섯 원칙을 순서대로 담아, 비슷한 하네스를 처음부터 짓도록 이끄는 "설명서를 위한 설명서"다. 발표자는 IKEA 조립 안내서에 비유한다.</li>
+        </ul>
+        <p class="note">예시와 내 작업을 오가려면 <code>var</code> 폴더 안의 데이터베이스 파일을 지우면 된다. 다시 열면 예시가 다시 생긴다. UI 하단의 원칙 이름 위에 마우스를 올리면 화면에서 그 원칙에 해당하는 요소가 강조된다.</p>
+        <div class="callout">
+          <span class="title">"탁자를 보여 주면서 탁자 만드는 법을 가르친다"</span>
+          <span>발표자들은 이 하네스가 설계 원칙을 보여 주기 위한 예시일 뿐 제품이 아니라고 반복한다. UI가 빠르거나 예쁜지 보지 말고, <strong>특정 하네스로 만든 에이전트를 믿는 느낌이 어떤 것인지</strong>를 느껴 보라고 한다. 만드는 것은 어렵지 않다. 어려운 것은 문제에 어떻게 접근할지 아는 것이다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="domain">
+        <header><span class="num">04</span><h2>원칙 1 · 공유된 도메인 <span class="ts">20:30</span></h2></header>
+        <p>UI 오른쪽에 빈 채팅창이 있다. 평소처럼 문제를 설명하며 시작한다. 다만 하나를 기억해야 한다. <strong>모델이 아는 것은 내가 아는 것과 다르다.</strong> 나만을 위해 학습된 모델이 아니라면, 내가 쓰는 용어의 정의는 모델이 학습한 다수의 정의와 어긋난다. 모델은 그 용어가 대략 어느 영역에 속하는지는 알지만 내가 가리킨 것을 정확히 알지는 못한다.</p>
+        <h3>시연: 일부러 흐리게 말하기 <span class="ts">25:50</span></h3>
+        <p>Francesco Galletta는 받아쓰기로 일부러 어수선하게 말한다. 결혼식에 세 번 돈을 내야 한다. 첫 번째는 6,000이고, 두 번째는 금액을 모르고, 세 번째는 나머지다. DJ 비용은 정해졌고 장식은 모른다. 손님 수를 모르니 좌석당 식사비 총액도 모른다. 이어서 저축이 없고, 어머니가 5,000 정도 보태 줄 수 있고, 1인당 비용이 150쯤이고, 꽃이 500이고, 정장을 사야 한다고 덧붙인다.</p>
+        <p>요점은 하네스가 이런 모호함을 그냥 넘기지 않는다는 것이다. 하네스 안의 인터뷰 에이전트 지시문이 어떤 질문을 할지, 계획이 어느 정도 엄격해야 구현에 들어갈지 정한다. 무엇이든 "네"라고 하고 바로 만드는 예스맨 모드로 가지 않는다. 계획에 필요한 데이터 포인트를 하나하나 채우도록 사람을 밀어붙인다.</p>
+        <h3>결과: 결정 트리와 출처 표시 <span class="ts">30:30</span></h3>
+        <p>10분쯤 주고받으면 "계획 수락"이 뜬다. 에이전트가 문제를 충분히 안다고 판단해 단계로 쪼갠 것이다. 왼쪽 그림의 각 단계는 결정 지점이다. 단계를 누르면 그 정보가 어디서 왔는지, 왜 여기서 결정이 필요한지, 내 말투를 근거로 어떤 가정을 했는지 보여 준다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>표시</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>내가 말한 것</td><td>사람이 직접 준 사실</td></tr>
+              <tr><td>에이전트가 추론한 것</td><td>내 표현을 근거로 모델이 추정한 것. 예: 특정 단어를 썼으니 이런 뜻일 것이라는 가정</td></tr>
+              <tr><td>열린 항목</td><td>아직 결정이 필요한 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>어떤 단계의 가정이 틀렸으면 그 노드에서만 다시 대화할 수 있다.</p>
+        <div class="shift" aria-label="대화 구조의 변화">
+          <div><span class="tag">보통의 채팅 하네스</span><b>한 줄로 이어지는 긴 대화</b><span class="muted">10턴을 넘기면 "처음부터 다시 하자"가 나온다. 앞에서 정한 것이 사라진다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이 하네스</span><b>결정 단위로 쪼갠 대화</b><span class="muted">개별 요소를 따로 논의해도 전체가 복잡해지지 않는다</span></div>
+        </div>
+        <p>발표자는 하네스가 잘 설계돼 있으면 좋은 계획을 세우고, 잘 구현하고, 어떤 부품이 중요한지 손을 잡고 안내한다고 말한다. 반대로 "내 말에 다 동의하고 최선을 다해"라는 하네스는 들쭉날쭉한 결과를 준다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="consistency">
+        <header><span class="num">05</span><h2>원칙 2 · 일관성 <span class="ts">36:40</span></h2></header>
+        <p>계획이 있으면 에이전트는 어떤 조각이 결정론적인지 안다. 그 조각은 코드나 계산 스크립트로 구현해야 매번 같은 결과가 나온다. 확인하는 쉬운 기준이 있다. <strong>계산이면 코드다.</strong></p>
+        <h3>채팅에서 예산을 계산해 본 사람들 <span class="ts">37:20</span></h3>
+        <p>청중에게 물으니 결과는 "별로였다", "꽤 나빴다"였다. Francesco Galletta의 경험도 같다. 에이전트가 이탤릭으로 예쁘게 포맷한 공식을 보여 주길래 믿었는데, 결과값이 틀렸다. 한 참가자는 결과가 그럴듯해 보여도 같은 것을 다시 돌리면 달라진다고 말했다.</p>
+        <div class="callout">
+          <span class="title">왜 스킬이 아니라 하네스인가 <span class="ts">39:00</span></span>
+          <span>Felippe Felisola Caso는 이 지점이 핵심이라고 말한다. Codex나 Claude Code 같은 기존 하네스에 원칙을 스킬이나 지시문으로 넣는 방식은, 올바른 말을 적어 놓고 "제발 실수하지 마세요"라고 부탁하는 것이다. 결국 매번 비결정적인 결과를 받는다. 하네스를 직접 지으면 <strong>비결정적인 부분과 내가 통제하고 싶은 결정론적 부분을 섞을 수 있다.</strong> 이것이 Monzo에서도 적용한 원칙이다.</span>
+        </div>
+        <h3>한 번 쓰고 매번 돌린다 <span class="ts">42:20</span></h3>
+        <p>최근 에이전트들은 도구 호출을 공격적으로 하고 계산용 도구를 스스로 만든다. 그러니 기다리면 해결될까? 발표자는 반대한다. 그때그때 만드는 코드는 100번째 실행에서 새로 발명될 수 있다. 자기 월 예산 분류를 에이전트에게 맡겼더니 세 번은 맞고 네 번째에 틀렸고, 실랑이하느라 돈과 시간을 더 썼다는 경험을 든다. 결론은 스크립트였다.</p>
+        <ul class="plain">
+          <li>하네스가 <strong>토큰을 해석해서 산수를 하지 못하게 엄격히 막는다.</strong> 계산은 한 번 작성하고 필요할 때마다 같은 것을 돌린다.</li>
+          <li>코드로 하지 않으면 계산이 모델 머릿속에 남는다. 새 세션마다 새 코드가 나오고 같은 질문에 다른 답이 나온다. 확률적 기계에게 일관된 출력을 요구하는 셈이다.</li>
+          <li>이자, 상환, 예측처럼 정해진 계산법이 있는 것은 라이브러리로 뽑아 한 번 쓰고 갱신한다. 회사마다 세부는 달라도 큰 공식은 같다.</li>
+          <li>코드에는 버전이 있다. 같은 함수라도 버전이 바뀌었으면 에이전트가 그 사실을 띄우고 결과를 그대로 믿지 말라고 알려야 한다.</li>
+        </ul>
+        <p>시연에서는 계획의 단계를 열어 코드와 테스트를 보고 "테스트 실행"을 누른다. 생각 중이라는 표시 없이 바로 끝난다. 그냥 내 환경에서 도는 테스트이기 때문이다. 발표자는 "하네스의 부품들은 에이전트가 마법 접착제로 엮어 주길 바라지 말고 그냥 함께 동작해야 한다"고 말한다. 테스트를 돌리는 것도, 코드로 만들 수 있다는 것을 알아채는 것도 사람의 기억에 기대지 않는다. 하네스가 안내한다.</p>
+        <p class="note">계산식을 일부러 바꿔 보는 실습도 있다. 곱셈을 합계로 바꾸고 저장하면 저장은 되지만, 테스트가 막아서 분석 결론까지 가지 못한다.</p>
+        <h3>질문: 스펙 기반 개발과 뭐가 다른가 <span class="ts">51:00</span></h3>
+        <p>Felippe Felisola Caso의 답은 두 가지다. 첫째, 코딩 에이전트에서는 코드가 수단이고 결과물이 제품이다. 여기서는 에이전트가 분석을 돕는 것이 목적이고, 결혼식 계획 같은 스펙은 계속 바뀐다. 계속 바뀌는 큰 스펙 하나를 모델이 매번 해석하게 두면 다시 비결정성에 기대게 된다. 이 하네스는 스펙을 <strong>의견이 담긴 구역들</strong>로 쪼개 놓은 것이다. 둘째, 데이터 일에서 지표 정의는 늘 바뀐다. "이 숫자 맞아?"에 "맞는 것 같은데 확신은 없어"라고 답하는 대화가 반복된다. 대시보드를 믿는 만큼 에이전트를 믿으려면, 전제와 원천 데이터가 바뀌어도 하네스가 그 정렬을 유지해 줘야 한다. 저장소의 작업 폴더에 저장되는 것이 사실상 이 하네스의 스펙이다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="evidence">
+        <header><span class="num">06</span><h2>원칙 3 · 증거 <span class="ts">56:00</span></h2></header>
+        <p>영수증을 보여 주는 원칙이다. 코드가 테스트돼 있으니 뒤로 따라갈 자취가 있고, 결정을 뒷받침할 근거가 있다. 다만 "증거를 모아라"로 끝내면 너무 막연하다. 데이터 전문가가 매주 당하는 문제가 있다. <strong>모든 정보는 같은 무게가 아니다.</strong></p>
+        <h3>사실, 가정, 해석을 구분한다 <span class="ts">57:30</span></h3>
+        <p>흔한 실수는 모든 것을 사실로 취급하는 것이다. 초대 손님 수를 사실로 넣었는데, 알고 보니 약혼자가 세 명을 더 초대하고 말하지 않았다. 모델 전체가 틀어진다. 어떤 가정이 어디서 왔는지 모르면 금융 분석은 치명적으로 틀어질 수 있다. 모델은 확정된 사실과 어림짐작을 구분하지 못하므로, 하네스 설계로 강제해야 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>입력</th><th>붙일 이름</th></tr></thead>
+            <tbody>
+              <tr><td>채팅에 적은 정리되지 않은 생각</td><td>해석 <span class="en">interpretation</span></td></tr>
+              <tr><td>에이전트의 추론, 기억에서 꺼낸 정보</td><td>가정 <span class="en">assumption</span></td></tr>
+              <tr><td>제출한 은행 명세서</td><td>사실 <span class="en">fact</span>. 얼마를 썼는지는 논의할 것이 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>데이터 라벨링과 같다. 학습이든 처리든 정제된 데이터셋이 필수이듯, 모은 증거에 알맞은 중요도를 매기고 최대한 많이 모은다. "내가 숫자 돌려 봤으니 믿어"라는 분석가를 믿는 사람은 없다. 모든 로그와 수식을 보고 싶은 것은 아니지만, <strong>되짚을 수 있는 자취가 있다는 것만으로 사람의 확신은 크게 오른다.</strong></p>
+        <h3>코드에도 증거가 필요하다 <span class="ts">1:00:00</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">마스터 파일 사고</span>
+            <p>모든 회사에는 공유 드라이브에 즐겨찾기된 마스터 파일이 있다. 어떤 사람이 숫자를 넣었고 겉보기엔 멀쩡했다. 그런데 파일에 합리적 값 범위에 대한 가정이 있었고, 파일이 바뀐 것을 그 사람은 몰랐다. 잘못한 것이 없는데 결과가 전부 틀렸다.</p>
+            <p class="verdict"><b>교훈</b>: 하네스의 결정론적 코드도 같다. 입력이 같아도 코드 변경을 추적하지 못하면 사각지대가 생긴다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">슬라이드 사고 <span class="ts">1:05:20</span></span>
+            <p>Francesco Galletta는 Google Slides의 텍스트 상자 크기 조정이 싫어 발표 자료를 만들어 주는 하네스를 썼다. 수정을 요청하며 예시 하나를 들었더니 모델이 그 예시에 집착해 발표 전체에 뿌렸다. 경영진 앞에서 "이 숫자와 가정은 어디서 왔나"라는 질문에 답하지 못했다.</p>
+            <p class="verdict"><b>교훈</b>: 출처를 잃은 숫자 하나가 하네스 전체의 신뢰를 깎는다.</p>
+          </div>
+        </div>
+        <p>업계의 금융 분석 제품들은 데이터셋 단위까지 추적한다. 어떤 커넥터, 어떤 데이터 공급자가 특정 시점의 Apple 주가를 줬는지까지 남긴다. 시연에서는 채팅으로 사실 하나를 바꾸면, 그 변화가 어느 입력을 거쳐 어떤 계산에 영향을 주는지 거꾸로 따라갈 수 있다.</p>
+        <p>Felippe Felisola Caso는 이것을 제품 관점으로 넓힌다. 우리가 만드는 에이전트를 쓰는 고객이 결과를 믿어야 사용과 개선의 루프가 돈다. 하네스를 지을 때 그 신뢰가 고객에게 전달되도록 만들라는 것이다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="accountability">
+        <header><span class="num">07</span><h2>원칙 4 · 책임 <span class="ts">1:06:40</span></h2></header>
+        <p>사실과 기준점이 있어야 결정을 내린다. 그리고 그 결정은 사람이 책임진다. Francesco Galletta는 "AI 때문에 일자리가 없어진다"는 말에 늘 같은 답을 한다. 내가 월급을 받는 이유의 일부는 회사에 내놓는 결과를 책임지기 때문이지, 컴퓨터 앞에서 타자를 치기 때문이 아니다.</p>
+        <blockquote>에이전트는 현실의 결과를 감당하지 않는다. 당신이 감당한다.<cite>발표자가 출처를 기억하지 못한 채 인용한 말</cite></blockquote>
+        <p>"글쎄요, Claude가 그렇게 줬는데요"라는 말을 들어 본 사람이 많았다. 그 말로 모든 것이 용서되지는 않는다. 책임 장치를 하네스에 넣어 두면 "혹시 여기서 잘못 가정한 건 아닐까" 하는 스트레스가 크게 준다.</p>
+        <h3>관문은 적게, 신호는 높게 <span class="ts">1:09:00</span></h3>
+        <p>목표는 모호함을 없애는 것이 아니라 줄이는 것이다. 자동 모드가 생기기 전, 변경마다 엔터를 눌러 승인하던 시절을 떠올려 보라. 100번 누르는 동안 "한 줄짜리 변경이네" 하고 넘기다가 "다행히 이건 봤다" 하는 경우가 몇 번이나 됐나. 그래서 이 하네스는 <strong>개별 변경이 아니라 과업 단위로 검토</strong>하게 설계했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>극단</th><th>무엇이 문제인가</th></tr></thead>
+            <tbody>
+              <tr><td>관문 없음</td><td>"확률 기계가 괜찮다고 했어요." 책임이 사라진다</td></tr>
+              <tr><td>계산마다 승인</td><td>에이전트가 내보낸 PR을 한 줄씩 읽는 것과 같다. 아무도 끝까지 하지 못한다. 노동만 늘고 신호는 떨어진다</td></tr>
+              <tr><td>적지만 높은 신호의 관문</td><td>중요한 판단과 중요한 모호함 해소만 사람이 잡는다. 사소한 것은 넘긴다. 코드는 테스트가 대신 말해 준다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>코딩 쪽 비유로는 기능 테스트가 통과하기 전까지는 대충 보더라도, 테스트를 전부 통과하지 않은 것은 프로덕션에 올리지 않는 것과 같다. Felippe Felisola Caso는 Claude Code가 사용자에게 관여 수준을 고르게 하듯, 금융 하네스도 사용자에게 같은 선택을 줄 수 있다고 덧붙인다.</p>
+        <p>돈 문제에서는 에이전트에게 맡길 수 있는 일이 있다. 값이 몇 가지 가능하면 시나리오 세 개를 만들라고 하면 된다. 하지만 결정 전에는 나란히 놓고 직접 본다. <strong>나쁜 결정은 다음 결정으로 번진다.</strong> 그래서 관문은 사용 사례를 깊이 알고 있어야 제자리에 놓을 수 있다. 모든 결정 앞에 "물어봐"를 붙이면 다시 신호가 낮아진다.</p>
+        <h3>가지를 치고 다시 합친다 <span class="ts">1:15:00</span></h3>
+        <p>시연의 계획은 책임 관문이 하나뿐이다. 모든 시나리오 계산을 보고 매달 얼마를 저축할지 결정하는 단계다. 돈이 실제로 빠져나가는 일은 없으니 이 정도면 된다. 다만 "2만이 세 번째 납부일과 같은 날 들어온다" 같은 가정이 최종 결정에 영향을 주면, 그 가정은 책임 표시와 함께 남는다.</p>
+        <p>계획 그림에는 가지가 갈라졌다가 다시 합쳐지는 구조가 있다. 모델이 가정을 세우고 "이 숫자가 맞나요?"라고 확인하는 지점이다. 누가 어떤 결정을 내렸는지, 에이전트의 가정을 내가 그냥 흘려보냈는지 아니면 수정 입력을 줬는지 추적할 수 있다.</p>
+        <div class="callout">
+          <span class="title">안전하게 방향을 바꾸는 장치</span>
+          <span>금융 대화에서는 결정이 난 뒤에 다시 생각하고 정보를 고치는 일이 흔하다. 그런데 보통의 채팅에서는 문장 하나를 흘리면 전체 분석이 날아간다. 운전 중 받아쓰기로 말하다가 중간에 딴소리가 섞여 분석을 통째로 잃은 경험이 발표자에게 여러 번 있다. 검증 관문만이 아니라 <strong>안전하게 방향을 고치는 관문</strong>도 설계해야 한다.</span>
+        </div>
+        <p>실습 두 가지. 손님 수 칩을 채팅에 끌어다 "150명보다 적지 않을 것"이라고 고치면 하네스가 계획을 다시 생각하고 결과를 제안한다. 단계를 눌러 <strong>가지 대화</strong>를 열면 본류를 오염시키지 않는 질문을 할 수 있다. 한 참가자는 Claude Code의 <code>/btw</code> 명령이 "곁가지 같지만 결국 맥락에 들어간다"고 말했다. 발표자도 바보 같은 질문이 많아 별도 채팅을 여는데, 이 하네스는 "이건 정말 곁가지다"라는 의도로 설계한 것이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="verification">
+        <header><span class="num">08</span><h2>원칙 5 · 검증 <span class="ts">1:20:30</span></h2></header>
+        <p>두 번째 눈이다. 책임 원칙 위에 쌓인다. 검토 결과도 내가 책임지기 때문이다. "Francesco가 리뷰했잖아"라며 나쁜 결정의 책임을 떠넘기는 일은 실제로 일어난다. 발표자들은 바이브 코딩에서 결과물의 품질 부담이 리뷰어에게 몰리는 현상이 팀의 사기를 꺾는다고 말한다.</p>
+        <p>검증은 사각지대를 줄이려고 피드백 루프를 더하는 것이지, 책임을 넘기는 것이 아니다. 다른 출처의 정보로 내 편향과 내 사고 과정에 갇히는 것을 막는다.</p>
+        <h3>전문가는 모든 칸을 보지 않는다 <span class="ts">1:22:10</span></h3>
+        <p>금융팀 사람들은 스프레드시트를 열어 대략의 합계를 알려 주는 몇 칸만 본다. "마케팅에 이렇게 많이 썼다고? 아닌 것 같은데." 직감이지만 큰 힘을 들이지 않고 틀린 곳을 찾는다. Elon Musk가 전 세계 모든 사람에게 100만 달러씩 주고도 돈이 남는다는 유명한 트윗도 같다. 읽으면 그럴듯한데 "잠깐, 그게 맞나?" 하는 느낌이 계산을 들여다보게 한다. 대략의 답과 가벼운 도전만으로도 큰 도움이 된다.</p>
+        <h3>참가자 질문: 골든 예시가 있으면 되지 않나 <span class="ts">1:23:50</span></h3>
+        <p>발표자는 좋은 질문이라고 하면서 그 한계를 짚는다. 골든 예시<span class="en">golden examples</span>는 올바른 범위 안에 있는지 알려 주는 기준값이다. 하지만 골든 예시만 보면 가진 정보로만 판단하는 되먹임에 갇힌다. 금융에는 정보 출처가 아주 많다. 내 데이터 밖의 기준점이 늘 있다. 하네스를 지을 때 어떤 외부 기준점을 쓸지 창의적으로 안내해야 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">BI 분석가 시절의 경험</span>
+            <p>쿼리도 좋고 숫자도 합리적이고 확인할 것은 다 확인했다. 대시보드를 보여 주자 다른 팀 사람이 바로 "그거 아닌데"라고 했다. 그 사람은 SQL을 몰랐다. 그냥 그해 매출이 대략 얼마인지 알고 있었다.</p>
+            <p class="verdict"><b>뜻</b>: 어떤 도메인도 고립돼 있지 않다. 내가 고른 골든 예시에는 내 도메인의 선택 편향이 들어 있다. 옆 도메인 숫자 하나로 틀린 것이 드러날 수 있다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">얇게 썰기 <span class="en">thin slicing</span></span>
+            <p>경험의 얇은 조각만으로 맞는지 틀린지 느끼는 능력이다. 모델은 모든 사람의 경험의 평균을 가진다. 내 경험은 다르다.</p>
+            <p class="verdict"><b>뜻</b>: 공유된 도메인 원칙이 내 언어를 모델의 학습 데이터로 번역하는 일이라면, 검증은 그 반대다. 모델이 안다고 생각하는 것을 내 경험으로 되돌려 확인하는 루프다. "대충 맞는 것 같다"가 통하지 않는 팀도 있다. 5% 차이가 결정적인 팀이라면 하네스도 그 기준을 알아야 한다.</p>
+          </div>
+        </div>
+        <h3>도전은 계획을 바꿔야 한다 <span class="ts">1:31:00</span></h3>
+        <p>시연에서는 "도전" 태그가 붙은 가지를 연다. 별도의 에이전트가 계획과 가정을 검토하고 "이게 합리적인가"를 따진다. 그 결과는 본류로 다시 합쳐져 <strong>계획을 실제로 바꾼다.</strong> 발표자는 이 설계가 의도적이라고 말한다. 결정마다 에이전트를 하나 더 띄워 심사만 시키는 LLM 판사<span class="en">LLM as a judge</span>로 끝낼 수도 있었다. 하지만 피드백 루프가 없으면 금융 결정은 전혀 나아지지 않는다. 반대로 "기각" 버튼도 일부러 넣었다. 어떤 도전은 아무것도 바꾸지 않고, 그건 사람이 더 잘 안다.</p>
+        <div class="callout">
+          <span class="title">다섯 원칙 정리 <span class="ts">1:32:50</span></span>
+          <span>공유된 도메인을 만들고, 일관성을 지키고, 영수증을 보여 주고, 책임을 유지하고, 내가 안다고 생각하는 것 밖에서 검증하는 의도적인 루프를 만든다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="when">
+        <header><span class="num">09</span><h2>하네스는 언제 지을까 <span class="ts">1:33:20</span></h2></header>
+        <p>참가자 질문이 이어졌다. 하네스는 얼마나 일반적이어야 하고, 얼마나 자주 지어야 하나. 회사에 하네스가 하나인가 여럿인가.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>스펙트럼</th><th>모습</th><th>문제</th></tr></thead>
+            <tbody>
+              <tr><td>한쪽 끝</td><td>모든 것을 Claude Code나 Codex에 스킬과 지시문으로 넣는다</td><td>결과가 자주 틀리고 재현되지 않는다</td></tr>
+              <tr><td>반대쪽 끝</td><td>새 일마다 바닥부터 짓는다</td><td>도구를 쓰는 시간보다 만드는 시간이 길어진다. 도끼만 갈고 나무는 베지 않는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Felippe Felisola Caso의 기준은 "사용 사례가 그만한 가치가 있는가"다. 재현성이 필요한가. 기존 하네스로는 너무 자주 틀리는가. 몇 명이 쓰는가. 결정이 얼마나 중요한가. 중요하지 않은 과업이면 사람이 출력을 보며 몇 턴 더 조종해도 된다. 하지만 신용 분석가 50명이 회사의 핵심 결정에 쓰는 도구라면 변동성을 두면 안 된다.</p>
+        <p>Francesco Galletta는 반대 예를 든다. Instagram과 TikTok에 AI 영상을 쏟아붓는 것이 목적이라면 증거 수집은 왜 하나. 검증과 책임은 더 필요 없다. 이 레시피는 판돈이 크고 피드백 루프가 많이 필요한 <strong>금융 사용 사례에 맞춘 것</strong>이다. 신뢰 시스템이라는 점에 모든 것이 걸려 있다.</p>
+        <div class="callout">
+          <span class="title">실용적인 신호</span>
+          <span>스킬과 명령을 몇 개 더해도 원하는 결과가 안 나온다. 채팅에서 채팅으로 텍스트를 복사해 붙인다. 새 세션을 또 연다. 같은 일을 서너 번, 다섯 번 반복했다. 그러면 그 반복을 한 번만 하도록 하네스를 설계한다.</span>
+        </div>
+        <h3>결혼식 준비 전체를 에이전트에게 맡겨 봤나 <span class="ts">1:38:50</span></h3>
+        <p>Francesco Galletta는 가장 비싼 Claude 구독을 한도까지 쓴다고 고백한다. 사진사, 꽃, 장소 리서치는 잘 됐다. 웹 검색으로 마드리드의 사진사 상위 다섯을 뽑고 비교하고 연락까지 하는 데 문제가 없었다. 하지만 통제와 예측 가능성이 필요한 금융 계산은 달랐다. 차에서 음성으로 계획하다가 왕복 한 시간 동안 같은 대화를 세 번 반복한 날이 있었다. "이걸 다시 계산하지는 않겠다"는 생각이 튼튼한 것을 짓게 했다.</p>
+        <h3>스킬 하나로 다 되지 않나 <span class="ts">1:43:50</span></h3>
+        <p>한 참가자는 질문하고 Python 스크립트로 계산하는 흐름을 스킬 수준에서 이미 만들었다고 했다. 경계가 어디인가. Felippe Felisola Caso의 답은 같은 기준이다. 비결정적 접근의 트레이드오프를 감수할 수 없을 만큼 중요해지는 시점이다. 에이전트는 지시를 99% 따른다. 문제는 그 1%다. 엣지 케이스가 있을 때, 그리고 내부 사용자에게 배포했는데 그 사용자의 개인 CLAUDE.md 지시가 내 지시와 충돌할 때다. Monzo의 사내 에이전트 확장 공유 저장소에서 지시문을 리뷰하면, "사용자가 이걸 하려 하면 지원하지 않는다고 답하라" 같은 방어 문장이 자주 보인다. 하네스의 백엔드 코드라면 그런 것을 기본으로 막을 수 있다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="leadership">
+        <header><span class="num">10</span><h2>경영진에게 설명하기 <span class="ts">1:40:40</span></h2></header>
+        <p>참가자 질문: AI로 만들었다고 하면 경영진은 200% 정확하길 기대한다. 예전 SQL 쿼리를 아무도 검증하지 않던 것과 같은 수준의 도구라는 것을 어떻게 이해시키나.</p>
+        <p>Felippe Felisola Caso의 답은 구현에 대한 신뢰를 구하지 말고 <strong>결과에 대해 합의하라</strong>는 것이다. Monzo는 AI 도입을 철저히 영향 기준으로 본다. "AI가 이걸 할 수 있으니 쓰자"가 아니다. 어떤 결과를 원하는가, 성공을 어떻게 재는가를 먼저 정한다. 예를 들어 새 대시보드 검증에 드는 왕복 횟수를 줄이고 싶은가. "숫자가 이상하다"는 사내 문의 티켓을 줄이고 싶은가. 그 지표를 추적하면 AI가 그 결과에 기여하는지 볼 수 있다. 방법은 어느 정도까지는 중요하지 않다. 더 빠르고 더 나은 안전장치를 가진 도구일 뿐이다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="closing">
+        <header><span class="num">11</span><h2>마무리: 1%가 큰돈이다 <span class="ts">1:47:00</span></h2></header>
+        <p>금융은 예전에 스프레드시트에 숫자를 더하는 지루한 일처럼 보였다. 그런데 회계사에게 물으면 전부 창의성과 해석이라고 한다. 매출이 한 달 뒤에 잡혀서 현금 흐름이 안 맞는 식이다. 그 모호함에서 AI는 아주 잘한다. 그래서 금융 문제는 10분 만에 에이전트가 고칠 간단한 일로 볼 수도 있고, 실제 모습대로 볼 수도 있다. <strong>100% 믿을 수 있게 돌아야 하는 부분과 그 사이의 해석과 창의성이 섞인 것</strong>이다.</p>
+        <ul class="plain">
+          <li>하네스 설계는 신뢰를 높이도록 <strong>의도적</strong>이어야 한다.</li>
+          <li>AI로 돌아간다고 저절로 정확하지 않다. 결과를 어느 정도까지 믿을 수 있게 하는 장치를 전부 설계해야 한다.</li>
+          <li>모델은 계속 좋아지지만 신뢰는 여전히 벌어야 한다. 돈에서는 1%의 오차가 큰돈일 때가 있다.</li>
+        </ul>
+        <p>마지막 질문은 "UI에서 신뢰를 어떻게 보여 주나"였다. 발표자들은 한 가지 장치가 아니라 모든 단계의 합이라고 답했다. 어디서 왔는지 알고, 코드로 도는 것을 알고, 테스트된 것을 안다. 사람마다 다르다. 어떤 사람에게는 검증이 중요하고, 더 의심 많은 사람은 실제 계산과 숫자를 보고 싶어 한다. 과정이 그 여러 가능성을 덮어야 한다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>금융 분석에서 AI의 병목은 속도가 아니라 <strong>신뢰</strong>다. 믿지 못하면 위임할 수 없다.</li>
+          <li>테스트, 평가, 추적은 부품이다. 신뢰는 부품을 조립하는 <strong>설계 원칙</strong>에서 나온다.</li>
+          <li><strong>공유된 도메인</strong>: 모델의 정의와 내 정의는 다르다. 하네스가 예스맨이 되지 않고 먼저 묻는다. 계획은 결정 트리로, 각 항목에는 출처 표시를 단다.</li>
+          <li>대화는 한 줄이 아니라 <strong>결정 단위의 가지</strong>로 나눈다. 10턴 넘는 채팅에서 맥락을 잃는 문제를 피한다.</li>
+          <li><strong>일관성</strong>: 계산이면 코드다. 한 번 쓰고 매번 같은 것을 돌린다. 테스트와 버전이 지킨다. 모델 머릿속 산수는 세션이 바뀌면 사라진다.</li>
+          <li>스킬과 지시문은 "실수하지 마세요"라는 부탁이다. 하네스는 비결정적인 부분과 <strong>통제하고 싶은 결정론적 부분을 코드로 섞는다.</strong></li>
+          <li><strong>증거</strong>: 사실, 가정, 해석을 구분해 표시한다. 코드 변경 이력도 증거다. 마스터 파일이 바뀐 것을 모르면 입력이 같아도 결과가 틀린다.</li>
+          <li><strong>책임</strong>: 에이전트는 결과를 감당하지 않는다. 관문은 적게, 신호는 높게. 변경마다가 아니라 과업 단위로 검토한다. 방향을 안전하게 고칠 수 있어야 한다.</li>
+          <li><strong>검증</strong>: 골든 예시 밖의 외부 기준점과 내 얇은 경험으로 모델의 평균을 흔든다. 도전은 심사로 끝나지 않고 계획을 실제로 바꿔야 한다.</li>
+          <li>하네스는 같은 일을 서너 번 반복했을 때, 여러 사람이 중요한 결정에 쓸 때 짓는다. 경영진에게는 구현이 아니라 <strong>측정 가능한 결과</strong>로 합의한다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 말하는 금융 분석 에이전트의 병목은 무엇이고, 왜 그런가?</span></summary><div class="answer">신뢰다. 분석을 뽑는 속도는 이미 충분하다. 돈은 가장 위험이 큰 주제라 결과를 믿지 못하면 지루한 일을 에이전트에게 위임할 수 없다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>다섯 원칙을 순서대로 말하면?</span></summary><div class="answer">공유된 도메인, 일관성, 증거, 책임, 검증. 각 원칙은 앞 원칙 위에 쌓인다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>공유된 도메인 원칙에서 하네스가 "예스맨 모드"로 가지 않는다는 말은 무슨 뜻인가?</span></summary><div class="answer">모호한 요청을 바로 구현하지 않는다. 인터뷰 지시문에 따라 계획에 필요한 데이터 포인트를 하나하나 묻고, 충분히 엄격한 계획이 나온 뒤에야 만든다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>계획의 각 단계에 붙는 출처 표시 세 가지는?</span></summary><div class="answer">내가 말한 것, 에이전트가 추론한 것, 아직 결정이 필요한 열린 항목.</div></details>
+          <details><summary><span class="qn">Q5</span><span>계산을 코드로 하지 않으면 생기는 문제 두 가지는?</span></summary><div class="answer">계산이 모델 머릿속에 남아 새 세션마다 새 코드가 나온다. 같은 질문에 다른 답이 나온다. 발표자의 월 예산 분류는 세 번 맞고 네 번째에 틀렸다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>스킬이나 지시문으로 원칙을 넣는 것과 하네스를 직접 짓는 것의 차이는?</span></summary><div class="answer">스킬은 올바른 말을 적고 "실수하지 마세요"라고 부탁하는 것이라 매번 비결정적이다. 하네스는 통제하고 싶은 결정론적 부분을 백엔드 코드로 강제하고 비결정적인 부분과 섞는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>증거 원칙에서 채팅의 생각, 에이전트의 추론, 은행 명세서는 각각 무엇으로 표시하나?</span></summary><div class="answer">해석, 가정, 사실. 모델은 확정된 사실과 어림짐작을 구분하지 못하므로 하네스 설계로 강제한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>마스터 파일 사고의 교훈은?</span></summary><div class="answer">입력이 같아도 파일 안의 가정이 바뀌면 결과가 틀린다. 하네스의 결정론적 코드도 변경 이력을 추적해야 사각지대가 없다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>책임 원칙에서 좋은 관문 설계의 한 줄 요약은?</span></summary><div class="answer">관문은 적게, 신호는 높게. 변경마다 승인하면 100번 중 대부분을 그냥 넘기게 된다. 과업 단위로 검토하고, 코드는 테스트가 대신 말한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>검증 원칙에서 "도전" 가지를 LLM 판사와 다르게 설계한 이유는?</span></summary><div class="answer">도전 결과가 본류로 합쳐져 계획을 실제로 바꾸게 했다. 심사만 하고 피드백 루프가 없으면 결정은 나아지지 않는다. 바꿀 것이 없으면 사람이 기각할 수도 있다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>골든 예시만으로 검증이 부족한 이유는?</span></summary><div class="answer">골든 예시에는 내 도메인의 선택 편향이 들어 있다. 옆 도메인 사람이 매출 규모만 알아도 틀린 것을 잡는다. 데이터 밖의 외부 기준점이 필요하다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>하네스를 지을 때인지 알려 주는 실용적인 신호는?</span></summary><div class="answer">스킬을 더해도 결과가 안 나오고, 채팅 간에 복사 붙여넣기를 하고, 같은 일을 서너 번 반복했을 때. 또는 여러 사람이 중요한 결정에 쓸 때.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 하네스에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>구현 전에 하네스가 먼저 묻게 한다<span class="how">인터뷰 지시문에 "계획에 필요한 데이터 포인트가 다 채워지기 전에는 만들지 않는다"를 넣는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>계획의 모든 항목에 출처를 표시한다<span class="how">내가 말한 것 / 에이전트가 추론한 것 / 열린 항목</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>계산은 전부 코드로 옮기고 모델의 산수를 막는다<span class="how">확인: 같은 질문을 세 번 던져도 같은 숫자가 나오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>계산 코드에 테스트와 버전을 붙인다<span class="how">코드가 바뀌면 에이전트가 "이전 결과를 믿지 마라"고 알리는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>입력을 사실, 가정, 해석으로 구분해 저장한다<span class="how">확인: 숫자 하나를 눌렀을 때 어디서 왔는지 거슬러 올라가는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>사람이 멈춰 서는 관문을 적게, 중요한 결정에만 둔다<span class="how">확인: 관문을 통과할 때 실제로 읽고 있는가, 아니면 엔터만 누르는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>결정 뒤에 입력을 고쳐도 분석이 날아가지 않게 한다<span class="how">가지 대화와 기각 버튼. 곁가지 질문이 본류에 섞이지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>도전 에이전트의 결과가 계획을 실제로 바꾸게 한다<span class="how">심사만 하는 LLM 판사로 끝내지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>골든 예시 밖의 외부 기준점을 하나 이상 정한다<span class="how">옆 도메인의 대략적인 숫자, 공개 데이터, 다른 팀의 감</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>경영진과는 구현이 아니라 측정 가능한 결과로 합의한다<span class="how">예: 대시보드 검증 왕복 횟수, "숫자가 이상하다" 티켓 수</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙, 검사를 정해 주는 실행 틀. 이 발표에서는 금융 분석용으로 직접 지은 것을 가리킨다</td></tr>
+              <tr><td>결정론적</td><td>Deterministic. 같은 입력이면 항상 같은 출력이 나오는 성질. 코드와 계산이 여기 속한다</td></tr>
+              <tr><td>비결정적</td><td>Non-deterministic. 같은 입력에도 출력이 달라질 수 있는 성질. 언어 모델의 기본 성질</td></tr>
+              <tr><td>계획 모드</td><td>Plan mode. 구현 전에 에이전트와 문제를 정리하고 단계를 합의하는 단계</td></tr>
+              <tr><td>결정 트리</td><td>계획을 결정 지점들의 가지 구조로 그린 것. 이 하네스의 왼쪽 그림</td></tr>
+              <tr><td>도구 호출</td><td>Tool calling. 모델이 직접 답하지 않고 코드나 외부 도구를 실행해 결과를 받는 것</td></tr>
+              <tr><td>골든 예시</td><td>Golden examples. 결과가 어떤 모습이어야 하는지 보여 주는 기준 데이터</td></tr>
+              <tr><td>얇게 썰기</td><td>Thin slicing. 경험의 작은 조각만으로 맞는지 틀린지 빠르게 느끼는 것</td></tr>
+              <tr><td>LLM 판사</td><td>LLM as a judge. 다른 모델이 결과를 심사하게 하는 방법. 피드백 루프가 없으면 결과를 바꾸지 못한다</td></tr>
+              <tr><td>관문</td><td>Gate. 사람이 멈춰서 확인하거나 승인하는 지점</td></tr>
+              <tr><td>가지 대화</td><td>Branched conversation. 본류와 분리해 묻고, 필요하면 결과를 다시 합치는 곁가지 대화</td></tr>
+              <tr><td>스펙 기반 개발</td><td>Spec-driven development. 요구 사항 문서를 먼저 쓰고 에이전트가 그것을 따라 만드는 방식</td></tr>
+              <tr><td>바이브 코딩</td><td>Vibe coding. 코드를 자세히 읽지 않고 에이전트에게 맡겨 만드는 방식</td></tr>
+              <tr><td>BI</td><td>Business Intelligence. 회사 데이터를 대시보드와 보고서로 만드는 일</td></tr>
+              <tr><td>평가</td><td>Eval. 모델이나 시스템의 결과 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>추적</td><td>Trace. 시스템이 한 단계씩 무엇을 했는지 남긴 기록</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:20</span></td><td>발표자 소개: Francesco Galletta, Felippe Felisola Caso</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>Monzo의 영향 중심 AI 도입, 개인 생활에 AI 적용</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>병목은 속도가 아니라 신뢰</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>부품이 아니라 설계 원칙</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>다섯 원칙 소개</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>숨은 동기: 결혼식 예산</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>저장소 설정 시간</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>저장소 구성 설명</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>원칙이 쌓이는 순서</td></tr>
+              <tr><td><span class="ts">20:30</span></td><td>원칙 1 공유된 도메인: 모델의 정의는 내 정의가 아니다</td></tr>
+              <tr><td><span class="ts">25:50</span></td><td>시연: 일부러 흐리게 결혼식 비용 말하기</td></tr>
+              <tr><td><span class="ts">30:30</span></td><td>계획 수락, 결정 트리, 출처 표시</td></tr>
+              <tr><td><span class="ts">35:40</span></td><td>10턴 넘는 채팅의 문제, 결정 단위로 쪼개기</td></tr>
+              <tr><td><span class="ts">36:40</span></td><td>원칙 2 일관성: 계산이면 코드</td></tr>
+              <tr><td><span class="ts">39:00</span></td><td>스킬이 아니라 하네스인 이유</td></tr>
+              <tr><td><span class="ts">42:20</span></td><td>월 예산 분류 경험, 한 번 쓰고 매번 돌리기</td></tr>
+              <tr><td><span class="ts">46:50</span></td><td>시연: 코드 만들기, 테스트 실행</td></tr>
+              <tr><td><span class="ts">48:20</span></td><td>직접 만들기 안내 파일</td></tr>
+              <tr><td><span class="ts">51:00</span></td><td>질문: 스펙 기반 개발과의 차이</td></tr>
+              <tr><td><span class="ts">55:10</span></td><td>실습: 계산식을 바꾸면 테스트가 막는다</td></tr>
+              <tr><td><span class="ts">56:00</span></td><td>원칙 3 증거: 영수증</td></tr>
+              <tr><td><span class="ts">57:30</span></td><td>사실, 가정, 해석 구분</td></tr>
+              <tr><td><span class="ts">1:00:00</span></td><td>마스터 파일 사고, 코드 변경 추적</td></tr>
+              <tr><td><span class="ts">1:02:20</span></td><td>실습: 사실을 고치면 영향이 추적된다</td></tr>
+              <tr><td><span class="ts">1:05:20</span></td><td>슬라이드 사고</td></tr>
+              <tr><td><span class="ts">1:06:40</span></td><td>원칙 4 책임: 에이전트는 결과를 감당하지 않는다</td></tr>
+              <tr><td><span class="ts">1:09:00</span></td><td>관문은 적게, 신호는 높게. 과업 단위 검토</td></tr>
+              <tr><td><span class="ts">1:12:50</span></td><td>나쁜 결정은 번진다. 관문은 사용 사례에 맞게</td></tr>
+              <tr><td><span class="ts">1:15:00</span></td><td>가지를 치고 다시 합치는 구조</td></tr>
+              <tr><td><span class="ts">1:17:40</span></td><td>실습: 손님 수 고치기, 가지 대화 열기</td></tr>
+              <tr><td><span class="ts">1:20:30</span></td><td>원칙 5 검증: 두 번째 눈</td></tr>
+              <tr><td><span class="ts">1:22:10</span></td><td>전문가는 모든 칸을 보지 않는다</td></tr>
+              <tr><td><span class="ts">1:23:50</span></td><td>질문: 골든 예시와 외부 기준점</td></tr>
+              <tr><td><span class="ts">1:27:40</span></td><td>얇게 썰기, 모델은 평균이다</td></tr>
+              <tr><td><span class="ts">1:31:00</span></td><td>도전 가지가 계획을 바꾼다. 기각 버튼</td></tr>
+              <tr><td><span class="ts">1:32:50</span></td><td>다섯 원칙 정리</td></tr>
+              <tr><td><span class="ts">1:33:20</span></td><td>질문: 하네스는 언제, 얼마나 자주 짓나</td></tr>
+              <tr><td><span class="ts">1:38:50</span></td><td>질문: 결혼식 준비 전체를 에이전트에게 맡겨 봤나</td></tr>
+              <tr><td><span class="ts">1:40:40</span></td><td>질문: 경영진의 200% 정확성 기대</td></tr>
+              <tr><td><span class="ts">1:43:50</span></td><td>질문: 스킬과 하네스의 경계, 99%와 1%</td></tr>
+              <tr><td><span class="ts">1:47:00</span></td><td>마무리: 금융은 창의성과 신뢰성의 혼합</td></tr>
+              <tr><td><span class="ts">1:49:20</span></td><td>질문: UI에서 신뢰를 어떻게 보여 주나</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'e9-br9hveRI:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

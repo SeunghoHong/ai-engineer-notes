@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>멀티플레이어 팩토리 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#multiplayer">솔로에서 멀티플레이어로</a></li>
+      <li><a href="#pr-flood">PR이 10배가 되면</a></li>
+      <li><a href="#split">일을 나누고 찜하기</a></li>
+      <li><a href="#isolate">에이전트마다 따로 떼어 주기</a></li>
+      <li><a href="#collide">부딪쳤을 때</a></li>
+      <li><a href="#intent">의도가 부딪칠 때</a></li>
+      <li><a href="#merge-train">투기적 머지 트레인</a></li>
+      <li><a href="#board">한 보드, 한 대화</a></li>
+      <li><a href="#non-engineers">엔지니어가 아닌 사람도</a></li>
+      <li><a href="#stuck">막히면 사람이 들어간다</a></li>
+      <li><a href="#decisions">선택지와 결정 장부</a></li>
+      <li><a href="#review">위험에 맞춘 리뷰</a></li>
+      <li><a href="#radiate">변화를 각자의 말로</a></li>
+      <li><a href="#factory-team">자동화와 팩토리 팀</a></li>
+      <li><a href="#conclusion">결론: 대비하라</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-10 · 23분 · 영어 발표 한글 정리</span>
+      <h1>팀의 에이전트가 한꺼번에 같은 코드로 몰려올 때</h1>
+      <p class="lead">사람 여럿과 에이전트 여럿이 같은 코드와 같은 티켓 보드에서 동시에 일하면 머지 충돌과 리뷰 대기가 폭발한다. 발표자는 동시 작업을 예외가 아니라 기본으로 놓고, 일을 나누는 법과 머지하는 법과 사람이 결정하는 법을 새로 짜자고 제안한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=fTUinMqA1XQ" target="_blank" rel="noopener">Your Team's Agents Are All Shipping to the Same Code at Once</a></span>
+        <span>발표: Patrick Debois (Tessl, 'DevOps'라는 말을 처음 퍼뜨린 사람으로 알려짐)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다(Tesla → Tessl, ASD → AST). <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>팀 단위로 에이전트를 돌리면 PR이 <strong>10배 가까이</strong> 는다(발표자의 체감). 충돌, 재테스트, 대기, CI 비용도 함께 는다.</li>
+        <li>출발점은 생각을 뒤집는 것이다. 동시 작업을 예외가 아니라 <strong>기본</strong>으로 놓는다. 지속적 배포에서 <strong>동시 배포</strong>로 간다.</li>
+        <li>코딩 전에 <strong>일을 나누고 찜한다</strong>. 에이전트마다 작업 환경을 <strong>따로 떼어 준다</strong>.</li>
+        <li>머지는 더 똑똑해진다. 에이전트가 충돌을 풀고, <strong>의도 충돌</strong>을 확인하고, <strong>투기적 머지 트레인</strong>으로 줄을 빠르게 한다.</li>
+        <li>사람 쪽에서는 에이전트를 <strong>팀 대화에 불러</strong> 티켓을 함께 다듬는다. 엔지니어가 아닌 사람도 같은 파이프라인을 쓴다.</li>
+        <li>에이전트는 <strong>선택지</strong>로 묻고, 결정은 <strong>공유 장부</strong>에 남긴다. 리뷰는 작게, 증거를 붙여, <strong>위험에 맞춰</strong> 한다.</li>
+        <li>자동화할 수 있는 건 자동화하고 예외만 사람에게 보낸다. 이 전체를 돌보는 <strong>팩토리 팀</strong>이 생긴다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="multiplayer">
+        <header><span class="num">01</span><h2>솔로 팩토리에서 멀티플레이어 팩토리로 <span class="ts">00:00</span></h2></header>
+        <p>소프트웨어 배포 파이프라인 <span class="en">delivery pipeline</span>은 AI 이전에도 있었다. 빌드, 테스트, 릴리스 대기, main 브랜치 머지가 차례로 이어진다. 한 줄로 흐르는 직렬 흐름이다. 이 흐름 덕분에 배포가 자동화되고 튼튼해졌다.</p>
+        <p>요즘은 각자 노트북에서 코딩 에이전트로 작은 공장을 돌린다. 발표자는 이를 <strong>솔로 팩토리</strong> <span class="en">solo factory</span>라고 부른다. 소프트웨어 팩토리는 에이전트와 자동화로 코드 작성부터 배포까지 돌리는 작업 라인이다.</p>
+        <p>솔로 팩토리에서도 에이전트는 여럿이다. 하지만 결정과 머지는 여전히 사람이 한다. 무엇을 하고 있는지 기억하는 일도 사람 몫이다. 사람이 한가운데 앉아 모든 걸 붙잡고 있는 구조다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>모습</th></tr></thead>
+            <tbody>
+              <tr><td>솔로 팩토리</td><td>각자 자기 노트북에서 에이전트 여럿을 돌린다</td></tr>
+              <tr><td>설정 공유</td><td>컨텍스트, 스킬, 루프 같은 자기 설정을 팀과 나눈다. 발표자는 지금 많은 팩토리가 이 단계라고 본다</td></tr>
+              <tr><td>멀티플레이어 팩토리</td><td>여러 사람과 에이전트가 같은 티켓 보드, 같은 코드베이스에서 동시에 일한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표는 마지막 단계를 다룬다. 갈등은 두 곳에서 생긴다. <span class="ts">01:30</span></p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1부 · 코드</span>
+            <p><strong>모두가 main에 머지하려 한다.</strong> 에이전트들이 같은 코드베이스에 동시에 변경을 밀어 넣는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2부 · 사람</span>
+            <p><strong>여러 사람이 한 보드에 있다.</strong> 사람과 에이전트가 같은 티켓 보드에서 함께 일해야 한다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="pr-flood">
+        <header><span class="num">02</span><h2>PR이 10배가 되면 <span class="ts">02:00</span></h2></header>
+        <p>멀티플레이어 팩토리를 켜면 가장 먼저 PR <span class="en">pull request</span>이 는다. 발표자의 체감으로는 <strong>10배 가까이</strong>다. 변경이 많이 나오니 생산성은 오른다. 동시에 긴장도 쌓인다.</p>
+        <ul class="plain">
+          <li><strong>충돌</strong>: 머지가 많아지니 서로 겹치지 않는지 확인할 일이 는다.</li>
+          <li><strong>제자리걸음</strong>: 한 에이전트가 바꾼 걸 다른 에이전트가 되돌리고, 그걸 또 바꾼다.</li>
+          <li><strong>대기</strong> <span class="ts">02:40</span>: 변경 하나가 머지되면 나머지 PR이 모두 리베이스 <span class="en">rebase</span>하고 테스트를 다시 돌린다. 리베이스는 내 변경을 최신 main 위로 옮겨 다시 쌓는 일이다. 릴리스를 기다리는 시간이 길어진다.</li>
+          <li><strong>CI 비용</strong>: 테스트를 계속 다시 돌리니 CI/CD 시스템이 훨씬 느려지고 비용도 는다.</li>
+        </ul>
+        <p>PR 대기열에는 기능만 쌓이지 않는다. <span class="ts">03:00</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>대기열에 쌓이는 것</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>기능</td><td>새로 만든 기능</td></tr>
+              <tr><td>에이전트 사고</td><td>에이전트가 일으킨 문제를 고치는 변경</td></tr>
+              <tr><td>팩토리 유지보수</td><td>팩토리에서 쓰는 스킬과 루프를 고치는 변경</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 모두를 사람이 승인해야 한다.</p>
+
+        <h3>동시 작업을 기본값으로 <span class="ts">03:20</span></h3>
+        <p>발표자는 여기서 생각을 뒤집자고 한다. 지금은 동시 작업이 예외처럼 다뤄진다. 이를 일상으로 받아들이고, 처음부터 그에 맞춰 설계하자는 것이다.</p>
+        <div class="shift" aria-label="지속적 배포에서 동시 배포로">
+          <div><span class="tag">지속적 배포 · continuous delivery</span><b>변경이 한 줄로 서서 하나씩 나간다</b><span class="muted">동시 작업은 예외다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">동시 배포 · concurrent delivery</span><b>동시에 일하는 것을 전제로 설계한다</b><span class="muted">사람과 에이전트가 같은 코드베이스에서 함께 일한다</span></div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="split">
+        <header><span class="num">03</span><h2>일을 나누고 찜하기 <span class="ts">03:50</span></h2></header>
+        <p>에이전트를 그냥 병렬로 많이 돌리는 것으로는 부족하다. 사람 팀이 일을 나누듯 에이전트에게도 일을 나눠 주면 덜 부딪친다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>나누는 방법</th><th>예</th></tr></thead>
+            <tbody>
+              <tr><td>영역별로</td><td>한 에이전트는 인증, 다른 에이전트는 결제를 맡는다</td></tr>
+              <tr><td>코드 구조를 보고</td><td>AST <span class="en">abstract syntax tree</span>를 보고 어디가 잘 떨어지는지 정한다. AST는 코드 구조를 나무 모양으로 나타낸 것이다</td></tr>
+              <tr><td>더 잘게</td><td>파일, 함수, 심지어 같은 파일 안의 특정 편집 위치까지 나눈다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>코딩을 시작하기 전에 하는 일이다. 변경을 더 잘 계획하는 방법이다.</p>
+
+        <h3>티켓을 찜하고 변경을 알린다 <span class="ts">04:50</span></h3>
+        <p>계획을 실행할 때는 스크럼 보드처럼 움직인다. 에이전트가 "이 티켓은 내가 한다"고 <strong>찜</strong> <span class="en">claim</span>한다. 그러면 다른 에이전트가 같은 티켓에 끼어들지 못한다.</p>
+        <p>에이전트는 어떤 파일을 어떻게 바꿀지도 <strong>미리 알린다</strong> <span class="en">announce</span>. 다른 에이전트는 이를 보고 계획 단계와 실행 단계에서 겹치지 않게 피한다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="isolate">
+        <header><span class="num">04</span><h2>에이전트마다 따로 떼어 주기 <span class="ts">05:20</span></h2></header>
+        <p>실행 중에 서로 방해하지 않도록 많은 사람이 워크트리 <span class="en">worktree</span>를 쓴다. 워크트리는 한 저장소에서 브랜치마다 작업 폴더를 따로 여는 Git 기능이다.</p>
+        <p>발표자는 이걸 더 넓게 보자고 한다. 에이전트마다 자기만의 세상을 떼어 주는 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>따로 주는 것</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>머신</td><td>에이전트 전용 실행 환경</td></tr>
+              <tr><td>컨텍스트</td><td>에이전트가 볼 정보 중 자기 몫</td></tr>
+              <tr><td>API</td><td>모킹 <span class="en">mock</span>한 자기 버전. 모킹은 진짜 시스템 대신 흉내 내는 가짜를 세우는 것이다</td></tr>
+              <tr><td>데이터베이스</td><td>자기 스냅샷과 자기 테스트 데이터</td></tr>
+              <tr><td>바깥 세계</td><td>디지털 트윈 <span class="en">digital twin</span>과 목. 디지털 트윈은 실제 외부 시스템을 본뜬 복제본이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>목표는 에이전트가 바깥 세계에 영향을 주지 않고 일하게 하는 것이다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="collide">
+        <header><span class="num">05</span><h2>부딪쳤을 때 <span class="ts">06:00</span></h2></header>
+        <p>그래도 두 에이전트가 작업 중에 부딪칠 수 있다. 전략은 세 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>전략</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>기다리기</td><td>한쪽이 끝날 때까지 다른 쪽이 기다린다</td></tr>
+              <tr><td>다시 줄 서기</td><td>대기열에 다시 들어갔다가 앞의 일이 끝나면 재시도한다</td></tr>
+              <tr><td>재협상</td><td>"너는 이걸, 나는 저걸" 하고 실행 도중에 계획을 고친다 <span class="en">renegotiation</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>머지 충돌을 에이전트가 푼다 <span class="ts">06:20</span></h3>
+        <p>지금 Git에서 충돌이 나면 보통 다시 돌려서 이번엔 합쳐지는지 본다. 발표자는 이 일을 에이전트가 점점 더 똑똑하게 맡을 수 있다고 본다. 단계로 나누면 이렇다.</p>
+        <ol class="plain">
+          <li><strong>다시 돌려 본다.</strong> 지금 PR에서 흔히 하는 방식이다.</li>
+          <li><strong>에이전트에게 맡긴다.</strong> 합쳐지는지 확인하는 일을 에이전트가 대신한다.</li>
+          <li><strong>함수 단위로 합친다.</strong> 코드 줄이 아니라 함수 단위로 보고 합친다.</li>
+          <li><strong>충돌을 고친다.</strong> 에이전트가 머지 충돌을 직접 고쳐서 사람이 다시 손대지 않는다.</li>
+          <li><strong>미리 맞춘다.</strong> 다른 에이전트가 곧 바꿀 부분을 내다보고 내 코드를 먼저 맞춘다. <span class="ts">07:00</span></li>
+        </ol>
+        <p>발표자는 이것을 <strong>변경을 직렬이 아니라 동시성으로 생각하기</strong>라고 정리한다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="intent">
+        <header><span class="num">06</span><h2>코드는 안 부딪쳐도 의도가 부딪친다 <span class="ts">07:20</span></h2></header>
+        <p>에이전트는 코드 머지에 잘 맞춰져 있다. 그런데 두 변경이 동시에 들어오면 코드가 아닌 곳에서 문제가 생긴다. 발표자가 든 예다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">PR A</span>
+            <p>송장 합계를 계산하는 함수를 바꾼다. 이제 달러가 아니라 <strong>센트</strong> 단위로 돌려준다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">PR B</span>
+            <p>같은 때 보고서 출력을 바꾼다. 보고서는 센트 단위 값을 원하지 않는다.</p>
+          </div>
+        </div>
+        <p>두 PR은 충돌 없이 합쳐지고 테스트도 통과한다. 하지만 두 변경이 기대하는 의미가 다르다. 코드 충돌이 아니라 <strong>의도 충돌</strong>이다.</p>
+        <div class="callout">
+          <span class="title">예시로 풀면 (발표에 없는 숫자)</span>
+          <span>합계가 19.99달러인 송장이 있다고 하자. PR A가 들어간 뒤 함수는 1999를 돌려준다. PR B의 보고서가 이 값을 달러로 읽으면 1,999달러가 찍힌다. 테스트가 두 변경을 함께 보지 않으면 이대로 나간다.</span>
+        </div>
+        <p>발표자의 제안은 이렇다. 여러 변경이 머지될 때 그 의도가 여전히 서로 맞는지 에이전트가 확인한다. 어긋나면 사람에게 경고하거나 PR을 고친다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="merge-train">
+        <header><span class="num">07</span><h2>투기적 머지 트레인 <span class="ts">08:20</span></h2></header>
+        <p>머지 트레인 <span class="en">merge train</span>은 머지할 PR을 줄 세워 하나씩 main에 합치는 장치다. 머지 큐 <span class="en">merge queue</span>라고도 한다.</p>
+        <p>문제는 하나가 제대로 합쳐지지 않을 때다. 그러면 보통 나머지 PR이 모두 리베이스하고 일을 다시 한다.</p>
+        <p>발표자가 소개하는 개선책은 <strong>투기적 머지 트레인</strong> <span class="en">speculative merge train</span>이다. 들어오는 PR을 보고 서로 맞는 것끼리 미리 짝지어 확인해 둔다. 하나가 떨어져도 나머지 맞는 것들은 그대로 지나간다. 그래서 줄 전체가 빨라진다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>예시: PR A, B, C가 줄을 섰고 B가 실패한다</th><th>흐름</th></tr></thead>
+            <tbody>
+              <tr><td>보통 머지 트레인</td><td>A가 들어간다. B를 합치려다 실패한다. C는 바뀐 main에 맞춰 리베이스하고 테스트를 다시 돌린 뒤에야 들어간다</td></tr>
+              <tr><td>투기적 머지 트레인</td><td>A, B, C가 서로 맞는지 미리 짝지어 확인해 둔다. B가 떨어져도 A와 C는 이미 확인된 조합이라 바로 들어간다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">위 표는 발표에 없는 예시다.</p>
+
+        <h3>에이전트를 위한 새 인프라 층 <span class="ts">09:10</span></h3>
+        <p>나누기, 충돌 처리, 머지, 리뷰, 계획에 이런 새 전략이 생기고 있다. 발표자는 이를 보고 <strong>새로운 개발 인프라 층</strong>이 생긴다고 본다. 업체들도 이쪽으로 움직이고 있다.</p>
+        <ul class="plain">
+          <li>머지를 지금과 다르게 처리하는 도구</li>
+          <li>분석 도구</li>
+          <li>더 나은 계획 도구</li>
+          <li>그 밖의 모든 단계에 맞춘 더 나은 도구</li>
+        </ul>
+        <p>발표자가 보기에 지금 팩토리 다수는 "꾸며진 루프" <span class="en">glorified loops</span>에 가깝다. 하지만 동시성은 앞으로 더 늘어난다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="board">
+        <header><span class="num">08</span><h2>한 보드, 한 대화 <span class="ts">09:40</span></h2></header>
+        <p>이제 반대쪽, 사람이 함께 일하는 이야기다. 멀티플레이어 팩토리에서는 모두 한 작업 보드를 쓴다. 어떤 변경이 오고 어떤 일이 진행 중인지 모두가 본다.</p>
+        <p>솔로 팩토리에서는 이걸 혼자 했다. 모두가 함께 보는 중앙 보드가 없었다.</p>
+        <p>에이전트가 많아지면 사람을 부르는 횟수도 는다. 그러니 에이전트가 사람의 주의를 덜 빼앗게 만들어야 한다. <span class="ts">10:00</span></p>
+
+        <h3>에이전트를 대화에 부른다 <span class="ts">10:20</span></h3>
+        <p>흥미로운 변화는 에이전트가 팀 채팅에 들어온다는 점이다. 사람이 에이전트에게 프롬프트를 쓰는 게 아니다. 사람들이 나누는 대화에 에이전트를 끌어들인다.</p>
+        <div class="shift" aria-label="프롬프트에서 대화로">
+          <div><span class="tag">프롬프트</span><b>한 사람이 에이전트에게 지시한다</b><span class="muted">단서는 그 한 사람에게서만 온다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">대화에 부르기</span><b>에이전트가 팀 대화에 들어온다</b><span class="muted">팀원 여럿의 말에서 단서를 모은다</span></div>
+        </div>
+        <ul class="plain">
+          <li>에이전트가 모든 입력을 모아 <strong>티켓을 다듬는다</strong>.</li>
+          <li>에이전트끼리의 적대적 리뷰 <span class="en">adversarial review</span>에 더해, 사람 여럿의 의견이 한 티켓에 모인다. 적대적 리뷰는 일부러 흠을 찾게 시킨 에이전트의 검토다.</li>
+          <li>에이전트가 먼저 <strong>질문을 던진다</strong>. 무엇을 테스트할지, 무엇을 해야 하는지, 요구사항이 무엇인지 묻는다. 사람이 매번 처음부터 설명하지 않아도 된다. <span class="ts">11:00</span></li>
+        </ul>
+        <p>그러면 티켓은 코딩 에이전트의 <strong>플랜 모드</strong> <span class="en">plan mode</span>와 비슷해진다. 플랜 모드는 코딩 전에 에이전트가 계획을 먼저 세워 보여 주는 방식이다. 다른 점은 그 계획이 보드 위에서 팀 전체에 공유된다는 것이다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="non-engineers">
+        <header><span class="num">09</span><h2>엔지니어가 아닌 사람도 같은 공장에 <span class="ts">11:30</span></h2></header>
+        <p>이 대화에는 엔지니어만 들어올 필요가 없다.</p>
+        <div class="shift" aria-label="티켓을 내고 기다리던 방식에서 함께 대화하는 방식으로">
+          <div><span class="tag">예전</span><b>티켓을 내고 기다린다</b><span class="muted">영업, 마케팅, 지원팀이 엔지니어링에 티켓을 낸다. 엔지니어가 잡을 때까지 몇 주가 걸리기도 했다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">지금</span><b>에이전트가 있는 채팅에서 함께 이야기한다</b><span class="muted">조직 안 대화에 에이전트가 들어와 있다</span></div>
+        </div>
+        <p>예전에도 엔지니어가 아닌 사람이 바이브 코딩 <span class="en">vibe coding</span>을 했다. 바이브 코딩은 코드를 자세히 보지 않고 AI에게 말로 시켜 만드는 방식이다. 문제는 그 결과물이 엔지니어링 관행에 맞지 않았다는 점이다. <span class="ts">12:10</span></p>
+        <p>멀티플레이어 팩토리에서는 엔지니어가 아닌 사람도 같은 파이프라인, 같은 지식, 같은 스킬, 같은 루프를 쓴다. 그래서 결과물이 처음부터 엔지니어링 흐름에 들어맞는다.</p>
+        <p>엔지니어가 아닌 사람들도 실험하고, 기능을 다듬고, 기능을 직접 만들어 보기도 한다. 기다리지 않고 먼저 시작하면 엔지니어링이 그 일을 이어받는다. 모두가 한 팩토리의 흐름 안에 들어온다.</p>
+        <p class="note">이 대목은 발표자가 다니는 Tessl의 팩토리에서 본 모습이다. Tessl은 이런 팩토리를 만들어 제공하는 회사이니 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="stuck">
+        <header><span class="num">10</span><h2>막히면 사람이 들어간다 <span class="ts">12:50</span></h2></header>
+        <p>에이전트가 일하다 확신이 서지 않을 때가 있다. 사람 쪽에서도 티켓으로 일하는 방식이 느리게 느껴질 때가 있다. 빠르게 이것저것 해 보고 싶을 때다.</p>
+        <p>발표자는 둘을 섞는 방법으로 Helix ML의 아이디어를 소개한다. <span class="ts">13:10</span></p>
+        <ol class="plain">
+          <li>에이전트가 막힌다.</li>
+          <li>에이전트가 일하던 맥락과 파일 그대로 새 코딩 IDE가 열린다.</li>
+          <li>사람이 그 안에 들어가 실험하고 맞는 선택을 한다.</li>
+          <li>일을 다시 에이전트와 팩토리에 넘긴다.</li>
+        </ol>
+        <p>개인 코딩 에이전트의 빠른 반복과 팩토리 방식 사이의 중간 지점이다. 에이전트도 이 길로 사람에게 도움을 청하고 물어볼 수 있다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="decisions">
+        <header><span class="num">11</span><h2>열린 질문 대신 선택지, 결정은 장부에 <span class="ts">13:50</span></h2></header>
+        <p>에이전트가 사람에게 넘기는 결정은 줄이는 게 좋다. 넘길 때는 "이제 뭘 할까요?" 같은 열린 질문을 하지 않는다. <strong>고를 수 있는 선택지</strong>로 내민다.</p>
+        <p>요즘 코딩 에이전트도 이렇게 한다. 선택지 몇 개를 보여 주고, 사람이 고르면 바로 진행한다. 사람이 매번 할 일을 일러 주지 않아도 되니 덜 지친다. 물론 사람은 선택지 대신 다른 지시를 내릴 수도 있다.</p>
+        <p>발표자는 이 방식이 여럿이 함께 일할 때 특히 강력하다고 본다.</p>
+
+        <h3>결정은 공유 장부에 <span class="ts">14:30</span></h3>
+        <p>사람이 내린 결정은 모두 <strong>결정 장부</strong> <span class="en">decision ledger</span>에 남는다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">솔로 팩토리</span>
+            <p>결정은 내 코딩 에이전트의 로컬 컨텍스트에 남는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">멀티플레이어 팩토리</span>
+            <p>결정은 공유된 결정 로그 <span class="en">decision log</span>에 남는다.</p>
+          </div>
+        </div>
+        <ul class="plain">
+          <li>에이전트와 사람 모두 찾아볼 수 있다.</li>
+          <li>누가 언제 무엇을 정했는지 거슬러 추적할 수 있다.</li>
+          <li>다음 세션에서 그 맥락을 조회해 쓸 수 있다.</li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="review">
+        <header><span class="num">12</span><h2>리뷰: 작게, 증거로, 위험에 맞춰 <span class="ts">15:00</span></h2></header>
+        <p>변경은 작아야 한다. 큰 변경은 읽기 어렵다.</p>
+        <p>앞에서는 에이전트끼리 덜 부딪치게 나누는 이야기를 했다. 여기에 하나를 더 생각해야 한다. <strong>사람이 리뷰할 수 있는 양</strong>이다. 사람이 빨리 리뷰할 수 있게 변경을 따로따로 나누고, 여러 머지 트레인으로 흘려보낼 수 있다.</p>
+
+        <h3>자동 리뷰가 하는 두 가지 <span class="ts">15:30</span></h3>
+        <p>많은 팀이 사람의 PR 리뷰를 줄이려고 자동 리뷰를 붙인다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>목표</th><th>방법</th></tr></thead>
+            <tbody>
+              <tr><td>실패를 줄인다</td><td>더 나은 컨텍스트와 도구를 준다. 적대적 에이전트가 사람보다 먼저 코드를 본다</td></tr>
+              <tr><td>무엇을 했는지 보여 준다</td><td>스크린샷, 영상, 테스트 결과 같은 증거를 요구한다. 리뷰어에게 도움이 되는 건 모두 붙인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>위험에 맞춰 리뷰 강도를 정한다 <span class="ts">16:10</span></h3>
+        <p>발표자 주변에는 "이제 코드를 안 본다"는 사람이 여럿 있었다. 발표자는 이렇게 되묻는다. "그게 프로덕션에 나가면 영향이 얼마나 됩니까?"</p>
+        <p>문서 변경이라면 영향이 작다. 실제 고객이 없는 제품도 영향이 작다. 그런 곳이라면 코드를 안 봐도 괜찮을 수 있다. 결국 하고 있는 일은 <strong>감당할 수 있는 위험을 고르는 것</strong>이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>변경 (발표의 예)</th><th>리뷰 방식</th></tr></thead>
+            <tbody>
+              <tr><td>문서처럼 영향이 작은 곳</td><td>그대로 진행한다</td></tr>
+              <tr><td>그 중간</td><td>일단 내보내고 출력과 오류를 지켜본다. 점진적 배포 <span class="en">gradual release</span></td></tr>
+              <tr><td>인증처럼 영향이 큰 곳</td><td>사람이 더 많이 리뷰한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>잘못돼도 싸게 고치게 <span class="ts">17:10</span></h3>
+        <p>품질을 높여 실패할 가능성을 줄이는 것만이 답은 아니다. 위험이라는 관점으로도 본다. 프로덕션에 나간 뒤 위험을 어떻게 줄일지도 설계한다.</p>
+        <ul class="plain">
+          <li>데이터를 잃을 수 있다면, 빨리 복원할 수 있나?</li>
+          <li>노드 하나가 죽으면 어떻게 되나?</li>
+          <li>빨리 롤백 <span class="en">rollback</span>할 수 있나? 롤백은 문제가 생긴 배포를 이전 버전으로 되돌리는 것이다.</li>
+        </ul>
+        <p>이는 아키텍처 결정이기도 하다. 목표는 일이 틀어졌을 때 <strong>복원과 수정이 싸게</strong> 만드는 것이다.</p>
+        <div class="shift" aria-label="품질만 올리기에서 위험으로 보기로">
+          <div><span class="tag">품질만 올리기</span><b>실패할 가능성을 줄인다</b><span class="muted">더 나은 컨텍스트, 도구, 적대적 리뷰</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">위험으로 보기</span><b>영향에 따라 리뷰 강도를 고른다</b><span class="muted">그리고 복원과 롤백을 싸게 만든다</span></div>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="radiate">
+        <header><span class="num">13</span><h2>변화를 각자의 말로 알린다 <span class="ts">18:00</span></h2></header>
+        <p>발표자는 원격으로 일한다. 팀 대부분은 런던에 모여 있다. 팀원들은 모여서 이야기를 많이 나눈다. 원격인 발표자는 무엇이 바뀌었는지 따라잡기 어려울 때가 있었다.</p>
+        <p>멀티플레이어 팩토리를 켜면 모두가 이런 처지가 된다. 코드가 너무 많이 쏟아져서 마케팅, 지원 같은 팀은 따라갈 수 없다. 이 팀들에게는 바뀐 내용을 <strong>자기 말로 옮긴 번역</strong>이 필요하다. <span class="ts">18:30</span></p>
+        <p>그래서 변화를 주변에 알리는 일 <span class="en">radiating change</span>은 멀티플레이어 팩토리의 중요한 기능이다. 물어야 할 것은 이것이다. 각자 자기 영역에서, 자기 이해 수준으로 어떻게 따라갈 것인가.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="factory-team">
+        <header><span class="num">14</span><h2>자동화하고, 예외는 사람에게 <span class="ts">18:50</span></h2></header>
+        <p>정리하면 이렇다. 스킬과 컨텍스트를 다듬어 자동화할 수 있는 건 많이 자동화한다. 사람은 <strong>예외</strong>를 위해 남겨 둔다.</p>
+        <blockquote>자동화할 수 있는 건 자동화하라. 다만 올바른 결정이 필요할 때 사람에게 넘길 수 있게 하라.<cite>발표자의 말을 옮김</cite></blockquote>
+
+        <h3>팩토리 팀이 생긴다 <span class="ts">19:20</span></h3>
+        <p>이런 인프라와 일하는 방식이 쌓이면서 새 팀이 생기고 있다. 발표자는 <strong>팩토리 팀</strong> <span class="en">factory team</span>이라고 부른다.</p>
+        <div class="shift" aria-label="플랫폼 팀에서 팩토리 팀으로">
+          <div><span class="tag">플랫폼 팀</span><b>Kubernetes, 클러스터, 클라우드를 맡았다</b><span class="muted">개발팀이 쓰는 공용 인프라</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">팩토리 팀</span><b>코딩 에이전트와 그 작업 바탕을 맡는다</b><span class="muted">에이전트들이 함께 일하는 구조 전체</span></div>
+        </div>
+        <ul class="plain">
+          <li>스킬마다 주인이 누구인지 정한다.</li>
+          <li>컨텍스트를 최신으로 유지한다.</li>
+          <li>필요한 것들이 제대로 연결돼 있게 한다.</li>
+          <li>팩토리 자체를 유지보수하고 모니터링한다.</li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="conclusion">
+        <header><span class="num">15</span><h2>결론: 대비하라 <span class="ts">20:00</span></h2></header>
+        <p>압력은 두 갈래로 커진다. 에이전트는 코드베이스에서 점점 더 함께 일한다. 사람도 에이전트와 점점 더 동시에 일하며 더 많은 결과물을 낸다. 두 쪽 모두 많은 변화가 필요하다.</p>
+
+        <h3>다음 참여자: 개인 에이전트 <span class="ts">20:20</span></h3>
+        <p>발표자 쪽에서 지금 시험하는 것은 세 번째 참여자다. 코딩 에이전트도, 보드 위의 사람도 아니다. 사람마다 붙은 <strong>개인 에이전트</strong> <span class="en">personal agent</span>가 보드에서 일한다.</p>
+        <ul class="plain">
+          <li>그 사람 대신 결정을 내린다.</li>
+          <li>다른 에이전트의 질문에 답한다.</li>
+          <li>사람이 하던 일 일부를 넘겨받는다.</li>
+        </ul>
+        <p>만드는 방식도, 일을 맡기는 방식도 새로워진다.</p>
+        <blockquote>대비하세요. 우리는 아직 거기에 이르지 못했습니다.<cite>발표자의 말을 옮김 <span class="ts">20:50</span></cite></blockquote>
+        <p>코딩 에이전트는 솔로 팩토리로 가는 좋은 첫걸음이었다. 멀티플레이어 팩토리는 에이전트의 코딩에도, 조직의 협업에도 새로운 역학을 가져온다.</p>
+        <div class="callout">
+          <span class="title">발표자가 남긴 자료 <span class="ts">21:10</span></span>
+          <span><strong>슬라이드</strong>: LinkedIn DM으로 요청하면 피드백을 받는 대신 보내 준다고 했다.</span>
+          <span><strong>Tessl 팩토리</strong>: 멀티플레이어 방식의 루프, 팩토리, 스킬을 만들고 있다고 소개했다.</span>
+          <span><strong>concurrent.cd</strong>: 동시성 문제를 푸는 사람, 도구, 기법을 모은 발표자의 조사 자료 사이트다.</span>
+        </div>
+        <p class="note">발표자는 Tessl 소속이다. 개인 에이전트 실험과 Tessl 팩토리 소개는 자기 회사 제품과 닿아 있으니 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 16 -->
+      <section id="recap">
+        <header><span class="num">16</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>솔로 팩토리 → 설정 공유 → 멀티플레이어 팩토리. 갈등은 <strong>코드</strong>(모두 main에 머지)와 <strong>사람</strong>(한 보드에서 협업) 두 곳에서 생긴다.</li>
+          <li>PR이 10배 가까이 늘면(발표자의 체감) 충돌, 되돌리기 반복, 리베이스·재테스트 대기, CI 비용이 함께 는다.</li>
+          <li><strong>동시 배포</strong>: 동시 작업을 예외가 아니라 기본 상황으로 놓고 설계한다.</li>
+          <li>코딩 전에 일을 영역·파일·함수 단위로 나누고, 티켓을 <strong>찜하고</strong>, 바꿀 파일을 <strong>알린다</strong>.</li>
+          <li>에이전트마다 워크트리, 컨텍스트, 모킹한 API, DB 스냅샷, 디지털 트윈을 <strong>따로 준다</strong>.</li>
+          <li>작업 중 충돌은 기다리기, 재시도, 재협상으로 푼다. 머지 충돌은 에이전트가 함수 단위로 풀고, 다가올 변경을 미리 반영한다.</li>
+          <li>코드가 안 부딪쳐도 <strong>의도</strong>는 부딪칠 수 있다. <strong>투기적 머지 트레인</strong>은 실패한 PR 하나가 줄 전체를 멈추지 않게 한다.</li>
+          <li>에이전트를 팀 대화에 불러 티켓을 다듬으면 티켓이 <strong>공유된 플랜 모드</strong>가 된다. 엔지니어가 아닌 사람도 같은 파이프라인을 쓴다.</li>
+          <li>에이전트는 <strong>선택지</strong>로 묻고, 결정은 <strong>공유 장부</strong>에 남겨 추적하고 조회한다. 에이전트가 막히면 사람이 같은 맥락으로 들어가 돕는다.</li>
+          <li>리뷰는 작게, 증거로, <strong>위험에 맞춰</strong> 한다. 자동화하고 예외만 사람에게 보내며, <strong>팩토리 팀</strong>이 이 전체를 돌본다.</li>
+        </ol>
+      </section>
+
+      <!-- 17 -->
+      <section id="quiz">
+        <header><span class="num">17</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>솔로 팩토리와 멀티플레이어 팩토리는 무엇이 다른가?</span></summary><div class="answer">솔로 팩토리는 한 사람이 자기 노트북에서 에이전트 여럿을 돌린다. 결정, 머지, 기억은 그 사람이 혼자 맡는다. 멀티플레이어 팩토리는 여러 사람과 에이전트가 같은 보드, 같은 코드베이스에서 동시에 일한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>PR이 크게 늘면 생기는 문제를 세 가지 이상 들면?</span></summary><div class="answer">머지 충돌, 에이전트끼리 서로 되돌리기, 머지마다 다른 PR의 리베이스와 재테스트로 인한 대기, CI/CD가 느려지고 비용이 느는 것. 대기열에는 에이전트 사고 처리와 팩토리 유지보수도 쌓인다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>"동시 배포"는 무엇을 뒤집는 생각인가?</span></summary><div class="answer">동시 작업을 예외로 다루던 것을 뒤집는다. 사람과 에이전트가 같은 코드베이스에서 동시에 일하는 것을 기본 상황으로 놓고 처음부터 그에 맞춰 설계한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>작업을 시작하기 전에 겹침을 줄이는 두 방법은?</span></summary><div class="answer">일을 영역, 파일, 함수 단위로 나눈다(AST로 잘 떨어지는 곳을 찾는다). 그리고 에이전트가 티켓을 찜하고, 바꿀 파일과 변경을 미리 알린다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>워크트리 말고 에이전트마다 따로 줄 수 있는 것은?</span></summary><div class="answer">전용 머신, 자기 몫의 컨텍스트, 모킹한 API, 데이터베이스 스냅샷과 테스트 데이터, 바깥 세계를 흉내 내는 디지털 트윈과 목.</div></details>
+          <details><summary><span class="qn">Q6</span><span>송장 합계 예에서 두 PR은 왜 문제인가?</span></summary><div class="answer">코드 충돌도 없고 테스트도 통과한다. 하지만 한쪽은 합계를 센트로 바꿨고 다른 쪽 보고서는 센트 값을 원하지 않는다. 의도가 부딪친다. 에이전트가 머지되는 변경들의 의도가 맞는지 확인해 경고하거나 PR을 고쳐야 한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>투기적 머지 트레인은 왜 빠른가?</span></summary><div class="answer">들어오는 PR들이 서로 맞는지 미리 짝지어 확인해 둔다. 하나가 실패해도 나머지 맞는 PR은 다시 리베이스하고 기다리지 않고 바로 지나간다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>에이전트를 팀 대화에 부르면 티켓은 어떻게 바뀌나?</span></summary><div class="answer">에이전트가 팀원 여럿의 말에서 단서를 모으고, 테스트와 요구사항을 질문으로 확인하며 티켓을 다듬는다. 티켓은 보드 위에서 공유되는 플랜 모드처럼 된다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Helix ML의 아이디어는 무엇을 해결하나?</span></summary><div class="answer">에이전트가 막혔을 때다. 그 맥락과 파일 그대로 IDE를 열어 사람이 들어가 실험하고 결정한 뒤 다시 에이전트에게 넘긴다. 빠른 개인 작업과 팩토리 방식의 중간 지점이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>결정 장부는 무엇에 쓰나?</span></summary><div class="answer">사람이 내린 결정을 공유 로그에 모은다. 에이전트와 사람이 찾아볼 수 있고, 누가 언제 무엇을 정했는지 추적하며, 다음 세션에서 그 맥락을 조회한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>"코드를 안 본다"는 사람에게 발표자가 되묻는 것과, 대신 내놓는 방식은?</span></summary><div class="answer">"프로덕션에서 영향이 얼마인가?"를 묻는다. 위험에 따라 리뷰 강도를 고른다. 문서는 그대로 진행하고, 중간은 점진적 배포로 지켜보고, 인증처럼 영향이 큰 곳은 사람이 더 본다. 그리고 복원과 롤백을 싸게 만든다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>팩토리 팀은 무엇을 맡나?</span></summary><div class="answer">플랫폼 팀이 인프라를 맡았듯 코딩 에이전트의 작업 바탕을 맡는다. 스킬의 주인을 정하고, 컨텍스트를 최신으로 유지하고, 연결을 챙기고, 팩토리 자체를 유지보수하고 모니터링한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="apply">
+        <header><span class="num">18</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>일을 영역·파일·함수 단위로 나눈 뒤 에이전트에 맡긴다<span class="how">인증, 결제처럼 서로 덜 닿는 영역부터 나눈다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트가 작업 전에 티켓을 찜하고 바꿀 파일을 알리게 한다<span class="how">확인: 두 에이전트가 같은 파일을 동시에 고치는 일이 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트마다 작업 환경을 따로 준다<span class="how">워크트리, 모킹한 API, DB 스냅샷, 테스트 데이터</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>머지 전에 의도 충돌을 확인하는 단계를 둔다<span class="how">함수의 의미(단위, 반환값)를 바꾼 PR과 그 함수를 쓰는 PR이 함께 들어오는지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>머지 대기열이 길면 투기적 머지 트레인을 검토한다<span class="how">확인: 머지 한 번마다 다른 PR이 전부 리베이스와 재테스트를 하고 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>에이전트가 열린 질문 대신 선택지를 주게 한다<span class="how">확인: 에이전트 호출에 답하는 시간이 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>결정을 팀이 함께 보는 장부에 남긴다<span class="how">누가, 언제, 무엇을 정했는지. 다음 세션에서 조회할 수 있게</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>영역별 위험에 따라 리뷰 강도를 정한다<span class="how">문서는 그대로 진행, 중간은 점진적 배포, 인증처럼 영향이 큰 곳은 사람 리뷰. PR에는 스크린샷, 영상, 테스트 결과를 붙인다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>복원과 롤백이 빠른지 점검한다<span class="how">데이터 복원, 노드 장애 대응, 배포 되돌리기</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>팩토리를 맡을 사람을 정하고, 바뀐 내용을 직군별 말로 알린다<span class="how">스킬과 컨텍스트의 주인, 유지보수, 모니터링. 마케팅과 지원이 읽을 수 있는 변경 요약</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 19 -->
+      <section id="glossary">
+        <header><span class="num">19</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>소프트웨어 팩토리</td><td>Software factory. 에이전트와 자동화로 코드 작성부터 배포까지 돌리는 작업 라인</td></tr>
+              <tr><td>솔로 팩토리</td><td>Solo factory. 한 사람이 자기 노트북에서 에이전트 여럿을 돌리는 팩토리. 결정과 머지는 혼자 맡는다</td></tr>
+              <tr><td>멀티플레이어 팩토리</td><td>Multiplayer factory. 여러 사람과 에이전트가 같은 보드, 같은 코드베이스에서 동시에 일하는 팩토리</td></tr>
+              <tr><td>배포 파이프라인</td><td>Delivery pipeline. 빌드, 테스트, 릴리스, 머지를 자동으로 잇는 흐름</td></tr>
+              <tr><td>PR</td><td>Pull request. 내 변경을 공용 브랜치에 합쳐 달라고 요청하는 단위</td></tr>
+              <tr><td>리베이스</td><td>Rebase. 내 변경을 최신 main 위로 옮겨 다시 쌓는 일</td></tr>
+              <tr><td>CI/CD</td><td>변경마다 자동으로 빌드·테스트하고(CI) 배포까지 하는(CD) 시스템</td></tr>
+              <tr><td>지속적 배포</td><td>Continuous delivery. 변경을 자주, 한 줄로 차례차례 내보내는 방식</td></tr>
+              <tr><td>동시 배포</td><td>Concurrent delivery. 사람과 에이전트가 같은 코드에서 동시에 일하는 것을 기본으로 놓고 설계하는 방식. 발표자가 쓰는 말</td></tr>
+              <tr><td>스킬 · 루프 · 컨텍스트</td><td>스킬: 에이전트가 불러 쓰는 작업 지침 묶음. 루프: 에이전트가 반복해서 도는 작업 흐름. 컨텍스트: 에이전트가 일할 때 보는 정보</td></tr>
+              <tr><td>AST</td><td>Abstract syntax tree. 코드 구조를 나무 모양으로 나타낸 것</td></tr>
+              <tr><td>찜하기</td><td>Claim. 에이전트가 티켓을 맡겠다고 표시해 다른 에이전트가 끼어들지 못하게 하는 것</td></tr>
+              <tr><td>워크트리</td><td>Worktree. 한 저장소에서 브랜치마다 작업 폴더를 따로 여는 Git 기능</td></tr>
+              <tr><td>모킹</td><td>Mock. 진짜 시스템 대신 흉내 내는 가짜를 세우는 것</td></tr>
+              <tr><td>디지털 트윈</td><td>Digital twin. 실제 외부 시스템을 본뜬 복제본</td></tr>
+              <tr><td>재협상</td><td>Renegotiation. 실행 도중에 에이전트끼리 일을 다시 나누는 것</td></tr>
+              <tr><td>의도 충돌</td><td>코드는 충돌하지 않지만 두 변경이 기대하는 의미가 어긋나는 것</td></tr>
+              <tr><td>머지 트레인</td><td>Merge train, merge queue. 머지할 PR을 줄 세워 하나씩 합치는 장치</td></tr>
+              <tr><td>투기적 머지 트레인</td><td>Speculative merge train. PR 조합이 서로 맞는지 미리 확인해, 하나가 실패해도 나머지가 바로 지나가게 하는 머지 트레인</td></tr>
+              <tr><td>적대적 리뷰</td><td>Adversarial review. 일부러 흠을 찾도록 시킨 에이전트의 검토</td></tr>
+              <tr><td>플랜 모드</td><td>Plan mode. 코딩 전에 에이전트가 계획을 먼저 세워 보여 주는 방식</td></tr>
+              <tr><td>바이브 코딩</td><td>Vibe coding. 코드를 자세히 보지 않고 AI에게 말로 시켜 만드는 방식</td></tr>
+              <tr><td>결정 장부</td><td>Decision ledger, decision log. 누가 언제 무엇을 정했는지 모아 두는 공유 기록</td></tr>
+              <tr><td>점진적 배포</td><td>Gradual release. 일부에게 먼저 내보내고 지켜보며 범위를 넓히는 배포</td></tr>
+              <tr><td>롤백</td><td>Rollback. 문제가 생긴 배포를 이전 버전으로 되돌리는 것</td></tr>
+              <tr><td>플랫폼 팀</td><td>개발팀이 쓰는 공용 인프라(Kubernetes, 클러스터, 클라우드)를 맡는 팀</td></tr>
+              <tr><td>팩토리 팀</td><td>Factory team. 코딩 에이전트, 스킬, 컨텍스트, 팩토리 자체를 맡아 돌보는 팀. 발표자가 쓰는 말</td></tr>
+              <tr><td>개인 에이전트</td><td>Personal agent. 한 사람을 대신해 보드에서 일하고, 결정하고, 다른 에이전트에 답하는 에이전트</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 20 -->
+      <section id="timeline">
+        <header><span class="num">20</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>멀티플레이어 소프트웨어 팩토리 소개</td></tr>
+              <tr><td><span class="ts">00:10</span></td><td>기존 배포 파이프라인: 직렬 흐름</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>솔로 팩토리</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>솔로 → 설정 공유 → 멀티플레이어</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>두 갈등: main 머지와 공유 보드</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>PR 10배와 충돌</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>리베이스·재테스트 대기, CI 비용</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>PR 대기열: 기능, 에이전트 사고, 팩토리 유지보수</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>지속적 배포에서 동시 배포로</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>일 나누기: 영역, AST, 파일·함수</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>티켓 찜하기와 변경 알리기</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>격리: 워크트리부터 디지털 트윈까지</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>부딪쳤을 때: 기다리기, 재시도, 재협상</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>머지 충돌을 에이전트가 푼다</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>의도 충돌: 송장 합계 예</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>투기적 머지 트레인</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>새 개발 인프라 층</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>사람 쪽: 공유 보드와 주의력</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>대화에 들어오는 에이전트, 공유된 플랜 모드</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>엔지니어가 아닌 사람들과 바이브 코딩</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>막힌 에이전트와 Helix ML</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>선택지로 묻기</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>결정 장부</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>작은 변경과 사람의 리뷰 용량</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>자동 리뷰와 증거</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>위험에 맞춘 리뷰</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>영향 줄이기: 복원, 롤백</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>변화를 각자의 말로 알리기</td></tr>
+              <tr><td><span class="ts">18:50</span></td><td>자동화하고 예외는 사람에게</td></tr>
+              <tr><td><span class="ts">19:20</span></td><td>팩토리 팀</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>정리: 두 갈래의 압력</td></tr>
+              <tr><td><span class="ts">20:20</span></td><td>개인 에이전트</td></tr>
+              <tr><td><span class="ts">20:50</span></td><td>대비하라</td></tr>
+              <tr><td><span class="ts">21:10</span></td><td>슬라이드, Tessl 팩토리, concurrent.cd</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'fTUinMqA1XQ:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

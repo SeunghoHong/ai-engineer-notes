@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>레거시 코드 워룸 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#loops">안쪽 루프와 바깥 루프</a></li>
+      <li><a href="#bandwidth">큰일에 남은 25%</a></li>
+      <li><a href="#missing">큰 변경에 모자란 두 가지</a></li>
+      <li><a href="#warroom">AI 워룸의 구성</a></li>
+      <li><a href="#bet">1,000달러짜리 내기</a></li>
+      <li><a href="#missions">세 번의 실험</a></li>
+      <li><a href="#layers">바꿀 수 있는 것과 없는 것</a></li>
+      <li><a href="#fleetkit">FleetKit: 에이전트 함대 관리</a></li>
+      <li><a href="#channel">미션 채널과 두 산출물</a></li>
+      <li><a href="#steps">에이전트 두 종류와 9단계</a></li>
+      <li><a href="#lessons">배운 것</a></li>
+      <li><a href="#next">다음 과제</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-21 · 19분 · 영어 발표 한글 정리</span>
+      <h1>1,000달러, 하루, 레거시 코드 워룸</h1>
+      <p class="lead">AI 덕분에 코딩은 빨라졌지만, 결정과 승인이 필요한 큰 변경은 여전히 느리다. GEICO는 의사결정자와 AI 에이전트 함대를 한 방에 모은 워룸으로 이 속도 차이를 줄였다. 하루짜리 실험을 세 번 돌려 레거시 도메인을 분석하고, 새 API를 만들고, 승인받은 이전 계획까지 얻었다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=DouK81O8R3o" target="_blank" rel="noopener">One Day, $1,000 in Tokens: An AI War Room for Legacy Code</a></span>
+        <span>발표: Ford Prior (GEICO 클레임 기술 그룹 시니어 스태프 엔지니어, 기술 에반젤리스트)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다(예: cloud code → Claude Code). 확실하지 않은 이름에는 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>AI로 코드를 쓰는 <strong>안쪽 루프</strong>는 빨라졌다. 결정, 승인, 협업이 있는 <strong>바깥 루프</strong>는 그대로라서 큰 변경이 막힌다.</li>
+        <li>GEICO 엔지니어는 패치와 마이너 작업을 하고 나면 <strong>큰 변경에 쓸 여력이 25% 이하</strong>였다. 작은 일은 에이전트에게 넘기는 중이다.</li>
+        <li>큰 변경에 모자란 것은 <strong>협업과 지능</strong>이다. 그래서 의사결정자 명단, AI를 모는 드라이버, AI 업무 도구를 한곳에 모은 <strong>워룸</strong>을 만들었다.</li>
+        <li>내기의 조건은 <strong>토큰 1,000달러와 하루</strong>였다. 한 도메인을 끝까지 분석하고, 레거시 시스템에 에이전트용 API를 하나 만들어 오후 4시 데모까지 띄운다.</li>
+        <li>세 도메인에서 돌렸다. 렌터카에서는 <strong>월 8,500건의 콜을 줄일 방법</strong>을 찾았다. 손해 산정에서는 새 API를 만들었다. 폐차 처리에서는 <strong>모든 단계에서 승인받은 이전 계획</strong>을 얻었다.</li>
+        <li>모델과 하네스는 바꿀 수 있다. 회사만 줄 수 있는 <strong>맥락, 방법, 판단</strong>을 저장소에 담은 것이 핵심이다.</li>
+        <li>교훈: Fable에게 <strong>cron을 맡기지 말 것</strong>. 레거시 코드 작성은 <strong>Sonnet 5.5도 Fable만큼</strong> 했다. 다음 과제는 승인 관문 강화와 회의 음성 입력이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="loops">
+        <header><span class="num">01</span><h2>안쪽 루프와 바깥 루프 <span class="ts">00:00</span></h2></header>
+        <p>지난 몇 년 동안 소프트웨어 개발 생명주기<span class="en">SDLC</span>를 빠르게 하자는 이야기가 많았다. 관심은 대부분 가운데의 빌드 단계에 몰렸다. 코드를 쓰고 머리를 쓰는 구간이다.</p>
+        <p>발표자의 회사에서도 이 단계는 거의 사라졌다고 할 만큼 빨라졌다. 흔히 그리는 미래는 에이전트가 일하고, 사람은 단계마다 결재만 하는 모습이다.</p>
+        <p>하지만 GEICO는 기술 회사가 아니라 리스크 관리 회사다. 리스크 관리는 소프트웨어를 만들고 내보내는 방식에도 배어 있다. 그래서 결재만 하는 미래로 곧장 갈 수 없다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">안쪽 루프 · inner loop</span>
+            <p>코드를 쓰고 빌드하는 일. AI 덕분에 크게 빨라졌다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">바깥 루프 · outer loop</span>
+            <p>코딩과 빌드를 뺀 나머지 전부. 결정, 승인, 협업이 여기에 있다.</p>
+            <p class="verdict">속도가 그대로라 <b>전체 흐름이 여기에 갇혔다.</b></p>
+          </div>
+        </div>
+        <p>안쪽 루프와 바깥 루프는 Gene Kim의 개념을 빌린 말이다. 이 발표는 바깥 루프가 안쪽 루프의 속도를 따라잡게 만든 이야기다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="bandwidth">
+        <header><span class="num">02</span><h2>큰일에 남은 25% <span class="ts">01:40</span></h2></header>
+        <p>GEICO는 미국의 자동차 위험을 보험으로 관리한다. 도로에서 사고가 나면 회사에는 손실<span class="en">loss</span>이 생긴다.</p>
+        <p>보험 계약자가 손실을 신고하면 클레임<span class="en">claim</span>, 즉 보험금 청구가 된다. 클레임 기술은 고객이 불편을 덜 겪고 빨리 도로로 돌아가게 돕는다. 이 끝 상태를 해결<span class="en">resolution</span>이라고 부른다.</p>
+        <p>Ford Prior는 이 클레임 기술 그룹의 시니어 스태프 엔지니어이자 기술 에반젤리스트다. 그룹에는 엔지니어 300명이 있다. 예전에 "피자 팀"이라 부르던 작은 팀이 약 32개 있고, 팀마다 기술 리드와 비즈니스 담당자가 짝을 이룬다.</p>
+        <p>발표자의 일은 개발 과정의 좋은 방법을 찾아 팀에 심는 것이다. 클레임 혁신 랩도 운영한다. 이런 발표로 좋은 엔지니어를 데려오는 것도 일의 하나라고 했다.</p>
+
+        <h3>큰 변경에 쓸 여력은 25% 이하 <span class="ts">02:50</span></h3>
+        <p>GEICO는 일을 시맨틱 버저닝<span class="en">semantic versioning</span>의 세 단계로 나눠 본다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>성격</th><th>앞으로 맡는 쪽</th></tr></thead>
+            <tbody>
+              <tr><td>패치</td><td>작은 수정</td><td>AI 에이전트</td></tr>
+              <tr><td>마이너</td><td>기능 추가, 업그레이드</td><td>AI 에이전트</td></tr>
+              <tr><td>메이저</td><td>V1에서 V2, V3로 판을 바꾸는 변경. 경쟁력의 원천</td><td>엔지니어</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>약 6개월 전 백로그를 살펴봤다. 엔지니어가 패치와 마이너 작업을 끝내고 나면, 메이저 변경에 쓸 여력은 좋은 날에도 25% 이하였다.</p>
+
+        <figure class="chart" aria-label="엔지니어 여력 배분: 패치·마이너 등 나머지 일 75% 이상, 메이저 변경 25% 이하">
+          <span class="chart-title">클레임 기술 엔지니어의 여력 배분 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>패치·마이너 등 나머지 일</span><span class="val">≥ 75</span></div>
+              <div class="track"><div class="fill" style="width:75%" title="패치·마이너 등 나머지 일: 75% 이상"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>메이저 변경</span><span class="val">≤ 25</span></div>
+              <div class="track"><div class="fill key" style="width:25%" title="메이저 변경: 25% 이하"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자는 "좋은 날에도 25% 이하"라고만 말했다. 75%는 100에서 25를 뺀 값이다. 막대는 두 경계값에 맞춰 그렸다.</span>
+        </figure>
+
+        <p>그래서 GEICO가 직접 관리하는 AI 에이전트에 투자하기 시작했다. 여러 하네스와 여러 모델을 쓴다. 패치와 마이너 작업은 명세부터 배포까지 에이전트에게 넘긴다. 엔지니어는 가장 중요하고 즐거운 메이저 작업에 집중하게 하는 것이 목표다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="missing">
+        <header><span class="num">03</span><h2>큰 변경에 모자란 두 가지 <span class="ts">03:40</span></h2></header>
+        <p>그런데 메이저 작업을 들여다보니 다른 곳에서 속도가 막혀 있었다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">협업 · collaboration</span>
+            <p>결정이 필요할 때마다 맞는 사람을 맞는 때에 한 방에 모아야 한다. 메이저 변경에서는 이런 결정이 단계마다 나온다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">지능 · intelligence</span>
+            <p>문제를 알아 갈수록 관련 변수를 엮어야 한다. 사실을 확인하고 코드를 분석해서, 결정이 필요한 순간에 바로 근거를 내놓는 능력이다.</p>
+          </div>
+        </div>
+        <p>이 두 가지가 있어야 메이저 변경을 시장에 낼 자신이 생긴다. 메이저 규모에서는 <strong>둘 다 모자랐다.</strong></p>
+      </section>
+
+      <!-- 4 -->
+      <section id="warroom">
+        <header><span class="num">04</span><h2>AI 워룸의 구성 <span class="ts">04:30</span></h2></header>
+        <p>해법으로 여러 사람이 함께 쓰는 AI 중심 워룸<span class="en">multiplayer AI-native war room</span>을 만들었다. 워룸은 중요한 결정을 빨리 내리려고 관련자를 한곳에 모은 작전실이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>로스터</td><td>Roster. 주제와 관련된 핵심 의사결정자와 도메인 전문가 명단</td></tr>
+              <tr><td>드라이버</td><td>Driver. 비싼 AI 도구를 직접 모는 사람. 이번 실험에서는 발표자</td></tr>
+              <tr><td>AI 업무 도구</td><td>대화용 메신저 채널, 함께 쓰는 인터랙티브 디자인 도구(업체 이름은 밝히지 않았다), 코드 저장소</td></tr>
+              <tr><td>연결 장치</td><td>워크플로, 에이전트 스킬, MCP, 사내 MCP</td></tr>
+              <tr><td>에이전트 함대</td><td>무거운 분석, 교차 검증, 종합을 나눠 맡는 여러 에이전트</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">MCP<span class="en">Model Context Protocol</span>는 AI가 외부 도구와 데이터에 접속하는 표준 방식이다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="bet">
+        <header><span class="num">05</span><h2>1,000달러짜리 내기 <span class="ts">05:20</span></h2></header>
+        <p>발표자가 던진 질문은 이것이다.</p>
+        <blockquote>레거시 핵심 기능을 에이전트가 호출할 수 있는 API로 더 빨리 내놓으려면 어떻게 해야 할까?<cite>발표자의 질문을 옮김</cite></blockquote>
+        <p>GEICO의 레거시 클레임 시스템은 코드가 수백만 줄이다. 여기서 쌓는 깊은 맥락은 한 번 만들어 두면 다시 쓸 수 있다.</p>
+        <p>발표자는 <strong>AI 토큰 1,000달러와 하루</strong>면 아래를 해낼 수 있다는 데 걸었다.</p>
+        <ol class="plain">
+          <li><strong>한 도메인을 처음부터 끝까지 매핑한다.</strong> 비즈니스 구조를 그래프로 그리고, 복잡한 레거시 코드와 그 사이의 모든 것을 정리한다.</li>
+          <li><strong>에이전트가 의미 있는 변경 하나를 찾아 제안한다.</strong> 범위는 레거시 클레임 시스템에 들어가는 에이전트 호출 API 하나로 좁혔다.</li>
+          <li><strong>그 API를 사내 스킬 에이전트 플랫폼에 배포한다.</strong> 오후 4시 상사 앞 데모에서 실제로 돌아가야 한다.</li>
+        </ol>
+      </section>
+
+      <!-- 6 -->
+      <section id="missions">
+        <header><span class="num">06</span><h2>세 번의 실험 <span class="ts">06:20</span></h2></header>
+        <p>이 실험을 서로 다른 코드 현대화 과제 세 개에서 돌렸다. 분류는 Anthropic의 코드 현대화 플러그인<span class="en">code modernization plugin</span>이 쓰는 세 가지를 따랐다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>유형</th><th>도메인</th><th>한 일</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>개선<br><span class="en">uplift</span></td><td>렌터카. 사고로 차를 못 쓸 때 대차 렌터카를 잡아 주는 기술. 셋 중 가장 단순하다 <span class="ts">06:40</span></td><td>같은 기술을 새 버전으로 올리고 기존 API를 넓혔다</td><td>에이전트가 데이터를 찾아 정리하다 연결 고리를 발견했다. 고객에게 최신 렌터카 정보를 주면 <strong>한 달에 콜 8,500건</strong>을 줄일 수 있다</td></tr>
+              <tr><td>전환<br><span class="en">transform</span></td><td>손해 산정. 신고된 손실에 금액을 매기는 일 <span class="ts">07:20</span></td><td>에이전트가 호출할 수 있는 새 API를 여러 개 만들었다</td><td>손해 데이터가 필요하던 더 큰 워크플로를 열었다</td></tr>
+              <tr><td>재구상<br><span class="en">reimagine</span></td><td>폐차 처리. 차가 전손 처리된 뒤 일어나는 모든 일. 셋 중 가장 복잡하다 <span class="ts">07:40</span></td><td>API 명세와 디자인 목업까지 갖춘 이전 계획을 만들었다</td><td>제품과 기술 양쪽의 <strong>모든 단계에서 승인</strong>을 받았다. 프로덕션 버그도 하나 찾았다(내용은 비공개)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">"콜 8,500건"이 고객 문의 전화인지 시스템 호출인지는 발표에서 밝히지 않았다. 고객에게 정보를 준다는 맥락으로 보면 문의 전화에 가깝다.</p>
+        <div class="callout">
+          <span class="title">발표자가 가장 중요하게 꼽은 결과</span>
+          <span>폐차 과제의 승인이다. 모든 관련자가 기술 세부까지 한 계획에 동의하는 것은 그 자체로 큰 이정표다. 곧바로 구현에 들어갈 수 있는 계획이 나왔다는 뜻이다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="layers">
+        <header><span class="num">07</span><h2>바꿀 수 있는 것과 없는 것 <span class="ts">08:20</span></h2></header>
+        <p>워룸을 이루는 재료는 두 쪽에서 왔다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">벤더가 준 것 · 교체 가능</span>
+            <ul>
+              <li>하네스</li>
+              <li>모델</li>
+              <li>FleetKit (다음 절에서 설명)</li>
+              <li>코드 현대화 플러그인</li>
+            </ul>
+            <p class="verdict">다른 벤더, 다른 모델, 다른 프레임워크로 <b>바꿀 수 있다.</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">GEICO가 채운 것 · 교체 불가</span>
+            <ul>
+              <li><strong>맥락</strong>: 지식 베이스, 소프트웨어 표준, 과거 결정을 파헤친 기록, 에이전트가 쓸 수 있는 도구 목록과 사용법</li>
+              <li><strong>방법</strong>: 스킬, GEICO 도메인에 맞춰 다듬은 개발 방식</li>
+              <li><strong>판단</strong>: 어느 관문에서 누가 무엇을 결정하는가. 도메인 전문가와 리더 양쪽 모두</li>
+            </ul>
+            <p class="verdict">이쪽이 <b>훨씬 많이 필요했다.</b></p>
+          </div>
+        </div>
+        <p>GEICO 쪽 자산은 저장소 두 개에 나눠 담았다. 저장소에 있으니 에이전트가 내용을 보태고 고칠 수 있다. 사람도 똑같이 할 수 있다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="fleetkit">
+        <header><span class="num">08</span><h2>FleetKit: 에이전트 함대 관리 <span class="ts">09:40</span></h2></header>
+        <p>AI를 대규모로 돌리면 비싸다. 그래서 에이전트 함대를 다룰 관리자가 필요했다. 발표자는 "박사급 함대 관리자"라고 불렀다.</p>
+        <p>그게 FleetKit이다. Anthropic과 함께 만들었고, 아직 오픈소스로 공개되지 않았다. 발표자는 원리가 어렵지 않으니 각자 만들어 보라고 권했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>형태</td><td>마크다운으로 쓴 규칙, 프로토콜, 지시의 묶음</td></tr>
+              <tr><td>맞춘 대상</td><td>Claude 하네스, 그중에서도 Fable</td></tr>
+              <tr><td>주 용도</td><td>아키텍처 전환 작업</td></tr>
+              <tr><td>위치</td><td>시스템 프롬프트보다 한 단계 위. 에이전트가 반드시 따라야 하는 규칙이다</td></tr>
+              <tr><td>필요한 모델</td><td>이전 세대 모델로는 잘 안 된다. 발표자는 Opus 4.8(추정) 이후 모델이면 감당할 것으로 짐작했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">자막에는 "Opus 48"로 적혀 있다.</p>
+
+        <h3>작업 흐름 <span class="ts">10:40</span></h3>
+        <ol class="plain">
+          <li>목표를 받아 작은 일로 쪼갠다.</li>
+          <li>리더 에이전트를 보내 조사하고 접근 방식을 정하게 한다.</li>
+          <li>결과를 모두 <strong>사람 확인 대기열</strong><span class="en">human-in-the-loop queue</span>에 올린다. GitHub 이슈처럼 사람이 댓글을 달고 승인할 수 있는 곳이면 된다. 다른 에이전트가 맥락을 보탤 수도 있다.</li>
+          <li>승인이 다 끝나면 <strong>빌더 에이전트</strong>를 보낸다. 빌더는 Beads라는 도구로 자기 작업을 추적한다.</li>
+          <li>최종 결과물은 <strong>material change</strong>다. 시스템에 내는 변경 요청이나 코드 저장소에 들어가는 코드 변경을 말한다.</li>
+        </ol>
+        <blockquote>소프트웨어 개발은 캔버스에서 노는 일보다 공장에서 일하는 것에 가까워진다.<cite>발표자의 표현을 옮김</cite></blockquote>
+        <p class="note">FleetKit은 Anthropic과 함께 만들었고, 실험에 쓴 모델과 플러그인도 Anthropic 것이다. FleetKit은 공개되지 않아 효과를 직접 확인할 수 없다. Anthropic 도구에 대한 평가는 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="channel">
+        <header><span class="num">09</span><h2>미션 채널과 두 산출물 <span class="ts">11:50</span></h2></header>
+        <p>FleetKit 실행에 필요한 것은 저장소 세 개에 들어 있다. FleetKit 소스도 그중에 있다. 발표 슬라이드는 발표 당일 올라온 블로그 글에서 볼 수 있다고 했다.</p>
+        <ol class="plain">
+          <li>모든 것을 불러와 Claude Code 세션에 플러그인으로 올린다.</li>
+          <li>미션을 준다.</li>
+          <li>사내 메신저에 미션 채널을 새로 만들거나 기존 채널을 쓴다.</li>
+          <li>워룸 멤버를 채널에 초대한다. 이 프로젝트의 결정에 관련된 사람 전부다.</li>
+          <li>에이전트는 9단계 과정을 밟는다. 마일스톤에 닿을 때마다 산출물 두 종류 중 하나를 만든다.</li>
+        </ol>
+        <p>로스터도 쓴다. 예를 들어 제품 정보가 빠졌으면, 에이전트가 그 부분의 제품 담당자를 찾아 채널에서 직접 멘션한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">워크시트 · worksheet <span class="ts">12:20</span></span>
+            <p>Claude artifacts로 만든 HTML 양식이다. 사람이 채우면 자동 저장된다.</p>
+            <p class="verdict">에이전트가 모르는 <b>빈칸을 메우는</b> 용도다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">설계 문서 · design document <span class="ts">12:40</span></span>
+            <p>그동안 없던 복잡한 아키텍처 시각화를 담는다. 사람이 draw.io나 Figma에서 고치면, 에이전트가 고친 문서를 다시 읽어 세션에 반영한다.</p>
+            <p class="verdict">팀들이 반겼고, <b>실험이 끝난 뒤에도 계속 썼다.</b></p>
+          </div>
+        </div>
+
+        <h3>Richmond 워룸 풍경 <span class="ts">13:10</span></h3>
+        <p>올여름 버지니아주 Richmond의 워룸에서는 큰 Claude Code 화면 앞에 사람들이 모여 있었다. 아니면 제품 워크시트나 다이어그램 도구 화면이 떠 있었다.</p>
+        <p>발표자가 가장 기뻤던 점은 산출물의 품질이다. "에이전트가 왜 이런 바보 같은 질문을 하지?"라는 반응은 없었다. 대신 "한 번도 생각 못 한 좋은 질문이네"라는 반응이 나왔다. 비즈니스나 기술의 엣지 케이스를 짚는 질문이었다.</p>
+        <p>설계 문서도 마찬가지다. 아무도 시간을 내 그리지 않던 구조를 그려 줬다. 다이어그램 그리기를 좋아하는 엔지니어는 많지 않다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="steps">
+        <header><span class="num">10</span><h2>에이전트 두 종류와 9단계 <span class="ts">14:00</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">코드 다이브 · code dive · 클라우드</span>
+            <p>클라우드에서 돈다. 레거시 도메인 특화 언어<span class="en">DSL</span>로 쓴 코드를 대량으로 분석하고 그래프로 만든다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">로컬 에이전트 · 드라이버 노트북</span>
+            <p>발표자 노트북의 모든 MCP에 접근한다. 상당수는 아직 프로덕션에 나가지 않은 사내 전용 MCP다.</p>
+            <p>분석 중인 코드베이스를 잘게 나눈 버전처럼 쓸모 있는 데이터를 꺼내 온다.</p>
+          </div>
+        </div>
+        <p>발표자는 에이전트에게 바인딩 파일<span class="en">bindings file</span>을 줬다. 노트북에 무엇이 있는지, 어떻게 동작하는지, FleetKit 작업과 어떻게 연결하는지 설명한 파일이다.</p>
+
+        <h3>9단계와 사람의 몫 <span class="ts">14:50</span></h3>
+        <p>전체의 중심은 코드 현대화 플러그인이다. 발표자는 플러그인 안을 직접 살펴보라고 권했다.</p>
+        <p>실행 환경은 드라이버의 노트북이었다. 과정은 부팅 단계 하나와 그 뒤 8단계, 모두 9단계다. 각 단계는 코드 현대화 플러그인의 단계를 포크<span class="en">fork</span>해 GEICO에 맞게 고친 것이다. 발표자는 누구든 이렇게 자기 환경에 맞춰 고쳐 쓰라고 권했다.</p>
+        <p>사람 승인이 필요한 단계에서는 워크시트가 나온다.</p>
+        <div class="shift" aria-label="단계에 따른 사람 입력의 변화">
+          <div><span class="tag">앞쪽 단계</span><b>사람 입력이 많다</b><span class="muted">워크시트로 맥락과 결정을 받는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">뒤쪽 단계</span><b>사람 입력이 줄어든다</b><span class="muted">승인된 내용을 바탕으로 에이전트가 진행한다</span></div>
+        </div>
+        <div class="callout">
+          <span class="title">단계마다 규칙으로 확인한다</span>
+          <span>코드 현대화 플러그인은 이전 단계가 필요한 산출물을 실제로 만들었는지 결정적으로 검사한다. 파일이 생겼는지도 본다. 모델의 판단에 맡기지 않고, 정해진 규칙으로 다음 단계로 넘어갈지 정한다는 뜻이다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="lessons">
+        <header><span class="num">11</span><h2>배운 것 <span class="ts">15:50</span></h2></header>
+        <div class="callout warn">
+          <span class="title">Fable에게 cron을 맡기지 말 것</span>
+          <span>Fable을 쓰는 Claude가 작업 확인용 cron을 걸게 두면 안 된다. 확인할 때마다 Fable 세션이 새로 뜬다. 예산이 순식간에 바닥난다.</span>
+        </div>
+        <ul class="plain">
+          <li>토큰을 많이 썼다.</li>
+          <li>프롬프트 캐싱<span class="en">prompt caching</span> 관련 수치가 예상보다 훨씬 높았다. 무엇이 높았는지는 자세히 말하지 않았다.</li>
+          <li>서브에이전트가 특이하게 움직일 때가 있었다. 구체적인 사례는 말하지 않았다.</li>
+        </ul>
+
+        <h3>모델 선택이 이긴다 <span class="ts">16:20</span></h3>
+        <p>맥락을 다 쌓은 뒤, 에이전트에게 복잡한 레거시 코드를 쓰게 하고 벤치마크를 돌렸다. 기준은 최근에 사람이 쓴 기존 코드였다. 이걸 정답 데이터<span class="en">golden data</span>로 삼았다.</p>
+        <p>결과는 <strong>Sonnet 5.5가 Fable만큼, 또는 더 잘 썼다</strong>는 것이다. 발표자는 이를 "모델 선택이 이긴다"고 정리했다. 맥락을 잘 갖추면 모든 일에 가장 큰 모델을 쓸 필요는 없다는 뜻으로 읽힌다.</p>
+        <p class="note">발표자는 처음에 "Fable"이라고 말했다가 Sonnet 5.5로 고쳐 말했다. 과제 수와 채점 방식은 밝히지 않았다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="next">
+        <header><span class="num">12</span><h2>다음 과제 <span class="ts">16:40</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>과제</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>관문 강화</td><td>Enhanced gate enforcement. 승인 관문을 더 엄격하게 지키게 한다. 발표자는 가장 큰 이득이 여기서 나온다고 본다</td></tr>
+              <tr><td>결정 모델</td><td>하네스와 모델 선택 프레임워크 안의 결정 모델을 손본다</td></tr>
+              <tr><td>맥락 검색 <span class="ts">17:00</span></td><td>지금 맥락은 마크다운 파일뿐이다. graphify(추정)나 Obsidian 같은 도구도 쓰지 않았다. 더 효율적으로 찾고 훑는 방법을 찾는다</td></tr>
+              <tr><td>음성 입력 <span class="ts">17:30</span></td><td>회의를 녹음해 자동으로 받아쓰게 하고 싶다. 이번에는 발표자가 손으로 메모해야 했고, 놓친 내용도 많다</td></tr>
+              <tr><td>조직 확산 <span class="ts">17:50</span></td><td>이 방식을 조직 전체에 어떻게 퍼뜨릴지 고민한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>조직에서 결정을 잘 못 내리는 그룹을 찾아 이걸 배포하라. 직접 몰고, 비용을 관리하고, 자기 것으로 만들어라.<cite>발표자의 제안을 옮김</cite></blockquote>
+        <p>GEICO가 고민하는 것은 사람의 자리다. 에이전트는 한 언덕을 오르며 더 나은 방법을 찾는다. 그동안 최고의 엔지니어는 다음에 오를 언덕을 고른다. 발표자는 이런 식으로 사람을 루프에 넣는 방법을 찾고 있다.</p>
+        <p>마무리 말은 이렇다. "우리는 바깥 루프에서 벗어났다. 이제 여러분 차례다."</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>AI로 안쪽 루프(코딩)는 빨라졌지만, 바깥 루프(결정, 승인, 협업)가 큰 변경을 막는다.</li>
+          <li>GEICO 엔지니어는 메이저 변경에 <strong>25% 이하</strong>만 쓸 수 있었다. 패치와 마이너는 에이전트에게 넘기는 중이다.</li>
+          <li>큰 변경에 모자란 것은 <strong>협업과 지능</strong>이다.</li>
+          <li>워룸은 <strong>의사결정자 로스터, AI를 모는 드라이버, AI 업무 도구와 에이전트 함대</strong>로 이뤄진다.</li>
+          <li>토큰 1,000달러와 하루로 도메인 매핑부터 에이전트 호출 API 데모까지 가는 실험을 세 도메인에서 돌렸다.</li>
+          <li>렌터카는 월 콜 8,500건 절감 방법, 손해 산정은 새 API, 폐차 처리는 <strong>모든 단계에서 승인받은 이전 계획</strong>과 프로덕션 버그 발견으로 끝났다.</li>
+          <li>모델과 하네스는 바꿀 수 있다. <strong>맥락, 방법, 판단</strong>은 회사만 줄 수 있고, 저장소에 담아 사람과 에이전트가 함께 고친다.</li>
+          <li>FleetKit 흐름: 목표 분해, 리더 조사, <strong>사람 확인 대기열</strong>, 승인 뒤 빌더 투입, material change.</li>
+          <li>에이전트는 워크시트와 설계 문서로 사람에게 묻는다. 질문의 질이 높아서 사람들이 반겼다.</li>
+          <li>비용은 관리 대상이다. Fable cron 금지, Sonnet 5.5로도 충분했다. 다음 과제는 <strong>관문 강화</strong>, 맥락 검색, 회의 음성 입력이다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>안쪽 루프와 바깥 루프는 각각 무엇인가?</span></summary><div class="answer">안쪽 루프는 코드를 쓰고 빌드하는 일이다. 바깥 루프는 그 밖의 모든 일, 곧 결정, 승인, 협업이다. AI로 안쪽은 빨라졌지만 바깥은 그대로였다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>GEICO 엔지니어가 메이저 변경에 쓸 수 있던 여력과, 그에 대한 대응은?</span></summary><div class="answer">좋은 날에도 25% 이하였다. 패치와 마이너 작업을 명세부터 배포까지 AI 에이전트에게 넘겨 엔지니어가 메이저 작업에 집중하게 했다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>메이저 변경을 막는 두 가지 부족은?</span></summary><div class="answer">협업(결정마다 맞는 사람을 맞는 때에 모으기)과 지능(변수를 엮고 사실 확인과 코드 분석으로 바로 근거를 내놓기).</div></details>
+          <details><summary><span class="qn">Q4</span><span>워룸을 이루는 사람 쪽 두 역할은?</span></summary><div class="answer">로스터(핵심 의사결정자와 도메인 전문가)와 드라이버(비싼 AI 도구를 직접 모는 사람)다. 여기에 AI 업무 도구와 에이전트 함대가 붙는다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>1,000달러 내기에서 하루 안에 해내려던 세 가지는?</span></summary><div class="answer">한 도메인을 끝까지 매핑하기, 에이전트가 변경 하나(레거시 시스템용 에이전트 호출 API)를 찾아 제안하기, 그 API를 배포해 오후 4시 데모에서 돌리기.</div></details>
+          <details><summary><span class="qn">Q6</span><span>개선, 전환, 재구상은 각각 어느 도메인에서 무엇을 남겼나?</span></summary><div class="answer">개선은 렌터카에서 월 콜 8,500건을 줄일 방법을 찾았다. 전환은 손해 산정에서 새 에이전트 호출 API를 만들었다. 재구상은 폐차 처리에서 모든 단계 승인을 받은 이전 계획을 만들고 프로덕션 버그를 찾았다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>벤더가 준 것과 GEICO만 줄 수 있는 것을 나누면?</span></summary><div class="answer">벤더 쪽은 하네스, 모델, FleetKit, 코드 현대화 플러그인으로 교체할 수 있다. GEICO 쪽은 맥락, 방법, 판단으로 교체할 수 없다. GEICO 쪽은 저장소에 담아 사람과 에이전트가 함께 고친다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>FleetKit에서 빌더 에이전트는 언제 움직이나?</span></summary><div class="answer">리더 에이전트의 조사 결과가 사람 확인 대기열(예: GitHub 이슈)에 올라가고, 승인이 모두 끝난 뒤다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>에이전트가 마일스톤마다 만드는 두 산출물은?</span></summary><div class="answer">사람이 채우는 HTML 워크시트, 그리고 사람이 고치면 에이전트가 다시 읽는 설계 문서(아키텍처 시각화).</div></details>
+          <details><summary><span class="qn">Q10</span><span>코드 현대화 플러그인은 단계 사이에서 무엇을 확인하나?</span></summary><div class="answer">이전 단계가 필요한 산출물(파일 포함)을 실제로 만들었는지 결정적으로 검사한다. 모델 판단이 아니라 규칙으로 확인한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>Fable에게 작업 확인용 cron을 맡기면 왜 안 되나?</span></summary><div class="answer">확인할 때마다 Fable 세션이 새로 떠서 예산이 바로 바닥난다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>레거시 코드 작성 벤치마크의 결과와 교훈은?</span></summary><div class="answer">최근 사람이 쓴 코드를 정답으로 비교했더니 Sonnet 5.5가 Fable만큼, 또는 더 잘 썼다. 발표자의 정리는 "모델 선택이 이긴다"였다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>팀의 일을 패치, 마이너, 메이저로 나눠 본다<span class="how">확인: 메이저 변경에 쓰는 시간이 몇 %인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>패치와 마이너 중 에이전트에게 명세부터 배포까지 넘길 일을 고른다<span class="how">확인: 넘긴 일만큼 메이저 작업 시간이 늘었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>큰 변경 하나를 골라 로스터를 만든다<span class="how">어느 관문에서 누가 무엇을 결정하는지 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>회사만 줄 수 있는 맥락, 방법, 판단을 저장소에 글로 모은다<span class="how">사람과 에이전트가 둘 다 보태고 고칠 수 있게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트 작업이 사람 확인 대기열을 거치게 한다<span class="how">예: GitHub 이슈. 승인 전에는 빌더 에이전트가 움직이지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>단계마다 산출물이 실제로 생겼는지 스크립트로 확인한다<span class="how">확인: 모델의 "다 했다"는 말 대신 파일 존재로 판단하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>토큰 예산을 정하고 cron 같은 자동 반복 호출을 막는다<span class="how">확인: 큰 모델 세션이 혼자 계속 뜨지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>같은 작업을 작은 모델로도 돌려 비교한다<span class="how">정답 데이터: 최근에 사람이 쓴 코드</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>워룸 회의를 녹음하고 받아써서 에이전트 입력으로 넣는다<span class="how">확인: 손 메모로 놓치는 결정이 줄었는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>SDLC</td><td>Software development life cycle. 소프트웨어를 기획하고 만들고 내보내는 전체 과정</td></tr>
+              <tr><td>안쪽 루프 / 바깥 루프</td><td>Inner loop: 코드를 쓰고 빌드하는 반복. Outer loop: 그 밖의 결정, 승인, 협업, 배포 과정</td></tr>
+              <tr><td>시맨틱 버저닝</td><td>Semantic versioning. 버전을 메이저.마이너.패치로 매기는 방식. 앞자리일수록 큰 변경</td></tr>
+              <tr><td>클레임</td><td>Claim. 보험 계약자가 손실을 신고해 생기는 보험금 청구</td></tr>
+              <tr><td>워룸</td><td>War room. 중요한 결정을 빨리 내리려고 관련자를 한곳에 모은 작전실</td></tr>
+              <tr><td>로스터</td><td>Roster. 워룸에 참여하는 의사결정자와 도메인 전문가 명단</td></tr>
+              <tr><td>드라이버</td><td>Driver. 워룸에서 AI 도구를 직접 조작하는 사람</td></tr>
+              <tr><td>도메인 전문가</td><td>SME, subject matter expert. 특정 업무 영역을 깊이 아는 사람</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. AI가 외부 도구와 데이터에 접속하는 표준 방식</td></tr>
+              <tr><td>에이전트 호출 API</td><td>Agent-callable API. AI 에이전트가 직접 불러 쓸 수 있게 만든 API</td></tr>
+              <tr><td>하네스</td><td>모델을 감싸 도구, 순서, 규칙, 검사를 정해 주는 실행 틀</td></tr>
+              <tr><td>FleetKit</td><td>GEICO와 Anthropic이 함께 만든 에이전트 함대 관리 규칙 묶음. 마크다운으로 쓰였고 아직 비공개</td></tr>
+              <tr><td>사람 확인 대기열</td><td>Human-in-the-loop queue. 에이전트 결과를 사람이 보고 댓글 달고 승인하는 곳</td></tr>
+              <tr><td>Beads</td><td>에이전트가 자기 작업을 추적하게 돕는 도구</td></tr>
+              <tr><td>material change</td><td>워룸의 최종 결과물. 시스템 변경 요청이나 코드 변경</td></tr>
+              <tr><td>개선 / 전환 / 재구상</td><td>Uplift / transform / reimagine. 코드 현대화 플러그인의 분류. 같은 기술 올리기, 새 구조로 바꾸기, 처음부터 다시 그리기</td></tr>
+              <tr><td>코드 다이브</td><td>Code dive. 클라우드에서 레거시 코드를 대량 분석하고 그래프로 만드는 에이전트</td></tr>
+              <tr><td>DSL</td><td>Domain-specific language. 특정 업무 영역 전용으로 만든 프로그래밍 언어</td></tr>
+              <tr><td>바인딩 파일</td><td>Bindings file. 드라이버 노트북의 도구와 환경을 설명하고 FleetKit 작업과 연결해 주는 파일</td></tr>
+              <tr><td>포크</td><td>Fork. 원본을 복사해 와서 자기 용도에 맞게 고치는 것</td></tr>
+              <tr><td>결정적 검사</td><td>Deterministic check. 같은 입력이면 늘 같은 결과가 나오는 규칙 기반 확인</td></tr>
+              <tr><td>cron</td><td>정해진 시각이나 간격마다 작업을 자동 실행하는 예약 기능</td></tr>
+              <tr><td>프롬프트 캐싱</td><td>Prompt caching. 반복되는 프롬프트 앞부분을 저장해 다시 쓰는 기능. 비용과 시간을 줄인다</td></tr>
+              <tr><td>정답 데이터</td><td>Golden data. 결과를 비교할 기준으로 삼는 믿을 만한 데이터</td></tr>
+              <tr><td>관문</td><td>Gate. 다음 단계로 넘어가기 전에 승인이나 검사를 받아야 하는 지점</td></tr>
+              <tr><td>힐 클라이밍</td><td>Hill climbing. 조금씩 나은 쪽으로 계속 고쳐 가며 더 좋은 해법을 찾는 방식</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>SDLC 속도 이야기, 빌드 단계의 가속</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>리스크 관리 회사 GEICO, 바깥 루프에 갇힘</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>손실, 클레임, 해결의 흐름</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>발표자 소개, 엔지니어 300명과 팀 32개</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>시맨틱 버저닝과 25% 여력</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>패치와 마이너를 에이전트에게</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>메이저 작업에 모자란 협업과 지능</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>멀티플레이어 AI 워룸의 구성</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>질문: 레거시 기능을 에이전트 호출 API로</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>내기: 토큰 1,000달러, 하루, 오후 4시 데모</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>세 번의 실험과 개선, 전환, 재구상</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>렌터카: 월 콜 8,500건 절감</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>손해 산정: 새 에이전트 호출 API</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>폐차 처리: 승인받은 이전 계획, 프로덕션 버그</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>벤더가 준 것과 GEICO가 채운 것</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>FleetKit 소개</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>리더, 사람 확인 대기열, 빌더, material change</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>저장소 세 개, 블로그 공개</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>미션 채널과 9단계 과정</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>로스터 멘션, 워크시트</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>설계 문서와 아키텍처 시각화</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>Richmond 워룸 풍경, 질문의 질</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>코드 다이브와 로컬 에이전트, 바인딩 파일</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>코드 현대화 플러그인과 9단계</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>단계 사이의 결정적 검사</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>교훈: 토큰 소모, cron 주의</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>프롬프트 캐싱, 서브에이전트, Sonnet 5.5 벤치마크</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>다음 과제: 관문 강화, 결정 모델</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>마크다운뿐인 맥락, 검색 개선</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>회의 음성을 데이터로</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>조직 확산, 사람은 다음 언덕을 고른다</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>마무리, 블로그 링크</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'DouK81O8R3o:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 프로덕션 기반</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#failure">에이전트가 프로덕션에서 무너지는 이유</a></li>
+      <li><a href="#pillars">기반 프레임워크 여덟 가지</a></li>
+      <li><a href="#path">등록부터 배포까지</a></li>
+      <li><a href="#mcp-server">직접 만드는 MCP 서버</a></li>
+      <li><a href="#gateway">MCP 게이트웨이</a></li>
+      <li><a href="#monitoring">게이트웨이 모니터링</a></li>
+      <li><a href="#graph">에이전트 그래프와 사람 승인</a></li>
+      <li><a href="#memory">메모리: 스레드와 체크포인트</a></li>
+      <li><a href="#eval">추적과 평가</a></li>
+      <li><a href="#pii">PII 차단</a></li>
+      <li><a href="#context">컨텍스트 최적화</a></li>
+      <li><a href="#takeaways">발표자의 핵심 메시지</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-14 · 29분 · 영어 발표 한글 정리</span>
+      <h1>에이전트를 프로덕션에 올리는 길</h1>
+      <p class="lead">에이전트를 프로덕션에 올리려면 똑똑한 에이전트 하나보다 모든 에이전트가 함께 쓰는 기반이 먼저다. Credit Karma는 인증 게이트웨이, 사내 MCP 서버, 모니터링, 메모리, 평가, 비밀 차단, 토큰 절약을 저장소 템플릿에 묶어 모든 에이전트에 똑같이 깐다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=tZycGA_Fbfo" target="_blank" rel="noopener">Paving the Road to Production: Governed Enterprise AI Agents</a></span>
+        <span>발표: Harish Gaggar (Intuit Credit Karma 시니어 스태프 소프트웨어 엔지니어, AI 분석 인프라 담당)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말하거나 데모 화면으로 보여 준 것이고, 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 알려진 이름으로 바로잡았다. 발표자 이름은 영상 제목의 표기를 따랐다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>에이전트가 프로덕션에서 실패하는 이유는 <strong>기반 통제가 빠져서</strong>다. 인증, 도구, 기록, 기억, 비밀 차단, 토큰 절약 장치가 없다.</li>
+        <li>새 에이전트를 등록하면 개발 포털이 <strong>저장소와 클라우드 자원을 한 번에</strong> 만든다. 메모리, 추적·평가, PII 차단, 컨텍스트 최적화가 처음부터 들어 있다.</li>
+        <li>모든 도구 호출은 <strong>MCP 게이트웨이</strong>를 지난다. 게이트웨이가 인증하고 알맞은 MCP 서버로 보낸다. 엔드포인트에 바로 붙는 길은 없다.</li>
+        <li>MCP 서버는 사내에서 직접 만들고, <strong>도구마다 보안팀 리뷰</strong>를 거친다.</li>
+        <li>에이전트는 LangGraph로 짠다. 질문을 해석하고 분류한 뒤, <strong>쓰기·민감 작업은 사람 승인</strong>을 기다린다. 모든 결과는 감사 로그에 남는다.</li>
+        <li>에이전트마다 질문, 답, 모델, 토큰 비용, 품질 점수를 <strong>첫날부터 저장</strong>한다. 나중에 투자 효과를 물을 때 답할 근거가 된다.</li>
+        <li>컨텍스트 최적화 데모에서 같은 질문의 토큰이 <strong>24,000에서 2,400</strong>으로 줄었다. 평소 절감률은 70~78%라고 한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="failure">
+        <header><span class="num">01</span><h2>에이전트가 프로덕션에서 무너지는 이유 <span class="ts">01:30</span></h2></header>
+        <p>발표자는 실패의 원인을 하나로 묶는다. <strong>기반 통제</strong><span class="en">foundation controls</span>가 빠져 있다는 것이다. 기반 통제는 어떤 에이전트든 공통으로 갖춰야 할 인증, 기록, 비용, 보안 장치를 말한다.</p>
+        <p>아래 표의 MCP<span class="en">Model Context Protocol</span>는 AI가 외부 도구와 데이터를 쓰는 표준 규약이다. 발표자가 던진 질문을 표로 옮기면 이렇다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>빠지기 쉬운 것</th><th>스스로 물어볼 질문</th></tr></thead>
+            <tbody>
+              <tr><td>게이트웨이</td><td>에이전트가 먼저 알맞은 인증 공급자로 인증받은 뒤, 알맞은 MCP 서버로 연결되나?</td></tr>
+              <tr><td>알맞은 도구</td><td>MCP 서버에 이 질문을 처리할 도구가 있나?</td></tr>
+              <tr><td>추적과 평가</td><td>에이전트에 보낸 모든 질문이 기록되나? 답의 품질을 평가하나?</td></tr>
+              <tr><td>메모리</td><td>며칠에 걸쳐 대화해도 예전에 물은 것을 기억하나?</td></tr>
+              <tr><td>컨텍스트 최적화</td><td>토큰을 아끼는 장치가 있나?</td></tr>
+              <tr><td>비밀 차단</td><td>비밀값이 LLM, 트레이스, 메모리 DB로 새지 않게 막나?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">마법 같은 에이전트는 없다</span>
+          <span>발표자는 이 발표에서 마법 같은 에이전트를 만들지 않는다고 먼저 밝힌다. 대신 위 질문 하나하나에 답하는 프레임워크를 보여 준다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="pillars">
+        <header><span class="num">02</span><h2>기반 프레임워크 여덟 가지 <span class="ts">02:40</span></h2></header>
+        <p>발표자의 해법은 핵심 네 가지와 보조 네 가지로 나뉜다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">핵심 네 가지 <span class="ts">02:50</span></span>
+            <ul>
+              <li><strong>에이전트 프레임워크</strong>: LangGraph를 쓴다. 질문에 맞춰 작업별 노드를 만든다. 마켓플레이스 플러그인, 스킬, 프롬프트를 쉽게 끼울 수 있다.</li>
+              <li><strong>MCP 게이트웨이</strong>: 에이전트나 그 서비스 계정이 먼저 인증받는다. 그다음 알맞은 MCP 서버로 연결된다.</li>
+              <li><strong>직접 만든 MCP 서버</strong>: 질문을 처리할 도구를 사내에서 만든다.</li>
+              <li><strong>감사</strong>: 실제로 어떤 작업을 했는지 기록한다.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">보조 네 가지 <span class="ts">03:50</span></span>
+            <ul>
+              <li><strong>PII 차단</strong>: 개인정보와 비밀값을 막는다.</li>
+              <li><strong>추적과 평가</strong>: 기록과 평가 결과를 클라우드에 저장한다.</li>
+              <li><strong>메모리</strong>: 대화의 스레드와 체크포인트를 남긴다.</li>
+              <li><strong>컨텍스트 최적화</strong>: 질문 하나에 토큰을 너무 많이 쓰지 않게 줄인다.</li>
+            </ul>
+          </div>
+        </div>
+        <p>이후 발표는 이 여덟 가지를 하나씩 설명한다. 먼저 이것들이 어떻게 모든 에이전트에 깔리는지부터 본다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="path">
+        <header><span class="num">03</span><h2>등록부터 배포까지 <span class="ts">04:10</span></h2></header>
+        <p>새 에이전트가 프로덕션에 가는 길은 정해져 있다. 개발자는 이 길만 따라가면 된다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1. 등록</td><td>에이전트의 용도와 적용할 분야를 적는다. 시스템이 에이전트 ID를 만들어 준다.</td></tr>
+              <tr><td>2. 개발 포털 입력</td><td>사내 개발 포털에 ID와 용도를 넣는다. 프레임워크(LangGraph나 LangChain), 언어(Python이나 TypeScript), 쓸 스킬과 프롬프트도 고른다.</td></tr>
+              <tr><td>3. 저장소 생성 <span class="ts">05:10</span></td><td>포털이 저장소를 만든다. 에이전트 프레임워크와 함께 메모리, 추적·평가, 컨텍스트 최적화, PII 차단 프레임워크가 들어 있다.</td></tr>
+              <tr><td>4. 로컬 테스트 <span class="ts">06:00</span></td><td>개발자가 저장소를 복제해 에이전트를 Docker 컨테이너로 빌드한다. 질문을 넣어 입력과 출력을 확인한다. 트레이스와 평가 결과는 SQLite나 BigQuery에 쌓아 본다.</td></tr>
+              <tr><td>5. PR <span class="ts">06:30</span></td><td>승인 2개를 받으면 CI/CD로 넘어간다. PR은 에이전트를 중앙 에이전트 레지스트리에도 등록한다. 레지스트리에는 트레이스를 볼 수 있는 링크(Langfuse 링크로 추정)가 붙는다.</td></tr>
+              <tr><td>6. CI/CD</td><td>로컬에서 만든 컨테이너를 프로덕션용으로 빌드한다. 이미지에 취약점이 없는지 검사한다. 보안 승인이 나면 이미지 레지스트리에 올린다.</td></tr>
+              <tr><td>7. 배포 <span class="ts">07:00</span></td><td>사내 배포 플랫폼이 쿠버네티스 클러스터의 지정된 네임스페이스에 에이전트를 올린다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>프레임워크를 저장소에 미리 넣는 이유 <span class="ts">05:30</span></h3>
+        <p>개발자가 이 프레임워크를 전부 챙기지는 않는다. AI 코딩 도구가 만들어 준 대로 두거나, 한두 개만 쓰는 경우가 많다. 그래서 회사 전체에 같은 프레임워크를 깐다. 그래야 방식이 일관되고, 결과를 한곳에 모아 볼 수 있다.</p>
+
+        <h3>포털이 함께 만드는 프로덕션 자원 <span class="ts">07:10</span></h3>
+        <p>개발 포털은 저장소만 만들지 않는다. 다음 자원도 같이 만든다.</p>
+        <ul class="plain">
+          <li><strong>워크로드 아이덴티티</strong><span class="en">workload identity</span>: 사람이 아니라 프로그램에 주는 클라우드 신원</li>
+          <li><strong>메모리 DB</strong></li>
+          <li><strong>추적·평가 테이블</strong></li>
+          <li><strong>에이전트 비밀 관리</strong></li>
+        </ul>
+        <p>모두 개발자가 입력한 이름을 바탕으로 만든다. 그래서 배포 시점에 에이전트는 자기가 어떤 신원으로 일할지 이미 안다. 쿠버네티스 서비스 계정과 Google Cloud 서비스 계정을 잇는 KSA-GSA 바인딩<span class="en">KSA-to-GSA binding</span>도 끝나 있다. 바인딩이 되면 에이전트는 바로 이 자원들과 통신한다.</p>
+        <p>그다음 에이전트는 AI 게이트웨이, MCP 서버, 트레이싱용 Langfuse, 그 밖의 API 엔드포인트와 통신한다. <span class="ts">08:00</span></p>
+        <p class="note">워크로드 아이덴티티, BigQuery, Cloud Spanner처럼 이 발표의 예는 대부분 Google Cloud 기준이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="mcp-server">
+        <header><span class="num">04</span><h2>직접 만드는 MCP 서버 <span class="ts">08:10</span></h2></header>
+        <p>밖에 공개된 MCP 서버를 써도 된다. 하지만 폐쇄망<span class="en">air-gapped</span>, 즉 외부 인터넷과 끊긴 환경에서 일한다면 직접 만들기를 강하게 권한다.</p>
+        <ol class="plain">
+          <li><strong>FastMCP</strong> 패키지로 서버를 만든다. 그 안에 필요한 도구를 정의한다.</li>
+          <li>모든 도구는 <strong>사내 보안팀이 리뷰</strong>한다. 승인된 도구만 프로덕션에 나간다. <span class="ts">09:00</span></li>
+          <li>리뷰하면서 필터와 호출 한도를 건다. LLM에 갈 필요가 없는 필드는 막는다. 사용자가 받으면 안 되는 정보가 새지 않게 하려는 것이다.</li>
+          <li>트래픽은 MCP 클라이언트, MCP 게이트웨이, MCP 서버 순서로 흐른다. 사용자든 서비스 계정이든 <strong>게이트웨이 인증을 먼저</strong> 통과해야 도구를 쓸 수 있다.</li>
+        </ol>
+      </section>
+
+      <!-- 5 -->
+      <section id="gateway">
+        <header><span class="num">05</span><h2>MCP 게이트웨이: 인증과 연결을 한곳에서 <span class="ts">09:40</span></h2></header>
+        <p>게이트웨이도 폐쇄망이라면 사내에서 직접 만들 수 있다. 요청 하나가 흐르는 순서는 아래와 같다. 클라이언트는 로컬 코딩 도우미 도구일 수도, 에이전트일 수도 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>순서</th><th>흐름</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>클라이언트 → 게이트웨이</td><td>첫 질문을 보내는 순간 한 번만 인증을 요청한다.</td></tr>
+              <tr><td>2</td><td>게이트웨이</td><td>세션 상태를 Redis에 저장한다.</td></tr>
+              <tr><td>3</td><td>게이트웨이 → 클라이언트</td><td>JWT 액세스 토큰을 돌려준다.</td></tr>
+              <tr><td>4 <span class="ts">10:30</span></td><td>클라이언트 → 게이트웨이</td><td>어느 MCP 서버를 부를지 정하고 <code>tools/call</code> 요청을 보낸다. 경로에 서버 이름(네임스페이스)을 넣는다. 예: <code>/github/mcp</code>. 헤더에는 <code>Authorization: Bearer &lt;JWT&gt;</code>를 붙인다.</td></tr>
+              <tr><td>5</td><td>게이트웨이 → MCP 서버</td><td>경로를 보고 어느 서버인지 찾는다. JWT를 풀어 사용자 토큰을 요청에 붙인 뒤 그 서버로 보낸다.</td></tr>
+              <tr><td>6 <span class="ts">11:00</span></td><td>MCP 서버 → 실제 서비스</td><td>서비스의 API를 부르고 ID 토큰을 교환한다. 사용자가 볼 권한이 있는 범위만 받아 온다.</td></tr>
+              <tr><td>7</td><td>MCP 서버 → 게이트웨이 → 클라이언트</td><td>받은 데이터를 게이트웨이가 받을 수 있는 형식으로 묶어 돌려준다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">경로와 헤더 모양은 발표의 설명을 옮긴 예시다. 발표자는 Artifactory와 GitHub를 예로 들었다.</p>
+        <div class="callout">
+          <span class="title">핵심은 길이 하나라는 것 <span class="ts">11:30</span></span>
+          <span>게이트웨이는 인증과 라우팅을 한곳에서 맡는 허브다. 코딩 도우미 도구든 에이전트든 엔드포인트에 바로 붙으면 안 된다. 반드시 게이트웨이에서 인증을 거친 뒤, MCP 서버를 통해 엔드포인트에 닿는다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="monitoring">
+        <header><span class="num">06</span><h2>게이트웨이 모니터링 <span class="ts">12:00</span></h2></header>
+        <blockquote>AI 에이전트는 지속적인 모니터링, 평가, 피드백 없이는 믿을 수 없다.<cite>발표자의 말을 옮김 · 12:10</cite></blockquote>
+        <p>그래서 게이트웨이에 모니터링을 붙인다. 에이전트에 호출이 들어오면 데이터가 세 갈래로 나간다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>데이터</th><th>보내는 곳</th><th>답하는 질문 (발표자의 예)</th></tr></thead>
+            <tbody>
+              <tr><td>운영 로그</td><td>로그 저장소: ELK, Loki, CloudWatch 중 하나</td><td>최근 10분 동안 401 응답이 몇 번이었나? 토큰 갱신이 실패했을 때 OAuth는 무엇을 했나?</td></tr>
+              <tr><td>트레이스 <span class="ts">13:00</span></td><td>OpenTelemetry를 거쳐 Tempo</td><td>이 요청에서 어느 도구가 느렸나? 호출이 에이전트에서 왔나, IDE에서 왔나? 실패한 호출의 정확한 에러는?</td></tr>
+              <tr><td>지표 <span class="ts">13:30</span></td><td>OpenTelemetry를 거쳐 Prometheus</td><td>도구별 P95 지연은 얼마인가? 특정 시간에 인증 거부가 치솟았나?</td></tr>
+              <tr><td>시각화 <span class="ts">13:50</span></td><td>Grafana</td><td>위 데이터를 모아 한 화면에서 본다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>트레이스<span class="en">trace</span>는 요청 하나가 어떤 단계를 거쳤는지 따라간 기록이다. 지표<span class="en">metrics</span>는 지연이나 에러 수처럼 시간에 따라 모은 숫자다. OpenTelemetry는 이 둘을 모아 처리한 뒤 뒤쪽 저장소로 보내는 오픈소스 도구다.</p>
+        <p class="note">자막에는 시각화 도구가 "graph now"로 들렸다. Tempo, Prometheus, Loki와 함께 쓰는 Grafana로 바로잡았다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="graph">
+        <header><span class="num">07</span><h2>에이전트 그래프와 사람 승인 <span class="ts">14:00</span></h2></header>
+        <p>에이전트는 대부분 LangGraph로 만든다. LangGraph는 LangChain 커뮤니티가 만든 프레임워크다. 작업 흐름을 그래프로 짜며 반복, 분기, 상태 관리를 지원한다. 여러 에이전트가 얽힌 복잡한 흐름에 맞다.</p>
+        <ol class="plain">
+          <li><strong>해석</strong><span class="en">interpret</span>: 어떤 종류의 질문인지, 어떤 답을 원하는지 파악한다. 그에 맞춰 계획을 세운다. <span class="ts">14:30</span></li>
+          <li><strong>분류</strong><span class="en">classify</span>: 읽기인지, 수정인지, 삭제인지, 민감한 작업인지 가린다. 결과에 맞춰 계획을 조정한다.</li>
+          <li><strong>계획 실행</strong>: 계획 자체가 하위 그래프다. 근거 수집 단계에서 MCP 게이트웨이로 인증받는다. 그다음 MCP 서버의 알맞은 도구로 데이터를 가져와 근거를 만든다. <span class="ts">15:00</span></li>
+          <li><strong>검증과 정책 확인</strong>: 찾은 내용을 검증한 뒤 정책에 맞는지 확인한다. <span class="ts">15:40</span></li>
+        </ol>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">읽기 전용 작업</span>
+            <p>바로 실행한다. 기록은 감사 로그<span class="en">audit log</span>에 남긴다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">쓰기·민감 작업 <span class="ts">15:50</span></span>
+            <p>사람 승인 단계<span class="en">HITL, human in the loop</span>로 간다. 사람이 승인하면 실행한다.</p>
+            <p class="verdict"><b>승인이든 거절이든</b> 결과는 감사 로그에 남는다.</p>
+          </div>
+        </div>
+
+        <h3>합쳐 보면 <span class="ts">16:10</span></h3>
+        <p>에이전트가 무엇을 하든 요청이 지나는 길은 같다.</p>
+        <ol class="plain">
+          <li>에이전트가 요청을 보낸다.</li>
+          <li>MCP 게이트웨이가 인증한다.</li>
+          <li>게이트웨이가 알맞은 MCP 서버로 보낸다.</li>
+          <li>MCP 서버가 알맞은 도구로 API 엔드포인트를 불러 응답을 받는다.</li>
+        </ol>
+      </section>
+
+      <!-- 8 -->
+      <section id="memory">
+        <header><span class="num">08</span><h2>메모리: 스레드와 체크포인트 <span class="ts">17:00</span></h2></header>
+        <p>메모리 관리는 작업 흐름의 상태를 저장했다가 다시 불러오는 일이다. 질문을 여러 번 해도 흐름이 끊기지 않는다. 문제가 생겨도 저장된 지점부터 복구할 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단위</th><th>언제 생기나</th></tr></thead>
+            <tbody>
+              <tr><td>스레드 <span class="en">thread</span></td><td>에이전트에게 질문을 보내면 생긴다. 대화 하나에 해당한다.</td></tr>
+              <tr><td>실행 ID <span class="en">run ID</span></td><td>스레드 안에서 질문할 때마다 하나씩 생긴다. 같은 스레드의 후속 질문도 새 실행 ID를 받는다.</td></tr>
+              <tr><td>체크포인트 <span class="en">checkpoint</span></td><td>질문이 LangGraph의 특정 노드에서 처리될 때, 그 노드에서 상태를 저장한다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>저장소는 로컬 개발에서 SQLite를 쓴다. 프로덕션에서는 GCP라면 Cloud Spanner를 쓴다. Azure나 AWS에서는 같은 역할의 DB를 쓰면 된다. <span class="ts">18:00</span></p>
+
+        <h3>데모: 메모리 DB에서 볼 수 있는 것 <span class="ts">18:10</span></h3>
+        <ul class="plain">
+          <li>처음에는 SQLite에 기록이 없다.</li>
+          <li>질문을 하나 보내자 기록 한 건이 생긴다. 스레드 ID, 질문, 실행 시각이 들어 있다.</li>
+          <li>한 스레드에 메시지가 몇 개 쌓였는지 조회할 수 있다.</li>
+          <li>메타데이터로 호출된 도구 수, 스레드 ID, 실행 ID를 본다.</li>
+          <li>어느 MCP 서버의 어떤 도구가 실행됐는지 본다.</li>
+          <li>LangGraph의 어느 노드를 어떤 순서로 지났는지 본다.</li>
+        </ul>
+      </section>
+
+      <!-- 9 -->
+      <section id="eval">
+        <header><span class="num">09</span><h2>추적과 평가 <span class="ts">19:50</span></h2></header>
+        <div class="callout">
+          <span class="title">게이트웨이 모니터링과 다르다</span>
+          <span>앞의 모니터링은 게이트웨이 운영을 본다. 여기서 말하는 추적은 에이전트 단위다.</span>
+        </div>
+        <p>에이전트 단위로 남기는 것은 이렇다.</p>
+        <ul class="plain">
+          <li>에이전트에 보낸 질문과 돌아온 답</li>
+          <li>사용한 LLM 모델</li>
+          <li>쓴 토큰 수와 비용</li>
+          <li>평가 기준과 답의 품질</li>
+        </ul>
+        <p>이 데이터는 <strong>첫날부터</strong> 저장해야 한다. 에이전트마다 자기 추적·평가 프로젝트와 테이블을 따로 가진다. 에이전트가 100개면 프로젝트도 100개다.</p>
+        <p>6개월 뒤 누군가 에이전트 성과와 토큰 사용량을 물을 수 있다. 그때 이 데이터를 모아 경영진용 대시보드를 만든다. 그 대시보드가 에이전트를 이렇게 많이 만든 투자 대비 효과<span class="en">ROI</span>를 보여 준다. <span class="ts">20:40</span></p>
+
+        <h3>데모: 테이블 여섯 개 <span class="ts">21:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>테이블</th><th>담는 것</th></tr></thead>
+            <tbody>
+              <tr><td>작업 추적</td><td>요청 ID, 세션 ID, 에이전트 이름, 질문, 답, 완료 여부, 걸린 시간, 사용 모델, 메타데이터</td></tr>
+              <tr><td>품질 검사 <span class="ts">22:10</span></td><td>실행 한 번마다 검사 8개. 성공, 지연, 비용, 도구 정확도, 안전성 등이 한 줄씩 들어간다.</td></tr>
+              <tr><td>평가 점수 <span class="ts">22:30</span></td><td>실행 한 번의 점수표. 모든 품질 항목을 0~1 점수로 한 줄에 담는다.</td></tr>
+              <tr><td>품질 지표 <span class="ts">22:40</span></td><td>실행 한 번을 깊이 본다. 답 품질, 안전성, 지연, 비용, 도구 통계를 중첩 필드로 넓은 한 줄에 담는다.</td></tr>
+              <tr><td>도구 호출 <span class="ts">23:00</span></td><td>어떤 MCP 도구가 돌았는지, 얼마나 걸렸는지, 성공했는지</td></tr>
+              <tr><td>실행 궤적 <span class="ts">23:10</span></td><td>실행을 단계별로 기록한다. LLM 호출과 그래프 상태가 계획, 요약 같은 순서대로 남는다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">테이블 이름은 발표자의 설명을 보고 붙였다. 실제 테이블 이름과 다를 수 있다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="pii">
+        <header><span class="num">10</span><h2>PII 차단 <span class="ts">23:20</span></h2></header>
+        <p>PII<span class="en">Personally Identifiable Information</span>는 특정인을 알아볼 수 있는 개인정보다. 이 발표에서는 API 키 같은 비밀값도 함께 다룬다.</p>
+        <p>에이전트를 쓰다 보면 비밀이 질문에 섞여 들어온다. 민감한 정보가 든 문서를 올리기도 하고, 입력하다가 API 키를 붙여 넣기도 한다.</p>
+        <ul class="plain">
+          <li>프레임워크가 데이터 종류별로 심각도를 정해 둔다.</li>
+          <li>심각도가 90% 정도를 넘으면 즉시 막고 가린다<span class="en">redact</span>. <span class="ts">23:50</span></li>
+          <li>목표는 입력되는 순간, 타이핑하는 바로 그때 막는 것이다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">가린 비밀이 닿으면 안 되는 곳 <span class="ts">24:00</span></span>
+          <span>LLM 모델, 메모리 DB, 추적·평가 테이블, 트레이싱 시스템. 네 곳 모두다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="context">
+        <header><span class="num">11</span><h2>컨텍스트 최적화 <span class="ts">24:20</span></h2></header>
+        <p>발표자가 가장 좋아한다고 밝힌 부분이다. 파일이나 데이터를 많이 올리면 질문 하나에 토큰을 많이 쓴다. 그래서 LLM에 보내기 전에 질문을 다듬고 가지치기<span class="en">pruning</span>한다.</p>
+        <ol class="plain">
+          <li><strong>선택</strong>: 토큰 한도에 맞춰 보낼 내용을 고른다. <span class="ts">25:00</span></li>
+          <li><strong>재정렬</strong><span class="en">re-rank</span>: 질문과 가장 관련 있는 정보가 무엇인지 순위를 다시 매긴다.</li>
+          <li><strong>중복 제거</strong><span class="en">dedupe</span>: 겹치는 내용을 빼서 꼭 필요한 데이터만 남긴다.</li>
+          <li><strong>압축</strong>: 남은 큰 내용을 줄인 뒤 LLM에 보낸다.</li>
+        </ol>
+
+        <h3>데모: 같은 질문, 최적화 전과 후 <span class="ts">25:20</span></h3>
+        <p>"내 JFrog Artifactory의 모든 아티팩트를 찾아 줘"라는 질문을 두 번 돌렸다. 한 번은 최적화 없이, 한 번은 최적화를 켜고 돌렸다. Slack 봇에서도 "Artifactory 전체 저장소의 내 Docker 이미지를 모두 알려 줘"로 같은 실험을 했다. <span class="ts">26:30</span></p>
+
+        <figure class="chart" aria-label="같은 질문의 토큰 사용량. JFrog 질문은 최적화 전 24,000, 후 2,400. Slack 봇 질문은 최적화 전 약 24,000, 후 약 1,500">
+          <span class="chart-title">같은 질문에 쓴 토큰 (컨텍스트 최적화 전후)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>JFrog 질문 · 최적화 전</span><span class="val">24,000</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="JFrog 질문, 최적화 전: 24,000 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>JFrog 질문 · 최적화 후</span><span class="val">2,400</span></div>
+              <div class="track"><div class="fill key" style="width:10%" title="JFrog 질문, 최적화 후: 2,400 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Slack 봇 질문 · 최적화 전</span><span class="val">약 24,000</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="Slack 봇 질문, 최적화 전: 약 24,000 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Slack 봇 질문 · 최적화 후</span><span class="val">약 1,500</span></div>
+              <div class="track"><div class="fill key" style="width:6.25%" title="Slack 봇 질문, 최적화 후: 약 1,500 토큰"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>12,000</span><span>24,000</span></div>
+          <span class="caption">발표자의 데모 화면 기준. 막대 길이는 24,000을 100으로 놓은 비율이다.</span>
+        </figure>
+
+        <figure class="chart" aria-label="토큰 절감률. JFrog 데모 90%, Slack 봇 데모 약 94%, 발표자가 말한 평소 절감률 70~78%">
+          <span class="chart-title">토큰 절감률: 데모와 평소 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>JFrog 데모</span><span class="val">90</span></div>
+              <div class="track"><div class="fill" style="width:90%" title="JFrog 데모: 90% 절감"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Slack 봇 데모</span><span class="val">약 94</span></div>
+              <div class="track"><div class="fill" style="width:93.75%" title="Slack 봇 데모: 약 94% 절감"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>평소 (발표자 설명)</span><span class="val">70~78</span></div>
+              <div class="track"><div class="fill key" style="width:78%" title="평소: 70~78% 절감"></div><div class="baseline" style="left:70%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">평소 막대는 상한 78에 맞춰 그렸고, 점선은 하한 70이다. 데모 두 건은 평소보다 절감률이 높았다.</span>
+        </figure>
+        <p class="note">1,500은 24,000의 약 6%라서 Slack 봇 데모의 절감률은 약 94%다. 발표자는 두 데모를 모두 "약 90%"로 말했다.</p>
+        <p>발표자는 대부분의 경우 절감률이 70~78%라고 했다. <span class="ts">27:10</span> 에이전트가 수천 개이고 하루에 질문이 많다면 아끼는 토큰도 그만큼 커진다.</p>
+        <p class="note">발표자 팀이 직접 만든 사내 도구의 데모 수치다. 그 점을 감안해 읽자. 최적화 뒤에도 답의 품질이 그대로였는지는 발표에서 보여 주지 않았다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="takeaways">
+        <header><span class="num">12</span><h2>발표자의 핵심 메시지 <span class="ts">27:30</span></h2></header>
+        <ol class="plain">
+          <li>에이전트가 아니라 <strong>엔터프라이즈 프레임워크</strong>를 만든다. 서둘러 배포하지 말고 모든 프레임워크를 거치게 한다. 나중에 "처음부터 있었어야 했는데"라고 깨닫지 않기 위해서다.</li>
+          <li>모든 도구 호출은 로컬에서든 에이전트에서든 <strong>중앙 MCP 게이트웨이</strong>에서 인증받은 뒤 MCP 서버에 닿는다. <span class="ts">28:00</span></li>
+          <li>질문을 어떤 도구로 처리할지는 <strong>MCP 서버가 통제</strong>한다.</li>
+          <li>도구 실행에는 <strong>모니터링과 완전한 감사 기록</strong>을 둔다.</li>
+          <li>위험이 큰 작업에는 언제나 <strong>사람 승인</strong>을 둔다. <span class="ts">28:30</span></li>
+          <li><strong>컨텍스트 최적화</strong>로 에이전트 비용을 설명할 수 있게 한다.</li>
+        </ol>
+        <div class="shift" aria-label="발표자가 제안하는 순서의 변화">
+          <div><span class="tag">서두르면</span><b>에이전트부터 만들어 배포한다</b><span class="muted">인증, 기록, 비용 장치는 나중에 붙인다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자의 제안</span><b>공통 프레임워크를 먼저 깐다</b><span class="muted">모든 에이전트가 같은 게이트웨이, 감사, 평가 위에서 돈다</span></div>
+        </div>
+        <p class="note">발표자는 마지막에 최근 Amazon에 낸 자신의 MCP 책을 소개했다. Kindle판은 무료이고 종이책도 있다고 한다. <span class="ts">28:50</span></p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>에이전트는 <strong>기반 통제가 빠져서</strong> 프로덕션에서 실패한다.</li>
+          <li>에이전트 하나가 아니라 모든 에이전트가 쓰는 <strong>엔터프라이즈 프레임워크</strong>를 먼저 만든다.</li>
+          <li>등록하면 개발 포털이 저장소, 워크로드 아이덴티티, 메모리 DB, 평가 테이블, 비밀 관리를 한 번에 만든다.</li>
+          <li>배포는 PR 승인 2개, CI/CD의 이미지 취약점 검사, 쿠버네티스 배포 순서로 진행된다.</li>
+          <li>폐쇄망이면 MCP 서버를 FastMCP로 직접 만들고, <strong>도구마다 보안 리뷰</strong>를 거친다.</li>
+          <li>MCP 게이트웨이가 JWT로 인증하고 경로의 네임스페이스로 서버를 고른다. <strong>엔드포인트 직접 접근은 없다.</strong></li>
+          <li>게이트웨이 운영 데이터는 로그, 트레이스, 지표로 나눠 쌓고 Grafana에서 본다.</li>
+          <li>에이전트 흐름은 해석, 분류, 근거 수집, 정책 확인 순서다. <strong>쓰기·민감 작업은 사람이 승인</strong>하고 모든 결과는 감사 로그에 남는다.</li>
+          <li>메모리는 스레드, 실행 ID, 체크포인트로 남긴다. 평가 데이터는 에이전트마다 <strong>첫날부터</strong> 테이블에 쌓는다.</li>
+          <li>비밀은 입력되는 순간 가린다. 컨텍스트는 선택, 재정렬, 중복 제거, 압축으로 줄인다. 평소 절감률은 <strong>70~78%</strong>다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 꼽은, 에이전트가 프로덕션에서 실패하는 근본 이유는?</span></summary><div class="answer">기반 통제가 빠져 있어서다. 게이트웨이 인증, 알맞은 도구, 추적과 평가, 메모리, 토큰 절약, 비밀 차단 장치가 없다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>개발 포털이 저장소에 에이전트 프레임워크 말고 무엇을 넣나? 왜 넣나?</span></summary><div class="answer">메모리, 추적·평가, 컨텍스트 최적화, PII 차단 프레임워크다. 개발자가 이걸 다 챙기지 않기 때문에, 회사 전체에서 일관되게 쓰고 결과를 한곳에서 보려고 넣는다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>개발 포털이 저장소 말고 미리 만드는 프로덕션 자원은? 덕분에 배포 때 무엇이 쉬워지나?</span></summary><div class="answer">워크로드 아이덴티티, 메모리 DB, 추적·평가 테이블, 비밀 관리다. 배포 시점에 에이전트가 자기 신원을 이미 알고 KSA-GSA 바인딩도 끝나 있어서, 바로 자원과 통신할 수 있다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>사내 MCP 서버의 도구가 프로덕션에 나가기 전에 거치는 절차는?</span></summary><div class="answer">사내 보안팀 리뷰다. 승인된 도구만 나간다. 리뷰하면서 필터, 호출 한도, LLM에 보낼 필요 없는 필드 차단을 정한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>MCP 게이트웨이가 첫 인증 요청을 받으면 하는 두 가지는?</span></summary><div class="answer">세션 상태를 Redis에 저장하고, JWT 액세스 토큰을 클라이언트에 돌려준다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>게이트웨이는 도구 호출을 어느 MCP 서버로 보낼지 어떻게 정하고, 보내기 전에 무엇을 하나?</span></summary><div class="answer">요청 경로에 든 네임스페이스(예: <code>/github/mcp</code>)를 보고 정한다. JWT를 풀어 사용자 토큰을 요청에 붙인 뒤 보낸다. MCP 서버는 사용자가 볼 권한이 있는 범위만 돌려준다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>게이트웨이 모니터링에서 로그, 트레이스, 지표는 각각 어디로 가나?</span></summary><div class="answer">로그는 ELK, Loki, CloudWatch 같은 로그 저장소로 간다. 트레이스는 OpenTelemetry를 거쳐 Tempo로, 지표는 Prometheus로 간다. Grafana에서 모아 본다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>에이전트 그래프에서 읽기 작업과 쓰기·민감 작업은 어떻게 다르게 처리되나?</span></summary><div class="answer">읽기 작업은 바로 실행한다. 쓰기·민감 작업은 사람 승인을 기다리고, 승인되면 실행한다. 어느 쪽이든, 거절된 경우도 결과는 감사 로그에 남는다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>메모리에서 스레드, 실행 ID, 체크포인트는 각각 언제 생기나?</span></summary><div class="answer">대화를 시작하면 스레드가 생긴다. 그 안에서 질문할 때마다 실행 ID가 생긴다. 질문이 그래프의 노드에서 처리될 때 체크포인트가 저장된다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>게이트웨이 모니터링과 추적·평가는 무엇이 다른가?</span></summary><div class="answer">모니터링은 게이트웨이 운영(인증 실패, 지연, 에러)을 본다. 추적·평가는 에이전트 단위로 질문, 답, 모델, 토큰 비용, 품질 점수를 남긴다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>PII 차단은 언제 막고, 막은 비밀이 가면 안 되는 곳은 어디인가?</span></summary><div class="answer">입력되는 순간 막는다. 심각도가 90% 정도를 넘으면 가린다. LLM, 메모리 DB, 추적·평가 테이블, 트레이싱 시스템 어디에도 가면 안 된다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>컨텍스트 최적화의 네 단계와 데모 결과는?</span></summary><div class="answer">선택, 재정렬, 중복 제거, 압축이다. 데모에서 24,000 토큰이 2,400과 약 1,500으로 줄었다. 발표자는 평소 절감률을 70~78%로 말했다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>새 에이전트 저장소 템플릿에 공통 프레임워크를 기본으로 넣는다<span class="how">메모리, 추적·평가, PII 차단, 컨텍스트 최적화</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트를 등록하면 신원, 메모리 DB, 평가 테이블, 비밀 관리가 같이 만들어지게 한다<span class="how">확인: 배포할 때 손으로 권한을 붙이는 단계가 남아 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>모든 도구 호출이 MCP 게이트웨이를 거치게 한다<span class="how">확인: 에이전트나 코딩 도구가 엔드포인트에 바로 붙는 길이 없는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>MCP 도구는 보안 리뷰를 통과한 것만 프로덕션에 올린다<span class="how">리뷰 때 필터, 호출 한도, LLM에 보낼 필요 없는 필드 차단을 함께 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>게이트웨이 데이터를 로그, 트레이스, 지표로 나눠 쌓는다<span class="how">확인: "최근 10분 401 응답 수", "도구별 P95 지연"에 바로 답할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>쓰기·삭제·민감 작업에 사람 승인 단계를 둔다<span class="how">승인이든 거절이든 결과를 감사 로그에 남긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>에이전트마다 추적·평가 테이블을 첫날부터 만든다<span class="how">질문, 답, 모델, 토큰 수와 비용, 품질 점수</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>비밀값이 LLM에 닿기 전에 가린다<span class="how">확인: 가짜 API 키를 넣어 보고 메모리 DB, 평가 테이블, 트레이스 어디에도 남지 않는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>컨텍스트 최적화 전후로 토큰과 답 품질을 함께 잰다<span class="how">확인: 토큰만 줄고 답이 나빠지지 않았는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>기반 통제</td><td>Foundation controls. 어떤 에이전트든 프로덕션에서 공통으로 갖춰야 할 인증, 기록, 비용, 보안 장치</td></tr>
+              <tr><td>거버넌스</td><td>Governance. 누가 무엇을 할 수 있는지 정하고 지키게 하는 관리 체계</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. AI가 외부 도구와 데이터를 쓰는 표준 규약</td></tr>
+              <tr><td>MCP 서버</td><td>도구를 MCP 형식으로 제공하는 서버</td></tr>
+              <tr><td>MCP 게이트웨이</td><td>인증을 처리하고 요청을 알맞은 MCP 서버로 보내는 관문</td></tr>
+              <tr><td>FastMCP</td><td>MCP 서버를 쉽게 만들게 해 주는 Python 패키지</td></tr>
+              <tr><td>폐쇄망</td><td>Air-gapped. 외부 인터넷과 끊긴 네트워크 환경</td></tr>
+              <tr><td>LangGraph</td><td>작업 흐름을 노드와 연결로 이뤄진 그래프로 짜는 에이전트 프레임워크</td></tr>
+              <tr><td>개발 포털</td><td>새 에이전트 정보를 넣으면 저장소와 자원을 만들어 주는 사내 웹 화면</td></tr>
+              <tr><td>에이전트 레지스트리</td><td>회사의 에이전트를 한곳에 등록해 관리하는 시스템</td></tr>
+              <tr><td>워크로드 아이덴티티</td><td>Workload identity. 사람이 아니라 프로그램에 주는 클라우드 신원</td></tr>
+              <tr><td>KSA-GSA 바인딩</td><td>쿠버네티스 서비스 계정(KSA)을 Google Cloud 서비스 계정(GSA)에 연결해 클라우드 권한을 쓰게 하는 설정</td></tr>
+              <tr><td>JWT</td><td>JSON Web Token. 누가 무엇을 할 수 있는지 담은, 서명된 접근 토큰</td></tr>
+              <tr><td>네임스페이스</td><td>이 발표에서는 요청 경로에 넣어 어느 MCP 서버로 갈지 정하는 이름. 쿠버네티스에서는 클러스터 안을 나누는 구역</td></tr>
+              <tr><td>트레이스 / 지표</td><td>Trace / metrics. 요청 하나가 거친 단계의 기록 / 지연이나 에러 수처럼 시간에 따라 모은 숫자</td></tr>
+              <tr><td>P95 지연</td><td>요청 100개 중 95개가 이 시간 안에 끝난다는 기준값</td></tr>
+              <tr><td>OpenTelemetry · Tempo · Prometheus · Grafana</td><td>차례로 관측 데이터 수집, 트레이스 저장, 지표 저장, 시각화를 맡는 오픈소스 도구</td></tr>
+              <tr><td>HITL</td><td>Human in the loop. 실행 전에 사람이 승인하는 단계</td></tr>
+              <tr><td>감사 로그</td><td>Audit log. 누가 언제 무엇을 했는지 남긴 기록</td></tr>
+              <tr><td>스레드 · 실행 ID · 체크포인트</td><td>대화 하나 · 그 안의 질문 하나 · 그래프 노드에서 저장한 상태</td></tr>
+              <tr><td>실행 궤적</td><td>Trajectory. 실행 한 번이 단계별로 무엇을 했는지 순서대로 남긴 기록</td></tr>
+              <tr><td>PII</td><td>Personally Identifiable Information. 특정인을 알아볼 수 있는 개인정보</td></tr>
+              <tr><td>가림</td><td>Redaction. 민감한 부분을 지우거나 가려서 넘기는 것</td></tr>
+              <tr><td>토큰</td><td>모델이 글을 처리하는 단위. 사용 비용을 매기는 기준</td></tr>
+              <tr><td>가지치기</td><td>Pruning. 모델에 보낼 입력에서 필요 없는 부분을 잘라 내는 것</td></tr>
+              <tr><td>재정렬 · 중복 제거</td><td>Re-rank · dedupe. 관련도 순으로 다시 세우기 · 겹치는 내용 빼기</td></tr>
+              <tr><td>ROI</td><td>Return on investment. 들인 비용 대비 얻은 효과</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>발표 순서</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>에이전트가 프로덕션에서 실패하는 이유</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>해법: 핵심 프레임워크 네 가지</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>보조 프레임워크 네 가지</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>로컬 개발: 에이전트 등록과 개발 포털</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>저장소 템플릿에 들어가는 것과 그 이유</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>로컬 테스트</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>PR, CI/CD, 이미지 검사, 쿠버네티스 배포</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>개발 포털이 만드는 프로덕션 자원</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>직접 만드는 MCP 서버</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>MCP 게이트웨이의 요청 흐름</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>중앙 인증·라우팅 허브</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>게이트웨이 모니터링</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>LangGraph 에이전트 흐름</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>정책 확인과 사람 승인</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>전체 연결 그림</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>메모리 관리</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>메모리 데모</td></tr>
+              <tr><td><span class="ts">19:50</span></td><td>추적과 평가</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>추적·평가 데모: 테이블 여섯 개</td></tr>
+              <tr><td><span class="ts">23:20</span></td><td>PII 차단</td></tr>
+              <tr><td><span class="ts">24:20</span></td><td>컨텍스트 최적화</td></tr>
+              <tr><td><span class="ts">25:20</span></td><td>최적화 데모: 24,000에서 2,400 토큰으로</td></tr>
+              <tr><td><span class="ts">26:30</span></td><td>Slack 봇 데모: 24,000에서 약 1,500 토큰으로</td></tr>
+              <tr><td><span class="ts">27:30</span></td><td>핵심 메시지</td></tr>
+              <tr><td><span class="ts">28:50</span></td><td>MCP 책 소개와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'tZycGA_Fbfo:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

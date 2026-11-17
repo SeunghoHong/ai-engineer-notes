@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 코드 검증 루프</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#claims">OpenAI 쪽의 세 가지 주장</a></li>
+      <li><a href="#evidence">"끝났다"는 증거가 있어야 한다</a></li>
+      <li><a href="#containment">격리는 정답을 보장하지 않는다</a></li>
+      <li><a href="#contract">피드백 계약은 루프 안에</a></li>
+      <li><a href="#bottleneck">병목은 생성에서 검증으로</a></li>
+      <li><a href="#acdc">에이전트 중심 개발 사이클</a></li>
+      <li><a href="#loops">안쪽 루프와 바깥 루프</a></li>
+      <li><a href="#project">실습 프로젝트와 심어 둔 취약점</a></li>
+      <li><a href="#wiring">Codex에 SonarQube 연결하기</a></li>
+      <li><a href="#secrets">비밀 키 차단 훅</a></li>
+      <li><a href="#fix">이슈 목록 보기와 찾아 고치기</a></li>
+      <li><a href="#newcode">새 기능 추가와 컨텍스트 보강</a></li>
+      <li><a href="#qa">청중 질문 정리</a></li>
+      <li><a href="#conclusion">결론</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-11 · 42분 · 영어 발표 한글 정리</span>
+      <h1>에이전트가 쓴 코드, 누가 검증하나</h1>
+      <p class="lead">코드를 만드는 일은 에이전트가 빠르게 해결했다. 이제 병목은 그 코드가 안전한지 확인하는 일이다. 이 발표는 Codex가 코드를 고치거나 새로 쓸 때마다 SonarQube가 비밀 키를 막고, 취약점을 찾고, 수정 결과를 바로 다시 검사하는 루프를 터미널 안에서 실제로 돌려 보인다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=bI8WyG9YB0I" target="_blank" rel="noopener">SonarQube + OpenAI: Agentic Development</a></span>
+        <span>발표: Killian Carlsen-Phelan (Sonar 개발자 콘텐츠 엔지니어) · 도입부: OpenAI Codex 배포 엔지니어링 팀의 Tony (추정)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 알려진 이름으로 바로잡았다. 발표 후반은 워크숍 형식의 실습이라 행사장 Wi-Fi 지연으로 기다리는 구간이 많다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 SonarQube를 만드는 Sonar 소속이고, 도입부 발표자는 Codex를 만드는 OpenAI 소속이다. 두 제품의 장점을 말하는 대목은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>OpenAI 쪽 도입부의 세 주장: <strong>"끝났다"는 증거와 함께 말해야 한다</strong>, <strong>샌드박스로 가두는 것과 결과가 맞는 것은 다르다</strong>, <strong>검사 규칙은 에이전트 루프 안에 들어가야 한다</strong>.</li>
+        <li>Sonar의 설문에 따르면 커밋된 코드의 <strong>42%</strong>가 AI가 썼거나 도왔지만, 개발자 <strong>96%</strong>는 그 코드를 완전히 믿지 않는다. 병목은 코드 생성에서 <strong>코드 검증</strong>으로 옮겨 갔다.</li>
+        <li>Sonar가 말하는 사이클은 네 단계다. 생성은 아무 도구나 쓰고, <strong>안내(Guide) → 검증(Verify) → 해결(Solve)</strong>을 SonarQube가 맡는다.</li>
+        <li>검증은 CI(바깥 루프)까지 가기 전에 <strong>IDE와 터미널(안쪽 루프)</strong>에서 끝내야 왕복 시간을 줄인다.</li>
+        <li>실습에서는 SonarQube 플러그인을 Codex에 붙여 <strong>비밀 키 차단 훅</strong>, <strong>이슈 목록 도구</strong>, <strong>찾아 고치기</strong>를 돌린다.</li>
+        <li>코드를 고칠 때마다 <strong>편집 직후 훅</strong>이 서버 쪽 분석을 돌려 새 취약점이 생기지 않았는지 바로 알려 준다. 새 코드를 쓸 때는 <strong>컨텍스트 보강</strong>이 프로젝트 규칙과 구조를 먼저 넣어 준다.</li>
+        <li>비밀 키 차단은 도구 호출과 프롬프트 제출 시점에 걸린다. 에이전트가 파일을 읽는 스크립트를 따로 쓰면 우회될 수 있다고 발표자도 인정했다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="claims">
+        <header><span class="num">01</span><h2>OpenAI 쪽의 세 가지 주장 <span class="ts">00:00</span></h2></header>
+        <p>발표는 OpenAI Codex 배포 엔지니어링 팀의 짧은 도입부로 시작한다. 에이전트 기초는 건너뛰고 더 어려운 질문으로 바로 들어간다. 에이전트가 과제를 "완료했다"는 것은 무슨 뜻인가. 신뢰 경계<span class="en">trust boundary</span>는 어디에 두는가.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>주장</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>끝났다 = 증거가 있다</td><td>"고쳤습니다"가 아니라 "고쳤고, 이것이 증거입니다"여야 완료다</td></tr>
+              <tr><td>격리 ≠ 정확성</td><td>샌드박스가 에이전트의 행동 범위를 가둘 수는 있어도 결과가 옳다고 증명하지는 못한다</td></tr>
+              <tr><td>피드백 계약은 루프 안에</td><td>검사 규칙을 사람이 나중에 따로 하는 게 아니라 에이전트가 도는 루프 안에 넣어야 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>에이전트 루프 자체는 늘 비슷하다. 모델이 행동을 정하고, 실행하고, 로그나 출력으로 변화를 관찰하고, 계획을 고친다. 과제 하나하나에는 기대 결과, 지켜야 할 불변 조건<span class="en">invariant</span>, 범위, 그리고 인수 기준<span class="en">acceptance criteria</span>이 붙는다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="evidence">
+        <header><span class="num">02</span><h2>"끝났다"는 증거가 있어야 한다 <span class="ts">01:20</span></h2></header>
+        <p>도입부 발표자가 말하는 완료의 정의는 <strong>리뷰할 수 있는 diff와 도구가 남긴 증거</strong>다. 구현이 싸지면 병목은 명세와 검증으로 옮겨 가는데, 그걸 그냥 두면 안 된다는 것이다.</p>
+        <h3>코딩 에이전트가 자주 빠지는 실패 <span class="ts">01:50</span></h3>
+        <ul class="plain">
+          <li><strong>맥락 부족</strong>: 필요한 정보를 다 보지 못한 채 고친다.</li>
+          <li><strong>국소 수정이 전역 규칙을 깬다</strong>: 한 곳만 보면 맞는 수정이 프로젝트 전체의 불변 조건을 위반한다.</li>
+          <li><strong>검증용 테스트가 같은 실수를 되풀이한다</strong>: 에이전트가 만든 테스트가 코드와 같은 오해 위에 서 있다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">자기 비판은 독립된 심판이 아니다</span>
+          <span>에이전트가 자기 결과를 다시 보는 것은 쓸모 있지만, 독립된 검증기<span class="en">oracle</span>는 아니다. 에이전트의 판단과 별도 검증기의 판단은 서로 다른 축을 본다. 그래서 완료 여부는 둘을 다 봐야 알 수 있다. 컴파일러 기준으로 끝났나, 테스트 기준으로 끝났나, 정적 분석 기준으로 끝났나를 따로 묻고, 오히려 <strong>"아직 안 끝났다"는 반증을 찾아 나서야</strong> 한다. 사람 리뷰는 이 사이클에서 빼지 못한다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="containment">
+        <header><span class="num">03</span><h2>격리는 정답을 보장하지 않는다 <span class="ts">02:40</span></h2></header>
+        <p>에이전트 시스템에는 두 층이 있다. 두 층은 서로 다른 질문에 답한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">실행 층 <span class="en">execution layer</span></span>
+            <p>에이전트가 <strong>무엇을 할 수 있는가</strong>를 정한다.</p>
+            <ul>
+              <li>어떤 도구에 접근하는가</li>
+              <li>범위가 어디까지인가</li>
+              <li>어떤 행동에 승인이 필요한가</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">산출물 층 <span class="en">artifact layer</span></span>
+            <p>나온 <strong>결과가 받아들일 만한가</strong>를 평가한다.</p>
+            <ul>
+              <li>어떤 테스트와 분석을 거쳤는가</li>
+              <li>정책에 맞는가</li>
+              <li>원래 의도에 맞는가</li>
+            </ul>
+          </div>
+        </div>
+        <blockquote>샌드박스는 쓰기 작업을 가둘 수는 있어도, 그 쿼리가 안전하다고 증명하지는 못한다.<cite>도입부 발표자의 말을 옮김 <span class="ts">03:20</span></cite></blockquote>
+        <p>어떤 검증기 하나도 증명은 아니다. 그래서 경계가 다른 통제를 여러 겹 쌓는다. 흔히 말하는 심층 방어<span class="en">defense in depth</span>다. 이 구조에서 사람이 쥐는 것은 세 가지다. <strong>의도</strong>, <strong>예외</strong>, 그리고 <strong>출시 여부 결정</strong>이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="contract">
+        <header><span class="num">04</span><h2>피드백 계약은 루프 안에 <span class="ts">03:50</span></h2></header>
+        <p>검사 규칙을 에이전트 루프 안에 넣는 수단으로 세 가지를 든다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>수단</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td>스킬 <span class="en">skills</span></td><td>특정 과제를 어떻게 수행할지 적은 절차</td></tr>
+              <tr><td>MCP</td><td>구조화된 도구와 컨텍스트를 모델에 제공하는 연결 규약</td></tr>
+              <tr><td>훅 <span class="en">hooks</span></td><td>생애주기의 특정 시점에 자동으로 도는 검사. 하드코딩된 비밀 키 찾기 같은 일에 잘 맞는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 셋 위에 CI와 사람 리뷰가 얹힌다. 사람의 역할은 그 마지막 검토가 핵심이다.</p>
+        <h3>에이전트 프로세스를 만들 때 점검할 것 <span class="ts">04:30</span></h3>
+        <ul class="plain">
+          <li><strong>경계</strong>: 비밀 키가 모델 입력에 들어가기 전에 가로챌 수 있는가.</li>
+          <li><strong>근거</strong>: 프로젝트의 구체적 규칙, 위치, 취약 경로를 에이전트에 줄 수 있는가.</li>
+          <li><strong>범위</strong>: 동작을 보존하면서 매개변수를 묶어 두는가.</li>
+          <li><strong>재검사</strong>: 계속 다시 확인하는가. 에이전트의 출력이 마지막 상태가 아니라고 못 박는가.</li>
+        </ul>
+        <p class="note">자막에서 "parameters binding while preserving behavior"로 들리는 대목은 뜻이 분명하지 않아 들린 대로 옮겼다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="bottleneck">
+        <header><span class="num">05</span><h2>병목은 생성에서 검증으로 <span class="ts">06:30</span></h2></header>
+        <p>이제 Sonar의 Killian Carlsen-Phelan이 이어받는다. 던지는 질문은 하나다. Codex 같은 에이전트가 만든 코드가 안전하다고 어떻게 확인하는가.</p>
+        <p>Sonar는 지난 1년 사이 개발자 1,000명 이상을 설문했다고 한다. 발표자가 인용한 결과는 이렇다.</p>
+
+        <figure class="chart" aria-label="Sonar 설문 결과: 커밋된 코드 중 AI가 썼거나 도운 비율 42%, AI 코드를 완전히 믿지 않는 개발자 96%, 머지 전에 완전히 검증한다는 개발자 50% 미만">
+          <span class="chart-title">Sonar 개발자 설문 (발표자 인용, %)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>커밋된 코드 중 AI가 썼거나 도운 비율</span><span class="val">42</span></div>
+              <div class="track"><div class="fill" style="width:42%" title="AI 생성 또는 AI 보조 코드: 42%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>AI 코드를 완전히 믿지 않는 개발자</span><span class="val">96</span></div>
+              <div class="track"><div class="fill key" style="width:96%" title="완전히 믿지 않음: 96%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>머지 전에 완전히 검증하는 개발자</span><span class="val">&lt; 50</span></div>
+              <div class="track"><div class="fill" style="width:50%" title="완전히 검증: 50% 미만"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">마지막 막대는 "절반 미만"이라 50에 맞춰 그렸다. 믿지 않으면서도 검증하지 않는 코드가 코드베이스로 들어가고 있다는 것이 발표자의 요점이다.</span>
+        </figure>
+
+        <div class="shift" aria-label="병목의 이동">
+          <div><span class="tag">예전</span><b>코드 생성</b><span class="muted">원하는 결과를 내는 코드를 어떻게 쓰나</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">지금</span><b>코드 검증</b><span class="muted">쏟아지는 코드가 코드베이스와 고객을 망가뜨리지 않는지 어떻게 확인하나</span></div>
+        </div>
+        <p>생성은 에이전트가 거의 해결했다. 남은 것은 사람의 한계다. 그 한계를 어떤 도구로 메우느냐가 이 발표의 주제다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="acdc">
+        <header><span class="num">06</span><h2>에이전트 중심 개발 사이클 <span class="ts">08:20</span></h2></header>
+        <p>Sonar는 이 흐름을 에이전트 중심 개발 사이클<span class="en">Agent-Centric Development Cycle, AC/DC</span>이라고 부른다. 네 단계 중 첫 단계는 어떤 코딩 도구를 써도 된다. 나머지 셋을 SonarQube가 맡는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th><th>이 발표에서 쓴 도구</th></tr></thead>
+            <tbody>
+              <tr><td>생성 <span class="en">Generate</span></td><td>코드를 만든다</td><td>Codex (아무 도구나 가능)</td></tr>
+              <tr><td>안내 <span class="en">Guide</span></td><td>작업 전에 프로젝트 가이드라인, 규칙, 아키텍처를 에이전트에 넣어 준다. 발표자는 이것이 토큰 비용도 줄인다고 말한다</td><td>컨텍스트 보강 <span class="en">context augmentation</span></td></tr>
+              <tr><td>검증 <span class="en">Verify</span></td><td>생성 직후 보안, 품질, 유지보수성 문제가 새로 들어오지 않았는지 확인한다</td><td>에이전트 분석 <span class="en">agentic analysis</span></td></tr>
+              <tr><td>해결 <span class="en">Solve</span></td><td>발견된 문제를 빠르게 고친다</td><td>이슈 목록 보기, 찾아 고치기</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="loops">
+        <header><span class="num">07</span><h2>안쪽 루프와 바깥 루프 <span class="ts">09:40</span></h2></header>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">바깥 루프 <span class="en">outer loop</span></span>
+            <p>전통적인 CI다. 코드를 쓰고, GitHub나 GitLab에 올리고, 파이프라인이 돈다. 테스트나 스캔이 실패하면 IDE로 돌아가 고치고 다시 올린다. 또 실패한다.</p>
+            <p class="verdict">발표자는 이 왕복을 "많은 개발자의 골칫거리"라고 표현한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">안쪽 루프 <span class="en">inner loop</span></span>
+            <p>IDE와 터미널이다. 코드 생성이 끝나자마자 올리지 않고 그 자리에서 검증한다.</p>
+            <p class="verdict">검증을 앞당기는 것, 즉 <b>왼쪽으로 옮기기</b><span class="en">shift left</span>가 시간을 아낀다.</p>
+          </div>
+        </div>
+        <p>이 발표의 실습은 모두 안쪽 루프 안에서 돈다. 터미널을 떠나지 않고 안내, 검증, 해결을 끝내는 것이 목표다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="project">
+        <header><span class="num">08</span><h2>실습 프로젝트와 심어 둔 취약점 <span class="ts">12:10</span></h2></header>
+        <p>실습은 발표자가 공개한 저장소를 복제한 뒤 <code>apply sonar</code>라는 스크립트를 돌리는 것으로 시작한다. 이 스크립트는 발표자가 만든 개인 도구이고 Sonar 공식 제품이 아니다. UI를 10분씩 클릭하지 않도록 SonarQube Cloud 프로젝트 생성, 첫 스캔, CLI 설치를 한 번에 해 준다. 발표자의 환경에서는 1분이 넘은 적이 없다고 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>프로젝트</td><td>작은 Python 프로젝트. 파일 4개, 전체 200줄 미만</td></tr>
+              <tr><td>심어 둔 문제</td><td>4개. 보안 취약점 3개, 코드 스멜 1개</td></tr>
+              <tr><td>첫 스캔 결과</td><td>보안 등급 E. 가장 낮은 등급이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>문제 1: 소스 코드에 박힌 OpenAI API 키 <span class="ts">16:30</span></h3>
+        <p>환경 변수나 .env 파일 대신 키를 코드에 그대로 적어 두었다. 발표자는 이런 키가 실수로 프로덕션 코드에 올라가는 일이 늘 일어난다고 말한다. 발표자가 인용한 수치로, 공개 저장소에 노출된 비밀 키의 평균 수습 시간은 <strong>90일</strong>이다. 그동안 봇들이 긁어 갈 수 있다.</p>
+
+        <h3>문제 2: SQL 인젝션 <span class="ts">17:20</span></h3>
+        <p>database.py 파일의 검색 함수가 인자를 f-string에 그대로 끼워 넣어 쿼리를 실행한다. 그 인자는 명령줄 인자 <code>sys.argv</code>에서 온다. 즉 <strong>명령줄 인자를 넣을 수 있는 사람이 데이터베이스를 마음대로 조작할 수 있다.</strong></p>
+        <div class="callout">
+          <span class="title">SonarQube가 이걸 찾는 방법</span>
+          <span>기호 실행<span class="en">symbolic execution</span>과 오염 분석<span class="en">taint analysis</span>으로 데이터 흐름을 추적한다. 믿을 수 없는 입력이 들어오는 지점(소스)에서 위험한 실행 지점(싱크)까지, 여러 파일과 함수를 가로질러 경로를 그려 보여 준다. 대시보드에서는 이 경로를 단계별로 볼 수 있다. <span class="ts">21:20</span></span>
+        </div>
+        <p class="note">발표 중 토큰을 환경 변수로 내보내는 단계를 빠뜨려 스크립트가 멈추는 장면이 있다. 저장소 안내대로 SonarQube Cloud 관리 메뉴에서 토큰을 만들고 셸에 export해야 한다. <span class="ts">15:00</span></p>
+      </section>
+
+      <!-- 9 -->
+      <section id="wiring">
+        <header><span class="num">09</span><h2>Codex에 SonarQube 연결하기 <span class="ts">21:50</span></h2></header>
+        <p>스캔이 끝난 뒤 Codex에 플러그인을 붙이는 순서다. 명령 이름은 자막을 바탕으로 적었으니 저장소의 안내를 기준으로 삼자.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>순서</th><th>명령 (자막 기준)</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td><code>codex plugin marketplace add …</code></td><td>SonarQube 마켓플레이스를 Codex에 추가한다 <span class="ts">21:50</span></td></tr>
+              <tr><td>2</td><td>Codex 안에서 <code>/plugins</code> → sonarqube 검색 → 설치</td><td>플러그인을 설치하고 Codex를 다시 연다 <span class="ts">22:40</span></td></tr>
+              <tr><td>3</td><td><code>sonar auth login</code></td><td>Sonar CLI를 인증한다. 플러그인은 이 CLI 위에서 돈다 <span class="ts">23:10</span></td></tr>
+              <tr><td>4</td><td><code>sonar integrate codex</code></td><td>마지막 연결 단계. 아래 네 가지를 프로젝트에 넣는다 <span class="ts">23:40</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>통합 명령이 프로젝트에 넣는 것 <span class="ts">25:20</span></h3>
+        <ul class="plain">
+          <li><strong>비밀 키 탐지 훅</strong></li>
+          <li><strong>AGENTS.md 지시문</strong>: SonarQube 스킬을 쓰라고 에이전트에 알리는 문서</li>
+          <li><strong>스킬들</strong></li>
+          <li><strong>MCP 설정</strong></li>
+        </ul>
+        <p>발표자의 계정에서는 유료 기능인 컨텍스트 보강과 에이전트 분석 두 가지도 함께 설치된다. 무료 계정에서는 보이지 않는다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">에이전트 분석 <span class="en">agentic analysis</span> <span class="ts">26:10</span></span>
+            <p>에이전트가 파일을 쓰거나 고칠 때마다 <strong>즉시 실행되는 훅</strong>이다. 방금 쓴 코드를 서버 쪽에서 분석한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">컨텍스트 보강 <span class="en">context augmentation</span> <span class="ts">26:30</span></span>
+            <p>Codex가 과제를 시작하려는 순간을 감지해 <strong>가이드라인과 관련 아키텍처 정보</strong>를 먼저 넣어 준다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="secrets">
+        <header><span class="num">10</span><h2>비밀 키 차단 훅 <span class="ts">27:00</span></h2></header>
+        <p>Codex를 열면 새 훅들을 신뢰할지 묻고, SonarQube MCP 서버가 올라온다. 발표자는 플러그인이 권하는 첫 시험을 그대로 해 본다. 가짜 토큰을 넣고 "내 토큰으로 커밋을 올려 줘"라고 요청한다.</p>
+        <ul class="plain">
+          <li>요청은 <strong>즉시 차단</strong>된다.</li>
+          <li>비밀 키는 모델의 컨텍스트에 들어가지 않는다. 로그에도 남지 않는다.</li>
+          <li>비밀 키가 들어 있는 파일을 읽어 달라고 해도 차단된다. Codex는 그 내용을 보지 못한다.</li>
+          <li>에이전트가 자기 스킬 파일을 읽을 때도 같은 스캔이 돈다. <span class="ts">33:10</span></li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">청중 질문: 파일을 읽는 스크립트를 쓰게 하면? <span class="ts">28:00</span></span>
+          <span>발표자는 가능하다고 인정했다. 이 훅은 주로 <strong>도구 호출</strong>과 <strong>프롬프트 제출</strong> 시점에 걸린다. 그 경로를 우회하면 훅이 안 돌 수 있다. 일반적인 사용, 즉 Codex의 기본 도구를 쓰고 프롬프트에 키를 흘리는 경우는 잡는다. 도입부에서 말한 "격리는 정확성이 아니다"가 여기서도 적용된다. 이 훅은 한 겹일 뿐이다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="fix">
+        <header><span class="num">11</span><h2>이슈 목록 보기와 찾아 고치기 <span class="ts">29:00</span></h2></header>
+        <p>MCP 서버가 올라오면 Codex가 SonarQube Cloud와 대화할 수 있다. "내 프로젝트의 이슈를 모두 보여 줘"라고 하면 대시보드에서 본 것과 같은 이슈가 터미널에 나온다. Sonar와 관련된 요청이면 Codex가 알아서 관련 스킬을 고른다. 발표자는 정상 네트워크라면 15초쯤 걸릴 일이라고 말한다. <span class="ts">34:40</span></p>
+
+        <h3>규칙 S8702: 에이전트가 다른 에이전트에게 뚫릴 코드를 쓰지 않도록 <span class="ts">35:10</span></h3>
+        <p>목록에서 발표자가 고르는 것은 S8702다. Sonar가 <strong>AI 에이전트 워크플로를 위해 따로 쓴 규칙</strong>이라고 한다. 앞에서 본 명령줄 인자가 데이터베이스까지 흘러가는 흐름이 바로 이 규칙에 걸린다. Codex에게 "S8702를 고쳐 줘"라고만 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>순서</th><th>일어나는 일</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Codex가 코드를 고친다. 결과는 매개변수화된 쿼리<span class="en">parameterized query</span>다</td></tr>
+              <tr><td>2</td><td>편집이 끝나는 순간 에이전트 분석의 <strong>편집 직후 훅</strong><span class="en">post tool use hook</span>이 돈다. 수정으로 새 취약점이 생겼는지 서버 쪽에서 스캔한다 <span class="ts">36:00</span></td></tr>
+              <tr><td>3</td><td>훅은 그 파일에 다른 이슈가 남아 있다고 알려 주지만, 그건 미리 심어 둔 기존 문제다. <strong>바뀐 코드에서 새 문제가 생겼는지만</strong> 본다. 파일 전체를 대신 고쳐 주려 하지 않는다 <span class="ts">37:20</span></td></tr>
+              <tr><td>4</td><td>다시 분석한 결과 통과. S8702는 더 이상 보고되지 않는다 <span class="ts">37:50</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">히드라 문제</span>
+          <span>발표자가 든 비유다. 이슈 하나를 고쳐 달라고 하면 세 개가 새로 튀어나오고, 그걸 고치다 보면 또 늘어난다. 편집 직후 자동 검사는 수정이 새 취약점을 만들지 않았다는 것을 그 자리에서 확인해 이 번짐을 막는다. 에이전트 분석이 없는 요금제라면 다음 CI 푸시 때 같은 스캔이 돈다. 루프가 닫히는 시점만 늦어진다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="newcode">
+        <header><span class="num">12</span><h2>새 기능 추가와 컨텍스트 보강 <span class="ts">38:20</span></h2></header>
+        <p>마지막 실습은 고치기가 아니라 새로 쓰기다. database.py에 "ID로 과제를 삭제하는 함수"를 추가해 달라고 한다. 이때는 컨텍스트 보강이 먼저 움직인다. 프로젝트의 규칙과 아키텍처를 가져와 에이전트에 넣은 뒤 구현이 시작된다. 구현이 끝나면 에이전트 분석 훅이 다시 검사한다. 문제가 있으면 Codex가 고쳐질 때까지 반복한다.</p>
+        <p>이 한 번의 요청 안에 <strong>안내, 검증, 해결</strong>이 모두 들어 있고, 전부 터미널 안에서 끝난다. 발표자가 말하는 "루프를 닫는다"는 것이 이것이다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="qa">
+        <header><span class="num">13</span><h2>청중 질문 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>질문</th><th>발표자의 답</th></tr></thead>
+            <tbody>
+              <tr><td>개발 워크플로에 부담이 늘지 않나 <span class="ts">30:30</span></td><td>프로비저닝 스크립트는 1분 안쪽이고, MCP는 다른 MCP와 같은 수준이다. 추가 부담은 없다고 본다</td></tr>
+              <tr><td>CLI와 MCP는 무슨 관계인가 <span class="ts">32:10</span></td><td>CLI는 설정과 프로비저닝을 맡는다. MCP는 Docker 안에서 돌고, 스킬이 필요할 때 거친다. 플러그인은 CLI 위에 얹혀 있어서, 요청에 따라 MCP 스킬로 가기도 하고 CLI 명령으로 가기도 한다</td></tr>
+              <tr><td>엔터프라이즈 서버에서도 되나 <span class="ts">34:00</span></td><td>Cloud, Server, Enterprise, 무료 요금제 모두 가능하다. 단 컨텍스트 보강과 에이전트 분석은 무료 요금제에 없다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">요금제별 제공 범위는 발표 시점의 설명이다. 실제 적용 전에 Sonar 문서로 확인하자.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="conclusion">
+        <header><span class="num">14</span><h2>결론 <span class="ts">40:10</span></h2></header>
+        <ul class="plain">
+          <li>비밀 키는 모델에 닿기 전에 막힌다.</li>
+          <li>이미 있는 이슈는 터미널에서 바로 불러와 고칠 수 있다.</li>
+          <li>새로 시키는 작업에는 더 엄격한 검증 층이 감싸진다.</li>
+        </ul>
+        <p>두 발표자의 메시지를 겹쳐 보면 이렇다. 에이전트가 "고쳤다"고 말하는 것은 완료가 아니다. 독립된 검사가 증거를 내놓아야 완료다. 그 검사는 사람이 나중에 하는 것이 아니라 <strong>에이전트가 코드를 건드리는 순간마다 자동으로 돌아야</strong> 한다. 그리고 어떤 검사도 혼자서는 증명이 아니므로, 여러 겹을 쌓고 마지막 결정은 사람이 쥔다.</p>
+      </section>
+
+      <!-- 15 -->
+      <section id="recap">
+        <header><span class="num">15</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li><strong>완료는 증거와 함께</strong>다. 리뷰할 수 있는 diff와 도구가 남긴 결과가 있어야 "끝났다"고 말한다.</li>
+          <li>에이전트의 자기 비판은 독립된 검증기가 아니다. 컴파일러, 테스트, 정적 분석에 따로 묻고 반증을 찾는다.</li>
+          <li><strong>격리는 정확성이 아니다.</strong> 실행 층은 무엇을 할 수 있는지, 산출물 층은 결과가 옳은지를 본다. 둘 다 필요하다.</li>
+          <li>검사 규칙은 스킬, MCP, 훅으로 <strong>루프 안에</strong> 넣는다. 사람은 의도, 예외, 출시 결정을 쥔다.</li>
+          <li>발표자가 인용한 설문: AI가 쓴 코드 42%, 믿지 않는 개발자 96%, 완전히 검증하는 개발자 절반 미만. <strong>병목은 검증</strong>이다.</li>
+          <li>Sonar의 사이클은 생성, 안내, 검증, 해결이다. 안내는 컨텍스트 보강, 검증은 에이전트 분석이 맡는다.</li>
+          <li>검증은 CI(바깥 루프)보다 IDE와 터미널(안쪽 루프)에서 먼저 끝내야 왕복이 준다.</li>
+          <li>비밀 키 차단 훅은 도구 호출과 프롬프트 제출을 지킨다. 다른 경로로는 우회될 수 있으니 한 겹으로만 믿지 않는다.</li>
+          <li>편집 직후 훅은 <strong>바뀐 코드에서 새 문제가 생겼는지만</strong> 본다. 기존 문제까지 대신 고치려 들지 않는다.</li>
+          <li>S8702처럼 에이전트 워크플로 전용 규칙이 있다. 명령줄 인자가 쿼리까지 그대로 흐르는 코드가 대표 사례다.</li>
+        </ol>
+      </section>
+
+      <!-- 16 -->
+      <section id="quiz">
+        <header><span class="num">16</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>도입부 발표자가 말한 "완료"의 정의는?</span></summary><div class="answer">리뷰할 수 있는 diff와 도구가 남긴 증거가 함께 있는 상태. "고쳤습니다"라는 말만으로는 완료가 아니다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>코딩 에이전트의 흔한 실패 세 가지는?</span></summary><div class="answer">맥락 부족, 국소 수정이 전역 불변 조건을 깨는 것, 검증용으로 만든 테스트가 같은 오해를 되풀이하는 것.</div></details>
+          <details><summary><span class="qn">Q3</span><span>실행 층과 산출물 층은 각각 어떤 질문에 답하나?</span></summary><div class="answer">실행 층은 에이전트가 무엇을 할 수 있는가(도구, 범위, 승인). 산출물 층은 나온 결과가 받아들일 만한가(테스트, 분석, 정책, 의도).</div></details>
+          <details><summary><span class="qn">Q4</span><span>"샌드박스는 쓰기를 가둘 수 있어도 쿼리가 안전하다고 증명하지 못한다"는 말의 뜻은?</span></summary><div class="answer">격리는 행동 범위를 제한할 뿐 결과의 정확성을 보장하지 않는다. 그래서 경계가 다른 검사를 여러 겹 쌓아야 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>Sonar 설문에서 42%, 96%, 절반 미만은 각각 무엇인가?</span></summary><div class="answer">커밋된 코드 중 AI가 썼거나 도운 비율 42%, AI 코드를 완전히 믿지 않는 개발자 96%, 머지 전에 완전히 검증하는 개발자 절반 미만. 모두 발표자가 인용한 수치다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>에이전트 중심 개발 사이클의 네 단계와 SonarQube가 맡는 세 단계는?</span></summary><div class="answer">생성, 안내, 검증, 해결. 생성은 아무 도구나 쓰고, 안내, 검증, 해결을 SonarQube가 맡는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>안쪽 루프와 바깥 루프의 차이는?</span></summary><div class="answer">바깥 루프는 푸시 후 CI 파이프라인에서 검증한다. 안쪽 루프는 IDE와 터미널에서 생성 직후 검증한다. 안쪽에서 끝내면 실패하고 되돌아오는 왕복이 준다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>실습 프로젝트의 SQL 인젝션은 왜 위험한가?</span></summary><div class="answer">명령줄 인자가 f-string에 그대로 들어가 쿼리로 실행된다. 명령줄 인자를 넣을 수 있는 사람이 데이터베이스를 조작할 수 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>비밀 키 차단 훅이 우회될 수 있는 경우는?</span></summary><div class="answer">훅은 도구 호출과 프롬프트 제출 시점에 걸린다. 에이전트가 파일을 읽는 스크립트를 따로 만들어 실행하는 식으로 그 경로를 피하면 훅이 안 돌 수 있다고 발표자가 인정했다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>편집 직후 훅이 기존 이슈를 발견했을 때 하는 일은?</span></summary><div class="answer">기존 이슈가 있다고 알려 주되 대신 고치려 하지 않는다. 바뀐 코드에서 새 문제가 생겼는지만 검사한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>컨텍스트 보강과 에이전트 분석은 각각 언제 움직이나?</span></summary><div class="answer">컨텍스트 보강은 과제를 시작하기 직전에 규칙과 아키텍처를 넣어 준다. 에이전트 분석은 파일을 쓰거나 고친 직후에 서버 쪽 분석을 돌린다. 둘 다 무료 요금제에는 없다.</div></details>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="apply">
+        <header><span class="num">17</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트 과제의 "완료" 기준을 글로 정한다<span class="how">리뷰 가능한 diff + 테스트 또는 분석 결과. "고쳤다"는 메시지만으로는 완료로 치지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>비밀 키가 모델 입력에 닿기 전에 가로채는 훅을 둔다<span class="how">확인: 프롬프트와 도구 호출 양쪽에서 걸리는가. 우회 경로를 적어 둔다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트가 파일을 고친 직후 자동으로 도는 검사를 붙인다<span class="how">정적 분석이나 테스트. 없으면 최소한 CI에서 같은 검사가 돌게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>프로젝트 규칙과 아키텍처를 에이전트가 읽는 문서로 만든다<span class="how">AGENTS.md 같은 파일. 과제 시작 전에 들어가야 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>검증을 CI보다 앞당긴다<span class="how">확인: 푸시 전에 터미널이나 IDE에서 같은 검사를 돌릴 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>외부 입력이 쿼리나 명령까지 그대로 흐르는 경로를 찾는다<span class="how">명령줄 인자, 요청 파라미터, 환경 변수가 f-string이나 문자열 결합으로 실행 지점에 닿는 곳</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>검사를 한 겹으로만 믿지 않는다<span class="how">샌드박스, 훅, 정적 분석, 테스트, 사람 리뷰 중 무엇이 무엇을 못 보는지 적어 둔다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>사람이 쥐는 결정을 정해 둔다<span class="how">의도 확인, 예외 승인, 출시 여부</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 18 -->
+      <section id="glossary">
+        <header><span class="num">18</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>Codex</td><td>OpenAI의 코딩 에이전트. 발표에서는 CLI, 샌드박스, 훅, 플러그인 기능을 쓴다</td></tr>
+              <tr><td>SonarQube</td><td>Sonar의 코드 품질·보안 분석 도구. Cloud, Server, Enterprise, 무료 요금제가 있다</td></tr>
+              <tr><td>불변 조건</td><td>Invariant. 코드가 어떻게 바뀌어도 항상 지켜져야 하는 규칙</td></tr>
+              <tr><td>인수 기준</td><td>Acceptance criteria. 과제가 끝났다고 인정하기 위한 조건 목록</td></tr>
+              <tr><td>검증기</td><td>Oracle. 결과가 맞는지 판정해 주는 독립된 기준이나 도구</td></tr>
+              <tr><td>심층 방어</td><td>Defense in depth. 경계가 다른 통제를 여러 겹 쌓아 하나가 뚫려도 다음이 막게 하는 설계</td></tr>
+              <tr><td>스킬</td><td>특정 과제를 수행하는 절차를 적어 에이전트에 제공하는 문서</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 모델에 도구와 컨텍스트를 구조화해 제공하는 연결 규약</td></tr>
+              <tr><td>훅</td><td>Hook. 프롬프트 제출, 도구 호출, 편집 직후 같은 특정 시점에 자동으로 도는 검사나 동작</td></tr>
+              <tr><td>편집 직후 훅</td><td>Post tool use hook. 에이전트가 파일을 쓰거나 고치는 도구를 쓴 직후에 실행되는 훅</td></tr>
+              <tr><td>안쪽 루프 / 바깥 루프</td><td>Inner loop는 IDE와 터미널에서 도는 짧은 주기, outer loop는 푸시 후 CI에서 도는 긴 주기</td></tr>
+              <tr><td>왼쪽으로 옮기기</td><td>Shift left. 검증을 개발 흐름의 더 이른 단계로 당기는 것</td></tr>
+              <tr><td>코드 스멜</td><td>Code smell. 당장 버그는 아니지만 유지보수를 어렵게 하는 코드 패턴</td></tr>
+              <tr><td>SQL 인젝션</td><td>외부 입력이 SQL 문에 그대로 섞여 들어가 공격자가 쿼리를 바꿀 수 있는 취약점</td></tr>
+              <tr><td>매개변수화된 쿼리</td><td>Parameterized query. 값을 문자열에 끼워 넣지 않고 자리 표시자로 분리해 넘기는 안전한 쿼리 방식</td></tr>
+              <tr><td>오염 분석</td><td>Taint analysis. 믿을 수 없는 입력(소스)이 위험한 실행 지점(싱크)까지 흐르는 경로를 추적하는 분석</td></tr>
+              <tr><td>기호 실행</td><td>Symbolic execution. 실제 값 대신 기호로 프로그램 경로를 따라가며 가능한 상태를 분석하는 기법</td></tr>
+              <tr><td>컨텍스트 보강</td><td>Context augmentation. 과제 시작 전에 프로젝트 규칙과 아키텍처를 에이전트에 넣어 주는 SonarQube 기능</td></tr>
+              <tr><td>에이전트 분석</td><td>Agentic analysis. 에이전트의 편집 직후 서버 쪽 분석을 자동으로 돌리는 SonarQube 기능</td></tr>
+              <tr><td>S8702</td><td>Sonar가 AI 에이전트 워크플로용으로 만들었다고 소개한 규칙. 외부 입력이 실행 지점까지 그대로 흐르는 코드를 잡는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 19 -->
+      <section id="timeline">
+        <header><span class="num">19</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>OpenAI Codex 팀 도입부, 세 가지 주장</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>에이전트 루프와 과제의 구성 요소</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>완료의 정의: diff와 증거</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>흔한 실패 모드, 자기 비판의 한계</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>격리 ≠ 정확성, 실행 층과 산출물 층</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>피드백 계약: 스킬, MCP, 훅</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>에이전트 프로세스 점검 항목</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>Killian Carlsen-Phelan 소개</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>설문: 42%, 96%, 절반 미만</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>병목은 생성에서 검증으로</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>에이전트 중심 개발 사이클 네 단계</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>안쪽 루프와 바깥 루프</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>두 도구 예고: 컨텍스트 보강, 에이전트 분석</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>실습 시작: 프로비저닝 스크립트</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>프로젝트 소개: 4개 파일, 취약점 4개</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>소스에 박힌 API 키, 수습 90일</td></tr>
+              <tr><td><span class="ts">17:20</span></td><td>SQL 인젝션과 명령줄 인자</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>오늘 쓸 세 도구: 비밀 키 훅, 이슈 목록, 찾아 고치기</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>대시보드: 보안 등급 E, 오염 흐름</td></tr>
+              <tr><td><span class="ts">21:50</span></td><td>마켓플레이스 추가, 플러그인 설치</td></tr>
+              <tr><td><span class="ts">23:10</span></td><td>CLI 인증, 통합 명령</td></tr>
+              <tr><td><span class="ts">25:20</span></td><td>통합이 넣어 주는 것: 훅, AGENTS.md, 스킬, MCP</td></tr>
+              <tr><td><span class="ts">26:00</span></td><td>에이전트 분석과 컨텍스트 보강 설명</td></tr>
+              <tr><td><span class="ts">27:00</span></td><td>비밀 키 차단 시연</td></tr>
+              <tr><td><span class="ts">28:00</span></td><td>질문: 스크립트로 우회하면?</td></tr>
+              <tr><td><span class="ts">29:00</span></td><td>MCP 서버와 이슈 목록</td></tr>
+              <tr><td><span class="ts">30:30</span></td><td>질문: 워크플로 부담</td></tr>
+              <tr><td><span class="ts">32:10</span></td><td>질문: CLI와 MCP의 관계</td></tr>
+              <tr><td><span class="ts">34:00</span></td><td>질문: 요금제별 제공 범위</td></tr>
+              <tr><td><span class="ts">34:40</span></td><td>터미널에 뜬 이슈 목록, S8702</td></tr>
+              <tr><td><span class="ts">35:40</span></td><td>"S8702를 고쳐 줘"</td></tr>
+              <tr><td><span class="ts">36:00</span></td><td>편집 직후 훅, 히드라 비유</td></tr>
+              <tr><td><span class="ts">37:10</span></td><td>매개변수화된 쿼리로 수정, 재검사 통과</td></tr>
+              <tr><td><span class="ts">38:20</span></td><td>새 함수 추가와 컨텍스트 보강</td></tr>
+              <tr><td><span class="ts">40:10</span></td><td>마무리와 부스 안내</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'bI8WyG9YB0I:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

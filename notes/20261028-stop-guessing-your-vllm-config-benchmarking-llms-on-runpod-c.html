@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>vLLM 설정 실측 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#guessing">다들 추측하고 있다</a></li>
+      <li><a href="#purpose">목적부터 묻는다</a></li>
+      <li><a href="#version">버전이 맞아야 돌아간다</a></li>
+      <li><a href="#benchpod">BenchPod는 무엇인가</a></li>
+      <li><a href="#kimi">B300 위의 Kimi K3</a></li>
+      <li><a href="#dashboard">대시보드에서 보는 것</a></li>
+      <li><a href="#demo">데모: 배포와 실시간 지표</a></li>
+      <li><a href="#experiment">실험: 배치 토큰 수 바꾸기</a></li>
+      <li><a href="#production">측정한 뒤 프로덕션으로</a></li>
+      <li><a href="#internal">Runpod 안에서 쓰는 모습</a></li>
+      <li><a href="#steps">발표자가 권하는 순서</a></li>
+      <li><a href="#smaller">가장 큰 모델이 늘 답은 아니다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-28 · 16분 · 영어 발표 한글 정리</span>
+      <h1>vLLM 설정, 감으로 정하지 말고 재 보자</h1>
+      <p class="lead">새 모델이 나오면 많은 팀이 기본 설정을 그대로 쓰거나 감으로 손본다. 발표자는 설정을 바꿔 가며 벤치마크를 돌리고, 우리 용도에 맞는 지표로 이긴 설정을 골라 배포하자고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=P_0_Th_ZzIg" target="_blank" rel="noopener">Stop Guessing Your vLLM Config: Benchmarking LLMs on Runpod</a></span>
+        <span>발표: Chris Vela (Runpod 포워드 디플로이드 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다(Chris Bella → Chris Vela, VLM → vLLM, Kim K3 → Kimi K3, KB cache → KV cache). 확실하지 않은 것은 들린 대로 쓰고 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>많은 팀이 새 모델을 띄울 때 vLLM 레시피의 기본 설정을 그대로 쓴다. 발표자는 이걸 <strong>"추측"</strong>이라 부른다.</li>
+        <li>모델과 GPU를 고르기 전에 <strong>무엇을 할지</strong>, <strong>동시에 몇 명이 쓸지</strong>부터 묻는다. 100만 토큰 컨텍스트가 늘 필요한 건 아니다.</li>
+        <li><strong>버전이 맞아야 돌아간다.</strong> 새 모델은 최신 vLLM과 맞는 CUDA가 필요하다. 출시 다음 날 바로 프로덕션에 올리지 않는다.</li>
+        <li>설정을 바꿀 때마다 재시작하고 가중치를 다시 올리면 <strong>30분씩</strong> 버린다. BenchPod는 설정 변경, 벤치마크, 지표 확인을 한곳에 모은 Runpod 템플릿이다. 발표 시점에는 출시 전이었다.</li>
+        <li>데모에서 <code>max_num_batched_tokens</code>를 키우자 <strong>첫 토큰 시간은 거의 그대로</strong>였고 <strong>토큰 사이 간격은 꽤 줄었다.</strong></li>
+        <li>발표자가 권하는 순서: GPU를 빌린다, 설정을 비교한다, 필요한 지표로 최적화한다, <strong>이긴 설정을 배포한다.</strong></li>
+        <li><strong>가장 큰 모델이 늘 답은 아니다.</strong> B200 노드는 한 달 약 4만 달러다. 발표자는 더 작은 DeepSeek도 잘 쓴다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="guessing">
+        <header><span class="num">01</span><h2>다들 추측하고 있다 <span class="ts">00:50</span></h2></header>
+        <p>Runpod는 GPU를 쉽게 빌려 주는 클라우드다. 연구 단계부터 서비스 운영까지 쓴다. 발표자는 고객 곁에서 실제 환경에 제품을 붙이는 <strong>포워드 디플로이드 엔지니어</strong> <span class="en">forward deployed engineer</span>다.</p>
+        <p>발표자가 고객에게서 자주 보는 장면은 이렇다.</p>
+        <ul class="plain">
+          <li>최신 모델을 쓰고 싶은데 어떻게 띄우는지 모른다.</li>
+          <li>프로덕션으로 가려는데 어떤 설정을 만져야 할지 모른다.</li>
+          <li>그래서 기본 설정을 그대로 쓴다. 출발점은 대개 <strong>vLLM 레시피</strong> <span class="en">vLLM recipes</span>다.</li>
+        </ul>
+        <p>레시피는 좋은 출발점이다. 문제는 그다음이다. 감으로 고른 설정으로는 상사나 스태프 엔지니어에게 "이게 더 낫다"고 보여 줄 수 없다. <strong>데이터가 있어야 한다.</strong></p>
+        <h3>흔한 실수 세 가지 <span class="ts">01:40</span></h3>
+        <ul class="plain">
+          <li>vLLM 버전이 틀렸다.</li>
+          <li>최신 개발판 <span class="en">nightly</span>을 쓰지 않는다.</li>
+          <li>컨텍스트 창 <span class="en">context window</span> 크기를 잘못 잡았다.</li>
+        </ul>
+      </section>
+
+      <!-- 2 -->
+      <section id="purpose">
+        <header><span class="num">02</span><h2>목적부터 묻는다 <span class="ts">01:50</span></h2></header>
+        <p>발표자는 한 걸음 물러서서 묻는 것부터 시작한다. 이 모델로 무엇을 하려는가.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>먼저 물을 것</th><th>왜 묻나</th></tr></thead>
+            <tbody>
+              <tr><td>어떤 일을 시키나</td><td>코딩 에이전트처럼 긴 작업인지, 요약처럼 아주 기본적인 작업인지에 따라 필요한 모델이 다르다. 100만 토큰 컨텍스트의 Kimi K3가 늘 필요한 건 아니다.</td></tr>
+              <tr><td>동시에 몇 명이 쓰나</td><td>다들 가장 싼 최소 GPU를 원한다. 하지만 동시 사용자가 늘면 <strong>KV 캐시</strong> <span class="en">KV cache</span>를 어떻게 쓸지 생각해야 한다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이런 작은 최적화 손잡이가 많다. 프로덕션에 가기 전에 하나씩 정해야 한다. 그런데 다들 빨리 움직이려다 이 단계를 건너뛴다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="version">
+        <header><span class="num">03</span><h2>버전이 맞아야 돌아간다 <span class="ts">03:00</span></h2></header>
+        <p>발표자의 예: Kimi K3를 vLLM 0.27 같은 예전 버전으로 띄우면 돌아가지 않는다. 모델이 나오는 속도를 코드가 따라가지 못한다. 맞는 버전을 써야 한다.</p>
+        <ul class="plain">
+          <li>그래서 버전 맞추기가 하나의 CI/CD 작업이 된다.</li>
+          <li>내부를 모르는 사람은 여기서 막힌다. 오류가 나도 왜인지 모른다.</li>
+          <li>원인은 대개 새 모델에 필요한 계층이 아직 구현되지 않았거나, 아직 개발 중인 코드라는 데 있다.</li>
+          <li>CUDA 버전도 같다. 발표자에 따르면 Kimi K3는 CUDA 12.8에서 돌아가지 않고 13.0에서 돌아갔다. <span class="ts">07:00</span></li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">출시 다음 날 프로덕션에 올리지 않는다 <span class="ts">03:30</span></span>
+          <span>새 모델이 나온 직후에는 환각 <span class="en">hallucination</span>이 많이 보일 것이라고 발표자는 말한다. 그 상태로는 아직 준비가 안 됐다는 판단이다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="benchpod">
+        <header><span class="num">04</span><h2>BenchPod는 무엇인가 <span class="ts">03:50</span></h2></header>
+        <p>발표자가 만든 BenchPod는 vLLM 위에 얹은 Runpod 템플릿이다. 발표 시점에는 공개 전이었고, 그달 말에 나올 예정이라고 했다.</p>
+        <p>vLLM만으로도 벤치마크는 할 수 있다. BenchPod는 그걸 <strong>한곳에 모은다.</strong> 지표를 한 화면에서 보고, 설정을 빨리 바꿀 수 있다.</p>
+        <h3>줄이려는 시간 <span class="ts">04:10</span></h3>
+        <p>보통은 설정을 바꿀 때마다 이미지를 재시작한다. 콜드 스타트 <span class="en">cold start</span>를 기다린다. Kimi K3라면 가중치를 내려받아 GPU에 올리기까지 30분쯤 걸린다. 에이전트에게 맡겨 둔 일이면 상관없지만, 빨리 움직여야 할 때는 버리는 시간이다.</p>
+        <h3>구성 <span class="ts">05:00</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>부분</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>Docker 이미지</td><td>vLLM 공식 OpenAI 호환 서버 이미지 <span class="en">vllm-openai</span> 위에 만든다. 모든 vLLM 버전을 미리 갖춰 둘 예정이다.</td></tr>
+              <tr><td>FastAPI 앱</td><td>작은 설정 묶음 <span class="en">payload</span>이 FastAPI 애플리케이션을 띄운다. 에이전트도 이 API를 쓸 수 있다.</td></tr>
+              <tr><td>모델 지정</td><td>어떤 모델을 서빙할지 직접 고른다.</td></tr>
+              <tr><td>워치독</td><td><span class="en">watchdog</span>. 서버가 죽으면 스스로 되살린다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">자동 복구 사례 <span class="ts">05:30</span></span>
+          <span>발표 직전 일요일, 사내 Kimi K3 인스턴스가 죽었다가 스스로 살아났다. 노드 4개로 돌리고 있어서 사내 사용자는 아무 문제도 느끼지 못했다고 한다.</span>
+        </div>
+        <p>또 하나의 장점으로 발표자는 장비를 꼽는다. "Kimi K3를 B300에서 돌리면 어떨까" 하는 궁금증을 글로 읽고 끝내지 않고, 실제로 빌려서 시험해 볼 수 있다는 것이다. <span class="ts">04:40</span></p>
+        <p class="note">발표자는 Runpod 직원이고 BenchPod는 Runpod 템플릿이다. 자동 복구 사례, 장비를 바로 빌릴 수 있다는 장점, 뒤에 나오는 9분 콜드 스타트는 모두 자기 회사 제품 이야기이니 감안해 읽자.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="kimi">
+        <header><span class="num">05</span><h2>B300 위의 Kimi K3 <span class="ts">06:00</span></h2></header>
+        <p>Runpod 팀은 Kimi K3를 많이 쓴다. 발표자는 이 모델의 컨텍스트를 100만 토큰이라고 소개한다. 그런데 B300 한 대에서는 100만까지 쓸 수 없고 절반만 쓴다고 했다.</p>
+
+        <figure class="chart" aria-label="Kimi K3 컨텍스트 비교: 모델이 지원하는 길이 100만 토큰, B300 한 대에서 쓰는 길이 약 50만 토큰">
+          <span class="chart-title">Kimi K3 컨텍스트 길이 (토큰)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>모델이 지원하는 길이</span><span class="val">1,000,000</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="모델이 지원하는 길이: 100만 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>B300 한 대에서 쓰는 길이</span><span class="val">≈ 500,000</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="B300 한 대: 약 50만 토큰"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50만</span><span>100만</span></div>
+          <span class="caption">발표자는 "절반"이라고만 말했다. 50만은 그 말을 숫자로 옮긴 것이다. "한 대"가 GPU 한 장인지 GPU 여러 장을 묶은 노드인지는 밝히지 않았다.</span>
+        </figure>
+
+        <p>절반이라도 충분하다는 게 발표자의 경험이다.</p>
+        <ul class="plain">
+          <li>팀은 이 모델을 주로 코딩 에이전트에 쓴다. 긴 작업을 하기에 충분하다.</li>
+          <li>KV 캐시도 잘 활용한다.</li>
+          <li>첫 토큰이 나오기까지 걸리는 시간 <span class="en">TTFT</span>이 아주 짧다.</li>
+        </ul>
+        <p class="note">발표자는 "time to first second"라고 말했지만, 뒤에서 TTFT라는 이름을 직접 쓰는 것으로 보아 첫 토큰까지 걸린 시간을 뜻한다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="dashboard">
+        <header><span class="num">06</span><h2>대시보드에서 보는 것 <span class="ts">06:50</span></h2></header>
+        <p>BenchPod 대시보드에는 지표가 많다. 복잡해 보이지만 묶으면 네 가지다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>보는 것</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>GPU 상태</td><td>GPU 지표와 CUDA 버전. 발표자는 CUDA 버전을 "아주 중요하다"고 강조한다.</td></tr>
+              <tr><td>벤치마크</td><td>실행한 벤치마크 결과를 모아 보고 비교한다.</td></tr>
+              <tr><td>플레이그라운드</td><td>코딩 에이전트에 붙이거나 OpenAI 호환 API를 부르기 전에, 모델이 제대로 답하는지 바로 시험한다.</td></tr>
+              <tr><td>운영 지표 <span class="ts">07:20</span></td><td>콜드 스타트가 얼마나 걸리는지, 실제 트래픽에서 지표가 어떤지 본다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="demo">
+        <header><span class="num">07</span><h2>데모: 배포와 실시간 지표 <span class="ts">07:40</span></h2></header>
+        <h3>배포는 버튼 하나</h3>
+        <ul class="plain">
+          <li>Runpod 콘솔에 BenchPod Docker 이미지를 넣는다.</li>
+          <li>저장 볼륨 <span class="en">storage volume</span>을 붙이고 배포한다.</li>
+          <li>그 시각에는 빈 B300이 없었다. 발표자는 GPU 공급이 그때그때 다르다며 웃었다.</li>
+          <li>빈 GPU가 생기면 그때 배포되도록 걸어 두는 기능도 보여 줬다(추정. 자막이 뭉개져 기능 이름은 알 수 없다).</li>
+        </ul>
+        <h3>실행 중인 Kimi K3 <span class="ts">08:40</span></h3>
+        <ul class="plain">
+          <li>요청이 오가는 동안 지표가 실시간으로 갱신된다.</li>
+          <li>모든 기록은 저장 볼륨에 백업된다.</li>
+          <li>모든 기능이 FastAPI 호출이라 에이전트가 직접 데이터를 가져갈 수 있다. UI를 안 써도 된다.</li>
+        </ul>
+        <blockquote>에이전트 시대로 갈수록, 무슨 일이 일어나는지 한눈에 내려다보는 시야는 여전히 갖고 싶다.<cite>발표자의 말을 옮김 <span class="ts">09:20</span></cite></blockquote>
+        <h3>장애 뒤 9분 만에 복구 <span class="ts">09:40</span></h3>
+        <p>지난 주말 GPU 하나에 장애가 났다. 다시 띄우는 콜드 스타트는 9분이었다. 발표자는 Kimi K3 같은 모델치고 꽤 좋은 숫자라고 평했다.</p>
+
+        <figure class="chart" aria-label="Kimi K3 콜드 스타트 시간 비교: 설정을 바꿀 때마다 기다리는 시간 약 30분, BenchPod 인스턴스 장애 뒤 콜드 스타트 9분">
+          <span class="chart-title">Kimi K3 콜드 스타트 (분)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>설정을 바꿀 때마다 재시작하고 가중치를 다시 올릴 때</span><span class="val">≈ 30</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="재시작과 가중치 적재: 약 30분"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>BenchPod 인스턴스, GPU 장애 뒤 재시작</span><span class="val">9</span></div>
+              <div class="track"><div class="fill key" style="width:30%" title="장애 뒤 재시작: 9분"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>15</span><span>30</span></div>
+          <span class="caption">같은 조건에서 잰 비교가 아니다. 30분은 발표자가 "30분쯤"이라고 말한 대략치다. 9분은 대시보드에 찍힌 실제 기록이다.</span>
+        </figure>
+      </section>
+
+      <!-- 8 -->
+      <section id="experiment">
+        <header><span class="num">08</span><h2>실험: 배치 토큰 수 바꾸기 <span class="ts">09:50</span></h2></header>
+        <p>serve 화면에서 실험을 만들고 바로 적용한다. 서버는 빠르게 재시작된다. 실험 내용은 vLLM의 설정 YAML 파일 그대로다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>바꾼 설정</td><td><code>max_num_batched_tokens</code>. 한 번의 처리 단계에서 함께 처리하는 토큰 수의 상한이다.</td></tr>
+              <tr><td>비교 기준</td><td>vLLM 레시피의 기본 설정</td></tr>
+              <tr><td>부하 <span class="ts">10:30</span></td><td>동시 사용자 1명, 8명, 64명, 192명으로 차례로 늘렸다.</td></tr>
+              <tr><td>첫 토큰 시간</td><td>TTFT. 배치 토큰 수를 늘려도 거의 바뀌지 않았다.</td></tr>
+              <tr><td>토큰 사이 간격 <span class="ts">10:50</span></td><td>ITL <span class="en">inter-token latency</span>. 꽤 줄었다.</td></tr>
+              <tr><td>발표자의 해석</td><td>요청 하나가 긴 작업이라면, 레시피 기본 설정보다 훨씬 빨리 끝난다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>왜 긴 작업에서 차이가 커질까. 응답 하나에 걸리는 시간은 대략 "첫 토큰 시간 + 토큰 사이 간격 × 출력 토큰 수"다(설명을 돕기 위해 덧붙인 근사식). 출력이 길수록 토큰 사이 간격이 줄어든 효과가 쌓인다.</p>
+        <p>여러 실행 결과를 나란히 놓고 비교할 수 있다. 벤치마크 자체는 20분쯤 걸려서 발표 전에 미리 돌려 두었다.</p>
+        <p class="note">화면에 나온 실제 수치는 자막에 없어서 옮기지 않았다.</p>
+        <div class="callout">
+          <span class="title">이 결과를 그대로 가져다 쓰지 않는다</span>
+          <span>발표자의 환경에서 한 번 해 본 결과다. 모델, GPU, 트래픽이 다르면 결과도 달라질 수 있다. 그래서 직접 재 보라는 것이 이 발표의 요지다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="production">
+        <header><span class="num">09</span><h2>측정한 뒤 프로덕션으로 <span class="ts">11:20</span></h2></header>
+        <ul class="plain">
+          <li>이 실험 기능을 에이전트에게 붙이면 실험을 마음껏 돌리게 할 수 있다. 답이 훨씬 빨리 나온다.</li>
+          <li>데이터가 생기면 파드 하나에서 멀티노드 클러스터로, 또는 서버리스 <span class="en">serverless</span>로 옮겨 갈 수 있다.</li>
+          <li>사용량에 따라 늘리고 줄일 계획이라면 이렇게 데이터를 먼저 모아 두는 게 맞다고 발표자는 말한다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">서버리스도 같은 함정이 있다 <span class="ts">11:50</span></span>
+          <span>서버리스에서도 많은 사람이 기본 설정을 그대로 넣는다. 그러고는 워커가 뜨기를 기다리며 고생한다. 실제 데이터를 먼저 재 두면 프로덕션에 갈 준비가 된다. 발표자의 표현으로는 "모든 것을 사실에 근거하게" 하는 일이다.</span>
+        </div>
+        <h3>실험은 직접 정의한다 <span class="ts">13:10</span></h3>
+        <p>예를 들어 "항상 500명이 쓸 것"이라면, 그 조건을 실험으로 만들어 얼마나 버티는지 볼 수 있다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="internal">
+        <header><span class="num">10</span><h2>Runpod 안에서 쓰는 모습 <span class="ts">12:10</span></h2></header>
+        <ul class="plain">
+          <li>발표자는 코딩 에이전트에 연결한 Kimi K3에게 "BenchPod가 뭐야?"라고 물어 답이 나오는 화면을 보여 줬다.</li>
+          <li>사내 인스턴스는 사용자가 50명쯤이다. 그래도 꽤 빠르다고 한다.</li>
+          <li>대부분이 기존에 쓰던 외부 서비스를 떠나 이 인스턴스를 쓴다고 했다. 자막에는 "cloud"로 나오는데, Claude를 말한 것으로 보인다(추정).</li>
+          <li>다른 사내 인스턴스로 GLM, DeepSeek, 그리고 자막상 "quant 3.8"이라는 모델도 돌린다. Qwen 계열로 보인다(추정).</li>
+        </ul>
+        <p>다음 목표는 <strong>스마트 라우터</strong> <span class="en">smart router</span>다. 여러 모델을 어떻게 직접 호스팅해서 남에게 기대지 않을지 고민하고 있다고 한다. <span class="ts">12:40</span></p>
+      </section>
+
+      <!-- 11 -->
+      <section id="steps">
+        <header><span class="num">11</span><h2>발표자가 권하는 순서 <span class="ts">13:30</span></h2></header>
+        <ol class="plain">
+          <li><strong>파드를 고른다.</strong> GPU 장비를 빌린다.</li>
+          <li><strong>모델을 정하고 설정을 비교한다.</strong> vLLM 레시피에서 멈추지 않는다.</li>
+          <li><strong>테스트한다.</strong> 에이전트에게 시험을 맡겨도 된다.</li>
+          <li><strong>필요한 지표 하나로 최적화한다.</strong> ITL, TTFT, TPOT 가운데 우리 용도에 맞는 것을 고른다.</li>
+          <li><strong>이긴 설정을 배포한다.</strong> 서버리스로 옮기고 규모를 늘린다.</li>
+        </ol>
+        <blockquote>vLLM 레시피는 검증됐지만, 프로덕션 준비가 된 건 아니다.<cite>발표자의 말을 옮김 <span class="ts">13:40</span></cite></blockquote>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>뜻</th><th>발표에 나온 맥락</th></tr></thead>
+            <tbody>
+              <tr><td>TTFT</td><td>요청을 보내고 첫 토큰이 나올 때까지 걸린 시간</td><td>Kimi K3의 첫 응답이 아주 빠르다는 대목</td></tr>
+              <tr><td>ITL</td><td>토큰 하나가 나오고 다음 토큰이 나올 때까지의 간격</td><td>배치 토큰 수를 늘리자 줄었고, 긴 작업이 빨리 끝난다는 대목</td></tr>
+              <tr><td>TPOT</td><td>출력 토큰 하나를 만드는 데 드는 평균 시간</td><td>최적화 지표 목록에만 나온다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="shift" aria-label="설정을 고르는 방식의 변화">
+          <div><span class="tag">추측</span><b>레시피 기본값을 그대로 쓴다</b><span class="muted">왜 이 설정인지 데이터로 말할 수 없다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">측정</span><b>설정을 비교해 이긴 것을 배포한다</b><span class="muted">우리 용도의 지표와 부하로 잰 결과가 근거다</span></div>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="smaller">
+        <header><span class="num">12</span><h2>가장 큰 모델이 늘 답은 아니다 <span class="ts">14:20</span></h2></header>
+        <p>발표자가 Kimi K3를 쓰며 느낀 점은, 팀에 꼭 필요한 건 아닐 수 있다는 것이다. 많은 사람이 더 작은 모델을 써도 된다는 걸 생각하지 않는다.</p>
+        <div class="callout">
+          <span class="title">비용 감각 <span class="ts">14:40</span></span>
+          <span>Runpod에서 B200 노드 하나는 한 달에 약 4만 달러다. 값은 조금 오르거나 내릴 수 있다. 아주 강한 장비지만, 프런티어 모델이라는 이유만으로 고를 일은 아니다.</span>
+        </div>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Kimi K3</span>
+            <p>발표자는 아주 세밀하게 풀어야 하는 긴 작업에 쓴다.</p>
+            <p class="verdict">팀은 B300에서 코딩 에이전트용으로 돌린다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">DeepSeek · H200 4장 <span class="ts">15:10</span></span>
+            <p>발표자는 H200 네 장으로 DeepSeek를 돌린다. 일을 아주 잘한다고 했다.</p>
+            <p class="verdict">더 작은 장비로도 <b>충분한 경우</b>가 있다.</p>
+          </div>
+        </div>
+        <h3>모델 말고도 챙길 것 <span class="ts">15:20</span></h3>
+        <ul class="plain">
+          <li>도구 선택이 모델과 맞아야 한다. 발표자는 이걸 "큰 문제"라고 했다.</li>
+          <li>사내 위키 같은 컨텍스트를 모델에 공급하는 일도 있다. 발표에서는 깊게 다루지 않았다.</li>
+          <li>AI 거버넌스 <span class="en">AI governance</span>는 Runpod가 다음에 다룰 주제라고 한다. 직접 호스팅한다면 늘 생각해야 할 부분이다.</li>
+        </ul>
+        <p class="note">4만 달러는 발표자가 말한 자기 회사 가격이다. 다른 클라우드와 비교한 숫자는 발표에 없다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>vLLM 레시피의 기본 설정을 그대로 쓰는 것은 <strong>추측</strong>이다. 레시피는 출발점일 뿐이다.</li>
+          <li>모델과 GPU를 고르기 전에 <strong>용도</strong>와 <strong>동시 사용자 수</strong>를 묻는다.</li>
+          <li>동시 사용자가 많으면 <strong>KV 캐시</strong>를 어떻게 쓸지가 중요해진다.</li>
+          <li>새 모델은 <strong>맞는 vLLM 버전과 CUDA 버전</strong>이 있어야 돌아간다.</li>
+          <li>출시 직후 모델은 <strong>바로 프로덕션에 올리지 않는다.</strong></li>
+          <li>설정을 바꿀 때마다 30분씩 기다리면 실험을 못 한다. 설정 변경과 측정을 <strong>한곳에서 빠르게</strong> 하는 게 BenchPod의 목적이다.</li>
+          <li>데모에서 배치 토큰 수를 늘리자 <strong>TTFT는 그대로, ITL은 감소</strong>했다. 긴 작업일수록 이득이다.</li>
+          <li>벤치마크는 <strong>동시 사용자 단계</strong>를 올려 가며 돌리고, 여러 실행을 나란히 비교한다.</li>
+          <li>순서는 <strong>GPU 확보, 설정 비교, 테스트, 지표 하나로 최적화, 이긴 설정 배포</strong>다.</li>
+          <li><strong>가장 큰 모델이 늘 답은 아니다.</strong> 할 일과 비용을 보고 더 작은 모델도 검토한다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 "추측"이라고 부르는 것은?</span></summary><div class="answer">vLLM 레시피의 기본 설정을 그대로 쓰거나, 데이터 없이 감으로 설정을 고르는 것. 그러면 "이게 더 낫다"를 보여 줄 근거가 없다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>모델과 GPU를 고르기 전에 먼저 물을 두 가지는?</span></summary><div class="answer">이 모델로 무엇을 하려는가(코딩 에이전트인가, 간단한 요약인가). 그리고 동시에 몇 명이 쓰는가.</div></details>
+          <details><summary><span class="qn">Q3</span><span>가장 싼 최소 GPU만 찾다가 놓치기 쉬운 것은?</span></summary><div class="answer">동시 사용자가 늘 때의 KV 캐시 활용. 사용자가 많아지면 KV 캐시를 어떻게 쓸지 따져야 한다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>Kimi K3가 vLLM 0.27이나 CUDA 12.8에서 돌아가지 않은 이유는?</span></summary><div class="answer">새 모델에 필요한 계층이 예전 버전에는 아직 구현되지 않았기 때문이다. 발표자에 따르면 CUDA는 13.0에서 돌아갔다. 버전 맞추기 자체가 CI/CD 작업이 된다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>출시 다음 날 새 모델을 프로덕션에 올리지 말라는 이유는?</span></summary><div class="answer">관련 코드가 아직 개발 중이라 환각 같은 문제가 많이 보일 수 있다. 발표자는 그 상태를 "아직 준비가 안 됐다"고 본다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>BenchPod가 줄이려는 낭비는 무엇인가?</span></summary><div class="answer">설정을 바꿀 때마다 이미지를 재시작하고, 가중치를 내려받아 GPU에 올리기를 기다리는 시간. Kimi K3는 30분쯤 걸린다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>BenchPod의 워치독은 무슨 일을 하고, 어떤 사례가 있었나?</span></summary><div class="answer">서버가 죽으면 스스로 되살린다. 발표 직전 일요일 사내 Kimi K3 인스턴스가 죽었다가 살아났고, 노드 4개로 돌려서 사용자는 문제를 못 느꼈다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>B300 한 대에서 Kimi K3의 컨텍스트는 얼마나 쓰나? 그래도 괜찮은 이유는?</span></summary><div class="answer">100만 토큰 가운데 절반. 발표자 팀의 코딩 에이전트에는 긴 작업을 하기에 충분했다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>데모 실험에서 바꾼 설정과 부하 조건은?</span></summary><div class="answer"><code>max_num_batched_tokens</code>를 바꿨다. 동시 사용자를 1명, 8명, 64명, 192명으로 늘려 가며 쟀고, vLLM 레시피 기본 설정과 비교했다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>그 실험에서 TTFT와 ITL은 어떻게 바뀌었고, 무슨 뜻인가?</span></summary><div class="answer">TTFT는 거의 그대로였고 ITL은 꽤 줄었다. 출력이 긴 작업일수록 토큰 사이 간격이 준 효과가 쌓여 더 빨리 끝난다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>발표자가 권하는 순서 다섯 단계는?</span></summary><div class="answer">파드(GPU)를 고른다. 모델을 정하고 설정을 비교한다. 테스트한다. ITL, TTFT, TPOT 중 필요한 지표로 최적화한다. 이긴 설정을 배포하고 규모를 늘린다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>가장 큰 모델이 늘 답이 아닌 근거로 발표자가 든 것은?</span></summary><div class="answer">Runpod에서 B200 노드는 한 달 약 4만 달러다. 발표자는 H200 네 장으로 돌리는 DeepSeek도 잘 쓰고, Kimi K3는 세밀한 긴 작업에만 쓴다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>모델을 고르기 전에 용도와 동시 사용자 수를 적는다<span class="how">코딩 에이전트인가, 요약인가. 동시에 최대 몇 명이 쓰나</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>필요한 컨텍스트 길이를 정한다<span class="how">확인: 100만 토큰이 정말 필요한가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>모델에 맞는 vLLM 버전과 CUDA 버전을 확인한다<span class="how">출시 직후 모델은 최신 개발판(nightly)이 필요할 수 있다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>출시 직후 모델은 사내에서 먼저 써 본다<span class="how">확인: 환각이 눈에 띄게 많지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>레시피 기본 설정으로 기준선을 한 번 잰다<span class="how">이후 모든 실험을 이 숫자와 비교한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>설정을 하나씩 바꿔 동시 사용자 단계별로 잰다<span class="how">예: <code>max_num_batched_tokens</code>를 바꾸고 1명, 8명, 64명, 192명으로 잰다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>우리 용도에 맞는 지표 하나를 정해 그걸로 고른다<span class="how">TTFT, ITL, TPOT 가운데 하나</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>장애 뒤 자동으로 되살아나는지, 콜드 스타트가 몇 분인지 잰다<span class="how">확인: 노드 하나가 죽어도 사용자가 모르는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>더 작은 모델과 비용을 나란히 비교한다<span class="how">발표자 기준 B200 노드 한 달 약 4만 달러. 더 작은 장비로 충분한지 본다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>vLLM</td><td>LLM을 빠르게 서빙하는 오픈소스 추론 엔진</td></tr>
+              <tr><td>vLLM 레시피</td><td>vLLM recipes. 모델별로 vLLM 실행 방법과 기본 설정을 정리한 안내서</td></tr>
+              <tr><td>nightly</td><td>매일 최신 코드로 새로 만드는 개발판</td></tr>
+              <tr><td>CUDA</td><td>NVIDIA GPU에서 계산을 돌리는 플랫폼. 모델과 엔진이 요구하는 버전이 맞아야 한다</td></tr>
+              <tr><td>컨텍스트 창</td><td>Context window. 모델이 한 번에 볼 수 있는 토큰 길이</td></tr>
+              <tr><td>KV 캐시</td><td>KV cache. 이미 처리한 토큰의 중간 계산 결과를 GPU 메모리에 저장해 두는 공간. 동시 요청이 많을수록 많이 필요하다</td></tr>
+              <tr><td>가중치</td><td>Weights. 학습으로 정해진 모델의 파라미터 파일</td></tr>
+              <tr><td>콜드 스타트</td><td>Cold start. 서버를 새로 띄워 요청을 받을 수 있게 되기까지 걸리는 시간. 이미지 시작, 가중치 다운로드, GPU 적재가 들어간다</td></tr>
+              <tr><td>동시성</td><td>Concurrency. 같은 시간에 요청을 보내는 사용자 수</td></tr>
+              <tr><td>TTFT</td><td>Time to first token. 요청부터 첫 토큰이 나올 때까지 걸린 시간</td></tr>
+              <tr><td>ITL</td><td>Inter-token latency. 토큰과 다음 토큰 사이의 간격</td></tr>
+              <tr><td>TPOT</td><td>Time per output token. 출력 토큰 하나를 만드는 데 드는 평균 시간</td></tr>
+              <tr><td>max_num_batched_tokens</td><td>vLLM 설정. 한 번의 처리 단계에서 함께 처리하는 토큰 수의 상한</td></tr>
+              <tr><td>워치독</td><td>Watchdog. 서비스를 지켜보다 멈추면 다시 살리는 감시 프로세스</td></tr>
+              <tr><td>FastAPI</td><td>파이썬으로 웹 API를 만드는 프레임워크</td></tr>
+              <tr><td>파드</td><td>Pod. Runpod에서 빌리는 GPU 컨테이너 한 단위</td></tr>
+              <tr><td>서버리스</td><td>Serverless. 요청량에 따라 워커가 자동으로 늘고 줄며 쓴 만큼 내는 실행 방식</td></tr>
+              <tr><td>멀티노드 클러스터</td><td>여러 대의 GPU 서버를 묶어 하나처럼 쓰는 구성</td></tr>
+              <tr><td>스마트 라우터</td><td>Smart router. 요청마다 알맞은 모델로 보내 주는 장치</td></tr>
+              <tr><td>AI 거버넌스</td><td>AI governance. 조직에서 AI 사용을 관리하는 규칙과 통제</td></tr>
+              <tr><td>포워드 디플로이드 엔지니어</td><td>Forward deployed engineer. 고객 곁에서 제품을 실제 환경에 붙이는 엔지니어</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자와 Runpod 소개</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>고객들의 패턴: 최신 모델, 기본 설정, vLLM 레시피</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>감이 아니라 데이터로 설득하기</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>흔한 실수: 버전, nightly, 컨텍스트 크기</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>목적 묻기: 코딩 에이전트인가 요약인가</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>동시 사용자와 KV 캐시</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>vLLM 버전 문제: 0.27과 Kimi K3</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>출시 직후 모델은 프로덕션에 올리지 않는다</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>BenchPod 소개</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>설정을 바꿀 때마다 30분 기다리기</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>B300 같은 장비로 직접 시험하기</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>vllm-openai 이미지, FastAPI, 워치독</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>일요일 장애와 자동 복구</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>Kimi K3: 100만 컨텍스트, B300에서는 절반</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>대시보드: GPU 지표, CUDA 버전</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>플레이그라운드, 콜드 스타트, 실제 트래픽 지표</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>데모: Runpod 콘솔에서 배포</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>실행 중인 Kimi K3와 실시간 지표</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>GPU 장애 뒤 콜드 스타트 9분</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>serve 화면: 설정 YAML로 실험</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>동시 사용자 1·8·64·192명 벤치마크</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>TTFT는 그대로, ITL은 감소</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>에이전트로 실험, 멀티노드와 서버리스로 확장</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>서버리스도 기본 설정이면 고생한다</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>Kimi K3로 답하는 코딩 에이전트</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>사내 사용자 약 50명, 다른 모델들</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>스마트 라우터 계획</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>실험 직접 정의하기: 500명 예시</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>권하는 순서: GPU, 설정 비교, 테스트, 최적화, 배포</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>더 작은 모델도 된다</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>B200 노드 한 달 약 4만 달러</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>H200 4장 위의 DeepSeek</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>도구 선택, 컨텍스트, AI 거버넌스</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>질의응답 안내, 크레딧, 템플릿 공개 예정</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'P_0_Th_ZzIg:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

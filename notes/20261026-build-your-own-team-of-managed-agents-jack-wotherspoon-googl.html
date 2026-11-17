@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>관리형 에이전트 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- code block (added for this note: API call examples) ---------- */
+pre {
+  margin: 0; max-width: 68ch; overflow-x: auto;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 16px; font-family: var(--font-mono); font-size: var(--step--1); line-height: 1.6;
+}
+pre code { background: none; padding: 0; font-size: 1em; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#why">왜 내 노트북 밖에서 돌리나</a></li>
+      <li><a href="#one-call">직접 만들기 vs API 한 번</a></li>
+      <li><a href="#interactions">모델 대신 에이전트를 부른다</a></li>
+      <li><a href="#architecture">내부 구조</a></li>
+      <li><a href="#pillars">다섯 가지 구성 요소</a></li>
+      <li><a href="#model">모델 선택과 긴 출력</a></li>
+      <li><a href="#primitives">대화와 작업 공간을 분리한다</a></li>
+      <li><a href="#tools">도구, 파일, 에이전트 저장</a></li>
+      <li><a href="#secrets">비밀 정보는 샌드박스에 없다</a></li>
+      <li><a href="#multi">예약 실행과 에이전트 팀</a></li>
+      <li><a href="#demo">데모: 세 에이전트가 이어받기</a></li>
+      <li><a href="#apps">내 앱에 넣기</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-26 · 20분 · 영어 발표 한글 정리</span>
+      <h1>관리형 에이전트로 내 에이전트 팀 만들기</h1>
+      <p class="lead">코딩 에이전트를 내 노트북이 아니라 클라우드 샌드박스에서 돌리면 어떤 점이 달라질까. Google DeepMind의 Gemini 관리형 에이전트를 예로, API 호출 한 번으로 샌드박스와 하네스를 얻고, 작업 공간을 공유하는 여러 에이전트를 이어 붙이는 방법을 설명한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=Y_p3y6zP5QE" target="_blank" rel="noopener">Build Your Own Team of Managed Agents</a></span>
+        <span>발표: Jack Wotherspoon (Google DeepMind 개발자 경험 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 기능 설명과 수치는 모두 발표자가 말한 것이고 문서나 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 알려진 이름으로 바로잡았고, 불확실하면 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 Google DeepMind 소속이고 발표 내용은 자사 제품인 Gemini API의 관리형 에이전트 소개다. 장점 설명은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>관리형 에이전트</strong><span class="en">managed agents</span>는 코딩 에이전트와 그 실행 틀을 내 컴퓨터가 아니라 <strong>클라우드 샌드박스</strong>에서 돌리는 방식이다.</li>
+        <li>장점은 두 가지다. 검증 작업이 <strong>내 노트북을 점령하지 않고</strong>, 개인 설정을 <strong>동료나 앱으로 확장</strong>할 수 있다.</li>
+        <li>직접 만들면 컨테이너, 하네스, 네트워크, 보안을 다 챙겨야 한다. 관리형은 이걸 <strong>API 호출 한 번</strong>으로 줄인다.</li>
+        <li>호출 방식은 Interactions API다. 모델 대신 <strong>에이전트</strong>를 지정하고 <code>environment=remote</code>를 켠다.</li>
+        <li>핵심 설계는 <strong>대화(interaction)와 작업 공간(environment)의 분리</strong>다. 다른 에이전트가 같은 작업 공간을 이어받아 파일을 계속 다룰 수 있다.</li>
+        <li>구성 요소는 하네스, 환경, 스킬, 자격 증명, 트리거 다섯 가지다. 비밀 토큰은 <strong>프록시가 바깥에서 끼워 넣고</strong> 샌드박스 안에는 가짜 값만 둔다.</li>
+        <li>데모에서는 SEC 공시 조사 에이전트, 정량 분석 에이전트, 보고서 에이전트 셋이 <strong>같은 환경 ID</strong>로 일을 넘겨받았다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="why">
+        <header><span class="num">01</span><h2>왜 내 노트북 밖에서 돌리나 <span class="ts">00:20</span></h2></header>
+        <p>관리형 에이전트는 코딩 에이전트의 실행 틀, 즉 하네스<span class="en">harness</span>를 내 컴퓨터가 아니라 클라우드의 격리된 공간인 샌드박스<span class="en">sandbox</span>에서 돌리는 것이다. 발표자는 그렇게 하는 이유를 두 가지로 정리한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">이유 1 · 내 기계가 아니다</span>
+            <p>에이전트는 코드를 쓰고, 추론하고, 웹을 검색하고, 테스트를 쓰고 실행해 <strong>검증된 답</strong>을 가져온다.</p>
+            <p class="verdict">노트북에서 검증을 돌리면 브라우저를 빼앗기고 팝업이 뜬다. 클라우드에서 돌리면 그 불편이 사라진다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">이유 2 · 노트북은 확장되지 않는다</span>
+            <p>개인 코딩 에이전트에 스킬이나 설정을 쌓아 두었다고 하자. 그걸 동료에게 어떻게 나누고, 내 앱에 어떻게 넣을까.</p>
+            <p class="verdict">고객에게 배포하는 앱이 내 개인 구독으로 돌아가면 안 된다. 규모를 키울 방법이 필요하다.</p>
+          </div>
+        </div>
+        <p class="note">자막에는 "cloud or managed agents"로 들리는 표현이 반복된다. 문맥상 "클라우드 에이전트 또는 관리형 에이전트"로 읽었다. 02:40 부근의 "cloud managed agents"는 다른 회사의 관리형 에이전트 제품을 가리키는 것으로 보인다(추정).</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="one-call">
+        <header><span class="num">02</span><h2>직접 만들기 vs API 한 번 <span class="ts">02:10</span></h2></header>
+        <p>클라우드 에이전트를 스스로 꾸리려면 할 일이 많다. 발표자는 이 과정을 "꽤 지루하다"고 표현한다.</p>
+        <div class="shift" aria-label="직접 만들 때와 관리형을 쓸 때의 비교">
+          <div><span class="tag">직접 만들 때</span><b>네 가지를 다 챙긴다</b><span class="muted">컨테이너나 VM 띄우기 → 안에 도구 올리고 관리 → 샌드박스 안에서 하네스 설계 → 네트워크, 방화벽, 보안 설정</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">관리형 에이전트</span><b>API 호출 한 번</b><span class="muted">샌드박스와 Antigravity 하네스가 함께 온다. 에이전트가 더 필요하면 호출을 더 한다</span></div>
+        </div>
+        <p>인프라나 규모를 따로 관리하지 않는다는 점이 발표자가 말하는 핵심 장점이다. 오늘 발표는 Gemini API에서 제공하는 <strong>Gemini 관리형 에이전트</strong>를 다룬다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="interactions">
+        <header><span class="num">03</span><h2>모델 대신 에이전트를 부른다 <span class="ts">03:20</span></h2></header>
+        <p>호출 창구는 Interactions API다. 발표자는 이를 "에이전트 우선"으로 새로 만든 SDK라고 소개한다. 예전 방식은 모델에 입력을 주고 출력을 받는 한 번의 왕복이었다. 에이전트는 여러 단계를 거쳐 파일을 쓰고, 그 파일을 실행하고, MCP 도구를 부른다. 그래서 그 흐름을 그대로 담는 <strong>상호작용</strong><span class="en">interaction</span> 단위가 필요했다. 이 API는 올해 초 정식 출시됐고, 지금은 관리형 에이전트의 집이다.</p>
+        <p>호출할 때 바뀌는 점은 두 가지다.</p>
+        <ul class="plain">
+          <li><strong>모델 이름 대신 에이전트</strong>를 지정한다. 기본은 Antigravity 에이전트다.</li>
+          <li><strong><code>environment=remote</code></strong>를 켠다. 이 한 줄이 "클라우드에서 돌리는 관리형 에이전트를 원한다"는 신호다.</li>
+        </ul>
+        <pre><code># 예시 (발표 슬라이드의 코드를 자막만 보고 재구성한 것이라 실제 SDK 문법과 다를 수 있다)
+interactions.create(
+    agent="antigravity",      # 모델 대신 에이전트
+    environment="remote",     # 클라우드 샌드박스에서 실행
+    input="엔비디아 최근 SEC 공시를 조사하고 핵심 지표를 metrics.json에 저장해",
+)</code></pre>
+        <p class="note">발표자는 "Antigravity"를 Google의 에이전트 제품군 이름으로 쓴다. 자막에는 "anti-gravity"로 적혀 있어 알려진 표기로 고쳤다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="architecture">
+        <header><span class="num">04</span><h2>내부 구조 <span class="ts">04:30</span></h2></header>
+        <p>관리형 에이전트를 호출하면 요청이 아래 순서로 흐른다.</p>
+        <ol class="plain">
+          <li><strong>입력</strong>: 사용자가 작업을 적어 보낸다.</li>
+          <li><strong>Gemini API</strong>: 서버에 내장된 도구를 갖고 있다. Google 검색으로 웹을 찾고, 파일 시스템 도구로 파일을 읽고 쓴다. 여기에 사용자의 커스텀 함수나 MCP 도구를 더할 수 있다.</li>
+          <li><strong>샌드박스</strong>: Google Cloud 인프라 위에서 돌아간다. API를 호출하면 이 샌드박스가 자동으로 만들어진다.</li>
+        </ol>
+        <p>샌드박스에는 파일을 올릴 수 있다. 에이전트 스킬, <code>AGENTS.md</code> 같은 지침 파일, 시작할 때 불러올 GitHub 저장소가 그 예다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="pillars">
+        <header><span class="num">05</span><h2>다섯 가지 구성 요소 <span class="ts">05:20</span></h2></header>
+        <p>발표자는 관리형 에이전트를 이루는 뼈대를 다섯 가지로 나눈다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성 요소</th><th>하는 일</th><th>발표자의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>하네스 <span class="en">harness</span></td><td>도구 호출을 결정하고 내장 도구를 쥔다</td><td>Google의 Antigravity 제품군이 쓰는 것과 똑같은 하네스다</td></tr>
+              <tr><td>환경 <span class="en">environment</span></td><td>샌드박스의 파일 시스템. 독립된 개체다</td><td>여러 에이전트가 같은 샌드박스를 가리켜 파일을 이어서 다룰 수 있다</td></tr>
+              <tr><td>스킬 <span class="en">skills</span></td><td>회사나 개인의 작업 절차 문서</td><td>개인 에이전트에 쓰던 플레이북을 그대로 올린다</td></tr>
+              <tr><td>자격 증명 <span class="en">credentials</span></td><td>토큰이나 MCP OAuth를 샌드박스에 넣어 외부 서비스에 접근</td><td>새로 추가된 부분이다. 작동 방식은 9장에서 다룬다</td></tr>
+              <tr><td>트리거 <span class="en">triggers</span></td><td>정해진 시각에 에이전트를 깨워 실행</td><td>예: 매일 아침 8시 30분 장 시작 전에 금융 분석을 돌리고 결과를 Slack으로 보낸다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="model">
+        <header><span class="num">06</span><h2>모델 선택과 긴 출력 <span class="ts">07:00</span></h2></header>
+        <p>하네스가 쓰는 모델은 에이전트 설정<span class="en">agent config</span>의 한 줄로 바꿀 수 있다. 발표자는 작업 성격에 따라 고르라고 한다.</p>
+        <ul class="plain">
+          <li><strong>빠르고 효율적</strong>이어야 하면 Gemini Flash.</li>
+          <li><strong>깊은 추론이나 많은 분석</strong>이 필요하면 발표 전날 출시됐다는 새 최상위 모델. 자막에는 "Gemini 4 Argon"으로 들린다(추정). 발표자는 금융 작업과 여러 문서에 걸친 데이터 분석에 특히 강하다고 말한다.</li>
+        </ul>
+        <h3>긴 출력 <span class="en">long decode</span> <span class="ts">08:10</span></h3>
+        <p>발표자가 강조한 기능이다. 보통 모델은 한 번에 내놓는 출력 토큰 한도가 약 6만 4천 개다. 새 모델에서는 100만 토큰 컨텍스트를 <strong>입력, 사고, 출력이 함께 나눠 쓴다</strong>. 그래서 수학 추론이나 재무 모델링처럼 결과가 수십 쪽이 되는 작업도 한 번에 쓸 수 있다고 한다.</p>
+        <figure class="chart" aria-label="출력 토큰 한도 비교: 일반 모델 약 64K, 새 모델은 100만 토큰 한도를 입력, 사고, 출력이 공유">
+          <span class="chart-title">한 번에 쓸 수 있는 출력 토큰 (천 개)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>일반 모델의 출력 한도</span><span class="val">약 64K</span></div>
+              <div class="track"><div class="fill" style="width:6.4%" title="일반 모델: 약 64,000 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>새 모델 (입력·사고·출력 공유 한도)</span><span class="val">1,000K</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="새 모델: 1,000,000 토큰을 입력, 사고, 출력이 공유"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>500K</span><span>1,000K</span></div>
+          <span class="caption">발표자가 말한 수치다. 아래 막대는 전체 공유 한도라서 실제로 출력에 쓸 수 있는 양은 입력과 사고에 쓴 만큼 줄어든다. 두 막대는 같은 조건의 비교가 아니다.</span>
+        </figure>
+        <p class="note">발표자는 이 기능이 수학과 금융 벤치마크 점수를 올리고 있다고 말했다. 구체적인 벤치마크 이름이나 점수는 발표에 나오지 않았다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="primitives">
+        <header><span class="num">07</span><h2>대화와 작업 공간을 분리한다 <span class="ts">08:50</span></h2></header>
+        <p>발표자가 "두 가지 핵심 원시 요소"라고 부르는 것이다. 둘 다 서버 쪽에 상태를 저장한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Interaction · 대화</span>
+            <p>입력을 넣고 출력을 받는 한 턴이 하나의 interaction으로 저장된다.</p>
+            <ul>
+              <li>interaction ID를 다음 호출에 넘기면 두 번째 턴이 된다</li>
+              <li>즉 <strong>대화 맥락</strong>을 담당한다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">Environment · 작업 공간</span>
+            <p>샌드박스의 파일 시스템 상태다. 에이전트가 쓴 파일, 만든 이미지가 여기 있다.</p>
+            <ul>
+              <li>API로 파일을 내려받거나 올릴 수 있다</li>
+              <li>environment ID를 다른 에이전트에 넘길 수 있다</li>
+            </ul>
+          </div>
+        </div>
+        <p>둘을 떼어 놓으면 이런 흐름이 가능하다. 첫 에이전트가 3분기 공시를 가져와 분석하고 파일로 저장한다. 두 번째 에이전트에 <strong>같은 environment ID</strong>를 넘기면, 이 에이전트는 <strong>대화 맥락은 새로 비어 있지만 파일은 그대로</strong> 물려받는다. 발표자는 이것을 멀티 에이전트 워크플로의 바탕이라고 설명한다.</p>
+        <div class="callout">
+          <span class="title">왜 맥락을 비우는 게 장점인가</span>
+          <span>앞 에이전트가 조사하며 쌓은 긴 대화를 다음 에이전트가 다 들고 갈 필요가 없다. 필요한 결과는 파일에 있다. 다음 에이전트는 깨끗한 컨텍스트 윈도우로 자기 일에만 집중한다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="tools">
+        <header><span class="num">08</span><h2>도구, 파일, 에이전트 저장 <span class="ts">10:40</span></h2></header>
+        <h3>도구</h3>
+        <p>샌드박스에는 코드 실행, 파일 읽기와 쓰기, Google 검색이 기본으로 들어 있다. 여기에 외부 서버를 연결해 자기가 쓰는 서비스를 붙일 수 있다. 발표자는 이것이 에이전트를 "일상 업무를 처리하는 수준"으로 끌어올린다고 말한다.</p>
+        <p class="note">자막에는 "remote SMTP servers"로 들리지만, 문맥상 원격 MCP 서버를 말한 것으로 보인다(추정).</p>
+        <h3>파일 올리기 <span class="ts">11:10</span></h3>
+        <p>개인 기기에서 쓰던 <code>AGENTS.md</code>와 스킬을 샌드박스 파일 시스템에 올린다. 같은 플레이북을 재현 가능한 환경에서 돌리게 되고, 내 컴퓨터의 파일을 덮어쓸 걱정이 없다. 발표의 코드 예시는 AGENTS.md를 올리고 GitHub 저장소를 연결해 에이전트가 코드의 버그를 살피게 했다.</p>
+        <h3>에이전트 저장 <span class="ts">11:50</span></h3>
+        <p>워크플로가 자리를 잡으면 Agents API의 <code>agents.create</code>로 그 설정을 저장한다. 이후에는 agent ID만으로 같은 에이전트를 여러 번 부른다. 고치고 다시 저장하는 반복도 가능하다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="secrets">
+        <header><span class="num">09</span><h2>비밀 정보는 샌드박스에 없다 <span class="ts">12:20</span></h2></header>
+        <p>보안에서 발표자가 가장 힘주어 말한 부분이다. GitHub 토큰 같은 비밀 값은 <strong>샌드박스 안으로 들어가지 않는다</strong>.</p>
+        <ol class="plain">
+          <li>샌드박스와 API 사이에 <strong>프록시</strong><span class="en">proxy</span>가 한 층 끼어 있다.</li>
+          <li>샌드박스 안에는 진짜 토큰 대신 <strong>자리 표시용 가짜 토큰</strong>이 놓인다.</li>
+          <li>에이전트가 GitHub API를 호출하면 프록시가 그 요청이 GitHub로 가는 것임을 알아보고 <strong>그때 진짜 토큰을 끼워 넣는다</strong>.</li>
+        </ol>
+        <div class="callout warn">
+          <span class="title">막으려는 상황</span>
+          <span>에이전트가 "GitHub 토큰이 있네, 다른 데도 뭐가 있는지 보자"며 엇나가는 것이다. 토큰 자체가 없으니 그런 행동이 불가능하다. 발표자의 표현을 빌리면 "에이전트는 해서는 안 될 일을 할 수 없다".</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="multi">
+        <header><span class="num">10</span><h2>예약 실행과 에이전트 팀 <span class="ts">13:10</span></h2></header>
+        <h3>트리거로 예약하기</h3>
+        <p>트리거는 에이전트 하나를 정해진 일정으로 돌린다. 발표자가 든 예는 매일 아침 브리핑이다. 이메일을 훑어 답장할 것을 골라 주거나, 장 시작 전에 주식 시장을 점검한다. 결과는 웹훅으로 Slack에 보내거나, 팀 Jira 보드를 읽어 "오늘 누가 무엇을 하는지"를 보내는 식으로 이어진다.</p>
+        <h3>에이전트가 에이전트를 부른다 <span class="ts">13:30</span></h3>
+        <p>관리형 에이전트는 결국 API 호출이다. 그래서 한 에이전트가 다른 관리형 에이전트를 호출해 일을 <strong>여러 갈래로 나눌</strong><span class="en">fan out</span> 수 있다. 발표자가 권하는 구성은 이렇다.</p>
+        <ul class="plain">
+          <li>에이전트마다 <strong>목적을 하나</strong>만 준다. 메모 작성, 조사 같은 좁은 일이다.</li>
+          <li>결과를 <strong>파일로 저장</strong>하고, 다음 에이전트가 그 파일을 입력으로 받아 이어간다.</li>
+          <li>이렇게 쪼개면 각 단계를 <strong>통제하고 측정</strong>할 수 있다. 넓은 과제를 통째로 주면 에이전트가 무엇을 하는지 가늠할 길이 없다.</li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section id="demo">
+        <header><span class="num">11</span><h2>데모: 세 에이전트가 이어받기 <span class="ts">14:30</span></h2></header>
+        <p>발표자는 금융 조사 흐름을 세 에이전트로 쪼개 실제로 돌렸다. 전부 같은 environment ID를 쓴다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · SEC 공시 조사 에이전트</span>
+            <p>대상 기업은 Nvidia. 공시를 조사해 지표를 뽑는다.</p>
+            <p class="verdict">출력: <b>metrics.json</b>. 각 행동은 단계 추적<span class="en">step trace</span>으로 남는다. 파일 쓰기 결과, 코드 실행 결과를 하나씩 볼 수 있다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 정량 분석 에이전트</span>
+            <p>같은 샌드박스에 있는 metrics.json을 읽어 Python 코드를 여러 개 돌린다.</p>
+            <p class="verdict">출력: 평가와 <b>주가 전망</b>을 담은 Markdown 파일.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 보고서 에이전트</span>
+            <p>앞 두 결과를 받아 읽을 수 있는 보고서로 바꾼다.</p>
+            <p class="verdict">MCP 서버를 붙였다면 <b>Google Docs에 쓰거나 Slack으로</b> 보낼 수도 있다.</p>
+          </div>
+        </div>
+        <p>발표자는 단계 추적을 보면서 "에이전트가 무엇을 하는지 따라가며 워크플로를 다듬으라"고 말한다. 이 데모가 보여 주는 것은 환경 공유가 실제로 어떻게 작업을 넘겨주는가다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="apps">
+        <header><span class="num">12</span><h2>내 앱에 넣기 <span class="ts">16:30</span></h2></header>
+        <p>SDK로 관리형 에이전트를 자기 애플리케이션에 바로 넣을 수 있다. 발표자는 데모 두 가지를 보였다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>데모</th><th>내용</th><th>눈여겨볼 점</th></tr></thead>
+            <tbody>
+              <tr><td>영수증 시각화 <span class="ts">16:40</span></td><td>Google Drive에 모아 둔 1년치 영수증을 에이전트가 읽어 인터랙티브 보고서로 만든다</td><td>"인터랙티브 보고서를 어떻게 만드는가"를 적은 스킬이 에이전트의 방법을 정한다</td></tr>
+              <tr><td>종목 분석 앱 <span class="ts">17:50</span></td><td>AI Studio 갤러리의 예시 앱. 종목 코드 VOO를 넣으면 여러 관리형 에이전트가 각자 다른 분석을 맡고, 마지막 에이전트가 PDF 보고서를 만든다</td><td>보고서에는 분석, 핵심 요약, 차트, 그리고 실제로 읽은 Vanguard 문서 링크가 들어 있다. 화면에 흐르는 추론 과정은 시연용이라 실제 앱에서는 숨길 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자의 결론은 한 문장이다. <strong>개인 코딩 에이전트로 할 수 있는 일은 모두 관리형 에이전트로 옮길 수 있다.</strong> 회사에서 매일 돌리거나 앱 안에 넣는 형태로 말이다. 시작은 AI Studio에서 무료로 할 수 있고 관리형 에이전트 문서가 따로 있다고 안내했다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>관리형 에이전트는 <strong>하네스를 클라우드 샌드박스에서</strong> 돌리는 방식이다. 내 노트북을 점령하지 않고, 개인 설정을 팀과 앱으로 확장한다.</li>
+          <li>직접 만들면 컨테이너, 하네스, 네트워크, 보안을 챙겨야 한다. 관리형은 이를 <strong>API 호출 한 번</strong>으로 줄인다.</li>
+          <li>Interactions API에서는 모델 대신 <strong>에이전트</strong>를 지정하고 <code>environment=remote</code>를 켠다.</li>
+          <li>구성 요소는 <strong>하네스, 환경, 스킬, 자격 증명, 트리거</strong> 다섯 가지다.</li>
+          <li>모델은 설정 한 줄로 바꾼다. 빠른 일은 Flash, 깊은 분석은 최상위 모델.</li>
+          <li>새 모델은 출력 한도를 따로 두지 않고 <strong>100만 토큰을 입력, 사고, 출력이 공유</strong>한다고 한다. 기존 한도는 약 6만 4천이다.</li>
+          <li><strong>Interaction은 대화, Environment는 파일</strong>이다. 둘을 분리해 서버에 저장한다.</li>
+          <li>environment ID를 넘기면 다음 에이전트가 <strong>깨끗한 컨텍스트로 같은 파일</strong>을 이어받는다. 이것이 멀티 에이전트의 바탕이다.</li>
+          <li>비밀 토큰은 샌드박스에 들어가지 않는다. <strong>프록시가 바깥에서 끼워 넣고</strong> 안에는 가짜 값만 있다.</li>
+          <li>에이전트마다 <strong>목적 하나</strong>, 결과는 <strong>파일로</strong>, 다음 에이전트가 이어받기. 이렇게 쪼개야 통제하고 측정할 수 있다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 든 "클라우드에서 돌려야 하는 이유" 두 가지는?</span></summary><div class="answer">첫째, 검증 작업이 내 노트북의 브라우저와 화면을 점령하지 않는다. 둘째, 노트북은 확장되지 않는다. 개인 설정을 동료와 나누고 앱에 넣으려면 클라우드가 필요하다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>클라우드 에이전트를 직접 만들 때 챙겨야 하는 네 가지는?</span></summary><div class="answer">컨테이너나 VM 띄우기, 그 위에 도구 올리고 관리하기, 샌드박스 안에서 하네스 설계하기, 네트워크와 방화벽과 보안 설정.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Interactions API 호출에서 관리형 에이전트를 켜는 설정은?</span></summary><div class="answer">모델 대신 에이전트를 지정하고 environment를 remote로 둔다. 이 값이 "클라우드 샌드박스에서 돌려라"는 신호다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>관리형 에이전트의 다섯 구성 요소는?</span></summary><div class="answer">하네스, 환경, 스킬, 자격 증명, 트리거.</div></details>
+          <details><summary><span class="qn">Q5</span><span>Interaction과 Environment는 각각 무엇을 담당하나?</span></summary><div class="answer">Interaction은 대화. 입력과 출력의 한 턴이 저장되고 ID를 넘기면 다음 턴이 된다. Environment는 샌드박스의 파일 시스템. 에이전트가 쓴 파일이 여기 있고 ID를 다른 에이전트에 넘길 수 있다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>두 번째 에이전트에 같은 environment ID를 넘기면 무엇이 같고 무엇이 다른가?</span></summary><div class="answer">파일은 그대로 이어받는다. 대화 맥락, 즉 컨텍스트 윈도우는 새로 비어 있다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>GitHub 토큰이 샌드박스 안에 없는데 에이전트가 GitHub API를 쓸 수 있는 이유는?</span></summary><div class="answer">샌드박스와 API 사이의 프록시가 요청이 GitHub로 가는 것을 알아보고 그때 진짜 토큰을 끼워 넣는다. 샌드박스 안에는 가짜 토큰만 있다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>발표자가 말한 기존 출력 한도와 새 모델의 방식은?</span></summary><div class="answer">기존은 약 6만 4천 토큰. 새 모델은 100만 토큰 한도를 입력, 사고, 출력이 함께 나눠 쓴다. 그래서 수십 쪽짜리 결과도 한 번에 쓸 수 있다고 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>멀티 에이전트를 짤 때 발표자가 권한 세 원칙은?</span></summary><div class="answer">에이전트마다 목적을 하나만 준다. 결과를 파일로 저장한다. 다음 에이전트가 그 파일을 받아 이어간다. 이렇게 하면 각 단계를 통제하고 측정할 수 있다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>데모의 세 에이전트와 각 결과물은?</span></summary><div class="answer">SEC 공시 조사 에이전트가 metrics.json을 만든다. 정량 분석 에이전트가 그 파일을 읽어 Python을 돌리고 주가 전망 Markdown을 쓴다. 보고서 에이전트가 이를 보고서로 바꾼다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>트리거는 무엇이고 발표자가 든 예는?</span></summary><div class="answer">에이전트를 정해진 일정에 깨워 실행하는 장치. 매일 아침 장 시작 전 금융 분석, 이메일 훑어 답장 후보 고르기, Jira 보드 요약을 Slack으로 보내기.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>내 노트북을 점령하는 에이전트 작업을 하나 고른다<span class="how">테스트 실행, 브라우저 검증, 긴 조사처럼 기다리는 동안 다른 일을 못 하는 작업</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>그 작업을 목적 하나짜리 에이전트 여러 개로 쪼갠다<span class="how">조사, 분석, 보고서처럼 단계마다 결과 파일이 하나씩 나오게</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>단계 사이의 인터페이스를 파일 이름과 형식으로 정한다<span class="how">예: metrics.json, analysis.md. 다음 에이전트는 이 파일만 보고 시작할 수 있어야 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>개인 에이전트의 AGENTS.md와 스킬을 공유 가능한 형태로 정리한다<span class="how">내 기기 경로나 개인 계정에 묶인 부분을 걷어낸다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>비밀 토큰이 에이전트 실행 환경 안에 그대로 놓여 있는지 점검한다<span class="how">확인: 에이전트가 토큰 값을 읽을 수 있는가. 읽을 수 있다면 프록시나 대체 수단을 검토한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>단계마다 빠른 모델과 깊은 모델 중 무엇이 맞는지 정한다<span class="how">파일 변환 같은 일은 빠른 모델, 분석과 추론은 깊은 모델</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>정기 실행이 맞는 작업이면 일정과 결과 전달 경로를 정한다<span class="how">예: 매일 아침 요약을 Slack 채널로. 실패했을 때 누가 알게 되는지도 함께</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트의 단계 추적을 보고 워크플로를 다듬는 시간을 잡는다<span class="how">확인: 각 에이전트가 불필요한 도구 호출이나 반복을 하고 있지 않은가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>관리형 에이전트</td><td>Managed agent. 에이전트의 실행 틀과 샌드박스를 서비스 제공자가 대신 운영하는 방식. 사용자는 API로 호출만 한다</td></tr>
+              <tr><td>샌드박스</td><td>Sandbox. 바깥과 격리된 실행 공간. 여기서 코드를 돌려도 내 컴퓨터나 다른 시스템에 영향이 없다</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구 호출, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>Interactions API</td><td>Gemini API에서 에이전트의 여러 단계 상호작용을 다루는 호출 방식. 모델 대신 에이전트를 지정한다</td></tr>
+              <tr><td>Interaction</td><td>입력 하나와 출력 하나로 이뤄진 대화의 한 턴. 서버에 저장되고 ID로 이어 붙인다</td></tr>
+              <tr><td>Environment</td><td>샌드박스의 파일 시스템 상태. 서버에 저장되고 ID로 다른 에이전트에 넘길 수 있다</td></tr>
+              <tr><td>컨텍스트 윈도우</td><td>Context window. 모델이 한 번에 볼 수 있는 토큰의 총량</td></tr>
+              <tr><td>토큰</td><td>Token. 모델이 글을 처리하는 최소 단위. 영어 단어 하나가 토큰 한두 개 정도다</td></tr>
+              <tr><td>긴 출력</td><td>Long decode. 모델이 한 번에 아주 긴 결과를 써 내는 능력</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 외부 도구와 서비스를 에이전트에 연결하는 표준 규약</td></tr>
+              <tr><td>OAuth</td><td>사용자가 비밀번호를 넘기지 않고 다른 서비스에 접근 권한을 주는 인증 방식</td></tr>
+              <tr><td>프록시</td><td>Proxy. 두 시스템 사이에 끼어 요청을 받아 넘기는 중간 층. 여기서는 토큰을 끼워 넣는 역할</td></tr>
+              <tr><td>트리거</td><td>Trigger. 정해진 시각이나 조건에 에이전트를 자동으로 실행시키는 장치</td></tr>
+              <tr><td>웹훅</td><td>Webhook. 어떤 일이 끝났을 때 다른 서비스의 URL로 결과를 밀어 보내는 방식</td></tr>
+              <tr><td>단계 추적</td><td>Step trace. 에이전트가 한 행동을 하나씩 기록한 것. 파일 쓰기, 코드 실행 같은 단계가 보인다</td></tr>
+              <tr><td>팬 아웃</td><td>Fan out. 한 작업을 여러 에이전트에 나눠 동시에 맡기는 것</td></tr>
+              <tr><td>AGENTS.md</td><td>에이전트에게 저장소나 작업의 규칙을 알려 주는 지침 파일</td></tr>
+              <tr><td>스킬</td><td>Skill. 특정 작업을 어떻게 하는지 적어 둔 절차 문서. 에이전트가 읽고 따른다</td></tr>
+              <tr><td>SEC 공시</td><td>미국 증권거래위원회에 기업이 제출하는 재무 보고서</td></tr>
+              <tr><td>AI Studio</td><td>Google의 Gemini API 실험 및 예시 도구 사이트</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, 관리형 에이전트란</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>이유 1: 검증이 내 노트북을 점령하지 않는다</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>이유 2: 노트북은 확장되지 않는다</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>직접 만들 때의 번거로움</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>API 호출 한 번으로 샌드박스와 하네스</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>Interactions API: 모델 대신 에이전트</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>environment=remote</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>내부 구조: Gemini API, 내장 도구, 샌드박스</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>다섯 구성 요소: 하네스, 환경, 스킬, 자격 증명, 트리거</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>모델 선택과 새 최상위 모델</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>긴 출력: 64K에서 100만 공유 한도로</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>Interaction과 Environment의 분리</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>environment ID로 다음 에이전트에 넘기기</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>내장 도구와 외부 서버 연결</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>AGENTS.md, 스킬, GitHub 저장소 올리기</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>agents.create로 에이전트 저장</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>비밀 정보와 프록시</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>트리거: 아침 브리핑</td></tr>
+              <tr><td><span class="ts">13:30</span></td><td>에이전트가 에이전트를 부른다</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>데모 1: SEC 공시 조사 에이전트</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>단계 추적 보기</td></tr>
+              <tr><td><span class="ts">15:30</span></td><td>데모 2: 정량 분석 에이전트가 metrics.json 이어받기</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>데모 3: 보고서 에이전트, MCP 연결 가능성</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>앱에 넣기: 영수증 시각화</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>AI Studio 안내</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>종목 분석 앱 데모 (VOO)</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>PDF 보고서와 출처 링크</td></tr>
+              <tr><td><span class="ts">19:30</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'Y_p3y6zP5QE:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

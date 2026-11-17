@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>의견을 가진 에이전트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#process">회사는 프로세스로 믿는다</a></li>
+      <li><a href="#gaps">코딩식 에이전트의 두 틈</a></li>
+      <li><a href="#simple">단순하고, 믿을 만하게</a></li>
+      <li><a href="#opinions">의견이란 무엇인가</a></li>
+      <li><a href="#evals">정답 있는 평가의 한계</a></li>
+      <li><a href="#context">행동은 컨텍스트 전체가 정한다</a></li>
+      <li><a href="#spec">행동 명세</a></li>
+      <li><a href="#forking">포킹</a></li>
+      <li><a href="#simulation">시뮬레이션</a></li>
+      <li><a href="#loop">고리를 닫는다</a></li>
+      <li><a href="#trust">신뢰는 동료처럼 쌓인다</a></li>
+      <li><a href="#move37">Move 37은 필요 없다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-04 · 19분 · 영어 발표 한글 정리</span>
+      <h1>나는 100배 빨라졌는데 회사는 왜 그대로인가</h1>
+      <p class="lead">개인은 AI로 크게 빨라졌는데 회사는 그대로다. 발표자는 에이전트가 회사처럼 정해진 방식대로 일하고 그 방식을 지키는지 감독받아야 조직이 믿고 쓸 수 있다고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=JGtkTjn4120" target="_blank" rel="noopener">Why AI Makes You 100x Faster but Not Your Company</a></span>
+        <span>발표: Mitchell Troyanovsky (Basis 공동 창업자. 회계법인용 AI 에이전트를 만든다)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름(Claude Code, Cowork, Move 37)은 알려진 이름으로 바로잡았고, 확실하지 않은 곳에는 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>개인 생산성은 크게 올랐다. 발표자 본인은 <strong>"100배쯤"</strong>이라고 한다. 그런데 <strong>보통 회사의 생산성은 그만큼 오르지 않았다.</strong></li>
+        <li>회사는 매번 똑같이 움직이지 않는 사람을 <strong>프로세스</strong>로 믿는다. 대표는 말단의 일을 몰라도, 정해진 절차가 좋은 결과로 이어진다고 믿는다.</li>
+        <li>지금의 코딩식 에이전트에는 두 가지 틈이 있다. <strong>쓰는 법이 어렵고</strong>, <strong>일하는 방식을 사용자 각자가 정한다.</strong></li>
+        <li>해법은 에이전트를 <strong>단순하고 믿을 만하게</strong> 만드는 것이다. 완벽할 필요는 없다. 매번 같은 방식으로 일하면 된다.</li>
+        <li>그러려면 에이전트가 <strong>의견</strong>을 가져야 한다. 예를 들어 PDF를 읽는 방법을 하나로 정해 둔다.</li>
+        <li>정답이 있는 평가로는 프로덕션을 다 덮지 못한다. 대신 <strong>"의견대로 행동했나"를 모든 궤적에서 채점</strong>한다. 발표자는 이것을 행동 명세라 부른다.</li>
+        <li>어긋난 지점은 <strong>포킹</strong>과 <strong>시뮬레이션</strong>으로 원인을 찾고 컨텍스트를 고친다. 이 고리를 닫으면 프로덕션에서 스스로 나아지는 에이전트가 된다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="process">
+        <header><span class="num">01</span><h2>회사는 프로세스로 사람을 믿는다 <span class="ts">00:40</span></h2></header>
+        <p>이 행사에 온 개발자라면 Cowork, Codex, Claude Code 같은 도구로 자기 생산성을 크게 올렸을 것이다. 발표자는 자기 생산성이 아마 100배쯤 올랐다고 말한다. 잰 숫자가 아니라 본인의 느낌이다.</p>
+        <p>그런데 보통 회사의 생산성은 10배도, 100배도 오르지 않았다. 발표자도 회사 안에서 일했다면 그 정도는 아니었을 거라고 한다.</p>
+        <div class="callout">
+          <span class="title">실마리 <span class="ts">01:20</span></span>
+          <span>사람은 이미 비결정적 시스템<span class="en">non-deterministic system</span>과 일하는 데 익숙하다. 같은 일을 시켜도 매번 조금씩 다르게 하는 상대다. 다만 그 상대가 컴퓨터가 아니라 동료였을 뿐이다. 그러니 지능을 가진 존재를 조직해 온 기존 방식, 즉 <strong>회사</strong>를 보면 답이 보인다.</span>
+        </div>
+
+        <h3>대표는 말단의 하루를 모른다 <span class="ts">02:00</span></h3>
+        <ul class="plain">
+          <li>회계법인 대표는 맨 아래 직원이 매일 무엇을 하는지 거의 모른다.</li>
+          <li>그래도 일이 제대로 될 거라고 믿는다.</li>
+          <li>그 믿음은 결정적 시스템에서 오지 않는다. 사람은 매번 똑같이 움직이지 않는다.</li>
+          <li>믿음은 <strong>프로세스</strong>에서 온다. 프로세스를 만든 사람이 "이 절차를 따르면 대체로 좋은 결과가 나온다"고 믿을 수 있으면, 실행하는 사람이 비결정적이어도 괜찮다.</li>
+        </ul>
+
+        <h3>아주 작은 단계에도 프로세스가 있다 <span class="ts">02:50</span></h3>
+        <p>고객사의 월 결산 안에는 현금 대사<span class="en">cash reconciliation</span>가 있다. 장부의 현금과 은행 기록을 맞춰 보는 일이다. 현금 대사를 하려면 은행 데이터를 받아야 하고, 이 작은 단계에도 프로세스가 있다.</p>
+        <p>그 프로세스는 "승인된 소프트웨어로 데이터를 뽑는다" 한 줄일 수도 있다. 그래도 정해져 있다. 회사는 직원이 "PDF 추출"을 검색해 아무 도구나 쓰게 두지 않는다. 그렇게 두면 프로세스가 없는 것이다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="gaps">
+        <header><span class="num">02</span><h2>코딩식 에이전트의 두 가지 틈 <span class="ts">03:40</span></h2></header>
+        <p>누구나 Cowork, ChatGPT, Codex, Claude Code를 쓸 수 있다. 그런데 그 생산성은 회사 어디에 있나. 발표자는 에이전트에게 말로 일을 시키는 제품을 <strong>코딩식 에이전트 제품</strong><span class="en">coding-style agent products</span>이라 부르고, 이런 제품에 두 가지 문제가 있다고 본다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">역량의 틈 · competency gap <span class="ts">03:50</span></span>
+            <p>에이전트가 복잡함을 사용자에게 떠넘긴다.</p>
+            <ul>
+              <li>사용자가 스킬과 메모리를 직접 관리해야 한다</li>
+              <li>언제 에이전트를 쓸지 사용자가 정해야 한다</li>
+              <li>에이전트가 무엇을 알고 어떻게 생각하는지 짐작해야 한다<span class="en">theory of mind</span></li>
+            </ul>
+            <p>이 자리의 개발자에게는 쉬울 수 있다. 하지만 대부분의 지식 노동자는 이걸 어떻게 하는지 모른다.</p>
+            <p class="verdict"><b>해법</b>: 단순하게 만든다</p>
+          </div>
+          <div class="card">
+            <span class="tag">프로세스의 틈 · process gap <span class="ts">04:30</span></span>
+            <p>"에이전트 줄 테니 알아서 써"라고 하면, 일하는 방식이 사용자마다 달라진다.</p>
+            <ul>
+              <li>방식은 사용자가 에이전트를 어떻게 설정했느냐에 달린다</li>
+              <li>조직이 커지는 방식과 정반대다</li>
+              <li>프로세스는 경영진이 위에서 정해야 한다. 직원 각자가 정하면 안 된다</li>
+            </ul>
+            <p>AI 이전인 2018년에도 직원마다 데이터 추출 방식을 마음대로 정했다면 좋은 결과가 아니었을 것이다.</p>
+            <p class="verdict"><b>해법</b>: 믿을 만하게 만든다</p>
+          </div>
+        </div>
+        <div class="shift" aria-label="일하는 방식을 정하는 주체의 차이">
+          <div><span class="tag">코딩식 에이전트</span><b>사용자가 방식을 정한다</b><span class="muted">각자 프롬프트, 스킬, 메모리를 꾸민다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">회사가 커지는 방식</span><b>위에서 정한 방식을 따른다</b><span class="muted">누가 맡겨도 같은 절차로 일한다</span></div>
+        </div>
+        <p class="note">발표자는 회계법인용 에이전트를 파는 Basis의 공동 창업자다. "범용 에이전트는 회사 안에서 퍼지기 어렵고, 방식이 정해진 에이전트가 맞다"는 주장은 그 회사 제품의 방향과 겹친다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="simple">
+        <header><span class="num">03</span><h2>단순하고, 믿을 만하게 <span class="ts">05:10</span></h2></header>
+        <p>발표자는 두 틈을 메워야 끝까지 일을 해내는 프로덕션 에이전트를 만들 수 있다고 본다.</p>
+        <ul class="plain">
+          <li><strong>단순함</strong>: 사용자는 상대가 에이전트라는 걸 알아도 굳이 느낄 필요가 없다. 동료에게 일을 맡기듯 원하는 걸 말하면, 당연히 될 거라 기대한 것들이 된다.</li>
+          <li><strong>믿을 만함</strong> <span class="ts">05:30</span>: 어느 날은 천재처럼 굴고 다음 날은 뭔가를 빠뜨리면 안 된다.</li>
+        </ul>
+        <p class="note">발표자는 05:10에서 첫 번째 문제를 "consistency gap"이라 불렀다. 앞에서 소개한 이름은 "competency gap(역량의 틈)"이다. 이 노트는 앞의 이름을 따른다.</p>
+
+        <h3>완벽이 아니라 일관성 <span class="ts">05:40</span></h3>
+        <ul class="plain">
+          <li>사람도 완벽하지 않다. 아무도 완벽을 바라지 않는다.</li>
+          <li>바라는 것은 신뢰성, 일관성, 믿음직함이다.</li>
+          <li>핵심은 맞히는 것이 아니라 <strong>비슷한 방식으로 하는 것</strong>이다. <span class="ts">06:20</span></li>
+          <li>못하는 일이 있어도 된다. 다만 늘 똑같이 못해야 하고, 사람처럼 점점 나아지면 된다.</li>
+          <li>어느 날 갑자기 전문가처럼 하다가 아주 기본적인 걸 놓치면 믿을 수 없다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">그래서 에이전트는 의견을 가져야 한다 <span class="ts">06:00</span></span>
+          <span>사용자가 내부를 몰라도 알아서 하고, 매번 같은 방식으로 하려면, 에이전트가 "이 일은 이렇게 한다"는 의견을 가져야 한다<span class="en">opinionated</span>.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="opinions">
+        <header><span class="num">04</span><h2>의견이란 무엇인가 <span class="ts">06:50</span></h2></header>
+        <p>에이전트가 PDF를 읽어야 한다고 하자. 가장 좋은 방법은 무엇일까. 방법은 끝없이 많다.</p>
+        <ul class="plain">
+          <li>VLM<span class="en">Vision Language Model</span>에 그대로 넣는다</li>
+          <li>Python 코드를 짜서 오픈소스 OCR 라이브러리를 쓴다</li>
+          <li>OCR 전문 모델 업체를 쓴다</li>
+          <li>OCR을 돌리고 VLM이 결과를 검사한다</li>
+          <li>VLM 5개가 검사한다</li>
+          <li>VLM 100개를 돌려 가장 좋은 결과를 고른다</li>
+        </ul>
+        <p>"PDF를 추출해"라고만 시키면 결과가 좋을 수는 있다. 하지만 믿을 수는 없다. 고른 방법이 나빠서가 아니다. <strong>방법이 정해져 있지 않아서다.</strong> <span class="ts">07:20</span></p>
+
+        <h3>의견은 어디서 오나 <span class="ts">07:40</span></h3>
+        <p>처음에는 직관과 전문 지식에서 온다. 평가 세트로 확인하거나 제1원리에서 끌어낼 필요가 없는 것들이 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>일</th><th>의견</th><th>기대 효과</th></tr></thead>
+            <tbody>
+              <tr><td>세금 업무</td><td>사용자에게 답하기 전에 1차 자료<span class="en">primary source</span>를 읽는다</td><td>답이 정확할 가능성이 높아진다</td></tr>
+              <tr><td>PowerPoint 만들기</td><td>돌려주기 전에 슬라이드를 캡처해서 직접 본다</td><td>서식 문제가 줄어든다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>의견은 정확도만의 문제가 아니다 <span class="ts">08:20</span></h3>
+        <ul class="plain">
+          <li>슬라이드를 캡처해 보는 데는 시간이 든다<span class="en">latency</span>.</li>
+          <li>서식 실수가 100번에 1번뿐이고 그 정도는 괜찮다면, 캡처를 안 하기로 정할 수도 있다. 그것도 의견이다.</li>
+          <li>중요한 건 의견의 내용이 아니라 <strong>의견이 있다는 것</strong>이다.</li>
+        </ul>
+        <p class="muted">발표는 여기서부터 의견을 만드는 법이 아니라, 의견이 왜 중요하고 프로덕션에서 어떻게 활용하는지를 다룬다. <span class="ts">08:50</span></p>
+      </section>
+
+      <!-- 5 -->
+      <section id="evals">
+        <header><span class="num">05</span><h2>정답 있는 평가로는 다 못 덮는다 <span class="ts">09:00</span></h2></header>
+        <p>흔히 말하는 평가는 <strong>결과 기반 평가</strong><span class="en">outcome-based eval</span>다. 정답이 있거나, 에이전트가 한 일을 채점할 기준표가 있다.</p>
+        <p>문제는 이 평가가 프로덕션에도 통하는지 어떻게 아느냐다. 평가 사례는 100건이나 1,000건이다. 실제 일을 하는 프로덕션에서는 수십만 가지 상황을 만난다.</p>
+
+        <figure class="chart" aria-label="평가 사례 수와 프로덕션 상황 수 비교: 작은 평가 세트 100건, 큰 평가 세트 1,000건, 프로덕션 수십만 가지 상황(100,000으로 그림)">
+          <span class="chart-title">평가 사례 수 vs 프로덕션에서 만나는 상황 수 (건)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>작은 평가 세트</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:0.1%" title="작은 평가 세트: 100건"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>큰 평가 세트</span><span class="val">1,000</span></div>
+              <div class="track"><div class="fill" style="width:1%" title="큰 평가 세트: 1,000건"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>프로덕션에서 만나는 상황</span><span class="val">수십만 (≥ 100,000)</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="프로덕션: 수십만 가지 상황"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50,000</span><span>100,000</span></div>
+          <span class="caption">발표자가 든 숫자다. 막대 길이는 실제 비율이다. 1,000건 막대는 1%, 100건 막대는 0.1%라 거의 보이지 않는다. 프로덕션은 "수십만"이라고만 해서 가장 작게 잡은 100,000에 맞췄다.</span>
+        </figure>
+
+        <ul class="plain">
+          <li>이 차이는 더 벌어진다. 에이전트가 오래 일할수록 한 궤적<span class="en">trajectory</span> 안의 결정 수가 기하급수로 늘어난다.</li>
+          <li>모든 궤적이 옳다고 증명할 수는 없다. 궤적마다 정답<span class="en">ground truth</span>이 있지 않다. <span class="ts">09:50</span></li>
+          <li>대신 궤적을 보고 <strong>의견대로 행동했는지</strong> 확인할 수는 있다.</li>
+          <li>그 행동이 실제로 나타난다면, 프로덕션에서도 잘 통할 가능성이 더 높다고 추론할 수 있다. 확실하지는 않다. 그래도 기준이 생긴다.</li>
+        </ul>
+      </section>
+
+      <!-- 6 -->
+      <section id="context">
+        <header><span class="num">06</span><h2>행동은 컨텍스트 전체가 정한다 <span class="ts">10:10</span></h2></header>
+        <p>회계에서 실제로 나오는 예를 보자. 은행 대사에서 차이가 날 때, 발표자는 에이전트가 숫자를 맞추려고 임의의 분개<span class="en">plug</span>를 넣지 않기를 바란다. 대신 차이가 왜 생겼는지 설명하게 하고 싶다.</p>
+        <p>이건 정답이 있는 문제가 아니다. 반대 방식을 원하는 사람도 있다. 피해야 할 것은 같은 고객이 어떤 날은 이 방식으로, 어떤 날은 저 방식으로 결과를 받는 것이다.</p>
+
+        <h3>무엇이 행동을 정하나 <span class="ts">10:50</span></h3>
+        <p>시스템 프롬프트에 두 문장을 쓴다고 끝나지 않는다. 아주 단순한 에이전트라면 그걸로 될 수도 있다. 큰 에이전트 시스템에서 행동은 여러 가지가 합쳐진 결과다.</p>
+        <ul class="plain">
+          <li>시스템 프롬프트</li>
+          <li>점진적 공개<span class="en">progressive disclosure</span>로 필요할 때 불러오는 컨텍스트</li>
+          <li>도구 설명</li>
+          <li>모델 자체의 학습</li>
+        </ul>
+        <div class="callout">
+          <span class="title">컨텍스트를 "실행 중의 학습 데이터"로 보라 <span class="ts">11:10</span></span>
+          <span>발표자는 "프롬프트"라는 말이 이걸 가볍게 들리게 한다고 본다. 진짜로 학습하는 건 아니지만, 에이전트는 사실상 이 데이터로 그때그때 배운다. 그러니 토큰 하나하나에 신경 쓰고, 그 데이터가 에이전트를 어떻게 움직이는지 이해해야 한다.</span>
+        </div>
+        <p>그래서 한 행동을 정확히 한 문단에 담기 어렵다. 행동은 모든 데이터가 한꺼번에 만든다. <span class="ts">11:50</span></p>
+      </section>
+
+      <!-- 7 -->
+      <section id="spec">
+        <header><span class="num">07</span><h2>행동 명세: 의견을 채점 기준으로 <span class="ts">12:00</span></h2></header>
+        <p>Basis가 만든 개념이 <strong>행동 명세</strong><span class="en">behavior spec</span>다. 컨텍스트를 쓰거나 고치기 전에 "우리가 실제로 원하는 게 뭔가", 즉 의도를 먼저 적는다. 에이전트 시대의 제품 명세라고 생각하면 된다.</p>
+        <ul class="plain">
+          <li>모든 세부를 다 쓰지 않는다.</li>
+          <li>다 쓰면 같은 내용이 컨텍스트와 명세 여기저기에 겹친다.</li>
+          <li><strong>가장 중요한 의견만</strong> 고른다.</li>
+        </ul>
+
+        <h3>두 가지로 쓴다 <span class="ts">12:30</span></h3>
+        <ol class="plain">
+          <li><strong>팀의 기준</strong>: 에이전트가 어떻게 행동해야 하는지 팀이 같은 그림을 갖게 한다.</li>
+          <li><strong>채점표</strong><span class="en">rubric</span>: 정답이 없는 궤적에도 두 가지를 묻는다. 이 행동이 필요한 상황이었나? 그랬다면 실제로 그렇게 행동했나?</li>
+        </ol>
+        <p>이렇게 하면 궤적에서 얻는 신호를 결과 기반 평가보다 훨씬 많이 늘릴 수 있다. 정답과 채점 기준을 늘리는 일도 중요하다. 하지만 행동을 감독하는 능력만큼 빨리 늘릴 수는 없다. <span class="ts">13:00</span></p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>예시: 행동 명세 한 항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>행동</td><td>은행 대사에서 차이가 나면 맞추기용 분개를 넣지 않고, 차이가 생긴 이유를 설명한다</td></tr>
+              <tr><td>해당 상황</td><td>장부 잔액과 은행 잔액이 다를 때</td></tr>
+              <tr><td>채점 질문 1</td><td>이 궤적에 잔액 차이가 있었나?</td></tr>
+              <tr><td>채점 질문 2</td><td>있었다면 분개 대신 설명을 남겼나?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">예시: 발표에는 이런 표 형식이 나오지 않는다. 발표의 은행 대사 사례를 행동 명세 모양으로 옮겨 본 것이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="forking">
+        <header><span class="num">08</span><h2>포킹: 결정 직전으로 돌아가기 <span class="ts">13:20</span></h2></header>
+        <p><strong>포킹</strong><span class="en">forking</span>은 행동 명세와 함께 쓰는 두 번째 도구다. Claude Code나 Codex 웹 앱에서 메시지 아래 포크 아이콘을 누르면, 그 시점의 상태 그대로 에이전트 사본이 생긴다.</p>
+        <p>로컬 컴퓨터에서는 쉽다. 클라우드에서 제대로 하기는 어렵다. 데이터베이스 환경, 프롬프트 등 모든 환경을 그대로 다시 만들어야 하기 때문이다.</p>
+
+        <h3>포킹으로 원인 찾기 <span class="ts">14:00</span></h3>
+        <ol class="plain">
+          <li>어떤 궤적이 행동 평가에서 떨어졌다. 평가 세트든, 테스트든, 프로덕션이든 상관없다.</li>
+          <li>궤적을 따라가, 에이전트가 행동 명세와 어긋난 결정을 한 지점을 찾는다.</li>
+          <li>그 결정 바로 뒤에서 포크하면, 에이전트에게 "왜 그렇게 했나"를 물을 수 있다.</li>
+          <li>또는 컨텍스트를 고친 뒤 같은 지점에서 다시 돌려, 행동이 나아지는지 본다.</li>
+          <li>찾은 원인으로 하네스<span class="en">harness</span>를 고친다.</li>
+        </ol>
+        <p class="muted">전제는 행동 명세 자체가 좋고, 실제로 쓸모 있는 신호를 낸다는 것이다.</p>
+        <div class="callout">
+          <span class="title">결과 기반 평가로는 왜 어렵나 <span class="ts">15:00</span></span>
+          <span>결과가 틀렸다는 것만 알면 왜 틀렸는지 알기 어렵다. 발표자에 따르면 5시간짜리 에이전트 궤적에는 추론 호출이 1,000번쯤 있을 수 있다. 그중 어디가 문제였는지 결과만 보고는 찾을 수 없다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="simulation">
+        <header><span class="num">09</span><h2>시뮬레이션: 싸고 빠른 대역 <span class="ts">15:10</span></h2></header>
+        <p>발표자가 가장 좋아하는 도구다. 우습게 들리지만 효과가 좋다고 한다.</p>
+        <ol class="plain">
+          <li>코딩 에이전트에게 프로덕션 에이전트 흉내를 내는 서브에이전트를 만들게 한다.</li>
+          <li>서브에이전트에게 속이지 말라고 일러 둔다.</li>
+          <li>실제 시스템 프롬프트와 스킬을 주고, 실제와 똑같이 렌더링한다.</li>
+          <li>평가나 프로덕션에서 본 상황을 주고, 그때 무엇을 할지 묻는다.</li>
+          <li>같은 행동이 재현되면, 컨텍스트를 고쳐 가며 서브에이전트의 행동이 바뀌는지 본다.</li>
+        </ol>
+        <ul class="plain">
+          <li>정확도는 포킹보다 훨씬 떨어진다. <span class="ts">15:50</span></li>
+          <li>그래도 훨씬 싸고 빠르다. 환경 전체를 포크하는 비싼 과정 없이 아이디어를 바로 시험할 수 있다.</li>
+          <li>아무것도 새로 만들지 않고 오늘 바로 할 수 있다. 발표자는 사내 시스템에 포킹을 넣기 전 1년 반 넘게 이 방법을 썼다. <span class="ts">16:10</span></li>
+        </ul>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>도구</th><th>하는 일</th><th>장단점 (발표 기준)</th></tr></thead>
+            <tbody>
+              <tr><td>행동 명세</td><td>중요한 의견을 적고, 정답 없는 궤적도 그 기준으로 채점한다</td><td>결과 기반 평가보다 신호를 훨씬 빨리 늘릴 수 있다</td></tr>
+              <tr><td>포킹</td><td>실제 궤적의 결정 지점에서 사본을 만들어 이유를 묻거나 고쳐 본다</td><td>가장 정확하다. 클라우드에서 환경을 재현하기 어렵고 비싸다</td></tr>
+              <tr><td>시뮬레이션</td><td>코딩 에이전트가 만든 대역이 같은 상황에서 어떻게 할지 본다</td><td>싸고 빠르고 오늘 할 수 있다. 정확도는 포킹보다 낮다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="loop">
+        <header><span class="num">10</span><h2>고리를 닫는다 <span class="ts">16:20</span></h2></header>
+        <p>다시 프로덕션 궤적의 분포를 떠올리자. 결과 기반 평가만으로는 에이전트가 그 분포 전체에서 잘하는지 알 수 없다. 분포를 대표할 만한 평가를 고를 수는 있지만 확신할 수 없다.</p>
+        <p>과정을 감독하면<span class="en">supervising the process</span> 추가 신호가 생긴다. 신호가 쌓이면 고리를 닫을 수 있다. <span class="ts">16:50</span></p>
+        <ol class="plain">
+          <li><strong>의견</strong>: 이 일을 어떻게 해야 하는지 정한다.</li>
+          <li><strong>행동 명세</strong>: 가장 중요한 의견을 적고 궤적을 채점한다.</li>
+          <li><strong>신호</strong>: 의견대로 하지 않은 궤적이 드러난다.</li>
+          <li><strong>원인 찾기</strong>: 포킹이나 시뮬레이션으로 왜 그랬는지 본다.</li>
+          <li><strong>고치기</strong>: 컨텍스트를 고치고 다시 채점한다.</li>
+        </ol>
+        <p class="note">발표의 세 도구를 한 흐름으로 이어 정리한 것이다.</p>
+        <div class="callout">
+          <span class="title">출발점은 의견이다 <span class="ts">17:00</span></span>
+          <span>시스템에 대한 의견이 없으면 이 신호를 만들 수 없다. 무엇을 확인할지 정할 기준이 없기 때문이다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="trust">
+        <header><span class="num">11</span><h2>신뢰는 동료처럼 쌓인다 <span class="ts">17:10</span></h2></header>
+        <p>다시 회계법인으로 돌아가자. 의견을 가진 에이전트는 더 믿을 만하고, 더 단순하다.</p>
+        <ul class="plain">
+          <li>처음에는 좁은 일부터 한다.</li>
+          <li>사람들이 써 보면서 쓰기 쉽고 믿을 만하다는 걸 본다.</li>
+          <li>에이전트가 나아질수록 사람들은 더 믿는다.</li>
+          <li>첫 출근한 동료를 믿게 되는 과정과 같다.</li>
+        </ul>
+
+        <h3>PR을 받을 때 보는 두 축 <span class="ts">17:30</span></h3>
+        <p>누군가 PR을 보내면 두 가지를 본다. 하나는 이 PR이 잘못됐을 때 피해가 미치는 범위다. 다른 하나는 보낸 사람의 실력에 대한 내 판단이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>보낸 사람</th><th>고친 곳</th><th>리뷰</th></tr></thead>
+            <tbody>
+              <tr><td>회사에서 실력이 가장 낮은 사람</td><td>핵심 서비스</td><td>꼼꼼히 본다</td></tr>
+              <tr><td>회사에서 실력이 가장 높은 사람</td><td>사내 문서</td><td>그만큼 보지 않을 수 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>사람과 에이전트 사이에서도 똑같다. <span class="ts">18:00</span> 에이전트가 믿을 만하다는 걸 보여 줄수록, 사람은 더 넓은 일을 덜 들여다보고 맡긴다.</p>
+        <p class="note">첫 번째 축은 자막에 "black greatest"로 들린다. 맥락상 영향 범위를 뜻하는 blast radius로 보인다(추정).</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="move37">
+        <header><span class="num">12</span><h2>Move 37은 필요 없다 <span class="ts">18:10</span></h2></header>
+        <p>이런 이야기를 들으면 반론이 나온다. 에이전트가 하고 싶은 대로 두면 더 나은 방법을 찾지 않을까? 바둑의 Move 37처럼 사람이 생각 못 한 수를 둘 수도 있지 않을까?</p>
+        <p>발표자의 답은 "그럴 수도 있다"다. 하지만 GDP와 생산량은 그렇게 늘지 않는다.</p>
+        <blockquote>자기 세금 신고서에 Move 37을 두길 바라는 사람은 없다.<cite>발표자의 말을 옮김 <span class="ts">18:20</span></cite></blockquote>
+        <p>사람들이 원하는 건 일이 이렇게 끝나는 것이다. 믿을 수 있게, 대규모로, 직원들이 함께 일하는 법을 아는 방식으로.</p>
+        <div class="callout">
+          <span class="title">발표자의 맺음말 <span class="ts">18:40</span></span>
+          <span>에이전트가 퍼지려면 <strong>단순</strong>해야 한다. 팀이 믿으려면 <strong>믿을 만</strong>해야 한다. 단순하고 믿을 만해지는 길은 에이전트의 행동에 <strong>의견</strong>을 갖는 것이다. 의견은 추가 신호를 만들고, 그 신호로 고리를 닫으면 프로덕션에서 스스로 나아지는 에이전트<span class="en">self-improving agents</span>에 닿는다.</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>개인은 AI로 크게 빨라졌지만, 보통 회사의 생산성은 그만큼 오르지 않았다.</li>
+          <li>회사는 비결정적인 사람을 <strong>프로세스</strong>로 믿는다. 에이전트도 같은 원리로 믿게 만들어야 한다.</li>
+          <li>코딩식 에이전트는 쓰는 법을 사용자에게 떠넘기고(역량의 틈), 일하는 방식을 사용자 각자에게 맡긴다(프로세스의 틈).</li>
+          <li>해법은 <strong>단순하고 믿을 만하게</strong>다. 목표는 완벽이 아니라 매번 같은 방식이다.</li>
+          <li>같은 방식을 지키려면 에이전트가 <strong>의견</strong>을 가져야 한다. PDF 읽는 법처럼 방법을 하나로 정한다.</li>
+          <li>의견은 전문 지식에서 오고, 정확도뿐 아니라 속도 같은 다른 비용도 따진다.</li>
+          <li>평가 사례는 100~1,000건, 프로덕션은 수십만 상황이다. 결과 기반 평가만으로는 프로덕션에서 통할지 알 수 없다.</li>
+          <li>행동은 프롬프트 한 줄이 아니라 <strong>컨텍스트 전체</strong>가 정한다. 컨텍스트를 실행 중의 학습 데이터로 다룬다.</li>
+          <li><strong>행동 명세</strong>로 정답 없는 궤적도 채점하고, <strong>포킹</strong>과 <strong>시뮬레이션</strong>으로 어긋난 원인을 찾는다.</li>
+          <li>의견이 신호를 만들고, 신호가 고리를 닫는다. 에이전트도 동료처럼 좁은 일에서 신뢰를 쌓아 넓혀 간다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>"사람은 이미 비결정적 시스템과 일해 왔다"는 무슨 뜻인가?</span></summary><div class="answer">동료가 바로 비결정적 시스템이다. 같은 일을 시켜도 매번 조금씩 다르게 한다. 회사는 그런 사람들을 프로세스로 묶어 믿고 일한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>회계법인 대표가 말단 직원의 일을 몰라도 결과를 믿을 수 있는 이유는?</span></summary><div class="answer">프로세스가 있기 때문이다. 만든 사람이 좋은 결과로 이어진다고 믿는 절차를 따르면, 실행하는 사람이 비결정적이어도 대체로 좋은 결과가 나온다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>역량의 틈(competency gap)이란?</span></summary><div class="answer">에이전트가 복잡함을 사용자에게 떠넘기는 것이다. 사용자가 스킬과 메모리를 관리하고, 언제 쓸지 정하고, 에이전트의 생각을 짐작해야 한다. 대부분의 지식 노동자는 이걸 할 줄 모른다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>프로세스의 틈이 조직이 커지는 방식과 맞지 않는 이유는?</span></summary><div class="answer">일하는 방식을 사용자 각자가 정하게 되기 때문이다. 조직에서는 프로세스가 경영진에서 위에서 아래로 내려와야 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>발표자가 말하는 "믿을 만함"은 완벽함과 어떻게 다른가?</span></summary><div class="answer">맞히는 것이 아니라 같은 방식으로 하는 것이다. 못하는 일도 늘 똑같이 못하고 점점 나아지면 된다. 하루는 전문가처럼 하고 다음 날 기본을 놓치면 믿을 수 없다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>"PDF를 추출해"라고만 시키면 왜 믿을 수 없나?</span></summary><div class="answer">방법이 끝없이 많은데 하나로 정해져 있지 않기 때문이다. 고른 방법이 나빠서가 아니다. 의견이 없어서다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>PowerPoint 예에서 "캡처하지 않는다"도 의견이 될 수 있는 이유는?</span></summary><div class="answer">캡처에는 시간이 든다. 서식 실수가 100번에 1번이고 감수할 만하다면 안 하기로 정할 수 있다. 의견은 정확도만의 문제가 아니다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>결과 기반 평가만으로 부족한 이유 두 가지는?</span></summary><div class="answer">평가 사례는 100~1,000건인데 프로덕션 상황은 수십만 가지다. 그리고 궤적이 길어질수록 결정 수가 기하급수로 늘어 모든 궤적에 정답을 둘 수 없다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>컨텍스트를 "실행 중의 학습 데이터"로 보라는 말의 뜻은?</span></summary><div class="answer">시스템 프롬프트, 필요할 때 불러오는 컨텍스트, 도구 설명이 모두 합쳐져 행동을 만든다. 그러니 "프롬프트 몇 줄"로 가볍게 보지 말고 토큰 하나하나가 행동에 주는 영향을 신경 써야 한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>행동 명세를 채점표로 쓸 때 궤적마다 묻는 두 질문은?</span></summary><div class="answer">이 행동이 필요한 상황이었나? 그랬다면 실제로 그렇게 행동했나?</div></details>
+          <details><summary><span class="qn">Q11</span><span>포킹으로 행동 평가 실패의 원인을 찾는 순서는?</span></summary><div class="answer">어긋난 결정 지점을 찾는다. 그 지점에서 포크한다. 에이전트에게 이유를 묻거나, 컨텍스트를 고쳐 행동이 나아지는지 본다. 찾은 원인으로 하네스를 고친다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>시뮬레이션이 포킹보다 부정확한데도 쓰는 이유는?</span></summary><div class="answer">훨씬 싸고 빠르기 때문이다. 환경 전체를 포크하지 않고도 아이디어를 시험할 수 있고, 아무것도 새로 만들지 않고 오늘 바로 할 수 있다.</div></details>
+          <details><summary><span class="qn">Q13</span><span>발표자가 "Move 37"을 꺼낸 이유는?</span></summary><div class="answer">자유롭게 둔 에이전트가 더 나은 방법을 찾을 수도 있다. 하지만 세금 신고 같은 실제 일에서는 놀라운 수보다 믿을 수 있고 대규모로 반복되는 결과가 필요하다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트가 하는 일 하나를 골라 "이렇게 한다"는 의견을 적는다<span class="how">예: PDF는 어떤 도구로 읽나, 답하기 전에 원문을 다시 확인하나</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>의견마다 정확도 말고 다른 비용도 적는다<span class="how">속도, 비용, 감수할 수 있는 실패율</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>가장 중요한 의견만 골라 행동 명세를 쓴다<span class="how">모든 걸 쓰지 않는다. 컨텍스트와 같은 내용이 겹치지 않게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>정답 없는 궤적에도 행동 명세 채점을 돌린다<span class="how">확인: 해당 상황이었나, 그렇게 행동했나</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트가 보는 컨텍스트를 한 번에 다 읽어 본다<span class="how">시스템 프롬프트, 필요할 때 불러오는 문서, 도구 설명이 같은 행동을 가리키는지</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>어긋난 궤적 하나를 시뮬레이션으로 재현해 본다<span class="how">코딩 에이전트에게 프로덕션 에이전트 역을 맡기고, 속이지 말라고 일러 둔다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>원인을 확인한 뒤 컨텍스트를 고치고 다시 채점한다<span class="how">확인: 같은 상황에서 행동이 바뀌었나</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트에게 처음에는 좁은 일만 맡긴다<span class="how">잘못돼도 피해가 작은 일부터 믿음을 쌓고 넓힌다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>비결정적 시스템</td><td>Non-deterministic system. 같은 입력에도 매번 결과가 조금씩 다를 수 있는 시스템. 사람과 LLM 에이전트가 그렇다</td></tr>
+              <tr><td>프로세스</td><td>일을 어떤 순서와 방법으로 할지 조직이 정해 둔 절차</td></tr>
+              <tr><td>현금 대사</td><td>Cash reconciliation. 장부의 현금 잔액과 은행 기록을 맞춰 보며 차이를 찾는 일</td></tr>
+              <tr><td>맞추기용 분개</td><td>Plug. 차이의 원인을 찾지 않고 잔액을 맞추려고 넣는 임의의 회계 기록</td></tr>
+              <tr><td>코딩식 에이전트 제품</td><td>발표자의 용어. 사용자가 에이전트에게 말로 일을 시키고 설정도 직접 하는 제품. 예: Cowork, Codex, Claude Code</td></tr>
+              <tr><td>역량의 틈</td><td>Competency gap. 에이전트를 잘 쓰는 데 필요한 능력을 사용자가 갖추지 못한 상태</td></tr>
+              <tr><td>프로세스의 틈</td><td>Process gap. 일하는 방식을 조직이 아니라 사용자 각자가 정하게 되는 문제</td></tr>
+              <tr><td>마음 이론</td><td>Theory of mind. 상대가 무엇을 알고 어떻게 생각하는지 짐작하는 능력. 여기서는 에이전트의 생각을 짐작하는 일</td></tr>
+              <tr><td>의견을 가진</td><td>Opinionated. 여러 방법 중 하나를 정해 두고 매번 그 방법으로 하는 것</td></tr>
+              <tr><td>VLM</td><td>Vision Language Model. 이미지와 글을 함께 이해하는 모델</td></tr>
+              <tr><td>OCR</td><td>이미지 속 글자를 텍스트로 바꾸는 기술</td></tr>
+              <tr><td>1차 자료</td><td>Primary source. 요약이나 해석이 아닌 원래 문서</td></tr>
+              <tr><td>결과 기반 평가</td><td>Outcome-based eval. 정답이나 채점 기준표로 결과가 맞았는지 재는 평가</td></tr>
+              <tr><td>궤적</td><td>Trajectory. 에이전트가 일하며 거친 결정과 행동의 기록 전체</td></tr>
+              <tr><td>정답</td><td>Ground truth. 결과를 비교할 기준이 되는 확정된 답</td></tr>
+              <tr><td>점진적 공개</td><td>Progressive disclosure. 컨텍스트를 처음에 다 주지 않고 필요할 때 단계적으로 불러오는 방식</td></tr>
+              <tr><td>행동 명세</td><td>Behavior spec. 에이전트가 지켜야 할 가장 중요한 행동을 적은 문서. 팀의 기준이자 궤적 채점표로 쓴다</td></tr>
+              <tr><td>채점표</td><td>Rubric. 결과나 행동을 판정하는 질문과 기준의 목록</td></tr>
+              <tr><td>포킹</td><td>Forking. 에이전트 대화의 특정 시점에서 같은 상태의 사본을 만들어 다르게 이어 가 보는 것</td></tr>
+              <tr><td>시뮬레이션</td><td>발표자의 용어. 코딩 에이전트가 만든 서브에이전트가 프로덕션 에이전트를 흉내 내게 해 행동을 시험하는 것</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙, 컨텍스트를 정해 주는 실행 틀</td></tr>
+              <tr><td>영향 범위</td><td>Blast radius. 변경이 잘못됐을 때 피해가 미치는 범위</td></tr>
+              <tr><td>Move 37</td><td>2016년 AlphaGo가 이세돌과의 대국에서 둔 37번째 수. 사람이 두지 않을 수였지만 승리로 이어졌다. AI가 사람이 생각 못 한 방법을 찾는 순간을 가리키는 말로 쓰인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개: Basis, 회계법인용 에이전트</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>질문: 개인은 100배, 회사는 왜 그대로인가</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>사람은 이미 비결정적 시스템(동료)과 일한다</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>조직은 어떻게 생산성을 키우나: 신뢰와 프로세스</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>회계법인 그림: 대표는 말단의 일을 모른다</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>작은 단계의 프로세스: 현금 대사와 은행 데이터</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>에이전트로 늘어난 생산성은 어디에 있나</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>첫째 틈: 역량</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>둘째 틈: 프로세스</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>해법: 단순하게, 믿을 만하게</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>완벽이 아니라 일관성</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>의견을 가져야 한다</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>의견의 예: PDF 읽기</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>의견을 만드는 법: 세금, PowerPoint</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>의견은 정확도만의 문제가 아니다: 속도</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>결과 기반 평가와 프로덕션 분포</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>궤적에서 의견대로 했는지 본다</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>실제 예: 은행 대사와 맞추기용 분개</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>행동을 정하는 것들</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>컨텍스트는 실행 중의 학습 데이터</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>행동 명세</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>행동 명세를 채점표로</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>포킹</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>포킹으로 원인 찾기</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>결과만 보면 원인을 모른다</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>시뮬레이션</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>포킹보다 싸고 빠르다</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>과정을 감독해 얻는 추가 신호</td></tr>
+              <tr><td><span class="ts">16:50</span></td><td>고리를 닫는다</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>신뢰는 동료처럼 쌓인다</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>PR 리뷰의 두 축</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>반론: Move 37</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>맺음말: 단순함, 믿음, 의견, 신호</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'JGtkTjn4120:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

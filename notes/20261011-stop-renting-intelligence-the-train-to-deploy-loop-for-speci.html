@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>학습-배포 루프 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#why">왜 오픈 모델로 옮기나</a></li>
+      <li><a href="#truths">지금 AI 업계의 세 가지 사실</a></li>
+      <li><a href="#scale">추론 규모와 고객 사례</a></li>
+      <li><a href="#engine">추론을 빠르게 만드는 법</a></li>
+      <li><a href="#products">품질 격차를 메우는 학습 상품 3가지</a></li>
+      <li><a href="#methods">SFT, RFT, DPO와 평가 함수</a></li>
+      <li><a href="#flywheel">데이터 플라이휠</a></li>
+      <li><a href="#enablers">루프를 받치는 기능</a></li>
+      <li><a href="#demo-agent">데모: 학습 에이전트</a></li>
+      <li><a href="#demo-managed">데모: 관리형 학습에서 배포까지</a></li>
+      <li><a href="#caveats">정리와 읽을 때 주의할 점</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-11 · 19분 · 영어 발표 한글 정리</span>
+      <h1>지능을 빌리지 말고 키워라</h1>
+      <p class="lead">폐쇄형 모델 비용이 빠르게 오르면서 오픈 모델로 옮기는 팀이 늘고 있다. 발표자는 오픈 모델을 내 일에 맞게 학습하고, 바로 배포하고, 다시 학습하는 루프로 품질 격차를 메울 수 있다고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=13YZ1EB9hjU" target="_blank" rel="noopener">Stop Renting Intelligence: The Train-to-Deploy Loop for Specialized AI</a></span>
+        <span>발표: Jatashri(추정) · Fireworks AI 응용 머신러닝 팀 일부를 이끈다. "Jet"으로 불러 달라고 했다</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 알려진 이름으로 바로잡았다(예: Versell → Vercel, RFD → RFT, humix → numerics). <span class="ts">mm:ss</span>는 영상 위치다.</p>
+      <p class="note">발표자는 Fireworks AI 소속이고, 발표 대부분이 자사 플랫폼 소개다. 고객 사례 수치와 "학습과 서빙을 한 플랫폼에서 해야 한다"는 주장은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>폐쇄형 모델이 비싸지면서 <strong>오픈 모델로 옮기는 팀</strong>이 늘고 있다. 발표자는 오픈 모델이 대부분 실서비스에 쓸 만하다고 본다.</li>
+        <li>오픈 모델이 품질에서 밀린다면, 차이를 메우는 건 <strong>내 일에 맞춘 추가 학습</strong>이다.</li>
+        <li>AI 스택은 "한 번 배포하고 끝"에서 <strong>학습과 배포를 계속 반복하는 루프</strong>로 바뀌고 있다.</li>
+        <li>추론 쪽에서 Fireworks는 자체 엔진 FireAttention과 <strong>CUDA 커널까지 고객 워크로드에 맞춰</strong> 조정한다. 발표자는 Cursor 13배, Vercel 40배 개선을 사례로 들었다.</li>
+        <li>학습 쪽 상품은 세 가지다. <strong>학습 에이전트</strong>(맡기기), <strong>관리형 학습</strong>(설정하고 누르기), <strong>학습 API</strong>(직접 짜기).</li>
+        <li>요즘 인기인 RFT는 <strong>좋은 평가 함수</strong>가 관건이다. Genspark는 RFT로 품질을 12% 올렸다고 한다.</li>
+        <li>루프를 받치는 장치는 <strong>원클릭 배포, 모니터링, 체크포인트 재학습, 핫로딩, 학습과 서빙의 수치 일치</strong>다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="why">
+        <header><span class="num">01</span><h2>왜 오픈 모델로 옮기나 <span class="ts">00:00</span></h2></header>
+        <p>발표자는 청중에게 두 가지를 물었다. ChatGPT나 Anthropic 같은 폐쇄형 모델 <span class="en">closed-source model</span>을 쓰는 사람이 얼마나 되는지. 그리고 그 비용이 너무 빨리 오른다고 느끼는 사람이 얼마나 되는지.</p>
+        <p>꽤 많은 사람이 손을 들었다. 발표자에 따르면 Fireworks 고객들도 같은 길을 걷고 있다. 비용과 성능 때문에 오픈 모델 <span class="en">open-source model</span>로 옮기는 중이다.</p>
+        <p>발표의 질문은 두 가지다. 오픈 모델은 어디서 강한가. 그리고 오픈 모델의 품질을 폐쇄형 모델 수준으로 어떻게 끌어올리나.</p>
+        <p class="note">제목의 "지능을 빌리지 말라 <span class="en">Stop Renting Intelligence</span>"는 남의 모델을 API로 빌려 쓰는 대신, 내 일에 맞게 학습한 모델을 직접 갖자는 뜻으로 읽힌다. 발표 본문에서 이 표현을 직접 쓰지는 않았다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="truths">
+        <header><span class="num">02</span><h2>지금 AI 업계의 세 가지 사실 <span class="ts">01:20</span></h2></header>
+        <p>발표자가 "지금 AI 생태계에서 참인 것"으로 꼽은 세 가지다.</p>
+        <ol class="plain">
+          <li><strong>오픈 모델은 대부분 실서비스에 쓸 수 있다.</strong> 발표자는 GLM 5.2를 예로 들며, 특히 코딩 용도에서 그렇다고 했다.</li>
+          <li><strong>품질 격차는 맞춤 학습으로 메운다.</strong> 오픈 모델이 폐쇄형 모델을 넘거나 따라잡지 못한다면, 차이를 만드는 건 모델을 얼마나 잘 맞춤 학습하고 개선하느냐다.</li>
+          <li><strong>AI 스택이 루프로 바뀐다.</strong> 모델을 한 번 서빙하고 끝내지 않는다. 같은 오픈 모델을 학습하고, 추론에 쓰고, 다시 학습한다.</li>
+        </ol>
+        <div class="shift" aria-label="AI 스택의 변화">
+          <div><span class="tag">지금까지</span><b>한 번 서빙하고 끝</b><span class="muted">정해진 모델을 가져다 배포한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">앞으로</span><b>학습과 추론을 계속 도는 루프</b><span class="muted">새 데이터와 피드백으로 같은 모델을 계속 개선한다</span></div>
+        </div>
+        <p>Fireworks는 이 루프를 쉽고 싸게 만드는 회사라고 자신을 소개했다 <span class="ts">02:20</span>. 오픈 모델을 학습하는 일과 대규모로 서빙하는 일을 한곳에서 한다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="scale">
+        <header><span class="num">03</span><h2>추론 규모와 고객 사례 <span class="ts">03:10</span></h2></header>
+        <p>학습 이야기 전에 발표자는 추론 쪽 실적부터 보여 줬다. 추론 <span class="en">inference</span>은 학습이 끝난 모델로 실제 답을 만들어 내는 일이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>발표자가 말한 값</th></tr></thead>
+            <tbody>
+              <tr><td>처리 토큰</td><td>약 30조 개. GLM 5.2 출시 전 숫자이고, 지금은 하루 5조 개 이상 늘었을 것이라고 했다</td></tr>
+              <tr><td>고객사</td><td>전 세계 1만 곳 이상</td></tr>
+              <tr><td>초당 요청</td><td>약 20만 건</td></tr>
+              <tr><td>투자 유치</td><td>약 3억 2,700만 달러</td></tr>
+              <tr><td>인원</td><td>약 200명</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">30조 토큰의 기간 단위는 자막에서 분명하지 않다. 바로 뒤에 "하루 5조 개 이상 늘었다"는 말이 이어져 하루 기준으로 보인다. 투자 금액 뒤의 말은 자막에 "CDC"로 적혀 있어 어떤 라운드인지 알 수 없다.</p>
+
+        <h3>고객 사례 <span class="ts">03:40</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Cursor · Composer 2</span>
+            <p>Cursor의 Composer 2 모델을 Fireworks에서 학습하고 서빙한다.</p>
+            <p class="verdict">FireAttention 엔진 덕분에 추론이 <b>13배</b> 빨라졌다고 했다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Vercel <span class="ts">04:00</span></span>
+            <p>모델 파인튜닝과 서빙을 모두 Fireworks에서 했다.</p>
+            <p class="verdict">지연 시간이 <b>40배</b> 개선됐다고 했다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Genspark <span class="ts">04:20</span></span>
+            <p>Lovable처럼 프롬프트만으로 결과물을 만들게 해 주는 서비스다. 오픈 모델로 옮길 때 품질이 가장 큰 걸림돌이었다.</p>
+            <ul>
+              <li>데이터셋 정리</li>
+              <li>평가 함수 정의</li>
+              <li>RFT 학습</li>
+            </ul>
+            <p class="verdict">학습이 끝난 뒤 품질이 <b>12%</b> 올랐다고 했다.</p>
+          </div>
+        </div>
+
+        <figure class="chart" aria-label="발표자가 인용한 속도 개선 배수: Vercel 40배, Cursor 13배. 기존을 1배로 놓음">
+          <span class="chart-title">고객 사례의 속도 개선 배수 (기존 = 1배)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Vercel · 지연 시간 개선</span><span class="val">40배</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="Vercel: 지연 시간 40배 개선"></div><div class="baseline" style="left:2.5%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Cursor · Composer 2 추론 속도</span><span class="val">13배</span></div>
+              <div class="track"><div class="fill key" style="width:32.5%" title="Cursor Composer 2: 추론 13배 빨라짐"></div><div class="baseline" style="left:2.5%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>점선 = 기존 (1배)</span><span>40배</span></div>
+          <span class="caption">두 수치 모두 무엇과 비교한 배수인지 발표에서 밝히지 않았다. 잰 대상도 "추론 속도"와 "지연 시간"으로 조금 다르다. 두 막대를 곧바로 비교하기는 어렵다.</span>
+        </figure>
+        <p class="note">세 사례 모두 발표자 회사의 고객 실적이다. 비교 기준과 측정 방법이 공개되지 않았다는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="engine">
+        <header><span class="num">04</span><h2>추론을 빠르게 만드는 법 <span class="ts">05:10</span></h2></header>
+        <p>Fireworks에는 FireAttention이라는 자체 추론 엔진이 있다. 발표자는 구조를 세 층으로 설명했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>모델</td><td>실제로 답을 계산하는 신경망</td></tr>
+              <tr><td>CUDA 커널</td><td>모델의 계산을 GPU가 실행할 명령으로 바꾸는 번역층. <strong>Fireworks는 이 커널을 직접 만든다</strong></td></tr>
+              <tr><td>GPU</td><td>계산을 실제로 수행하는 하드웨어</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>워크로드에 맞춘 최적화 <span class="ts">05:50</span></h3>
+        <p>고객은 자기 워크로드와 성능 목표를 가지고 온다. Fireworks는 엔진과 CUDA 커널까지 그 용도에 맞춰 조정한다. 목표는 두 가지다. 더 싸게 서빙하고, 성능 목표도 맞춘다.</p>
+        <p>발표자가 든 예로, Vercel 같은 고객은 이런 정보를 가져온다.</p>
+        <ul class="plain">
+          <li>요청당 입력 토큰 수</li>
+          <li>요청당 출력 토큰 수</li>
+          <li>프롬프트 캐시 적중률 <span class="en">prompt cache hit rate</span></li>
+          <li>맞춰야 할 지연 시간 목표</li>
+        </ul>
+
+        <h3>널리 쓰이는 기법도 쓴다 <span class="ts">06:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기법</th><th>쉬운 설명 (일반적인 뜻, 발표 밖 보충)</th></tr></thead>
+            <tbody>
+              <tr><td>추측 디코딩</td><td><span class="en">speculative decoding</span> 작은 초안 모델이 다음 토큰 여러 개를 먼저 추측하고, 큰 모델이 한 번에 검사한다</td></tr>
+              <tr><td>분리 서빙</td><td><span class="en">disaggregation</span> 입력을 읽는 단계와 답을 만드는 단계를 다른 GPU에 나눠 맡긴다</td></tr>
+              <tr><td>양자화</td><td><span class="en">quantization</span> 모델의 숫자를 더 적은 비트로 저장해 계산을 가볍게 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">초안 모델도 직접 학습할 수 있다</span>
+          <span>추측 디코딩에 쓰는 초안 모델 <span class="en">draft model</span>을 고객이 Fireworks에서 학습할 수 있다. 파인튜닝처럼 데이터셋을 올리면 된다. 초안 모델이 잘 학습되면 본 모델이 빨라지고, 지연 목표를 맞추기 쉬워지고, 처리량도 늘어난다고 했다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="products">
+        <header><span class="num">05</span><h2>품질 격차를 메우는 학습 상품 3가지 <span class="ts">07:00</span></h2></header>
+        <p>추론 최적화는 고객이 모델 품질에 만족한 다음 단계다. 폐쇄형에서 오픈 모델로 옮길 때 가장 큰 벽은 <strong>품질</strong>이다. Fireworks는 이 벽을 학습 상품으로 푼다. 사용자 층에 따라 세 가지로 나뉜다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 학습 에이전트 <span class="ts">07:20</span></span>
+            <p><strong>대상</strong>: 이 분야에 최근 들어온 PM과 빌더</p>
+            <ul>
+              <li>UI에서 쓴다</li>
+              <li>올려 둔 데이터셋을 연결하고, 이번 학습으로 하려는 일을 설명한다</li>
+              <li>에이전트가 모델을 고르고, 데이터를 정리하고, 하이퍼파라미터를 조정한다</li>
+            </ul>
+            <p class="verdict"><b>한계</b>: RFT는 지원하지 않는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 관리형 학습 <span class="ts">08:10</span></span>
+            <p><strong>대상</strong>: 대부분의 고객. 가장 많이 쓰는 방식이다</p>
+            <ul>
+              <li>API와 UI 둘 다 쓸 수 있다</li>
+              <li>하이퍼파라미터를 넣고, 모델을 고르고, 데이터셋을 올리고, 버튼을 누른다</li>
+              <li>대시보드에서 에폭마다 학습이 얼마나 잘 되는지, 손실 곡선이 어떤지 본다</li>
+              <li>Weights &amp; Biases API 키를 넣으면 지표를 그쪽으로 내보낸다</li>
+            </ul>
+            <p class="verdict"><b>해결하려는 문제</b>: 학습이 시작된 뒤 안을 들여다보기 어려운 것</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 학습 API <span class="ts">09:20</span></span>
+            <p><strong>대상</strong>: 조직 안의 ML 엔지니어</p>
+            <ul>
+              <li>학습 루프를 직접 정의한다</li>
+              <li>손실 함수를 직접 정의한다</li>
+            </ul>
+            <p class="verdict"><b>쓸 때</b>: 관리형 학습이 제공하는 범위를 넘어 학습을 맞춤화해야 할 때</p>
+          </div>
+        </div>
+        <div class="shift" aria-label="세 상품의 차이">
+          <div><span class="tag">학습 에이전트</span><b>무엇을 원하는지만 말한다</b><span class="muted">모델, 데이터 정리, 하이퍼파라미터를 맡긴다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">학습 API</span><b>학습 방식을 직접 짠다</b><span class="muted">루프와 손실 함수까지 정한다. 관리형 학습은 그 사이에 있다</span></div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="methods">
+        <header><span class="num">06</span><h2>SFT, RFT, DPO와 평가 함수 <span class="ts">10:00</span></h2></header>
+        <p>세 상품에서 지도 파인튜닝(SFT), 강화 파인튜닝(RFT), DPO를 쓸 수 있다고 했다. 다만 학습 에이전트는 RFT를 지원하지 않는다고 바로 덧붙였다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>무엇을 주고 학습하나 (일반적인 뜻, 발표 밖 보충)</th></tr></thead>
+            <tbody>
+              <tr><td>SFT</td><td><span class="en">supervised fine-tuning</span> 입력과 모범 답의 쌍을 보여 주고 그대로 따라 하게 한다</td></tr>
+              <tr><td>RFT</td><td><span class="en">reinforcement fine-tuning</span> 모델이 낸 답을 평가 함수로 채점하고, 점수가 높아지는 쪽으로 학습한다</td></tr>
+              <tr><td>DPO</td><td><span class="en">direct preference optimization</span> 같은 질문에 대한 더 좋은 답과 덜 좋은 답의 쌍으로, 좋은 쪽을 고르게 학습한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자에 따르면 요즘은 <strong>RFT가 아주 인기</strong>다. RFT의 관건은 좋은 평가 함수 <span class="en">evaluator function</span>다. 평가 함수는 모델의 답에 점수를 매기는 규칙이다.</p>
+        <p class="muted">예시: 코드를 만드는 모델이라면 "생성한 코드가 테스트를 통과하면 1점, 아니면 0점"처럼 정할 수 있다. 발표에 나온 예는 아니다.</p>
+        <div class="callout">
+          <span class="title">평가 함수 정의를 도와준다</span>
+          <span>Genspark 사례처럼 Fireworks가 평가 함수 정의, 데이터셋 정리, 하이퍼파라미터 선택을 함께 해 준다. 하이퍼파라미터 선택은 특히 RFT에서 중요하다고 했다. 학습 에이전트가 RFT를 지원하지 않으니, 큰 사용 사례라면 직접 도와주겠다고 했다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="flywheel">
+        <header><span class="num">07</span><h2>데이터 플라이휠 <span class="ts">11:00</span></h2></header>
+        <p>발표 첫머리의 세 번째 사실로 돌아간다. 많은 팀이 학습하고, 서빙하고, 다시 학습하고, 다시 서빙하는 루프를 원한다. 사용자에게서 새 데이터와 피드백이 계속 들어오기 때문이다. 이 루프를 데이터 플라이휠 <span class="en">data flywheel</span>이라고 부른다.</p>
+        <ol class="plain">
+          <li><strong>학습한다.</strong></li>
+          <li><strong>배포한다.</strong> 학습이 끝나면 클릭 한 번으로 실서비스에 올린다.</li>
+          <li><strong>지켜본다.</strong> 토큰 수, 캐시 적중률, 추측 디코딩용 모델 <span class="en">speculator</span>을 학습했다면 그 성능을 본다.</li>
+          <li><strong>피드백을 모은다.</strong> 수집한 지표에서 개선할 거리를 찾는다.</li>
+          <li><strong>다시 학습한다.</strong> 쓰던 체크포인트에서 이어 새 체크포인트를 만든다. 그리고 2번으로 돌아간다.</li>
+        </ol>
+        <p>학습 상품을 여러 개 두고, 서빙을 싸고 빠르게 만드는 것도 모두 이 루프를 매끄럽게 하려는 것이라고 했다 <span class="ts">11:20</span>.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="enablers">
+        <header><span class="num">08</span><h2>루프를 받치는 기능 <span class="ts">12:20</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기능</th><th>하는 일</th><th>발표자가 덧붙인 말</th></tr></thead>
+            <tbody>
+              <tr><td>GPU 확보</td><td>여러 클라우드, 네오클라우드와 제휴해 연산 자원을 마련한다</td><td>그래서 대규모 서빙이 가능하다</td></tr>
+              <tr><td>핫로딩 <span class="ts">12:40</span></td><td>새 체크포인트를 다운타임 없이 실서비스에 반영한다. 버튼 하나로 모델 가중치를 바꿔 끼운다</td><td>Cursor 모델을 학습할 때 Cursor를 위해 만든 기능이다. 다른 사람에게도 쓸모 있겠다 싶어 공개했다</td></tr>
+              <tr><td>수치 일치 <span class="ts">13:20</span></td><td>학습과 추론을 같은 플랫폼에서 해, 학습 뒤 서빙할 때 수치 차이가 생기지 않게 한다</td><td>아래 설명 참고</td></tr>
+              <tr><td>원클릭 배포</td><td>학습과 추론이 한곳에 있어 학습한 모델을 바로 실서비스 규모로 배포한다</td><td>루프가 끊기지 않는 이유</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">수치 일치 <span class="en">numerical fidelity</span>란</span>
+          <span>많은 고객이 A 플랫폼에서 학습하고 B 플랫폼에서 서빙한다. 발표자에 따르면 이렇게 하면 모델 품질에 문제가 생긴다. 두 플랫폼의 수치 계산 방식 <span class="en">numerics</span>이 항상 맞지는 않기 때문이다. 그래서 Fireworks는 학습과 추론을 한 플랫폼에서 하고, 그 사이에 수치 차이가 없도록 보장한다고 했다.</span>
+        </div>
+        <p class="note">이 주장은 학습과 서빙을 한곳에서 파는 회사의 주장이다. 학습과 서빙을 다른 곳에서 할 계획이라면, 학습 때 평가 점수와 서빙 후 결과를 직접 비교해 확인하자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="demo-agent">
+        <header><span class="num">09</span><h2>데모: 학습 에이전트 <span class="ts">14:10</span></h2></header>
+        <ol class="plain">
+          <li>학습 데이터셋이 Fireworks 안 어디에 있는지 알려 준다.</li>
+          <li>평가용 데이터셋도 함께 준다. 학습용과 평가용을 따로 두는 경우가 많기 때문이다.</li>
+          <li>파인튜닝을 요청하고, 모델과 하이퍼파라미터 선택도 맡긴다.</li>
+          <li>에이전트가 계획을 내놓는다 <span class="ts">15:00</span>. SFT 계획, 기본 모델을 고른 이유, 하이퍼파라미터, 전체 학습 과정을 설명한다. 데모에서는 Qwen3-8B(추정, 자막은 "quen 38B")를 골랐다.</li>
+          <li>계획이 괜찮으면 승인한다.</li>
+          <li>에이전트가 단계를 하나씩 진행하며 결과를 알려 준다.</li>
+          <li>끝나면 설정, 기본 모델, 하이퍼파라미터와 그 영향을 요약한다 <span class="ts">16:00</span>. 정확도와 F1 점수 같은 지표도 보여 준다.</li>
+          <li>마지막으로 <strong>다음에 할 일을 추천</strong>한다.</li>
+        </ol>
+        <p>사람이 하는 일은 데이터 위치를 알려 주고, 원하는 것을 설명하고, 계획을 승인하는 것뿐이다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="demo-managed">
+        <header><span class="num">10</span><h2>데모: 관리형 학습에서 배포까지 <span class="ts">16:10</span></h2></header>
+        <ol class="plain">
+          <li>데이터셋을 올리고 모델을 고른다.</li>
+          <li>평가 설정에서 평가용 데이터셋을 고른다.</li>
+          <li>필요하면 선택 설정에서 하이퍼파라미터를 세밀하게 정한다.</li>
+          <li><code>Create</code> 버튼을 누르면 학습 작업이 시작된다 <span class="ts">17:00</span>.</li>
+          <li>끝난 작업을 누르면 쓴 데이터셋, 하이퍼파라미터, 학습 중 손실 곡선을 볼 수 있다.</li>
+          <li>작업을 복제해 설정만 바꿔 다시 돌릴 수 있다.</li>
+          <li>배포 화면에서 방금 학습한 모델을 고르고 <code>Deploy</code>를 누른다 <span class="ts">17:40</span>.</li>
+        </ol>
+        <p>배포 설정은 직접 정해도 되고, 미리 만든 템플릿 <span class="ts">18:00</span> 중에서 골라도 된다. 템플릿은 <code>throughput</code>, <code>fast</code>, <code>minimal</code> 같은 것이다. 처리량, 지연 시간, 첫 토큰까지 걸리는 시간 같은 지표를 기준으로 일반적인 워크로드에 맞춰 둔 설정이다.</p>
+
+        <h3>학습 API는 데모가 없다 <span class="ts">18:20</span></h3>
+        <p>학습 API는 고객마다 설정이 달라서 데모를 준비하지 않았다고 했다. 학습 루프와 손실 함수를 직접 짜고 싶다면 Fireworks 웹사이트의 쿡북을 따라 해 보라고 권했다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="caveats">
+        <header><span class="num">11</span><h2>정리와 읽을 때 주의할 점 <span class="ts">18:40</span></h2></header>
+        <p>발표자는 학습에서 추론까지 이어지는 루프의 전체 모습을 보여 주는 것으로 발표를 마쳤다. 메시지는 하나다. <strong>오픈 모델을 내 일에 맞게 학습하고, 바로 배포하고, 다시 학습하는 루프를 돌려라.</strong></p>
+        <div class="callout warn">
+          <span class="title">발표에서 빠진 것</span>
+          <ul class="plain">
+            <li>발표는 비용 문제로 시작했지만, 폐쇄형 모델과 비교해 비용이 얼마나 줄었는지는 숫자로 나오지 않았다.</li>
+            <li>오픈 모델이 폐쇄형 모델 품질을 따라잡았다는 직접 비교도 없다. Genspark의 12%는 학습 전후 비교다.</li>
+            <li>13배, 40배는 무엇과 비교한 값인지 밝히지 않았다.</li>
+            <li>학습과 서빙을 한 플랫폼에서 해야 한다는 주장은 그 플랫폼을 파는 회사의 주장이다.</li>
+          </ul>
+        </div>
+        <p>그래도 남는 생각은 쓸 만하다. 모델을 한 번 고르고 끝내지 말고, 평가 기준을 세우고, 서비스에서 모은 데이터로 계속 개선하는 구조를 갖추라는 것이다. 이 구조는 어느 플랫폼을 쓰든 적용할 수 있다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>폐쇄형 모델 비용이 빠르게 오르면서 오픈 모델로 옮기는 팀이 늘고 있다.</li>
+          <li>발표자는 오픈 모델이 대부분 실서비스에 쓸 만하다고 본다. 특히 코딩에서 그렇다고 했다.</li>
+          <li>품질 격차는 <strong>내 일에 맞춘 학습</strong>으로 메운다.</li>
+          <li>AI 스택은 한 번 서빙하고 끝이 아니라 <strong>학습과 배포를 반복하는 루프</strong>가 된다.</li>
+          <li>추론 속도는 엔진과 CUDA 커널을 워크로드에 맞춰 조정해 올린다. 추측 디코딩, 분리 서빙, 양자화도 쓴다.</li>
+          <li>학습 상품은 세 가지다. 에이전트(맡기기), 관리형(설정하고 누르기), API(직접 짜기).</li>
+          <li>SFT, RFT, DPO를 지원하고 요즘은 RFT가 인기다. RFT의 관건은 <strong>좋은 평가 함수</strong>다.</li>
+          <li>루프는 학습, 원클릭 배포, 모니터링, 피드백 수집, 체크포인트에서 재학습 순서로 돈다.</li>
+          <li>루프를 받치는 기능은 GPU 확보, <strong>핫로딩</strong>, 학습과 서빙의 <strong>수치 일치</strong>다.</li>
+          <li>고객 수치(13배, 40배, 12%)는 비교 기준이 공개되지 않은 자사 발표 수치로 읽는다.</li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 꼽은 지금 AI 업계의 세 가지 사실은?</span></summary><div class="answer">오픈 모델은 대부분 실서비스에 쓸 수 있다. 품질 격차는 맞춤 학습으로 메운다. AI 스택은 한 번 서빙하고 끝내는 방식에서 학습과 추론을 반복하는 루프로 바뀐다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>FireAttention이 고객 워크로드에 맞춰 조정한다는 층은 어디까지인가?</span></summary><div class="answer">추론 엔진 전체와 CUDA 커널까지다. CUDA 커널은 모델의 계산을 GPU 명령으로 바꾸는 번역층이고, Fireworks는 이 커널을 직접 만든다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>최적화를 요청할 때 고객이 가져오는 네 가지 정보는?</span></summary><div class="answer">요청당 입력 토큰 수, 출력 토큰 수, 프롬프트 캐시 적중률, 맞춰야 할 지연 시간 목표.</div></details>
+          <details><summary><span class="qn">Q4</span><span>추측 디코딩에서 고객이 직접 학습할 수 있는 것은? 잘 학습하면 무엇이 좋아지나?</span></summary><div class="answer">초안 모델(draft model). 데이터셋을 올려 파인튜닝처럼 학습한다. 잘 학습하면 본 모델이 빨라지고, 지연 목표를 맞추기 쉬워지고, 처리량이 늘어난다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>세 학습 상품과 각각의 주 사용자는?</span></summary><div class="answer">학습 에이전트는 이 분야에 새로 들어온 PM과 빌더. 관리형 학습은 대부분의 고객. 학습 API는 학습 루프와 손실 함수를 직접 짜려는 ML 엔지니어.</div></details>
+          <details><summary><span class="qn">Q6</span><span>관리형 학습에서 학습 중 상태를 보는 두 가지 방법은?</span></summary><div class="answer">Fireworks 대시보드에서 에폭별 학습 정도와 손실 곡선을 본다. 또는 Weights &amp; Biases API 키를 넣어 지표를 그쪽으로 내보낸다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>학습 에이전트가 지원하지 않는 학습 방식과 그 대안은?</span></summary><div class="answer">RFT를 지원하지 않는다. 큰 사용 사례라면 Fireworks가 평가 함수 정의, 데이터셋 정리, 하이퍼파라미터 선택을 직접 도와준다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Genspark 사례에서 Fireworks가 한 일과 결과는?</span></summary><div class="answer">데이터셋을 정리하고, 평가 함수를 정의하고, RFT로 학습했다. 발표자에 따르면 품질이 12% 올랐다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>데이터 플라이휠은 어떤 순서로 도나?</span></summary><div class="answer">학습, 원클릭 배포, 모니터링(토큰 수, 캐시 적중률, speculator 성능), 피드백 수집, 쓰던 체크포인트에서 이어 재학습. 그리고 다시 배포로 돌아간다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>핫로딩은 무엇이고, 처음에 누구를 위해 만들었나?</span></summary><div class="answer">새 체크포인트를 다운타임 없이 실서비스에 반영하는 기능이다. 버튼 하나로 가중치를 바꿔 끼운다. Cursor 모델을 학습할 때 Cursor를 위해 만들었다가 일반에 공개했다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>학습과 서빙을 다른 플랫폼에서 하면 생긴다고 한 문제는? 이 주장을 어떻게 읽어야 하나?</span></summary><div class="answer">두 플랫폼의 수치 계산 방식이 맞지 않아 모델 품질에 문제가 생긴다고 했다. 학습과 서빙을 한곳에서 파는 회사의 주장이니, 직접 비교해 확인하는 것이 좋다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>학습 에이전트 데모에서 학습이 끝난 뒤 보여 준 것은?</span></summary><div class="answer">설정, 기본 모델, 하이퍼파라미터와 그 영향의 요약. 정확도와 F1 점수 같은 지표. 그리고 다음에 할 일 추천.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>지금 쓰는 모델의 사용 패턴을 숫자로 적는다<span class="how">입력 토큰, 출력 토큰, 프롬프트 캐시 적중률, 목표 지연 시간. 최적화 요청 때 필요한 정보와 같다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>오픈 모델로 옮겨 볼 작업 하나를 고른다<span class="how">발표자는 코딩을 오픈 모델이 이미 강한 분야로 꼽았다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>학습용과 평가용 데이터셋을 따로 준비한다<span class="how">데모에서도 에이전트에 두 데이터셋을 함께 넘겼다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>모델 답에 점수를 매기는 평가 함수를 정의한다<span class="how">RFT의 출발점이다. 확인: 같은 답에 늘 같은 점수가 나오는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>학습 중 손실 곡선과 에폭별 지표를 볼 수 있게 한다<span class="how">이미 Weights &amp; Biases를 쓴다면 그쪽으로 모은다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>배포 후 지표와 사용자 피드백을 재학습 데이터로 모으는 길을 만든다<span class="how">확인: 마지막 체크포인트에서 이어 다시 학습할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>학습한 곳과 서빙하는 곳의 결과 차이를 확인한다<span class="how">학습 때 평가 점수와 서빙 후 같은 평가 세트 점수를 비교한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>새 체크포인트를 다운타임 없이 교체하는 절차를 정한다<span class="how">핫로딩이나 그에 준하는 교체 방법</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>폐쇄형 모델</td><td>Closed-source model. 가중치를 공개하지 않고 API로만 쓰게 하는 모델</td></tr>
+              <tr><td>오픈 모델</td><td>Open-source model. 가중치를 내려받아 직접 학습하고 서빙할 수 있는 모델</td></tr>
+              <tr><td>추론</td><td>Inference. 학습이 끝난 모델로 실제 답을 만들어 내는 일</td></tr>
+              <tr><td>서빙</td><td>모델을 띄워 두고 요청에 답하게 하는 일. 호스팅이라고도 한다</td></tr>
+              <tr><td>파인튜닝</td><td>Fine-tuning. 이미 학습된 모델을 내 데이터로 추가 학습하는 것</td></tr>
+              <tr><td>SFT</td><td>Supervised fine-tuning. 입력과 모범 답의 쌍으로 따라 하게 학습</td></tr>
+              <tr><td>RFT</td><td>Reinforcement fine-tuning. 평가 함수의 점수가 높아지는 쪽으로 학습</td></tr>
+              <tr><td>DPO</td><td>Direct preference optimization. 더 좋은 답과 덜 좋은 답의 쌍으로 학습</td></tr>
+              <tr><td>평가 함수</td><td>Evaluator function. 모델의 답에 점수를 매기는 규칙</td></tr>
+              <tr><td>하이퍼파라미터</td><td>학습률, 에폭 수처럼 학습 전에 사람이 정하는 설정값</td></tr>
+              <tr><td>에폭</td><td>Epoch. 학습 데이터 전체를 한 번 다 훑는 단위</td></tr>
+              <tr><td>손실 함수</td><td>Loss function. 모델의 답이 정답과 얼마나 다른지 재는 식. 학습은 이 값을 줄이는 쪽으로 진행된다</td></tr>
+              <tr><td>체크포인트</td><td>학습 중 특정 시점에 저장한 모델 가중치</td></tr>
+              <tr><td>CUDA 커널</td><td>GPU에서 실제로 실행되는 계산 코드. 모델 계산을 GPU 명령으로 바꾼다</td></tr>
+              <tr><td>추측 디코딩</td><td>Speculative decoding. 작은 초안 모델이 먼저 추측하고 큰 모델이 한 번에 검사해 속도를 올리는 방법</td></tr>
+              <tr><td>초안 모델</td><td>Draft model. 추측 디코딩에서 먼저 추측하는 작은 모델. 발표에서는 speculator라고도 불렀다</td></tr>
+              <tr><td>분리 서빙</td><td>Disaggregation. 입력 처리와 출력 생성을 다른 GPU에 나눠 맡기는 방식</td></tr>
+              <tr><td>양자화</td><td>Quantization. 모델의 숫자를 더 적은 비트로 저장해 가볍게 만드는 것</td></tr>
+              <tr><td>프롬프트 캐시 적중률</td><td>앞서 처리한 프롬프트 계산 결과를 다시 쓸 수 있었던 비율</td></tr>
+              <tr><td>지연 시간</td><td>Latency. 요청을 보내고 답을 받기까지 걸리는 시간</td></tr>
+              <tr><td>처리량</td><td>Throughput. 같은 시간에 처리하는 요청이나 토큰의 양</td></tr>
+              <tr><td>첫 토큰까지 시간</td><td>Time to first token(TTFT). 요청 후 첫 글자가 나오기까지 걸리는 시간</td></tr>
+              <tr><td>핫로딩</td><td>Hot loading. 서비스를 멈추지 않고 모델 가중치를 새것으로 바꿔 끼우는 것</td></tr>
+              <tr><td>수치 일치</td><td>Numerical fidelity. 학습 때와 서빙 때 같은 입력에 같은 계산 결과가 나오는 것</td></tr>
+              <tr><td>네오클라우드</td><td>GPU 임대에 특화된 신생 클라우드 업체</td></tr>
+              <tr><td>데이터 플라이휠</td><td>Data flywheel. 서비스에서 모은 데이터로 모델을 개선하고, 개선된 모델이 다시 데이터를 만드는 반복 구조</td></tr>
+              <tr><td>F1 점수</td><td>정밀도와 재현율을 함께 반영한 분류 성능 지표</td></tr>
+              <tr><td>쿡북</td><td>Cookbook. 따라 하면서 배우는 예제 모음</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>청중 질문: 폐쇄형 모델 비용</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>오픈 모델로 옮기는 흐름과 발표 주제</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>발표자 소개</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>AI 업계의 세 가지 사실</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>Fireworks의 역할</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>추론 규모: 토큰, 고객사, 초당 요청</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>Cursor Composer 2: 추론 13배</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>Vercel: 지연 시간 40배</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>Genspark: RFT로 품질 12%</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>투자 유치와 인원</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>FireAttention과 CUDA 커널</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>워크로드에 맞춘 최적화</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>추측 디코딩, 분리 서빙, 양자화. 초안 모델 학습</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>전환의 가장 큰 벽: 품질</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>학습 에이전트</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>관리형 학습과 관측 도구</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>학습 API</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>SFT, RFT, DPO와 평가 함수</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>데이터 플라이휠</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>GPU 확보</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>핫로딩</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>수치 일치</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>데모: 학습 에이전트</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>에이전트의 학습 계획과 기본 모델 선택</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>학습 결과 요약과 다음 단계 추천</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>데모: 관리형 학습</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>배포와 배포 템플릿</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>학습 API는 쿡북으로</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '13YZ1EB9hjU:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

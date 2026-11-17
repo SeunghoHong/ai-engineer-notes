@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 개발 현황 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#data">어떤 데이터인가</a></li>
+      <li><a href="#velocity">속도: 배포는 늘었다</a></li>
+      <li><a href="#perceived">체감 속도는 거의 그대로</a></li>
+      <li><a href="#quality">품질: 변경 실패율이 흔들린다</a></li>
+      <li><a href="#confidence">고치기는 쉬운데 믿음은 줄었다</a></li>
+      <li><a href="#prsize">PR이 커지고 있다</a></li>
+      <li><a href="#who">누가 더 이득을 보나</a></li>
+      <li><a href="#measure">어떻게 잴 것인가</a></li>
+      <li><a href="#readiness">플랫폼 준비도와 에이전트의 피드백</a></li>
+      <li><a href="#bottleneck">코드 생성은 병목이 아니었다</a></li>
+      <li><a href="#cases">병목을 고친 회사들</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-09-30 · 19분 · 영어 발표 한글 정리</span>
+      <h1>AI는 개발 속도를 얼마나 올렸나</h1>
+      <p class="lead">AI를 쓴 뒤 배포 빈도와 PR 크기는 늘었지만, PR 처리량 증가는 중앙값 7.7%에 그쳤다. 코드 작성은 원래 병목이 아니었고, 큰 이득을 본 회사는 코드 밖의 병목을 고쳤다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=Se8jHLliLXE" target="_blank" rel="noopener">The State of AI in Software Development: Data from 400+ Orgs</a></span>
+        <span>발표: Justin Reock (DX 부CTO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 알려진 이름으로 바로잡았고, 확실하지 않은 곳에는 "(추정)"을 붙였다. 발표 화면의 그래프는 자막에 없어서, 발표자가 말로 설명한 내용만 옮겼다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>배포 빈도는 꾸준히 늘었다.</strong> 다만 개발자가 느끼는 전달 속도는 1년 동안 약 4.5%만 올랐다.</li>
+        <li><strong>품질은 회사마다 크게 갈린다.</strong> 변경 실패율이 2%p 오른 회사도 있다. 업계 기준이 약 4%이니 실패가 50% 늘어난 셈이다.</li>
+        <li>코드 유지보수성 점수는 약 4% 올랐는데 <strong>변경 신뢰도는 6% 떨어졌다.</strong> 코드를 고치기는 쉬워졌지만 결과물은 덜 믿는다.</li>
+        <li><strong>PR 평균 크기가 44줄에서 72줄로 커졌다.</strong> 작게 나눠 내보낸다는 느낌은 10% 떨어졌다.</li>
+        <li>주니어가 AI를 가장 많이 쓰지만, <strong>아낀 시간은 시니어와 비슷하다.</strong> 시니어는 토큰을 덜 쓴다.</li>
+        <li>측정은 <strong>사용량, 영향, 비용</strong> 세 축으로 한다. 기존 생산성 지표를 버리지 말고, 사용자 집단을 나눠 그 지표로 비교한다.</li>
+        <li><strong>코드 생성은 전체 가치 흐름의 14~16%뿐이다.</strong> PR 처리량 증가는 중앙값 7.7%였고 2배를 넘긴 곳은 없었다. 병목을 찾아 그곳에 AI를 써야 한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="data">
+        <header><span class="num">01</span><h2>어떤 데이터인가 <span class="ts">00:10</span></h2></header>
+        <p>발표자 Justin Reock은 DX의 부CTO다. DX는 개발자 경험<span class="en"> developer experience</span>과 개발자 생산성을 재는 플랫폼을 만드는 회사다. 발표자는 이 플랫폼을 DORA 지표, SPACE 프레임워크, DevEx 프레임워크를 만든 사람들이 함께 만들었다고 소개한다.</p>
+        <ul class="plain">
+          <li>DX는 분기마다 AI 현황 보고서와 AI 영향 보고서를 낸다. 자료는 DX 플랫폼에 쌓인 데이터다.</li>
+          <li>영상 제목은 400곳 이상의 조직 데이터라고 밝힌다. 발표 중에는 엔지니어 약 20만 명을 본 연구라고 말한다. <span class="ts">06:10</span></li>
+          <li>이 발표는 숫자 나열보다 조직의 흐름을 본다. 발표자는 흐름을 다섯 가지로 나눴다. 속도, 품질, 집단별 차이, 측정, 개발 과정 전체로의 확장이다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">먼저 알아 둘 단서 <span class="ts">01:30</span></span>
+          <span>PR 처리량이나 배포 빈도 같은 속도 지표는 대리 지표<span class="en"> proxy metric</span>다. 일이 조직 안에서 어떻게 흐르는지 방향만 알려 준다. 만들어 낸 가치를 그대로 보여 주지는 않는다.</span>
+        </div>
+        <p class="note">발표자는 개발자 생산성 측정 플랫폼을 파는 DX 소속이다. 데이터도 DX 고객사에서 나왔다. "측정해야 한다"는 결론과 DX의 측정 프레임워크 소개는 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="velocity">
+        <header><span class="num">02</span><h2>속도: 배포는 늘었다 <span class="ts">01:50</span></h2></header>
+        <p>첫 번째 지표는 DORA의 배포 빈도<span class="en"> deployment frequency</span>다. 일을 얼마나 자주 프로덕션에 내보내는지 잰다.</p>
+        <ul class="plain">
+          <li>배포 빈도는 <strong>꾸준히 늘고 있다.</strong></li>
+          <li>최근에는 증가세가 조금 둔해졌다. 발표자는 초반 급증의 일부가 PR을 더 자주 올린 덕분이었다고 본다.</li>
+          <li>이 지표는 PR을 만든 뒤 배포하기까지의 구간만 본다. 개발 과정 전체에서 작은 한 부분이다.</li>
+        </ul>
+        <div class="callout warn">
+          <span class="title">배포 빈도가 말해 주지 않는 것</span>
+          <span>되돌린 비율, 결함 비율, 변경 실패율은 이 지표에 없다. 프로덕션에 얼마나 많이 내보냈는지만 알려 준다.</span>
+        </div>
+        <h3>지역별 차이 <span class="ts">02:50</span></h3>
+        <p>북미는 계속 오르고 있다. 유럽은 최근 한 분기에 조금 물러섰다. 발표자는 이유로 일하는 방식, 토큰에 쓸 수 있는 돈, 규제의 차이를 든다. 발표자가 든 이유는 추측이고 데이터로 보여 준 것은 아니다. 지역마다 차이는 있어도 전체 흐름은 증가다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="perceived">
+        <header><span class="num">03</span><h2>체감 속도는 거의 그대로 <span class="ts">03:30</span></h2></header>
+        <p>두 번째 지표는 체감 전달 속도<span class="en"> perceived rate of delivery</span>다. 엔지니어가 스스로 얼마나 빨리 전달한다고 느끼는지 묻는다.</p>
+        <p>이 값은 <strong>1년 동안 약 4.5% 올랐다.</strong> 발표자는 그동안 AI에 들어간 투자와 비용을 생각하면 놀랄 만큼 작은 변화라고 본다.</p>
+
+        <h3>METR 연구와 비교 <span class="ts">04:00</span></h3>
+        <p>발표자는 METR의 연구를 함께 든다. 엔지니어 16명을 본 작은 연구다. 발표자는 이 연구를 "결함이 있는 연구"라고 부른다. METR도 2월에 후속 글을 내고, 모은 신호 일부가 불완전했다고 밝혔다고 한다.</p>
+
+        <figure class="chart" aria-label="METR 연구에서 실제 생산성은 약 19% 감소, 체감 생산성은 약 20% 증가">
+          <span class="chart-title">METR 연구: 실제 생산성과 체감 생산성의 변화 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>실제 생산성</span><span class="val">약 −19</span></div>
+              <div class="track"><div class="fill key" style="left:2.5%;width:47.5%;border-radius:4px 0 0 4px" title="실제 생산성: 약 −19%"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>체감 생산성</span><span class="val">약 +20</span></div>
+              <div class="track"><div class="fill" style="left:50%;width:50%" title="체감 생산성: 약 +20%"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>−20</span><span>점선 = 변화 없음 (0)</span><span>+20</span></div>
+          <span class="caption">발표자가 인용한 수치. 엔지니어 16명의 작은 연구다.</span>
+        </figure>
+        <p class="note">발표자는 두 값의 차이를 "약 40%"라고 말했다. 정확히는 39점이다.</p>
+        <p>METR 연구에서는 실제와 체감이 크게 어긋났다. DX가 넓게 모은 데이터에서는 체감 값이 거의 평평하다. 발표자는 이 대비가 흥미롭다고만 하고, 원인을 설명하지는 않는다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="quality">
+        <header><span class="num">04</span><h2>품질: 변경 실패율이 흔들린다 <span class="ts">04:30</span></h2></header>
+        <p>변경 실패율<span class="en"> change failure rate</span>은 DORA 지표 가운데 하나다. 배포한 변경 가운데 문제를 일으킨 비율이다. 낮을수록 좋다.</p>
+        <p>발표자가 보여 준 그래프는 선 하나가 회사 하나다. 선마다 변경 실패율이 올랐는지 내렸는지를 나타낸다. 결과는 <strong>회사마다 크게 갈렸다.</strong> 좋아진 회사도 있고 나빠진 회사도 있다.</p>
+
+        <figure class="chart" aria-label="변경 실패율: 업계 기준 약 4%, 2퍼센트포인트 오른 회사는 약 6%">
+          <span class="chart-title">변경 실패율: 업계 기준과 가장 많이 오른 회사 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>업계 기준</span><span class="val">약 4</span></div>
+              <div class="track"><div class="fill" style="width:66.7%" title="업계 기준: 약 4%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>2%p 오른 회사</span><span class="val">약 6 · +50%</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="2%p 오른 회사: 약 6%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>3</span><span>6</span></div>
+          <span class="caption">6%는 업계 기준 4%에 발표자가 말한 최대 상승폭 2%p를 더한 값이다. 낮을수록 좋다.</span>
+        </figure>
+
+        <p>2%p는 작아 보인다. 하지만 기준이 4%이므로 실패가 절반이나 늘어난 것이다. 발표자는 "결함을 50% 더 내보내는 셈"이라고 표현한다.</p>
+        <div class="callout">
+          <span class="title">AI가 원인의 전부는 아니다 <span class="ts">05:30</span></span>
+          <span>이런 갈림은 AI가 없던 때에도 있었다. 릴리스 파이프라인, 자동 테스트처럼 코드를 내보내는 주변 환경이 좌우한다. 발표자의 표현으로는 모양은 그대로이고 진폭이 커졌다. 평소보다 훨씬 크게 흔들리는 부분이 AI의 효과다.</span>
+        </div>
+        <p>그래서 발표자의 권고는 단순하다. <strong>우리 회사가 그래프의 어느 쪽에 있는지부터 잰다.</strong></p>
+      </section>
+
+      <!-- 5 -->
+      <section id="confidence">
+        <header><span class="num">05</span><h2>고치기는 쉬운데 믿음은 줄었다 <span class="ts">05:50</span></h2></header>
+        <p>개발자에게 물어서 얻는 품질 지표 두 개가 있다. 보통은 같이 움직인다. 코드가 고치기 쉬우면 배포할 때도 마음이 놓이기 때문이다. 이번에는 둘이 반대로 움직였다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">코드 유지보수성 · 약 +4%</span>
+            <p>개발자가 코드를 고치기 쉽다고 느끼는 정도다.</p>
+            <p class="verdict">에이전트와 어시스턴트 덕분에 눈앞의 코드를 <b>이해하고 고치기는 쉬워졌다.</b></p>
+          </div>
+          <div class="card">
+            <span class="tag">변경 신뢰도 · −6%</span>
+            <p>내가 내보내는 변경이 문제를 일으키지 않을 거라고 믿는 정도다.</p>
+            <p class="verdict">결과물은 <b>덜 믿는다.</b> 1년 전보다 뭔가 깨뜨릴까 봐 더 걱정한다.</p>
+          </div>
+        </div>
+        <p>발표자는 이 어긋남의 큰 이유로 PR 크기를 든다. 다음 절의 내용이다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="prsize">
+        <header><span class="num">06</span><h2>PR이 커지고 있다 <span class="ts">06:50</span></h2></header>
+        <p>발표자는 PR 크기를 올해 가장 중요하게 볼 지표 가운데 하나로 꼽는다.</p>
+
+        <figure class="chart" aria-label="PR 평균 크기: 1년 전 약 44줄, 지금 72줄">
+          <span class="chart-title">PR 하나의 평균 크기 (줄)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>약 1년 전</span><span class="val">약 44</span></div>
+              <div class="track"><div class="fill" style="width:61.1%" title="약 1년 전: 약 44줄"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>지금</span><span class="val">72 · 약 +64%</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="지금: 72줄"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>36</span><span>72</span></div>
+          <span class="caption">+64%는 44와 72로 이 노트에서 계산한 값이다. 발표자는 "두 배까지는 아니다"라고만 말했다.</span>
+        </figure>
+
+        <h3>왜 커지나 <span class="ts">07:10</span></h3>
+        <ol class="plain">
+          <li><strong>모델이 평균적인 코드를 낸다.</strong> 발표자는 예전에는 같은 기능을 더 적은 코드로 만드는 것이 실력의 표시였다고 말한다. 지금은 일단 내보내는 쪽으로 바뀌었다는 것이 발표자의 의견이다.</li>
+          <li><strong>빌드가 느리다.</strong> 빌드 파이프라인이 45분에서 1시간 걸린다고 하자. AI는 함수를 바로 만들어 준다. 그러면 함수 네 개를 PR 네 개로 나눠 네 번 기다리지 않는다. PR 하나에 몰아넣는다.</li>
+        </ol>
+
+        <h3>왜 문제인가 <span class="ts">08:00</span></h3>
+        <ul class="plain">
+          <li>코드 한 줄이 늘 때마다 버그와 취약점이 생길 자리가 는다.</li>
+          <li>리뷰할 양이 는다.</li>
+          <li>코드를 다른 곳으로 옮기기 어려워진다.</li>
+          <li>작게 나눠 내보내야 되돌리기 쉽고 변경을 이해하기 쉽다. 그런데 "작은 변경을 나눠서 작업한다"는 체감, 즉 점진적 전달<span class="en"> incremental delivery</span> 점수가 <strong>10% 떨어졌다.</strong> 발표자는 지난 1년 동안 가장 나빠진 개발자 경험 항목 가운데 하나라고 말한다.</li>
+        </ul>
+
+        <h3>체감 지표 네 개를 한눈에</h3>
+        <figure class="chart" aria-label="지난 1년 체감 지표 변화: 체감 전달 속도 약 4.5% 증가, 코드 유지보수성 약 4% 증가, 변경 신뢰도 6% 감소, 점진적 전달 10% 감소">
+          <span class="chart-title">개발자에게 물어 얻은 지표의 1년 변화 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>체감 전달 속도</span><span class="val">약 +4.5</span></div>
+              <div class="track"><div class="fill" style="left:50%;width:22.5%" title="체감 전달 속도: 약 +4.5%"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>코드 유지보수성</span><span class="val">약 +4</span></div>
+              <div class="track"><div class="fill" style="left:50%;width:20%" title="코드 유지보수성: 약 +4%"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>변경 신뢰도</span><span class="val">−6</span></div>
+              <div class="track"><div class="fill key" style="left:20%;width:30%;border-radius:4px 0 0 4px" title="변경 신뢰도: −6%"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>점진적 전달</span><span class="val">−10</span></div>
+              <div class="track"><div class="fill key" style="left:0;width:50%;border-radius:4px 0 0 4px" title="점진적 전달: −10%"></div><div class="baseline" style="left:50%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>−10</span><span>점선 = 변화 없음 (0)</span><span>+10</span></div>
+          <span class="caption">발표자가 말한 값이다. 유지보수성은 "거의 4%"라고 해서 4에 맞춰 그렸다. 값이 점수의 변화율인지 %p인지는 발표에서 밝히지 않았다.</span>
+        </figure>
+      </section>
+
+      <!-- 7 -->
+      <section id="who">
+        <header><span class="num">07</span><h2>누가 더 이득을 보나 <span class="ts">08:40</span></h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>집단</th><th>데이터가 보여 준 것</th><th>발표자의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>주니어 엔지니어</td><td>AI를 가장 많이 쓴다. 같은 용도에 토큰을 더 많이 쓴다</td><td>버려야 할 옛 습관이 적다. 학교에서 이미 써 본 경우도 많다. 토큰을 더 쓰는 것은 배우는 과정이다</td></tr>
+              <tr><td>스태프 이상 시니어</td><td>아낀 시간은 주니어와 비슷하다. 토큰은 덜 쓴다</td><td>모델이 지어낸 내용을 더 잘 찾아낸다. 바꾸는 코드 주변의 아키텍처를 이해한다</td></tr>
+              <tr><td>작은 회사</td><td>시간 절감이 가장 크다</td><td>릴리스 파이프라인이 단순하다. 조직의 복잡도와 마찰이 적다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>정리하면 <strong>많이 쓰는 것과 많이 아끼는 것은 다르다.</strong> 사용량은 주니어가 앞서지만 아낀 시간의 총량은 직급에 따라 큰 차이가 없다.</p>
+        <p class="note">토큰 소비는 DX가 "에이전트 경험"이라고 부르는 방법으로 본다. 에이전트에게 어떤 용도로 일했고 토큰을 얼마나 썼는지 묻는다. <span class="ts">09:20</span></p>
+      </section>
+
+      <!-- 8 -->
+      <section id="measure">
+        <header><span class="num">08</span><h2>어떻게 잴 것인가 <span class="ts">10:30</span></h2></header>
+        <p>개발자 생산성 측정은 AI 이전에도 어려웠다. 그 논의가 끝나기도 전에 AI가 들어왔다. 그런데 올해는 모두가 이 질문에 답해야 한다. "토큰에 천만 달러를 썼다. 10배 생산성은 어디 있나."</p>
+
+        <h3>원칙: 기존 지표를 버리지 않는다 <span class="ts">11:10</span></h3>
+        <ul class="plain">
+          <li>가장 중요한 것은 여전히 원래 보던 개발자 경험 지표와 생산성 지표다.</li>
+          <li>AI가 <strong>그 믿을 만한 지표를 어떻게 바꾸는지</strong>를 본다.</li>
+          <li>도구의 API 텔레메트리<span class="en"> telemetry</span>로 누가 무엇을 어디에 쓰는지 파악한다.</li>
+          <li>사용자를 집단(코호트<span class="en"> cohort</span>)으로 나누고, 집단끼리 기존 지표로 비교한다. 발표자가 든 비교 지표는 PR 사이클 타임, PR 크기, 리뷰에서 되돌려 보낸 정도다. <span class="ts">13:00</span></li>
+        </ul>
+
+        <h3>DX의 AI 측정 프레임워크 <span class="ts">11:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>축</th><th>묻는 것</th><th>보는 것</th></tr></thead>
+            <tbody>
+              <tr><td>사용량 <span class="en">utilization</span></td><td>누가, 무엇을, 얼마나 자주, 어떤 용도로 쓰나</td><td>일간 활성 사용자, 주간 활성 사용자</td></tr>
+              <tr><td>영향 <span class="en">impact</span></td><td>사용량이 늘 때 어떤 지표가 움직여야 하나</td><td>품질, 속도, 사업에 준 가치</td></tr>
+              <tr><td>비용 <span class="en">cost</span></td><td>얼마를 쓰고 있나</td><td>토큰 지출</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이 표는 성숙 단계로도 읽을 수 있다. 대부분은 사용량부터 잰다. 그다음 사용량을 영향 지표와 맞춰 본다. 투자가 실제로 통하는지는 영향에서 드러난다. 비용에 대해 발표자는 클라우드 비용을 예로 든다. 클라우드 유행이 15년 지났는데도 비용 관리는 아직 풀지 못한 숙제라는 것이다.</p>
+        <p class="note">이 프레임워크는 발표자 회사인 DX가 만든 것이다. 발표자는 자세한 내용이 DX의 백서에 있다고 안내한다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="readiness">
+        <header><span class="num">09</span><h2>플랫폼 준비도와 에이전트의 피드백 <span class="ts">13:20</span></h2></header>
+        <p>발표자는 지난 흐름을 이렇게 요약한다. 2024년에는 모두에게 코딩 어시스턴트를 줬다. 2025년에는 에이전트를 만들기 시작했다. 지금은 인프라가 준비되지 않았다는 것을 깨닫는 중이다.</p>
+        <p>플랫폼이 AI를 받을 준비가 됐는지 재면, 토큰을 얼마나 효율적으로 쓰고 에이전트에게 맥락을 얼마나 잘 줄 수 있는지 가늠할 수 있다. 준비도의 항목은 이렇다.</p>
+        <ul class="plain">
+          <li>분명하고 정확하고 구조가 잘 잡힌 문서</li>
+          <li>관계가 단순한 데이터 구조</li>
+          <li>다루기 쉽게 모듈로 나뉜 코드</li>
+          <li>믿을 만한 로컬 CI</li>
+          <li>결과가 오락가락하지 않는 테스트</li>
+        </ul>
+        <blockquote>사람에게 좋은 것이 에이전트에게도 좋다.<cite>발표자의 표현을 옮김 · 14:10</cite></blockquote>
+        <p>이 목록은 예전에 "좋은 개발자 경험"이라고 부르던 것과 같다. 발표자는 지난 20년 동안 미뤄 온 투자를 이제야 하게 될지도 모른다고 말한다.</p>
+
+        <h3>에이전트에게 묻는다 <span class="ts">14:10</span></h3>
+        <p>DX는 에이전트에게서 정성 피드백을 받는다. 에이전트가 사람과 일하면서 어디서 막혔는지 알려 준다.</p>
+        <ul class="plain">
+          <li>사람이 방향을 잡아 준 방식</li>
+          <li>사람이 준 맥락</li>
+          <li>거쳐야 했던 피드백 반복</li>
+        </ul>
+        <p>이 자료로 팀이 AI와 얼마나 잘 일하는지 본다. 용도별로 나눠 보는 것이 중요하다. 어떤 용도에서 토큰이 가장 효율적으로 쓰이고 실제 가치로 이어지는지 알 수 있기 때문이다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="bottleneck">
+        <header><span class="num">10</span><h2>코드 생성은 병목이 아니었다 <span class="ts">14:50</span></h2></header>
+        <p>다섯 번째 흐름은 AI를 코드 작성 밖으로 넓히는 것이다. 발표자는 SDLC<span class="en"> software development life cycle</span>와 PDLC 전체에 AI를 넣자고 말한다.</p>
+        <p>이유는 간단하다. 모델이 100% 정확한 코드를 즉시 준다고 해도(실제로는 그렇지 않다), 그것은 <strong>전체 가치 흐름의 14~16%</strong>만 건드린다.</p>
+
+        <figure class="chart" aria-label="AI 도입 후 PR 처리량 증가: 중앙값 7.7%, 평균 13%, 상위 조직 약 70%. 2배인 100%에 이른 곳은 없다">
+          <span class="chart-title">AI 도입 후 PR 처리량 증가율 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>중앙값</span><span class="val">7.7</span></div>
+              <div class="track"><div class="fill key" style="width:7.7%" title="중앙값: 7.7%"></div><div class="baseline" style="left:calc(100% - 2px)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>평균</span><span class="val">13</span></div>
+              <div class="track"><div class="fill" style="width:13%" title="평균: 13%"></div><div class="baseline" style="left:calc(100% - 2px)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>상위 조직</span><span class="val">70 안팎</span></div>
+              <div class="track"><div class="fill" style="width:70%" title="상위 조직: 70% 안팎"></div><div class="baseline" style="left:calc(100% - 2px)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>점선 = 2배 (+100)</span></div>
+          <span class="caption">발표자가 인용한 DX 연구. 기간은 2024년 11월부터 발표한 해 2월까지로 들린다(자막이 뭉개져 추정). 상위 조직은 "70%대"라고 해서 70에 맞춰 그렸다.</span>
+        </figure>
+
+        <p>2배, 5배, 10배를 낸 곳은 없었다. 발표자가 드는 이유는 이렇다. AI로 아낀 시간보다 <strong>AI와 상관없는 요인이 잡아먹는 시간이 더 크다.</strong></p>
+        <ul class="plain">
+          <li>회의로 가득 찬 날</li>
+          <li>컨텍스트 전환</li>
+          <li>그 밖의 방해</li>
+          <li>개발 환경과 코드 주변 과정에 쌓인 마찰</li>
+        </ul>
+        <blockquote>병목이 아닌 곳에서 아낀 한 시간은 가치가 없다.<cite>발표자가 Eli Goldratt의 제약 이론을 빌려 한 말 · 16:00</cite></blockquote>
+        <p>그래서 할 일은 병목을 찾고 병목을 고치는 것이다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="cases">
+        <header><span class="num">11</span><h2>병목을 고친 회사들 <span class="ts">16:20</span></h2></header>
+        <p>발표자가 든 사례는 모두 코드 작성 밖의 단계를 겨눈다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Morgan Stanley · 레거시 해석 <span class="ts">16:20</span></span>
+            <p>DevGen.AI라는 에이전트를 만들었다. 메인프레임의 Natural, COBOL, Perl 같은 오래된 코드를 읽는다. 읽은 내용을 문서로 만들어 엔지니어에게 넘긴다. 발표자는 이 문서를 PRD라고 불렀다.</p>
+            <p class="verdict"><b>없앤 병목</b>: 옛 코드를 거꾸로 분석하는 단계. 발표자가 인용한 절감은 연 약 30만 시간이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Zapier · 관리 업무 <span class="ts">16:40</span></span>
+            <p>에이전트 여러 개로 관리성 업무를 처리한다. 에이전트가 요약을 만들어 주면서 스탠드업을 주 5회에서 주 2회로 줄였다. 신규 엔지니어 온보딩은 약 2주(추정)에 끝난다. 발표자가 말한 업계 기준은 한 달 이상이다.</p>
+            <p class="verdict"><b>결과</b>: 엔지니어 한 명이 만드는 가치가 약 15% 늘었다. 그래서 Zapier는 회사 역사상 가장 많이 채용하고 있다고 한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Faire(추정) · 1차 리뷰 <span class="ts">17:40</span></span>
+            <p>PR이 올라오면 에이전트가 자동으로 리뷰한다. 주당 약 3,000건이다. 에이전트는 겉으로 드러나는 문제만 본다. 사람 리뷰는 여전히 필요하다.</p>
+            <p class="verdict"><b>요령</b>: 에이전트의 리뷰가 PR 댓글에 기록으로 남는다. 다음에 보는 사람은 에이전트가 이미 무엇을 봤는지 알고 시작한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Spotify · 장애 대응 <span class="ts">18:00</span></span>
+            <p>SRE를 위한 에이전트를 만들었다. 장애가 나면 런북에서 조치 순서를 찾고 장애의 맥락을 모은다. 모은 내용을 SRE 소통 채널에 올린다.</p>
+            <p class="verdict"><b>없앤 병목</b>: 장애 직후 상황을 파악하느라 쓰는 몇 분.</p>
+          </div>
+        </div>
+        <p class="note">자막에는 세 번째 회사 이름이 "Fair"로만 나온다. 도매 플랫폼 Faire로 보이지만 확실하지 않아 "(추정)"을 붙였다. Zapier의 온보딩 기간도 자막이 뭉개져 2주로 추정했다.</p>
+        <div class="callout">
+          <span class="title">발표자가 Zapier 사례에서 강조한 점 <span class="ts">17:20</span></span>
+          <span>엔지니어 한 명의 생산 능력이 늘면 한 명을 뽑는 투자 수익도 는다. Zapier는 그래서 더 뽑는다. 발표자는 이것을 인력을 줄이는 이야기가 아니라 처리량과 혁신 능력을 늘리는 이야기라고 본다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>배포 빈도는 꾸준히 늘었다. 다만 속도 지표는 <strong>대리 지표</strong>이고 품질은 말해 주지 않는다.</li>
+          <li>개발자가 느끼는 전달 속도는 1년 동안 약 4.5%만 올랐다.</li>
+          <li>변경 실패율은 회사마다 크게 갈린다. 2%p 오르면 업계 기준 4% 대비 <strong>실패가 50% 는다.</strong></li>
+          <li>이 갈림은 AI 이전에도 있었다. AI는 <strong>진폭을 키웠다.</strong> 파이프라인과 테스트가 약한 곳이 더 크게 흔들린다.</li>
+          <li>코드 유지보수성은 약 4% 올랐고 변경 신뢰도는 6% 내렸다. <strong>고치기는 쉬워졌지만 결과물은 덜 믿는다.</strong></li>
+          <li>PR 평균 크기가 44줄에서 72줄로 커졌다. 느린 빌드가 PR을 뭉치게 만든다. 점진적 전달 체감은 10% 내렸다.</li>
+          <li>주니어가 AI를 가장 많이 쓰지만 아낀 시간은 시니어와 비슷하다. 시니어는 토큰을 덜 쓴다. 작은 회사가 시간을 가장 많이 아낀다.</li>
+          <li>측정은 <strong>사용량, 영향, 비용</strong> 세 축으로 한다. 기존 지표를 유지하고 사용자 집단을 나눠 비교한다.</li>
+          <li>AI 준비도 항목은 좋은 개발자 경험과 같다. 문서, 단순한 데이터 구조, 모듈화된 코드, 안정적인 CI와 테스트다.</li>
+          <li>코드 생성은 가치 흐름의 14~16%뿐이다. PR 처리량 증가는 중앙값 7.7%였다. <strong>병목을 찾아 그곳에 AI를 쓴 회사가 큰 이득을 봤다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>배포 빈도가 늘었다는 사실만으로 알 수 없는 것은?</span></summary><div class="answer">되돌린 비율, 결함 비율, 변경 실패율. 배포 빈도는 얼마나 많이 내보냈는지만 알려 주는 대리 지표다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>체감 전달 속도는 1년 동안 얼마나 올랐고, 발표자는 왜 주목했나?</span></summary><div class="answer">약 4.5%. AI에 들어간 투자와 비용에 비해 변화가 작기 때문이다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>변경 실패율이 2%p 오르는 것이 왜 큰일인가?</span></summary><div class="answer">업계 기준이 약 4%다. 2%p가 오르면 6%가 되고, 실패가 50% 늘어난 것이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>변경 실패율의 갈림에서 AI가 한 역할은?</span></summary><div class="answer">갈림 자체는 AI 이전에도 있었고 릴리스 파이프라인과 자동 테스트가 좌우한다. AI는 흔들리는 폭을 키웠다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>코드 유지보수성과 변경 신뢰도는 각각 어떻게 움직였나? 무슨 뜻인가?</span></summary><div class="answer">유지보수성은 약 4% 올랐고 변경 신뢰도는 6% 내렸다. AI 덕분에 코드를 이해하고 고치기는 쉬워졌지만, 내보내는 결과물은 덜 믿는다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>PR 평균 크기는 어떻게 변했나? 발표자가 든 이유 두 가지는?</span></summary><div class="answer">약 44줄에서 72줄로 커졌다. 모델이 평균적인 코드를 길게 내는 것, 그리고 빌드가 느려서 여러 변경을 PR 하나에 몰아넣는 것.</div></details>
+          <details><summary><span class="qn">Q7</span><span>주니어와 시니어의 AI 사용은 어떻게 다른가?</span></summary><div class="answer">주니어가 더 많이 쓰고 같은 용도에 토큰도 더 쓴다. 아낀 시간은 비슷하다. 시니어는 지어낸 내용을 잘 찾고 아키텍처를 이해해서 토큰을 덜 쓴다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>DX의 AI 측정 프레임워크의 세 축은?</span></summary><div class="answer">사용량, 영향, 비용. 보통 사용량부터 재고, 그다음 영향 지표와 맞춰 본다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>AI의 영향을 잴 때 기존 생산성 지표는 어떻게 하나?</span></summary><div class="answer">버리지 않는다. 사용자 집단을 나누고, PR 사이클 타임이나 PR 크기 같은 기존 지표로 집단끼리 비교한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>플랫폼의 AI 준비도 항목이 낯익은 이유는?</span></summary><div class="answer">좋은 문서, 단순한 데이터 구조, 모듈화된 코드, 안정적인 CI와 테스트는 원래 좋은 개발자 경험의 조건이다. 사람에게 좋은 것이 에이전트에게도 좋다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>PR 처리량 증가의 중앙값, 평균, 상위 조직 값은?</span></summary><div class="answer">중앙값 7.7%, 평균 13%, 상위 조직 70% 안팎. 2배를 넘긴 곳은 없었다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>증가폭이 기대보다 작은 이유는?</span></summary><div class="answer">코드 생성은 가치 흐름의 14~16%뿐이다. 회의, 컨텍스트 전환, 방해, 개발 환경의 마찰이 AI로 아낀 시간을 덮는다.</div></details>
+          <details><summary><span class="qn">Q13</span><span>네 회사 사례의 공통점은?</span></summary><div class="answer">모두 코드 작성 밖의 병목을 겨눴다. 레거시 해석, 스탠드업과 온보딩, 1차 코드 리뷰, 장애 직후 상황 파악이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>우리 팀의 변경 실패율 추이를 확인한다<span class="how">확인: AI 도입 전후로 올랐는가 내렸는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>PR 평균 크기를 추적한다<span class="how">확인: 최근 1년 동안 커졌는가. 커졌다면 리뷰 시간과 되돌린 횟수도 같이 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>빌드 파이프라인 시간을 잰다<span class="how">빌드가 느리면 변경을 PR 하나에 몰아넣게 된다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>AI 사용량부터 잰다<span class="how">누가, 어떤 도구를, 얼마나 자주, 어떤 용도로 쓰는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>사용자 집단을 나눠 기존 지표로 비교한다<span class="how">PR 사이클 타임, PR 크기, 리뷰에서 되돌려 보낸 정도</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>용도별 토큰 지출을 본다<span class="how">확인: 어떤 용도가 지출 대비 효과가 큰가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>플랫폼의 AI 준비도를 점검한다<span class="how">문서, 데이터 구조, 코드 모듈화, 로컬 CI, 오락가락하는 테스트</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>코드 작성 밖에서 시간이 새는 곳을 찾는다<span class="how">회의, 컨텍스트 전환, 대기, 온보딩, 장애 대응</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>찾은 병목 하나에 에이전트를 붙여 본다<span class="how">예: 회의 요약, PR 1차 리뷰, 레거시 코드 설명, 장애 맥락 모으기</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>개발자 경험</td><td>Developer experience. 개발자가 일하면서 겪는 도구, 과정, 환경의 좋고 나쁨</td></tr>
+              <tr><td>DORA 지표</td><td>소프트웨어 전달 성과를 재는 네 가지 지표. 배포 빈도와 변경 실패율이 여기에 든다</td></tr>
+              <tr><td>배포 빈도</td><td>Deployment frequency. 프로덕션에 얼마나 자주 내보내는가</td></tr>
+              <tr><td>변경 실패율</td><td>Change failure rate. 배포한 변경 가운데 문제를 일으킨 비율</td></tr>
+              <tr><td>대리 지표</td><td>Proxy metric. 재고 싶은 것을 직접 못 재서 대신 쓰는 지표</td></tr>
+              <tr><td>PR 처리량</td><td>PR throughput. 일정 기간에 처리한 PR의 수</td></tr>
+              <tr><td>PR 사이클 타임</td><td>PR을 열고 나서 머지하기까지 걸린 시간</td></tr>
+              <tr><td>코드 유지보수성</td><td>개발자가 코드를 고치기 쉽다고 느끼는 정도. 설문으로 잰다</td></tr>
+              <tr><td>변경 신뢰도</td><td>Change confidence. 내보내는 변경이 문제를 일으키지 않을 거라고 믿는 정도</td></tr>
+              <tr><td>점진적 전달</td><td>Incremental delivery. 변경을 작게 나눠 차례로 내보내는 방식</td></tr>
+              <tr><td>코호트</td><td>Cohort. 비교하려고 같은 조건으로 묶은 사용자 집단</td></tr>
+              <tr><td>텔레메트리</td><td>도구 사용 기록을 자동으로 모은 데이터</td></tr>
+              <tr><td>토큰</td><td>모델이 글을 읽고 쓰는 단위. AI 사용료는 토큰 수로 매긴다</td></tr>
+              <tr><td>중앙값</td><td>값을 크기순으로 세웠을 때 가운데 값. 몇몇 큰 값에 덜 흔들린다</td></tr>
+              <tr><td>SDLC / PDLC</td><td>소프트웨어 개발 수명 주기와 제품 개발 수명 주기. 기획부터 운영까지의 전체 과정. PDLC의 뜻은 발표에서 따로 풀지 않았다</td></tr>
+              <tr><td>가치 흐름</td><td>Value stream. 아이디어가 고객에게 가치로 닿기까지 거치는 모든 단계</td></tr>
+              <tr><td>제약 이론</td><td>Theory of constraints. 전체 성과는 가장 느린 단계(병목)가 정한다는 Eli Goldratt의 이론</td></tr>
+              <tr><td>환각</td><td>Hallucination. 모델이 사실이 아닌 내용을 그럴듯하게 지어내는 것</td></tr>
+              <tr><td>런북</td><td>Runbook. 장애가 났을 때 따라 하는 조치 순서 문서</td></tr>
+              <tr><td>SRE</td><td>Site reliability engineer. 서비스가 안정적으로 돌아가게 책임지는 엔지니어</td></tr>
+              <tr><td>PRD</td><td>Product requirements document. 만들 것의 요구사항을 적은 문서</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자와 DX 소개</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>이 세션의 범위: 조직의 흐름</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>속도 지표는 대리 지표</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>배포 빈도 증가</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>지역별 차이: 북미와 유럽</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>체감 전달 속도 약 +4.5%</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>METR 연구: 실제 −19%, 체감 +20%</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>변경 실패율의 갈림</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>AI는 진폭을 키웠다</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>유지보수성 +4%, 변경 신뢰도 −6%</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>PR 크기 44줄 → 72줄</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>느린 빌드와 PR 뭉치기</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>점진적 전달 −10%</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>주니어가 AI를 가장 많이 쓴다</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>에이전트 경험과 토큰 소비</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>시니어의 시간 절감</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>작은 회사의 시간 절감</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>측정이라는 숙제</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>기존 지표를 버리지 않는다</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>AI 측정 프레임워크: 사용량, 영향, 비용</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>코호트 비교의 예</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>플랫폼의 AI 준비도</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>에이전트가 주는 피드백</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>다섯 번째 흐름: 개발 과정 전체로</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>PR 처리량 증가 중앙값 7.7%</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>AI 밖의 요인과 제약 이론</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>Morgan Stanley: DevGen.AI</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>Zapier: 스탠드업, 온보딩, 채용</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>Faire(추정): 주 3,000건 자동 리뷰</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>Spotify: SRE 에이전트</td></tr>
+              <tr><td><span class="ts">18:30</span></td><td>보고서 안내와 마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'Se8jHLliLXE:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ChatGPT 안의 금융 에이전트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#surfaces">세 가지 화면과 지금의 제약</a></li>
+      <li><a href="#pillars">금융 서비스 판의 세 축</a></li>
+      <li><a href="#ontology">데이터를 모델이 읽기 좋게</a></li>
+      <li><a href="#plugins">플러그인: 80%는 받고 20%는 채운다</a></li>
+      <li><a href="#lab1">실습 1: 자산관리 어드바이저</a></li>
+      <li><a href="#concepts">스킬, 플러그인, 플러그인 확장</a></li>
+      <li><a href="#cost">비용: 오케스트레이터만 비싸게</a></li>
+      <li><a href="#architecture">따로 앱을 만들지 않는 이유</a></li>
+      <li><a href="#skills">스킬은 적게, 함께 쓴다</a></li>
+      <li><a href="#deep-research">API 앱을 플러그인으로 옮긴 사례</a></li>
+      <li><a href="#harness">Codex 하네스와 긴 작업</a></li>
+      <li><a href="#industries">다른 산업과 데이터 사일로</a></li>
+      <li><a href="#security">보안: 샌드박스와 관리형 정책</a></li>
+      <li><a href="#evals">평가와 자동 연구</a></li>
+      <li><a href="#write-back">기록 시스템에 쓰기와 감사 로그</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 워크숍 · 2026-11-07 · 1시간 50분 · 영어 발표 한글 정리</span>
+      <h1>ChatGPT 안에 금융 에이전트 만들기</h1>
+      <p class="lead">OpenAI에서 금융 고객을 맡는 엔지니어들이 ChatGPT Work의 금융 서비스 기능과 Codex 플러그인을 보여 준다. 핵심 메시지는 하나다. 새 앱을 따로 만들기보다, 회사가 이미 쓰는 ChatGPT Work와 Codex 안에 스킬과 플러그인으로 업무를 얹으라는 것이다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=ZJjRgvjhq3M" target="_blank" rel="noopener">Build Your Own Finance Agent Inside ChatGPT</a></span>
+        <span>발표: Stefano Fabbri, Oliver Steffmann (OpenAI 응용 AI 엔지니어링 팀, 뉴욕 금융 기관 담당). 같은 팀의 Dom이 중간에 두 번 답했다.</span>
+      </div>
+      <p class="note">영어 워크숍의 자동 자막을 바탕으로 한글로 정리했다. 실습 화면은 자막에 남지 않아서 말로 설명한 부분만 담았다. 수치와 주장은 모두 발표자가 말한 것이고, 원 출처를 따로 확인하지 않았다. 모델 이름(6.1 Soul, Astra, Terra, Luna)과 일부 고유명사는 들린 대로 적고 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치이고, 한 시간이 넘으면 h:mm:ss로 적었다.</p>
+      <p class="note">발표자 세 명 모두 OpenAI 직원이고, 이 워크숍은 OpenAI 제품 소개를 겸한다. 제품의 장점에 관한 말은 그 점을 감안해 읽자.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>OpenAI의 화면은 셋이다. <strong>ChatGPT</strong>, 지식 노동자용 <strong>ChatGPT Work</strong>, 엔지니어용 <strong>Codex</strong>. 금융 서비스 기능은 지금 ChatGPT Work 웹에만 있다.</li>
+        <li>ChatGPT for Financial Services는 <strong>데이터, 금융 업무에 맞춘 모델, 엑셀·PPT 산출물</strong>을 묶은 기업용 제품이다.</li>
+        <li>발표자가 꼽는 차별점은 데이터다. 원본을 그냥 붙이지 않고 <strong>데이터셋마다 모델이 쓰기 좋게 가공하고 설명을 붙였다.</strong></li>
+        <li>플러그인은 <strong>스킬 + MCP 서버 + 도구 설정 + UI</strong>다. 업계 전문가와 만든 기본 플러그인이 80%를 주고, 회사가 20%를 채운다.</li>
+        <li>사내 개발자는 <strong>별도 앱 대신 플러그인</strong>을 만들어 이미 승인된 화면에 배포한다. 로그인, 권한, 보안 정책을 다시 만들 필요가 없다.</li>
+        <li>비용은 <strong>오케스트레이터만 가장 강한 모델</strong>로 두고, 하위 에이전트는 싼 모델과 잘 쓴 스킬로 줄인다. 발표자는 결과의 약 95%가 나온다고 했다.</li>
+        <li><strong>평가(eval)가 가장 막히는 곳</strong>이다. 단순하게 시작하고, LLM 채점은 1~5점 대신 예/아니오로 묻는다. 규제 업무에는 결정마다 근거 로그를 남긴다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="surfaces">
+        <header><span class="num">01</span><h2>세 가지 화면과 지금의 제약 <span class="ts">05:00</span></h2></header>
+        <p>OpenAI는 사용자가 만나는 화면<span class="en">surface</span>을 셋으로 나눈다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>화면</th><th>주 사용자</th><th>특징</th></tr></thead>
+            <tbody>
+              <tr><td>ChatGPT</td><td>누구나</td><td>처음부터 있던 대화형 제품</td></tr>
+              <tr><td>ChatGPT Work</td><td>지식 노동자 <span class="en">knowledge worker</span></td><td>에이전트를 돌리고 플러그인을 쓴다. 금융 서비스 기능이 여기 들어 있다</td></tr>
+              <tr><td>Codex</td><td>엔지니어</td><td>코딩 같은 엔지니어링 일. 데스크톱 앱과 CLI가 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>네 번째 길은 API다. Responses API로 직접 앱을 짜는 경우다. Stefano의 팀은 원래 이 API 고객을 주로 돕는다.</p>
+
+        <h3>지금 되는 것과 안 되는 것 <span class="ts">27:30</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>기능</th><th>쓸 수 있는 곳 (발표 당시)</th></tr></thead>
+            <tbody>
+              <tr><td>ChatGPT for Financial Services</td><td>ChatGPT Work 웹에서만. 휴대폰 앱에서도 된다</td></tr>
+              <tr><td>플러그인</td><td>데스크톱(Codex)과 ChatGPT Work 웹 둘 다</td></tr>
+              <tr><td>플러그인 확장 (화면 맞춤)</td><td>데스크톱에서만. 웹은 곧 나온다고 안내했다</td></tr>
+              <tr><td>스킬 단독</td><td>Codex 쪽. 웹에서는 아직 안 된다</td></tr>
+              <tr><td>금융 데이터를 CLI·파이프라인에서</td><td>아직 안 된다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">발표자들도 "아직 아주 새로운 제품이라 화면마다 되는 일이 다르고, 앞으로 바뀔 수 있다"고 했다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="pillars">
+        <header><span class="num">02</span><h2>금융 서비스 판의 세 축 <span class="ts">05:40</span></h2></header>
+        <p>ChatGPT for Financial Services는 기업용으로만 제공된다. 금융 사용자에 맞춰 제품을 다듬은 판이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 데이터</span>
+            <p>내장 데이터가 있고, 외부 데이터 업체도 바로 연결한다. 에이전트가 중간 작업 없이 데이터 원천을 직접 다룬다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 금융 업무</span>
+            <p>M&amp;A, 주식 리서치 같은 금융 일에 맞춰 모델을 더 밀어붙였다고 발표자는 말한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 산출물 <span class="en">artifact</span></span>
+            <p>발표 자료와 스프레드시트를 만든다. 예전 자료를 참고 템플릿으로 주면, 이번 분석을 같은 형식으로 다시 만든다.</p>
+          </div>
+        </div>
+        <p class="note">발표 안에서 "모델을 금융 업무로 훈련했다"<span class="ts">06:30</span>는 말과 "모델은 같고 제품만 맞췄다, 미세 조정이 아니다"<span class="ts">05:50</span> <span class="ts">30:00</span>는 말이 함께 나온다. 어느 쪽이 정확한지는 발표만으로 알 수 없다.</p>
+
+        <h3>기본으로 들어 있는 데이터 <span class="ts">08:00</span></h3>
+        <ul class="plain">
+          <li>SEC 공시</li>
+          <li>시세 데이터. 약 15분 늦게 들어온다</li>
+          <li>뉴스</li>
+          <li>비상장 기업 정보</li>
+          <li>실적 발표 녹취록 <span class="en">earnings call transcript</span></li>
+        </ul>
+        <p>제휴 업체로 Daloopa(추정), LSEG(추정), PitchBook, Crunchbase 등을 들었다. 따로 계약한 데이터 업체는 플러그인으로 로그인해서 쓸 수 있다.</p>
+        <p>실습에서는 프롬프트로 답을 차트로 보여 주게 하고, 검증을 거치게 하고, 데이터 출처를 주석으로 달게 하는 법도 다룬다<span class="ts">07:20</span>.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="ontology">
+        <header><span class="num">03</span><h2>데이터를 모델이 읽기 좋게 <span class="ts">08:40</span></h2></header>
+        <p>발표자가 꼽는 가장 큰 차별점은 데이터를 넣는 방식이다.</p>
+        <div class="shift" aria-label="데이터 연결 방식의 차이">
+          <div><span class="tag">흔한 방식</span><b>원본 데이터를 API로 넘긴다</b><span class="muted">모델이 파일을 받아 알아서 해석한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이 제품</span><b>데이터셋마다 맞춤 도구와 설명을 붙인다</b><span class="muted">무엇이 어디 있고 무엇이 중요한지까지 함께 준다</span></div>
+        </div>
+        <ul class="plain">
+          <li>10-K, 10-Q 같은 공시는 파일만 주지 않는다. 파일 안 어디에 무엇이 있는지 설명을 같이 준다.</li>
+          <li>데이터셋마다 무엇이 중요하고 무엇이 아닌지 맥락을 붙였다.</li>
+          <li>예를 들어 시세와 수익률을 다룰 때 흔히 하는 착각을 피하는 법까지 적었다.</li>
+          <li>데이터셋 하나하나를 공급 업체와 함께 넣었다. "어떻게 줘야 모델이 가장 잘 쓰나"를 맞추기 위해서다.</li>
+        </ul>
+        <p>발표자는 이 작업을 데이터 온톨로지<span class="en">data ontology</span>라고 부른다. 데이터의 구조와 의미를 정리해 둔 틀이라는 뜻이다.</p>
+        <div class="callout">
+          <span class="title">맞춤 임베딩을 썼나? <span class="ts">35:00</span></span>
+          <span>아니라고 답했다. 데이터를 미리 가공하고, 그 데이터셋 전용으로 다듬은 도구 호출을 만든 것이다. 내부 구조(온톨로지, 그래프)는 사용자에게 열려 있지 않다. 엔지니어보다 지식 노동자를 위한 제품이기 때문이라고 했다.</span>
+        </div>
+        <p>Oliver는 자산운용사에서 비슷한 일을 직접 해 봤다. SEC 파일을 대량으로 받고, 새 정보를 계속 챙기고, 그걸 빠르게 내줄 맥락 계층<span class="en">context layer</span>을 만드는 일은 기술적으로 어렵다고 했다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="plugins">
+        <header><span class="num">04</span><h2>플러그인: 80%는 받고 20%는 채운다 <span class="ts">10:10</span></h2></header>
+        <p>OpenAI 제품팀은 금융 업무용 플러그인을 만들었다. 투자은행용과 주식 리서치용이 대표적이다.</p>
+        <p>OpenAI가 말하는 플러그인은 스킬 묶음과 MCP 서버를 합친 것이다. MCP<span class="en">Model Context Protocol</span>는 모델이 외부 도구와 데이터에 접속하는 표준 방식이다.</p>
+        <p>상위 투자은행, 자산운용사, 리서치 회사와 함께 만들었다. 스킬 자체는 마크다운 파일과 템플릿이다. 다만 그 안에 업계 전문 지식이 담겼다는 것이 발표자의 설명이다.</p>
+
+        <figure class="chart" aria-label="업무 하나를 100으로 볼 때: 기본 플러그인이 해 주는 몫 80, 회사가 채우는 몫 20">
+          <span class="chart-title">업무 하나를 100으로 볼 때 누가 무엇을 채우나</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>기본 플러그인이 해 주는 몫</span><span class="val">80</span></div>
+              <div class="track"><div class="fill key" style="width:80%" title="기본 플러그인: 80"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>회사가 직접 채우는 몫</span><span class="val">20</span></div>
+              <div class="track"><div class="fill" style="width:20%" title="회사 맞춤: 20"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">Stefano가 "80%는 이미 있고 20%를 더한다"고 어림잡아 말한 비율이다. 잰 값이 아니다.</span>
+        </figure>
+
+        <ol class="plain">
+          <li>기본 스킬을 그대로 가져온다.</li>
+          <li>그 스킬로 예약 작업이나 파이프라인을 만들어, 하려는 일을 재현해 본다.</li>
+          <li>빠진 부분과 자기 회사의 관점을 더한다.</li>
+        </ol>
+
+        <h3>기본 제공 사례 <span class="ts">12:00</span></h3>
+        <p>피치북<span class="en">pitch book</span> 준비, 실적 분석, 가치 평가, LBO 모델링이 처음부터 들어 있다. 투자은행 쪽에 치우쳐 있고, 오늘 실습은 자산관리 쪽이다.</p>
+        <p>Stefano는 자본시장 출신이다. 투자은행 사람들과 가치 평가를 이야기해야 했을 때, 이 플러그인 예제를 몇 개 돌려 보고 빠르게 따라잡았다고 했다.</p>
+
+        <h3>답을 보여 주는 방식까지 <span class="ts">37:40</span></h3>
+        <p>플러그인은 데이터를 어떻게 보여 줄지도 안다. 매출을 물으면 표와 차트로 답한다. 같은 Astra(추정) 모델을 플러그인 없이 쓰면 꼭 그렇게 하지는 않는다. 모델을 바꾼 게 아니라 보여 주는 법에 대한 맥락을 준 것이다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="lab1">
+        <header><span class="num">05</span><h2>실습 1: 자산관리 어드바이저 <span class="ts">14:20</span></h2></header>
+        <p>목표는 어드바이저가 고객과 이야기하는 시간을 늘리는 것이다. 그러려면 뒤에서 하는 준비 작업을 줄여야 한다.</p>
+        <ol class="plain">
+          <li>고객 포트폴리오에 변화가 생긴다.</li>
+          <li>무슨 일이 있었는지 분석한다. 손익과 성과 요인 분석<span class="en">performance attribution</span>을 만든다.</li>
+          <li>왜 바뀌었는지 설명을 정리한다.</li>
+          <li>고객 미팅을 준비하고, 고객에게 보여 줄 자료를 만든다.</li>
+          <li>포트폴리오의 균형을 되돌릴 방법<span class="en">rebalancing</span>을 제안한다.</li>
+        </ol>
+        <p>실습 사이트에는 고객 예시 데이터(zip 파일)와 프롬프트가 있다. 포트폴리오 질문, 리서치, 차트 그리기 같은 하위 실습을 골라 할 수 있다.</p>
+        <p>사이트의 프롬프트를 복사해 넣으면 화면에 플러그인과 내부 도구 호출이 보인다. 프롬프트 안에 "ChatGPT for Financial Services를 써라"는 힌트를 넣어 플러그인을 부르는 방식이다.</p>
+        <p>프롬프트 하나에 몇 분이 걸린다. 빨리 하려면 6.1 Soul(추정) 모델에서 Ultra Fast를 켠다. 발표자는 Ultra Fast가 평균 초당 약 300토큰을 낸다고 했다<span class="ts">03:10</span>.</p>
+        <p class="note">실습 사이트는 웹사이트를 띄워 주는 Sites 기능(추정)으로 만들었다. 참가자는 가상 투자금 10만을 받고, 단계를 마칠 때마다 돈이 늘었다. 상위 세 명이 OpenAI 물병을 받았다.</p>
+        <div class="callout">
+          <span class="title">Oliver가 아쉬워한 것 <span class="ts">39:10</span></span>
+          <span>과거 시세를 API로 바로 받을 수 있으면 좋겠지만, 데이터 업체 라이선스 때문에 쉽지 않다. 그래서 사내에 이미 시세·포트폴리오 시스템이 있다면 직접 플러그인을 만들 기회라고 했다. 같은 시각화를 쓰면서 ChatGPT Work와 데스크톱 양쪽에 둘 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="concepts">
+        <header><span class="num">06</span><h2>스킬, 플러그인, 플러그인 확장 <span class="ts">18:50</span></h2></header>
+        <p>실습 2(Codex로 만들기)를 위한 세 가지 단위다. 아래로 갈수록 무겁고 할 수 있는 일이 많다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단위</th><th>들어 있는 것</th><th>할 수 있는 일</th></tr></thead>
+            <tbody>
+              <tr><td>스킬 <span class="en">skill</span></td><td>자연어로 쓴 마크다운 파일 몇 개, 템플릿</td><td>프롬프트와 지식을 재사용하고 팀에 공유한다. 사내 시스템 연결은 못 한다</td></tr>
+              <tr><td>플러그인 <span class="en">plugin</span></td><td>스킬 + MCP 서버 + 도구 설정 + UI 컴포넌트. 하나의 패키지로 묶는다</td><td>사내 데이터에 붙고 인증을 처리한다. 모든 것을 담는 가장 큰 단위다</td></tr>
+              <tr><td>플러그인 확장 <span class="en">plugin extension</span></td><td>플러그인이 화면 일부를 바꾸는 기능. DevDay에서 발표됐다</td><td>대화 맥락에 맞춰 맞춤 UI를 띄운다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>서버가 꼭 있어야 하나? <span class="ts">53:40</span></h3>
+        <p>플러그인에 따라 다르다. 스킬만 묶은 플러그인도 있다. 사내 데이터에 붙으려면 MCP 서버와 인증이 필요하다.</p>
+        <ul class="plain">
+          <li><strong>시스템 간 인증</strong>: 플러그인이 회사 시스템에 자기 자격으로 접속한다.</li>
+          <li><strong>사용자 대신 인증</strong>: Codex에 로그인한 사람의 권한으로 접속한다.</li>
+        </ul>
+
+        <h3>플러그인 확장이 바꾸는 것 <span class="ts">56:40</span></h3>
+        <p>화면 왼쪽 아래에 자기 아이콘을 넣을 수 있다. 설정과 내비게이션도 바꿀 수 있다. 그리고 대화 맥락을 읽고 필요한 순간에 맞춤 UI를 띄운다.</p>
+        <div class="callout">
+          <span class="title">발표자가 든 장면</span>
+          <span>어드바이저가 대화 중에 고객 미팅을 준비한다고 말한다. 그러면 사내 시스템에서 그 고객의 지표를 보여 주는 화면이 뜬다. 다섯 군데 사이트를 돌아다니지 않고, 늘 쓰는 AI 도구 안에서 일을 끝낸다.</span>
+        </div>
+        <p>Figma와 Adobe 같은 파트너가 만든 더 복잡한 앱 예시도 OpenAI 웹사이트에 있다고 했다<span class="ts">1:21:10</span>.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="cost">
+        <header><span class="num">07</span><h2>비용: 오케스트레이터만 비싸게 <span class="ts">42:10</span></h2></header>
+        <p>Stefano에 따르면 최근 3개월 고객사의 가장 큰 관심사는 토큰 효율과 비용이었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>상황</th><th>권하는 구성 (발표자 설명)</th></tr></thead>
+            <tbody>
+              <tr><td>완전히 새 코드베이스, 새 연구</td><td>가장 강한 모델(Astra)을 쓴다. 성능 여유가 필요하다</td></tr>
+              <tr><td>반복되는 업무</td><td>기대하는 바를 자세히 적은 스킬을 만들고, 싼 모델(Luna(추정), 6.1 Soul)을 쓴다</td></tr>
+              <tr><td>다중 에이전트</td><td>오케스트레이터<span class="en">orchestrator</span>만 가장 똑똑한 모델. 하위 에이전트는 Terra(추정)나 Luna</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <figure class="chart" aria-label="다중 에이전트 결과 품질: 모든 에이전트에 최고 모델 100, 오케스트레이터만 최고 모델 약 95">
+          <span class="chart-title">다중 에이전트의 결과 품질 (모든 에이전트에 최고 모델 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>모든 에이전트에 최고 모델</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="모두 최고 모델: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>오케스트레이터만 최고 모델, 하위는 Terra·Luna</span><span class="val">≈ 95</span></div>
+              <div class="track"><div class="fill key" style="width:95%" title="오케스트레이터만 최고 모델: 약 95"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">Stefano가 "대략 95%"라고 말한 값이다. 쓰임새마다 달라서 평가를 만들어 직접 재야 한다고 덧붙였다.</span>
+        </figure>
+
+        <p>이 전략이 중요한 이유가 있다. 자산관리 컨시어지 에이전트를 전체 고객에게 돌리면 비용과 시간이 빠르게 커진다.</p>
+
+        <h3>모델이 나올 때마다 다시 찾는다 <span class="ts">45:10</span></h3>
+        <p>Oliver는 새 모델이 나올 때마다 성능과 가격의 균형점, 그리고 적당한 노력 수준<span class="en">effort level</span>을 다시 찾는다고 했다. 실습 사이트도 금요일에 Astra에게 맡겨 오래 돌렸고, 다듬는 일은 더 빠른 Soul로 했다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="architecture">
+        <header><span class="num">08</span><h2>따로 앱을 만들지 않는 이유 <span class="ts">47:20</span></h2></header>
+        <p>ChatGPT for Financial Services를 회사에 들였다고 하자. 다음 질문은 "우리 데이터를 어떻게 붙이고 어떻게 맞추나"다. 사내 개발자에게는 두 길이 있다<span class="ts">17:40</span>.</p>
+        <div class="shift" aria-label="경로 A에서 경로 B로">
+          <div><span class="tag">경로 A · 별도 앱</span><b>API 키를 받아 웹 UI를 만든다</b><span class="muted">로그인, 접근 권한, 보안 승인, 개발 주기를 모두 새로 거친다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">경로 B · 플러그인</span><b>이미 쓰는 ChatGPT Work와 Codex 안에 넣는다</b><span class="muted">승인되어 운영 중인 환경의 로그인과 권한을 그대로 쓴다</span></div>
+        </div>
+
+        <h3>발표에서 그린 구조 <span class="ts">48:20</span></h3>
+        <ol class="plain">
+          <li>데스크톱 Codex에서 프롬프트로 로컬 MCP 서버를 만든다. 사내 증권 포트폴리오 DB, 고객 DB, Salesforce 같은 곳에 붙인다.</li>
+          <li>로컬에서 시제품을 돌려 본다.</li>
+          <li>플러그인으로 묶는다. 웹 ChatGPT Work에는 Plugin Creator라는 플러그인을 설치해 직접 만든 플러그인을 올릴 수 있다<span class="ts">49:40</span>.</li>
+          <li>회사가 관리하는 플러그인 폴더 구조를 정하고, 기존 Codex 배포 방식으로 직원들에게 나눠 준다.</li>
+          <li>금융 데이터 맥락은 여전히 OpenAI 웹 쪽에 있다. 사내 DB는 인증을 거친 MCP 도구로 연결한다.</li>
+        </ol>
+        <div class="callout">
+          <span class="title">왜 빠른가 <span class="ts">50:40</span></span>
+          <span>기업에서 새 앱을 내려면 로그인, 접근 제어, 승인에 오래 걸린다. 이미 승인된 화면에 끼우면 그 단계를 건너뛴다. 어떤 플러그인을 어떤 직원에게 줄지, 누가 어떤 데이터에 접근할지는 기업 관리 기능으로 정한다. Stefano는 이렇게 하면 "몇 달이 아니라 몇 주" 안에 도구를 전달할 수 있다고 했다<span class="ts">1:23:00</span>.</span>
+        </div>
+
+        <h3>무거운 작업은 원격에서 <span class="ts">1:01:00</span></h3>
+        <p>로컬 Codex는 노트북 성능만큼만 빠르다. 모델이 빨라도 코드를 실행하는 시간은 줄지 않는다. 예를 들어 큰 저장소를 보안 점검<span class="en">AppSec scanning</span>하면 노트북이 묶인다. Oliver는 회사 안에 작업을 넘기고 나중에 결과만 받는 원격 실행 환경을 두라고 권했다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="skills">
+        <header><span class="num">09</span><h2>스킬은 적게, 함께 쓴다 <span class="ts">1:02:50</span></h2></header>
+        <p>목표는 사람마다 따로 가진 스킬이 아니다. 팀끼리 나눠 쓰는 마켓플레이스다.</p>
+
+        <h3>산출물 템플릿을 함께 넣는다</h3>
+        <p>플러그인 안에 예전 보고서나 자료 파일을 넣고, 스킬에서 그것을 참고하라고 지시한다. 웹사이트, PowerPoint, Excel 모두 템플릿이 될 수 있다. 형식이 중요해서 OpenAI가 산출물 생성에 공을 들였다고 했다.</p>
+        <p>틀린 세부가 있으면 스킬에 적어 둔다. 그러면 다음 번에는 맞게 나온다.</p>
+        <p class="note">"지난 6개월 동안 스프레드시트 서식이 투자은행 기준에 맞을 만큼 좋아졌다"는 말은 OpenAI 직원의 자사 모델 평가다. Stefano 본인도 "직접 해 보라"고 했다.</p>
+
+        <h3>모델이 바뀌어도 쓸 수 있나 <span class="ts">1:05:20</span></h3>
+        <ul class="plain">
+          <li>같은 계열 안의 작은 업데이트에서는 대체로 그대로 쓴다.</li>
+          <li>모델이 똑똑해질수록 자세한 지시가 덜 필요하다.</li>
+          <li>5에서 6으로 넘어가는 것처럼 1년짜리 도약이면 손봐야 한다.</li>
+        </ul>
+
+        <h3>스킬이 너무 많을 때 <span class="ts">1:06:10</span></h3>
+        <p>Oliver는 스킬을 마구 만든 고객에게 "스킬이 너무 많다"고 조언한 적이 있다. 프런트오피스나 퀀트는 저마다 Codex에 스킬을 쌓는다. 두 사람이 비슷한 일로 각자 스킬을 만들면 관리가 어려워진다. 스킬이 너무 많으면 처리도 느려진다.</p>
+        <ul class="plain">
+          <li>포트폴리오 분석, 트레이딩 분석처럼 <strong>핵심 역량만</strong> 스킬로 남긴다. 업무의 모든 단계를 스킬로 만들지 않는다.</li>
+          <li>통제가 필요하면, 무엇을 묶을지 설계한 사람이 있는 플러그인으로 배포한다.</li>
+          <li>새 모델이 나오면 스킬을 다시 테스트한다. OpenAI와 거래 관계가 있으면 미리보기 모델로 먼저 시험해 볼 수 있다.</li>
+        </ul>
+      </section>
+
+      <!-- 10 -->
+      <section id="deep-research">
+        <header><span class="num">10</span><h2>API 앱을 플러그인으로 옮긴 사례 <span class="ts">1:08:30</span></h2></header>
+        <p>Stefano는 몇 달 사이 변화가 컸다고 말한다. 예전에는 API로 코드를 짜야만 만들던 것을 이제는 플러그인으로 다시 만들 수 있다.</p>
+        <p>사례는 금융 문제 전용 딥리서치<span class="en">deep research</span> 에이전트다. 처음에는 API로 만든 독립 앱이었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구성 요소</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>계획 에이전트 <span class="en">planner</span></td><td>질문을 받아 하위 질문으로 나눈다</td></tr>
+              <tr><td>하위 에이전트 <span class="en">sub-agent</span></td><td>하위 질문마다 하나씩 떠서 서로 독립적으로 조사한다</td></tr>
+              <tr><td>비평 에이전트 <span class="en">critique agent</span></td><td>결과를 모으고 서로 충돌하는지 검사한다. 충돌하면 새 하위 에이전트를 띄워 그 모순을 조사시킨다</td></tr>
+              <tr><td>끝나는 조건</td><td>보고서가 품질 기준을 넘고, 다뤄야 할 질문에 모두 답할 때까지 반복한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Dom이 Codex 안으로 옮긴 이유 <span class="ts">1:12:00</span></h3>
+        <ul class="plain">
+          <li>사람들이 일하는 곳이 Codex와 ChatGPT Work로 모이고 있었다. 일회성 독립 앱에는 잘 들어가지 않았다.</li>
+          <li>Codex가 이미 가진 하위 에이전트 기능과, 에이전트 구조를 상황에 맞춰 바꾸는 기능을 그대로 쓸 수 있다.</li>
+          <li>모델이 학습한 방식 그대로 도구를 부르게 된다. Dom은 이를 분포 안 도구 호출<span class="en">in-distribution tool calling</span>이라 부르고, 더 빠르고 정확하다고 했다.</li>
+          <li>사용자가 쓸 데이터 원천과 품질 관문<span class="en">quality gate</span>을 직접 바꿀 수 있다. 정해진 블랙박스 앱이 사용자 곁에서 자라는 과정이 된다.</li>
+          <li>사용자는 화면을 떠나지 않고, 하위 에이전트가 무엇을 조사하는지 지켜본다.</li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section id="harness">
+        <header><span class="num">11</span><h2>Codex 하네스와 긴 작업 <span class="ts">1:14:10</span></h2></header>
+        <p>Codex의 하네스는 오픈소스다. 하네스<span class="en">harness</span>는 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀이다.</p>
+        <ul class="plain">
+          <li>앱 화면은 OpenAI 소유지만, 뒤에서 도는 엔진은 공개돼 있다. 기업이 들여다보고 필요에 맞게 고칠 수 있다.</li>
+          <li>Codex SDK나 app server(추정)로 같은 작업을 서버 쪽으로 옮길 수 있다. 연구자가 데스크톱에서 만든 흐름을 팀용 서비스로 키우는 길이다.</li>
+          <li>모델의 사후 학습<span class="en">post-training</span>이 이 하네스로 이뤄진다. 그래서 이 하네스에서 성능을 더 낸다고 발표자는 말한다.</li>
+          <li>하위 에이전트를 쓸지는 에이전트가 스스로 정한다. Ultra 모드는 하위 에이전트를 더 많이 쓰도록 민다. 속도를 높이는 Ultra Fast와는 다른 모드다.</li>
+        </ul>
+        <p class="note">"우리 모델은 우리 하네스에서 가장 잘 돈다"는 주장은 OpenAI 직원의 설명이다. 감안해 읽자.</p>
+
+        <h3>압축 모드와 몇 시간짜리 작업 <span class="ts">1:18:20</span></h3>
+        <p>압축<span class="en">compaction</span>은 보조 모델이 대화 맥락을 계속 줄여 주는 기능이다. 중복을 빼고 맥락 크기를 한도 안에 둔다. 아주 긴 맥락이 필요한 연구형 작업에서 효과가 컸다고 한다. API에서도 쓸 수 있고, Codex 하네스에서는 신경 쓰지 않아도 켜져 있다.</p>
+        <div class="callout">
+          <span class="title">Stefano의 실험: 퀀트 논문 재현 <span class="ts">1:19:20</span></span>
+          <span>브라운 운동<span class="en">Brownian motion</span>과 옵션 가격 결정을 다룬 퀀트 금융 논문을 Codex에 줬다. 논문의 코드를 다시 짜고, 수치 결과를 내고, 논문 값과 맞는지 비교하게 했다. 몇 달 전 모델(5.5로 들림)이었다. 약 2시간 돌았고, 확률적 브라운 운동 시뮬레이션과 모델 보정까지 재현했다. 압축 없이는 불가능한 작업이었다고 했다.</span>
+        </div>
+
+        <h3>엔지니어도 앱으로 옮겨 간다 <span class="ts">1:21:50</span></h3>
+        <p>Stefano가 입사했을 때는 엔지니어 대부분이 Codex CLI를 썼다. 지금은 데스크톱 앱으로 옮겨 가 떠나지 않는 사람이 늘었다. Stefano도 늘 열어 두던 Jupyter 노트북을 이제 Codex 안에서 쓴다.</p>
+        <p>발표자들이 말하는 방향은 이렇다. 2025년 코딩에서 본 생산성 도약을 지식 노동자에게도 가져간다. 기술자가 플러그인을 만들고, 비기술 사용자에게 빠르게 전달한다.</p>
+
+        <h3>마켓플레이스라는 배포 채널 <span class="ts">1:35:40</span></h3>
+        <p>플러그인은 공개 마켓플레이스에 올릴 수 있다. 외부 고객에게 갈 수 있어서 심사를 거친다. 사내 마켓플레이스도 같은 개념이다. Oliver는 앱스토어 때처럼 새 유통 채널이 생기는 신호로 본다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="industries">
+        <header><span class="num">12</span><h2>다른 산업과 데이터 사일로 <span class="ts">1:24:20</span></h2></header>
+        <p>청중 질문: 데이터가 정형이라 금융부터 한 것인가? 다른 산업도 하나?</p>
+        <ul class="plain">
+          <li><strong>의료</strong>: 연구 쪽에서도 가장 우선순위가 높은 분야라고 했다.</li>
+          <li><strong>사이버보안</strong>: 보안 특화 모델 상품 Daybreak(추정)이 있다. 여기에 정적 보안 점검 플러그인과, 점검부터 리뷰와 패치까지 이어지는 스킬 묶음을 준다. 보안팀이 처음부터 AI 전문가일 필요가 없게 하려는 것이다.</li>
+        </ul>
+        <p>Oliver는 금융이 AI에 잘 맞는 이유로 정형 데이터를 꼽았다. 다만 회사 데이터는 사일로<span class="en">silo</span>, 곧 부서별로 갇힌 저장소에 흩어져 있고 온톨로지도 없다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">위에서 아래로</span>
+            <p>전사 데이터 저장소 전체에 맥락 계층을 제대로 만든다.</p>
+            <p class="verdict">시간이 아주 오래 걸린다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">아래에서 위로</span>
+            <p>팀이 ChatGPT Work나 Codex로 필요한 데이터 원천에 하나씩 붙으며 맥락을 쌓는다.</p>
+            <p class="verdict"><b>권하는 방식</b>: 데이터 아키텍처를 현대화하는 동안 함께 진행한다.</p>
+          </div>
+        </div>
+        <p>OpenAI 내부에는 오래된 시스템이 없어서 맥락 계층이 이미 있다고 했다. 그게 열리면 조직이 할 수 있는 일이 크게 달라진다는 것이 Oliver의 말이다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="security">
+        <header><span class="num">13</span><h2>보안: 샌드박스와 관리형 정책 <span class="ts">1:28:20</span></h2></header>
+        <p>플러그인을 깔면 다른 사람의 컴퓨터나 웹에서 코드가 돈다. 보안팀의 첫 질문은 "해를 끼치지 않게 하려면?"이다.</p>
+        <ol class="plain">
+          <li><strong>기존 기업 통제가 먼저다.</strong> 네트워크 보안, 엔드포인트 검사가 바깥 층이다.</li>
+          <li><strong>Codex 안에도 통제가 있다.</strong> 관리자가 정책 파일(<code>config.toml</code>)을 기업 차원에서 정하고, 팀별로 내려보낸다.</li>
+          <li><strong>정책으로 막는 것</strong>: 플러그인이 부를 수 있는 URL, 로컬에서 접근할 수 있는 폴더(예: 민감한 프로젝트 폴더), 누가 어떤 플러그인을 쓸 수 있는지.</li>
+          <li><strong>도구 자체의 보호는 여전히 직접 한다.</strong> 샌드박스는 Codex 클라이언트 안에서 도는 것만 감싼다.</li>
+        </ol>
+        <h3>보안과 편의의 균형 <span class="ts">1:31:00</span></h3>
+        <p>보안팀은 민감한 작업마다 승인을 받고 싶어 한다. 사용자는 매번 클릭해야 해서 느리다고 한다. Codex에는 guardian(추정)이라는 장치가 있어, 작업이 위험한지 아닌지 판단을 일부 자동으로 내린다.</p>
+        <p>Stefano에 따르면 큰 금융기관은 모두 승인·권한 설정을 자기에 맞게 바꾼다. Codex를 전사에 배포할 때 가장 먼저 논의하는 주제다.</p>
+      </section>
+
+      <!-- 14 -->
+      <section id="evals">
+        <header><span class="num">14</span><h2>평가와 자동 연구 <span class="ts">1:37:20</span></h2></header>
+        <p>Stefano는 고객과 일할 때 가장 중요한 말로 평가<span class="en">eval</span>를 꼽는다. 채팅으로 쓸 때는 필요 없다. 하지만 에이전트를 만들어 운영하려면 성능을 잴 방법이 있어야 한다.</p>
+        <p>성능이 안 나올 때 원인은 모델보다 하네스, 프롬프트, 도구 연결일 때가 많다. 정말 모델의 한계라면 OpenAI 연구팀에 전해 다음 모델에서 고치게 한다고 했다.</p>
+
+        <h3>평가가 막히는 이유 <span class="ts">1:39:00</span></h3>
+        <p>기술이 어려워서가 아니다. 평가에는 업무 지식이 들어가야 한다. 그 지식은 주제 전문가<span class="en">SME, subject matter expert</span>에게 있고, 평가 데이터셋은 엔지니어가 만든다. 두 사람이 한 팀으로 일하게 만들기가 어렵다.</p>
+        <ul class="plain">
+          <li>재지 않으면 최적화할 수 없다.</li>
+          <li>"70% 맞음" 한 줄로 끝내지 않는다. 어디서 잘하고 어디서 못하는지 지표를 쪼개 본다.</li>
+        </ul>
+
+        <h3>요령 두 가지 <span class="ts">1:40:40</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">단순하게 시작한다</span>
+            <p>LLM 채점자<span class="en">LLM as a judge</span>부터 시작하지 않는다. 처음부터 복잡하면 평가가 나쁜 건지 에이전트가 나쁜 건지 구분할 수 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">예/아니오로 묻는다</span>
+            <p>1~5점을 매기게 하지 않는다. 그 점수를 참/거짓 질문 여러 개로 쪼갠다. 그쪽이 훨씬 낫다고 했다.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>예시 (발표에 없음)</th><th>질문</th></tr></thead>
+            <tbody>
+              <tr><td>1~5점</td><td>"이 고객 보고서의 품질을 1~5점으로 매겨라"</td></tr>
+              <tr><td>예/아니오로 쪼갬</td><td>모든 수치에 출처가 붙어 있나? · 고객의 위험 성향을 반영했나? · 고객이 물은 질문에 답했나? · 포트폴리오 변화의 이유를 설명했나?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Stefano는 decision API도 소개했다. Luna 기반으로, 예/아니오와 그 확률·확신도를 아주 빠르게 돌려준다. 평가에 쓸 곳이 많다고 했다.</p>
+        <p class="note">decision API는 Stefano가 스스로 "홍보를 좀 하자면"이라며 꺼낸 OpenAI 제품이다.</p>
+
+        <h3>자동 연구와 goal 모드 <span class="ts">1:41:40</span></h3>
+        <p>자동 연구<span class="en">auto research</span>는 에이전트가 가설을 세우고 실험하며 스스로 결과를 끌어올리는 방식이다. 발표자는 최근 모델의 수학 능력이 크게 늘어서, 코딩과 수학이 겹치는 퀀트 쪽에서 쓸모가 크다고 했다.</p>
+        <ol class="plain">
+          <li>Codex의 goal 모드에 목표를 준다. 숫자 점수로 주는 게 좋다.</li>
+          <li>예: "이 에이전트와 평가 데이터셋이 있다. 프롬프트를 조정해 점수를 최대로 올려라."</li>
+          <li>에이전트가 목표를 보며 새 아이디어와 가설을 계속 시도한다. AI 쪽에서는 이를 언덕 오르기<span class="en">hill climbing</span>라 부른다.</li>
+        </ol>
+        <p>발표자는 OpenAI가 올해 초 발표한 수학 결과 일부가 goal 모드로 나왔다고 인용했다. 한 추측을 증명할 때 Codex에 준 프롬프트도 공개됐다고 했다. Ultra 모드에서는 하위 에이전트가 자동으로 병렬 조사를 하고 결과를 합친다.</p>
+        <blockquote>반년 전에는 프롬프트와 에이전트 오케스트레이션을 걱정했다. 이제는 에이전트의 목표가 무엇이어야 하는지를 생각한다.<cite>Oliver Steffmann의 말을 옮김 <span class="ts">1:44:50</span></cite></blockquote>
+      </section>
+
+      <!-- 15 -->
+      <section id="write-back">
+        <header><span class="num">15</span><h2>기록 시스템에 쓰기와 감사 로그 <span class="ts">1:46:40</span></h2></header>
+        <p>청중 질문: 시연은 읽기 전용이 많았다. 기록 시스템<span class="en">system of record</span>, 곧 회사의 공식 데이터 저장소에 다시 쓰는 사례는 있나?</p>
+        <p>Dom의 답은 두 단계다.</p>
+        <ul class="plain">
+          <li><strong>가장 쉬운 길은 로컬 파일 시스템이다.</strong> 스킬 지시에 "결과를 이 위치에 저장하라"를 넣는다. Codex는 로컬 파일을 기록처로 삼아 긴 맥락을 잘 다룬다.</li>
+          <li><strong>더 나아가면 플러그인 확장의 도구가 중앙 서버나 DB에 직접 쓴다.</strong> MCP와 OAuth 권한 묶음으로 필요한 곳에 연결한다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">사례: 의결권 대리 행사 <span class="ts">1:48:10</span></span>
+          <span>의결권 대리 행사<span class="en">proxy voting</span>는 펀드가 보유 주식의 주총 의결권을 행사하는 업무다. 사용자가 일하는 화면은 Codex였다. 실제 기록은 플러그인 확장으로 연결한 앱 서버에 남았다. 보고서, 발견 사항, 날짜, 출처를 DB에 쓰고, 그 DB가 Codex 밖의 운영 시스템으로 들어갔다. 사용자에게는 Codex가 일터였고, 관리와 법무 검토는 Codex 밖에서 이뤄졌다.</span>
+        </div>
+        <h3>결정마다 근거를 남긴다 <span class="ts">1:49:00</span></h3>
+        <p>Stefano는 감사가 필요한 업무에 표준화된 확장 로그를 붙인다고 했다. 최종 분석만 남기지 않는다. 각 결정이 어떤 데이터와 어떤 논리에서 나왔는지 거슬러 올라갈 수 있게 한다.</p>
+        <p>금융처럼 규제가 많은 산업에서는 이 추적이 결정적이다. 그래서 산출물을 만들 때 감사 가능한 로그를 함께 저장한다.</p>
+      </section>
+
+      <!-- 16 -->
+      <section id="recap">
+        <header><span class="num">16</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>OpenAI의 화면은 ChatGPT, ChatGPT Work, Codex다. 금융 서비스 기능은 <strong>ChatGPT Work 웹</strong>에 있다.</li>
+          <li>금융 서비스 판의 세 축은 <strong>데이터, 금융 업무에 맞춘 모델, 산출물</strong>이다.</li>
+          <li>발표자가 말하는 차별점은 <strong>데이터를 모델이 읽기 좋게 가공하고 설명을 붙인 것</strong>이다. 맞춤 임베딩은 아니다.</li>
+          <li>플러그인은 <strong>스킬 + MCP 서버 + 도구 설정 + UI</strong>다. 기본 플러그인이 80%, 회사가 20%를 채운다.</li>
+          <li>플러그인 확장은 <strong>화면 자체를 맞춤으로 바꾼다.</strong> 발표 당시에는 데스크톱에서만 됐다.</li>
+          <li>사내 개발자는 <strong>별도 앱 대신 이미 승인된 화면에 플러그인을 배포</strong>한다. 로그인, 권한, 승인을 다시 만들지 않는다.</li>
+          <li>비용은 <strong>오케스트레이터만 비싼 모델</strong>, 하위 에이전트는 싼 모델과 좋은 스킬로 줄인다. 효과는 평가로 직접 잰다.</li>
+          <li>스킬은 <strong>핵심 역량만 남기고 함께 쓴다.</strong> 새 모델이 나오면 다시 테스트한다.</li>
+          <li>Codex 하네스는 오픈소스고, <strong>압축 모드</strong>가 몇 시간짜리 작업을 가능하게 한다. 보안은 <strong>관리형 정책 파일</strong>로 통제한다.</li>
+          <li>평가는 <strong>단순하게 시작하고 예/아니오로 묻는다.</strong> 규제 업무에는 <strong>결정마다 근거 로그</strong>를 남긴다.</li>
+        </ol>
+      </section>
+
+      <!-- 17 -->
+      <section id="quiz">
+        <header><span class="num">17</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>OpenAI가 나눈 세 화면과 각각의 주 사용자는?</span></summary><div class="answer">ChatGPT(누구나), ChatGPT Work(지식 노동자, 에이전트와 플러그인), Codex(엔지니어링 일). 금융 서비스 기능은 ChatGPT Work 웹에만 있다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>ChatGPT for Financial Services의 세 축은?</span></summary><div class="answer">내장·외부 데이터, 금융 업무에 맞춘 모델, 발표 자료와 스프레드시트 같은 산출물 생성.</div></details>
+          <details><summary><span class="qn">Q3</span><span>발표자가 꼽은 데이터의 차별점은? 맞춤 임베딩인가?</span></summary><div class="answer">원본을 그대로 넘기지 않고, 데이터셋마다 전처리와 설명, 전용 도구 호출을 붙였다. 맞춤 임베딩은 아니라고 답했다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>플러그인은 무엇으로 이루어지고, 스킬과 무엇이 다른가?</span></summary><div class="answer">스킬 + MCP 서버 + 도구 설정 + UI 컴포넌트를 묶은 패키지다. 스킬은 재사용하는 지시와 지식이라 사내 시스템 연결과 인증은 못 한다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>플러그인 확장은 무엇을 바꾸고, 발표 당시 어디서 쓸 수 있었나?</span></summary><div class="answer">아이콘, 설정, 내비게이션 같은 화면 일부를 바꾸고, 대화 맥락에 맞춰 맞춤 UI를 띄운다. 데스크톱 앱에서만 됐다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>별도 앱 대신 플러그인을 권하는 이유는?</span></summary><div class="answer">로그인, 접근 권한, 보안 승인을 새로 만들지 않고 이미 승인된 화면에 끼운다. 배포가 빨라지고, 사용자는 일하던 곳을 떠나지 않는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>다중 에이전트 비용을 줄이는 구성은?</span></summary><div class="answer">오케스트레이터만 가장 강한 모델로 두고, 하위 에이전트는 싼 모델과 잘 쓴 스킬로 돌린다. 발표자는 결과의 약 95%가 나온다고 했고, 평가로 직접 확인하라고 했다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>팀에 스킬이 너무 많으면 생기는 문제와 권고는?</span></summary><div class="answer">관리가 어렵고 처리도 느려진다. 핵심 역량만 스킬로 남기고, 새 모델이 나오면 다시 테스트한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>딥리서치 에이전트에서 비평 에이전트가 하는 일은?</span></summary><div class="answer">하위 에이전트들의 결과를 모아 서로 충돌하는지 찾는다. 충돌하면 새 하위 에이전트를 띄워 조사시키고, 보고서가 품질 기준을 넘을 때까지 반복한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>압축 모드는 무엇이고 왜 중요한가?</span></summary><div class="answer">보조 모델이 대화 맥락에서 중복을 빼 크기를 한도 안에 유지한다. 2시간짜리 논문 재현 같은 긴 작업이 가능해진다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>평가가 막히는 이유와 두 가지 요령은?</span></summary><div class="answer">주제 전문가의 업무 지식과 엔지니어의 데이터셋 작업이 만나야 해서 어렵다. 요령은 단순하게 시작하기(LLM 채점부터 하지 않기), 1~5점 대신 예/아니오로 묻기.</div></details>
+          <details><summary><span class="qn">Q12</span><span>goal 모드에 주는 목표는 어떤 형태가 좋은가?</span></summary><div class="answer">숫자 점수. 예를 들어 평가 데이터셋 점수를 최대로 올리도록 프롬프트를 조정하라고 시킨다.</div></details>
+          <details><summary><span class="qn">Q13</span><span>규제 업무에서 산출물과 함께 남기는 것은?</span></summary><div class="answer">각 결정이 어떤 데이터와 어떤 논리에서 나왔는지 거슬러 올라갈 수 있는 감사 로그.</div></details>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="apply">
+        <header><span class="num">18</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>반복되는 업무 하나를 골라 기본 플러그인이나 스킬로 먼저 돌려 본다<span class="how">부족한 20%를 목록으로 적는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>새 앱을 만들기 전에, 이미 승인된 화면에 플러그인으로 넣을 수 있는지 검토한다<span class="how">로그인, 권한, 보안 승인을 재사용할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>사내 데이터에 붙일 MCP 서버 후보와 인증 방식을 정한다<span class="how">포트폴리오 DB, 고객 DB, CRM. 시스템 간 인증인지 사용자 대신 인증인지</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>하위 에이전트를 싼 모델로 바꾸고 품질 차이를 평가로 잰다<span class="how">확인: 오케스트레이터만 강한 모델일 때 결과가 기대 수준인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>팀 스킬 목록을 정리해 핵심 역량만 남긴다<span class="how">비슷한 일을 하는 스킬은 합친다. 새 모델이 나오면 다시 테스트한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>산출물 템플릿(예전 보고서, 엑셀, PPT)을 플러그인에 함께 넣는다<span class="how">틀린 세부는 스킬에 적어 다음 번에 고쳐지게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>관리형 정책으로 플러그인이 갈 수 있는 URL과 폴더를 제한한다<span class="how">누가 어떤 플러그인을 쓸 수 있는지도 함께 정한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>평가를 단순하게 시작하고, LLM 채점은 예/아니오 질문으로 쪼갠다<span class="how">확인: 어디서 잘하고 어디서 못하는지 지표가 나뉘어 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>산출물마다 결정 근거 로그를 함께 저장한다<span class="how">데이터 출처와 판단 논리까지 거슬러 올라갈 수 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 19 -->
+      <section id="glossary">
+        <header><span class="num">19</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>ChatGPT Work</td><td>지식 노동자용 ChatGPT. 에이전트를 돌리고 플러그인을 쓴다</td></tr>
+              <tr><td>ChatGPT for Financial Services</td><td>ChatGPT Work 안의 금융 업무용 기업 제품. 데이터, 플러그인, 산출물 생성을 묶었다</td></tr>
+              <tr><td>지식 노동자</td><td>Knowledge worker. 정보를 다루고 판단하는 일을 하는 사람. 애널리스트, 어드바이저 등</td></tr>
+              <tr><td>산출물</td><td>Artifact. 모델이 만들어 내는 파일. 발표 자료, 스프레드시트, 웹페이지 등</td></tr>
+              <tr><td>데이터 온톨로지</td><td>Data ontology. 데이터의 구조와 의미, 무엇이 중요한지를 정리해 둔 틀</td></tr>
+              <tr><td>10-K / 10-Q</td><td>미국 상장사가 SEC에 내는 연간 / 분기 보고서</td></tr>
+              <tr><td>스킬</td><td>Skill. 재사용할 지시와 지식을 마크다운 파일로 적은 것</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. 모델이 외부 도구와 데이터에 접속하는 표준 방식</td></tr>
+              <tr><td>플러그인</td><td>Plugin. 스킬, MCP 서버, 도구 설정, UI 컴포넌트를 묶은 패키지</td></tr>
+              <tr><td>플러그인 확장</td><td>Plugin extension. 플러그인이 앱 화면 일부를 바꾸고 맞춤 UI를 띄우는 기능</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>오케스트레이터 / 하위 에이전트</td><td>Orchestrator / sub-agent. 일을 나눠 맡기는 상위 에이전트와, 나눠 받은 일을 하는 에이전트</td></tr>
+              <tr><td>압축</td><td>Compaction. 보조 모델이 긴 대화 맥락에서 중복을 빼 크기를 줄이는 기능</td></tr>
+              <tr><td>Ultra Fast / Ultra</td><td>Ultra Fast는 응답 속도를 높이는 모드. Ultra는 하위 에이전트를 더 많이 쓰게 하는 모드</td></tr>
+              <tr><td>성과 요인 분석</td><td>Performance attribution. 포트폴리오 수익이 어디서 왔는지 나눠 보는 분석</td></tr>
+              <tr><td>리밸런싱</td><td>Rebalancing. 자산 비중을 원래 목표대로 되돌리는 일</td></tr>
+              <tr><td>LBO 모델링</td><td>Leveraged buyout. 빚을 많이 써서 회사를 사는 거래의 수익을 계산하는 재무 모델</td></tr>
+              <tr><td>의결권 대리 행사</td><td>Proxy voting. 펀드가 보유 주식의 주주총회 의결권을 행사하는 업무</td></tr>
+              <tr><td>기록 시스템</td><td>System of record. 어떤 데이터의 공식 원본이 저장되는 시스템</td></tr>
+              <tr><td>샌드박스</td><td>Sandbox. 프로그램이 정해진 범위 밖으로 나가지 못하게 가둔 실행 환경</td></tr>
+              <tr><td>평가 (eval)</td><td>모델이나 에이전트의 결과 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>LLM 채점자</td><td>LLM as a judge. 다른 모델의 답을 LLM이 채점하게 하는 방식</td></tr>
+              <tr><td>주제 전문가</td><td>SME, subject matter expert. 해당 업무를 깊이 아는 사람</td></tr>
+              <tr><td>goal 모드</td><td>Codex에서 숫자 목표를 주면 에이전트가 가설을 바꿔 가며 점수를 올리는 모드</td></tr>
+              <tr><td>언덕 오르기</td><td>Hill climbing. 지표를 조금씩 끌어올리며 개선하는 방식</td></tr>
+              <tr><td>분포 안 도구 호출</td><td>In-distribution tool calling. 모델이 학습 때 본 방식 그대로 도구를 부르게 하는 것 (Dom의 표현)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 20 -->
+      <section id="timeline">
+        <header><span class="num">20</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 워크스페이스 접속 안내</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>Ultra Fast 모드, 초당 약 300토큰</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>워크숍 일정</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>세 가지 화면: ChatGPT, ChatGPT Work, Codex</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>금융 서비스 판의 세 축</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>내장 데이터와 제휴 업체</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>데이터를 모델이 읽기 좋게 감싼다</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>금융 플러그인: 투자은행, 주식 리서치</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>80%는 기본, 20%는 맞춤</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>기본 제공 사례</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>실습 1: 자산관리 어드바이저 시나리오</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>경로 A(별도 앱)와 경로 B(플러그인)</td></tr>
+              <tr><td><span class="ts">18:50</span></td><td>스킬, 플러그인, 플러그인 확장 소개</td></tr>
+              <tr><td><span class="ts">22:40</span></td><td>실습 사이트와 가상 투자금 게임</td></tr>
+              <tr><td><span class="ts">27:30</span></td><td>지금의 제약: 웹 전용, 데스크톱 전용, CLI 불가</td></tr>
+              <tr><td><span class="ts">30:40</span></td><td>질의: 모델 말고 무엇을 만들었나</td></tr>
+              <tr><td><span class="ts">34:00</span></td><td>질의: 내부 데이터 구조에 접근할 수 있나</td></tr>
+              <tr><td><span class="ts">35:00</span></td><td>질의: 맞춤 임베딩인가</td></tr>
+              <tr><td><span class="ts">35:30</span></td><td>실습 화면: 프롬프트가 플러그인을 부른다</td></tr>
+              <tr><td><span class="ts">37:40</span></td><td>답을 표와 차트로 보여 주는 UI</td></tr>
+              <tr><td><span class="ts">39:10</span></td><td>시세 API의 아쉬움과 사내 플러그인 기회</td></tr>
+              <tr><td><span class="ts">42:10</span></td><td>비용 전략: 오케스트레이터만 비싼 모델</td></tr>
+              <tr><td><span class="ts">45:10</span></td><td>모델마다 노력 수준 다시 찾기</td></tr>
+              <tr><td><span class="ts">47:00</span></td><td>빌더 관점: 플러그인 구조</td></tr>
+              <tr><td><span class="ts">48:20</span></td><td>아키텍처: 로컬 MCP에서 기업 배포까지</td></tr>
+              <tr><td><span class="ts">49:40</span></td><td>Plugin Creator로 웹에 플러그인 설치</td></tr>
+              <tr><td><span class="ts">50:40</span></td><td>별도 앱보다 빠른 배포, 기업 통제</td></tr>
+              <tr><td><span class="ts">53:40</span></td><td>질의: 서버가 꼭 있어야 하나</td></tr>
+              <tr><td><span class="ts">54:20</span></td><td>스킬과 플러그인의 차이 자세히</td></tr>
+              <tr><td><span class="ts">56:40</span></td><td>플러그인 확장 예시: 화면 맞춤</td></tr>
+              <tr><td><span class="ts">1:01:00</span></td><td>무거운 작업은 원격 실행 환경으로</td></tr>
+              <tr><td><span class="ts">1:02:50</span></td><td>스킬 공유와 산출물 템플릿</td></tr>
+              <tr><td><span class="ts">1:05:20</span></td><td>모델 세대가 바뀔 때 스킬 재사용</td></tr>
+              <tr><td><span class="ts">1:06:10</span></td><td>스킬이 너무 많을 때</td></tr>
+              <tr><td><span class="ts">1:08:30</span></td><td>API 딥리서치 앱을 플러그인으로</td></tr>
+              <tr><td><span class="ts">1:12:00</span></td><td>Dom의 설명: 왜 Codex 안으로 옮겼나</td></tr>
+              <tr><td><span class="ts">1:14:10</span></td><td>Codex 하네스 오픈소스, SDK</td></tr>
+              <tr><td><span class="ts">1:17:10</span></td><td>하네스로 사후 학습한 모델, 하위 에이전트</td></tr>
+              <tr><td><span class="ts">1:18:20</span></td><td>압축 모드와 긴 작업</td></tr>
+              <tr><td><span class="ts">1:19:20</span></td><td>퀀트 논문 재현 실험</td></tr>
+              <tr><td><span class="ts">1:21:10</span></td><td>플러그인 확장 시연, 파트너 앱 예시</td></tr>
+              <tr><td><span class="ts">1:21:50</span></td><td>CLI에서 앱으로, 지식 노동자의 생산성</td></tr>
+              <tr><td><span class="ts">1:24:20</span></td><td>질의: 다른 산업은? 의료, 사이버보안</td></tr>
+              <tr><td><span class="ts">1:26:30</span></td><td>데이터 사일로와 아래에서 쌓는 맥락</td></tr>
+              <tr><td><span class="ts">1:28:20</span></td><td>샌드박스와 관리형 정책 파일</td></tr>
+              <tr><td><span class="ts">1:31:00</span></td><td>보안과 편의의 균형: guardian(추정)</td></tr>
+              <tr><td><span class="ts">1:32:50</span></td><td>게임 우승자 발표</td></tr>
+              <tr><td><span class="ts">1:35:40</span></td><td>마켓플레이스라는 배포 채널</td></tr>
+              <tr><td><span class="ts">1:37:20</span></td><td>평가가 가장 중요한 이유</td></tr>
+              <tr><td><span class="ts">1:38:40</span></td><td>질의: 평가와 자동 연구의 성숙도</td></tr>
+              <tr><td><span class="ts">1:40:40</span></td><td>평가 요령: 단순하게, 예/아니오로</td></tr>
+              <tr><td><span class="ts">1:41:40</span></td><td>자동 연구와 goal 모드</td></tr>
+              <tr><td><span class="ts">1:44:50</span></td><td>Oliver: 이제는 목표를 생각한다</td></tr>
+              <tr><td><span class="ts">1:46:40</span></td><td>질의: 기록 시스템에 다시 쓰기</td></tr>
+              <tr><td><span class="ts">1:48:10</span></td><td>의결권 대리 행사 사례</td></tr>
+              <tr><td><span class="ts">1:49:00</span></td><td>감사 가능한 결정 로그</td></tr>
+              <tr><td><span class="ts">1:50:10</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'ZJjRgvjhq3M-finance-agent-note:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

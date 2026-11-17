@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 기억 소유하기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#question">질문은 "누구 것인가"</a></li>
+      <li><a href="#amnesia">기억 없는 천재</a></li>
+      <li><a href="#home">모델은 왔고 기억은 아직</a></li>
+      <li><a href="#renting">빌려 쓰는 값</a></li>
+      <li><a href="#continuity">자율성과 연속성</a></li>
+      <li><a href="#memory">기억은 세 가지 동작</a></li>
+      <li><a href="#disk">CPU, RAM, 디스크</a></li>
+      <li><a href="#edge">앱 안에 들어가는 벡터 검색</a></li>
+      <li><a href="#demo">데모: 드론의 기억</a></li>
+      <li><a href="#compound">쌓이는 기억, 들고 다니는 기억</a></li>
+      <li><a href="#everyday">하루 전체를 기억한다면</a></li>
+      <li><a href="#share">공유는 동의로만</a></li>
+      <li><a href="#conclusion">결론과 오늘 할 일</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 AI에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-02 · 15분 · 영어 발표 한글 정리</span>
+      <h1>AI의 기억은 누구 것인가</h1>
+      <p class="lead">AI 모델은 내 컴퓨터에서 돌 만큼 가까워졌지만, 나를 기억하는 부분은 아직 남의 데이터센터에 있다. 발표자는 그 기억을 내 기기에 두고, 공유는 내가 동의할 때만 하자고 말한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=apyrzaWj0Z4" target="_blank" rel="noopener">Stop Renting Your AI's Memory</a></span>
+        <span>발표: Dylan Couzon (Qdrant 개발자 관계 엔지니어)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 사건은 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다. Quadrant는 Qdrant로, yellow는 YOLO로, Carpathy는 Karpathy로 고쳤다. 무대에서 소개한 발표 제목은 "The frontier is coming home"이다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>진짜 질문은 초지능이 <strong>언제</strong> 오느냐가 아니라 <strong>누구 것</strong>이냐다.</li>
+        <li>2,500달러가 안 되는 기계로 작년 프런티어급 모델을 돌릴 수 있다. 그런데 <strong>나를 아는 부분인 기억은 아직 빌려 쓴다.</strong></li>
+        <li>빌려 쓰면 접근이 끊기고, 모델이 조용히 바뀌고, 지금의 싼 정액 요금이라는 <strong>보조금은 결국 끝난다.</strong></li>
+        <li>추론을 가지면 <strong>자율성</strong>을, 기억을 가지면 <strong>연속성</strong>을 얻는다. 연구소들이 포장해 파는 것이 이 연속성이다.</li>
+        <li>기억은 큰 프롬프트가 아니라 <strong>쓰기, 찾기, 잊기</strong>를 하는 시스템이다. 필요한 기술은 오래전에 나왔다.</li>
+        <li>발표자 회사의 앱 내장 벡터 검색으로, 드론이 본 모든 것을 <strong>오프라인에서 기억하는</strong> 데모를 보였다.</li>
+        <li>기억은 <strong>내 기기에서 시작</strong>하고, 공유는 내가 켤 때만 한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="question">
+        <header><span class="num">01</span><h2>질문은 "누구 것인가" <span class="ts">00:20</span></h2></header>
+        <p>발표자는 몇 년 안에 우리 모두보다 똑똑한 무언가가 나온다고 본다. 사람들은 그게 <em>언제</em> 오느냐를 오래 물어 왔다. 발표자에게 그건 지루한 질문이다. 진짜 질문은 <strong>그게 누구 것이냐</strong>다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">버전 1 · 빌린 초지능</span>
+            <ul>
+              <li>남의 데이터센터에 있다</li>
+              <li>토큰 단위로 돈을 낸다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">버전 2 · 내 초지능</span>
+            <ul>
+              <li>내 삶에서 배운다</li>
+              <li>내 맥락은 밖으로 나가지 않는다</li>
+              <li>아무도 끄거나, 제한하거나, 빼앗지 못한다</li>
+            </ul>
+          </div>
+        </div>
+        <p>발표는 두 번째 버전을 다룬다. 발표자는 이를 "프런티어가 집으로 온다"고 부른다. 프런티어 <span class="en">frontier</span>는 그 시점에 가장 앞선 AI 성능을 말한다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="amnesia">
+        <header><span class="num">02</span><h2>기억 없는 천재 <span class="ts">01:10</span></h2></header>
+        <p>사고 실험 하나. 비서가 내가 가르친 모든 것을 몇 년 동안 기억한다면 무엇을 만들겠나.</p>
+        <ul class="plain">
+          <li>내가 좋아하는 방식 하나하나</li>
+          <li>내가 고쳐 준 것 하나하나</li>
+          <li>한 번 빠졌던 막다른 길 하나하나</li>
+        </ul>
+        <p>그건 더 이상 챗봇이 아니다. 발표자는 이를 <strong>두 번째 마음</strong> <span class="en">second mind</span>이라고 부른다.</p>
+        <p>지금 쓰는 비서는 반대다. 대화가 끝나는 순간 거의 다 잊는다. 세션마다 0에서 시작한다. 우리는 이걸 지능이라 부르지만, 실제로는 <strong>장기 기억이 없는 천재</strong>다.</p>
+        <div class="callout">
+          <span class="title">발표의 처방</span>
+          <span>더 큰 프롬프트로 고치지 않는다. 진짜 기억으로 고친다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="home">
+        <header><span class="num">03</span><h2>모델은 왔고 기억은 아직 <span class="ts">01:50</span></h2></header>
+        <p>예전에는 그런 천재가 남의 API 뒤에만 있었다. 이제는 많은 사람이 가진 하드웨어에서 돈다.</p>
+        <ul class="plain">
+          <li>2,500달러가 안 되는 기계로 사실상 <strong>작년의 프런티어 모델</strong>을 돌릴 수 있다.</li>
+          <li>지금의 최전선은 아니다. 발표자도 이 점은 인정한다. 그래도 놀랄 만큼 가깝다.</li>
+          <li>오픈 웨이트 모델 <span class="en">open weights</span>이 빠르게 따라붙는다. 학습된 가중치를 공개해 누구나 내려받는 모델이다. 격차는 분기마다 줄어든다.</li>
+        </ul>
+        <p>노트북 값으로 책상 위에 프런티어가 생겼으니 큰 사건처럼 느껴져야 한다. 그런데 와닿지 않는다. 모델 혼자서는 <strong>똑똑한 낯선 사람</strong> <span class="en">brilliant stranger</span>이기 때문이다. 강력하지만 내 것이 아니다.</p>
+        <p>모델을 내 것으로 만드는 건 그 모델이 나에 대해 아는 모든 것이다. 그 부분은 아직 집에 오지 않았다.</p>
+
+        <h3>AI 스택은 전부 빌린 것 <span class="ts">02:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>지금 상태</th></tr></thead>
+            <tbody>
+              <tr><td>컴퓨트</td><td>빌린다. 모델을 돌리는 계산 자원이다</td></tr>
+              <tr><td>모델</td><td>빌린다</td></tr>
+              <tr><td>하네스</td><td>빌린다. 모델을 감싸 도구와 규칙을 정해 주는 실행 틀이다</td></tr>
+              <tr><td>기억</td><td><strong>이것마저 빌린다.</strong> 해가 갈수록 쌓여 "나"가 되어야 할 부분이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          <span class="title">고치지 않으면</span>
+          <span>우리가 평생 만져 볼 가장 강력한 기술이 그 기술을 쓰는 사람들이 아니라 임대권을 쥔 쪽의 것이 된다.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="renting">
+        <header><span class="num">04</span><h2>빌려 쓰는 값 <span class="ts">03:10</span></h2></header>
+        <p>모델을 빌리면 그 모델을 내가 통제하지 못한다. 발표자는 이게 세 가지로 드러난다고 말한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 접근이 끊긴다 <span class="ts">03:30</span></span>
+            <p>발표자에 따르면 지난달 정부 명령 하나로 대표 모델 두 개가 모든 고객에게서 막혔다. 자막에는 모델 이름이 "Fable"과 "Mythos 5"로 들린다(추정).</p>
+            <p class="verdict"><b>대비</b>: 이미 내 책상에 있는 가중치는 아무도 손을 뻗어 끌 수 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 조용히 바뀐다 <span class="ts">03:40</span></span>
+            <p>모델이 살아 있어도 그대로 있지는 않는다. 업체는 버전을 은퇴시키고, 남은 버전은 사용량을 제한한다. 수지가 빠듯해지면 내가 기대던 모델이 조용히 나빠지거나 사라진다.</p>
+            <p class="verdict"><b>대비</b>: 내 가중치는 내가 바꾸지 않는 한 바뀌지 않는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 보조금은 끝난다 <span class="ts">04:00</span></span>
+            <p>사람들은 이제 프롬프트 하나를 쓰지 않는다. 에이전트와 루프를 몇 시간씩 돌린다. 작업 하나가 채팅 메시지 하나보다 토큰을 수천 배 더 쓸 수 있다.</p>
+            <p class="verdict"><b>결과</b>: 지금의 정액 요금은 업체가 떠안는 보조금이다. 보조금은 결국 사라진다.</p>
+          </div>
+        </div>
+
+        <figure class="chart" aria-label="월 200달러 요금제로 실제로 월 5,000달러 이상의 컴퓨트를 쓴 사례">
+          <span class="chart-title">월 200달러 요금제로 쓴 컴퓨트 (달러/월)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>요금제 가격</span><span class="val">200</span></div>
+              <div class="track"><div class="fill" style="width:4%" title="요금제 가격: 월 200달러"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>실제로 쓴 컴퓨트</span><span class="val">5,000+</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="실제로 쓴 컴퓨트: 월 5,000달러 이상"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>2,500</span><span>5,000</span></div>
+          <span class="caption">발표자가 인용한 일부 개발자의 사례다. "5,000달러 이상"이라 5,000에 맞춰 그렸다. 차이는 25배가 넘는다.</span>
+        </figure>
+
+        <p>컴퓨트와 가중치를 내가 가지면 통제권이 돌아온다. 하지만 발표자는 이것이 <strong>문제의 절반</strong>일 뿐이라고 말한다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="continuity">
+        <header><span class="num">05</span><h2>자율성과 연속성 <span class="ts">04:30</span></h2></header>
+        <p>추론 <span class="en">inference</span>은 학습된 모델을 실제로 돌려 답을 만드는 일이다. 추론을 가지는 것과 기억을 가지는 것은 서로 다른 것을 준다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>내가 가지는 것</th><th>얻는 것</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>추론 (컴퓨트와 가중치)</td><td>자율성 <span class="en">autonomy</span></td><td>아무도 모델을 빼앗지 못한다</td></tr>
+              <tr><td>기억</td><td>연속성 <span class="en">continuity</span></td><td>대화가 바뀌어도 나를 이어서 안다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>연구소들이 파는 것 <span class="ts">04:50</span></h3>
+        <p>발표자는 작년에 모든 프런티어 연구소가 기억 기능을 내놨다고 말한다. 모델이 더 똑똑해져서가 아니다. 모델이 세션 사이에 아무것도 가져가지 못하기 때문이다.</p>
+        <p>발표자는 <strong>그 빈틈이 바로 상품</strong>이라고 본다. 연구소들은 연속성을 포장해 우리에게 되판다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">A · 똑똑하게 시작해 다 잊는다</span>
+            <p>첫날은 인상적이다. 하지만 나에 대해 배운 것을 매번 잃는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">B · 단순하게 시작해 계속 배운다</span>
+            <p>첫날은 평범하다. 하지만 나를 계속 배운다.</p>
+            <p class="verdict"><b>발표자의 판단</b>: B가 언제나 더 똑똑하게 느껴진다. 이렇게 쌓이는 것이 지능을 개인적으로 느끼게 만든다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="memory">
+        <header><span class="num">06</span><h2>기억은 세 가지 동작 <span class="ts">05:10</span></h2></header>
+        <p>기억은 더 큰 프롬프트가 아니다. 세 가지 동작을 하는 시스템이다. 사람의 뇌가 하는 일과 같다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>동작</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>쓰기 <span class="en">write</span></td><td>새로 배운 것을 저장한다</td></tr>
+              <tr><td>찾기 <span class="en">retrieve</span></td><td>지금 필요한 기억만 꺼내 온다</td></tr>
+              <tr><td>잊기 <span class="en">forget</span></td><td>오래됐거나 덜 쓰는 기억의 비중을 낮춘다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>마크다운 폴더면 되지 않나 <span class="ts">05:30</span></h3>
+        <p>당연한 반론이 있다. 마크다운 파일을 큰 폴더에 다 넣어 두면 되지 않나.</p>
+        <p>발표자의 답은 이렇다. <strong>전부 쏟아 넣고 모델이 알아서 찾길 비는 것보다, 맞는 기억을 찾아오는 쪽이 낫다.</strong> 검색은 프롬프트가 줄 수 없는 것을 준다. 바로 통제다.</p>
+        <ul class="plain">
+          <li>주제로 거를 수 있다.</li>
+          <li>얼마나 최근에, 얼마나 자주 썼는지로 비중을 낮출 수 있다. 이를 감쇠 <span class="en">decay</span>라고 한다.</li>
+          <li>시간이 지나며 무엇이 중요한지 바뀌게 둘 수 있다.</li>
+        </ul>
+        <p>사람의 기억도 실제로 이렇게 작동한다.</p>
+
+        <h3>기술은 이미 있었다 <span class="ts">06:00</span></h3>
+        <ul class="plain">
+          <li><strong>2016년</strong>: HNSW. 비슷한 벡터를 빠르게 찾는 색인 방식이다.</li>
+          <li><strong>2019년</strong>: 임베딩을 로컬에서 돌리기 시작했다. 임베딩 <span class="en">embedding</span>은 글이나 이미지의 뜻을 숫자 목록, 즉 벡터로 바꾼 것이다.</li>
+        </ul>
+        <p>둘 다 모델이 이걸 대규모로 쓸 수 있게 되기 훨씬 전이다. 발표자는 초지능에서 기억 쪽은 처음부터 어려운 부분이 아니었다고 말한다.</p>
+
+        <h3>지금 나를 아는 기억은 어디에 있나 <span class="ts">06:20</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">색인 없는 파일</span>
+            <p>내 손에 있다. 하지만 질문을 던져 원하는 걸 꺼낼 수 없다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">남의 클라우드</span>
+            <p>검색은 된다. 하지만 이용 약관 하나만 바뀌어도 모양이 바뀌거나 다른 곳으로 옮겨질 수 있다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="disk">
+        <header><span class="num">07</span><h2>CPU, RAM, 디스크 <span class="ts">06:40</span></h2></header>
+        <p>발표자는 Andrej Karpathy의 비유를 빌린다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>컴퓨터</th><th>AI</th><th>성질</th></tr></thead>
+            <tbody>
+              <tr><td>CPU</td><td>모델</td><td>계산한다</td></tr>
+              <tr><td>RAM</td><td>컨텍스트 창 <span class="en">context window</span></td><td>빠르지만 세션이 끝나면 지워진다</td></tr>
+              <tr><td>디스크</td><td>기억</td><td>모든 대화에 걸쳐 나를 기억한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>지금 거의 모든 AI 비서에서 <strong>그 디스크는 남의 데이터센터에 있다.</strong></p>
+        <div class="callout">
+          <span class="title">발표자가 주장하는 범위</span>
+          <span>어떤 기억 구조가 가장 좋은지는 이 발표의 주제가 아니다. 발표자의 주장은 하나다. 나에 대한 실제 기록을 담는 디스크는 온전히, 영원히 내 것이어야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="edge">
+        <header><span class="num">08</span><h2>앱 안에 들어가는 벡터 검색 <span class="ts">07:20</span></h2></header>
+        <p>발표자가 만드는 것은 그 디스크를 내 쪽에 두는 한 가지 방법이다. 앱 안에 그대로 넣는 벡터 검색 엔진이다. 발표 뒷부분에서 이 엔진을 "Edge"라고 부른다. Qdrant Edge를 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>특징</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>내 프로세스 안에서 돈다</td><td>앱 안에 로컬 저장소를 연다</td></tr>
+              <tr><td>기억 쓰기</td><td>임베딩에 페이로드 <span class="en">payload</span>를 붙여 저장한다. 시각이나 설명 같은 부가 정보다</td></tr>
+              <tr><td>오프라인 검색</td><td>네트워크 없이 1밀리초 미만에 찾는다</td></tr>
+              <tr><td>같은 엔진</td><td>클라우드의 Qdrant와 같은 Rust 코어를 쓴다</td></tr>
+              <tr><td>작은 크기</td><td>양자화 <span class="en">quantization</span>를 쓰면 기억 100만 개가 1GB 안에 들어간다. 휴대폰이나 Raspberry Pi에도 올라간다</td></tr>
+              <tr><td>오래 간다</td><td>앱을 닫고 1년 뒤에 와도 기억이 그대로다</td></tr>
+              <tr><td>앱마다 따로</td><td>앱마다 분리된 저장소를 갖는다. 그 폴더가 나를 따라다닌다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">풀이: 임베딩과 벡터 검색 (발표 밖 설명)</span>
+          <span>임베딩 모델은 뜻이 비슷한 것을 가까운 숫자 목록으로 바꾼다. 벡터 검색은 질문도 같은 방식으로 바꾼 뒤 가장 가까운 기억을 찾는다. 그래서 글자가 달라도 뜻이 같으면 찾아낸다. 양자화는 숫자의 정밀도를 낮춰 저장 공간을 줄이는 기법이다.</span>
+        </div>
+        <p class="note">발표자는 Qdrant 소속이고, 이 엔진은 그 회사 제품이다. 속도와 용량 수치는 회사 쪽 주장이니 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="demo">
+        <header><span class="num">09</span><h2>데모: 드론의 기억 <span class="ts">08:00</span></h2></header>
+        <p>발표자는 집 위를 나는 드론의 녹화 영상으로 라이브 데모를 했다. 드론은 처음 세상에 나와 아무것도 모르는 상태다. 모든 처리는 발표자의 노트북에서 완전히 오프라인으로 돌았다.</p>
+        <ol class="plain">
+          <li>물체 탐지 모델 YOLO가 화면 속 물체를 찾는다.</li>
+          <li>찾은 물체마다 이름표를 붙인다.</li>
+          <li>사진과 이름표를 임베딩으로 바꿔 실시간 기억으로 저장한다.</li>
+          <li>기억 공간을 2D 지도로 그린다. 비슷한 기억끼리 가까이 모인다.</li>
+          <li>기억 하나를 누르면 의미 검색 <span class="en">semantic search</span>이 비슷한 기억을 모두 찾아온다.</li>
+        </ol>
+
+        <h3>데모 화면의 숫자 <span class="ts">09:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>값</th></tr></thead>
+            <tbody>
+              <tr><td>알아본 물체</td><td>92종</td></tr>
+              <tr><td>저장한 벡터</td><td>300개 이상. 물체 하나를 평균 3개 남짓의 모습으로 기억한다</td></tr>
+              <tr><td>기억과 엔진을 합친 크기</td><td>15MB</td></tr>
+              <tr><td>"커피 테이블" 검색 시간</td><td>1밀리초 미만</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>기억 하나에 담긴 것 <span class="ts">09:40</span></h3>
+        <p>커피 테이블을 누르자 드론이 지금까지 본 모든 커피 테이블이 나왔다. 기억마다 이런 정보가 붙어 있다.</p>
+        <ul class="plain">
+          <li>그때의 이미지</li>
+          <li>처음 본 시각</li>
+          <li>마지막으로 본 시각</li>
+          <li>그 물체에 대한 설명</li>
+          <li>지금까지 본 횟수</li>
+        </ul>
+        <p>이 모든 처리에 네트워크 연결은 전혀 없었다.</p>
+
+        <h3>클라우드 동기화: 무리의 공동 기억 <span class="ts">10:20</span></h3>
+        <p>클라우드 동기화도 된다. 드론이나 로봇 여러 대가 함께 돌아다닌다면, 클라우드에 공동 기억을 둘 수 있다. 발표자는 이를 하이브 마인드 <span class="en">hive mind</span>라고 부른다. 한 대가 배운 것을 모두가 알게 된다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="compound">
+        <header><span class="num">10</span><h2>쌓이는 기억, 들고 다니는 기억 <span class="ts">10:40</span></h2></header>
+        <p>드론은 예시일 뿐이다. 같은 방식을 챗봇, 에이전트, 코드 비서 어디에나 쓸 수 있다.</p>
+        <p>이런 기억을 몇 주만 쌓아도 <strong>낯선 사람이 사라진다.</strong> 내가 고쳐 준 것, 내가 좋아하는 방식, 한 번만 겪으면 될 막다른 길을 기억한다.</p>
+        <blockquote>그저 괜찮은 모델이라도 나를 잊지 않고 해마다 쌓아 가면, 실제로 써 볼 때 초인처럼 느껴진다. 모델이 바뀌어서가 아니라 나를 배우기를 멈추지 않아서다.<cite>발표자의 표현을 옮김</cite></blockquote>
+
+        <h3>들고 다니는 기억 <span class="ts">11:20</span></h3>
+        <p>이 기억은 옮겨 다닐 수 있다. 답을 만드는 모델을 바꿔도, 하드웨어를 바꿔도 상관없다. 평생의 맥락이 온전히 내 것으로 남아 기기에서 기기로 옮겨 간다.</p>
+        <div class="callout">
+          <span class="title">조건 하나: 같은 임베딩 모델</span>
+          <span>발표자는 같은 임베딩 모델을 계속 쓴다는 조건을 붙였다. 이유를 풀어 보면 이렇다(발표 밖 설명). 임베딩 모델마다 뜻을 숫자로 바꾸는 방식이 다르다. 임베딩 모델을 바꾸면 저장한 기억을 새 모델로 다시 임베딩해야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="everyday">
+        <header><span class="num">11</span><h2>하루 전체를 기억한다면 <span class="ts">11:40</span></h2></header>
+        <p>발표자는 더 나간다. 같은 기억을 노트북이나 드론이 아니라 내 하루 전체에 연결해 보자.</p>
+        <ul class="plain">
+          <li>출입증을 어디 뒀지?</li>
+          <li>지난번에 만난 사람의 딸 이름이 뭐였더라?</li>
+          <li>화이트보드에 뭐가 적혀 있었지?</li>
+          <li>우리가 처음 만났을 때 흐르던 노래는?</li>
+        </ul>
+        <p>모두 검색 질문 하나로 답할 수 있다. 드론이 물체를 기억했듯, 내가 보고 듣는 모든 것으로 넓히면 된다.</p>
+        <p>발표자는 이게 공상과학이 아니라고 말한다. 그런 스마트 안경은 이미 팔리고 있고, 같은 행사장에서도 소개됐다. 목표는 <strong>더 똑똑한 내가 아니라 잊지 않는 나</strong>다.</p>
+
+        <h3>이미 만들어지는 "나의 색인" <span class="ts">12:30</span></h3>
+        <p>지금 이 기기들은 내가 소유한 기억을 서로 나누지 않는다. 내 조건으로 나누게 만들 수는 있다.</p>
+        <p>그사이 프런티어 모델들은 이미 나에 대한 색인을 만들고 있다. 내 인간관계, 습관, 속마음까지 담긴다. 발표자는 내가 동의하든 안 하든 이 색인은 생긴다고 본다.</p>
+        <blockquote>남은 질문은 하나다. 그 색인을 내가 소유하느냐, 아니면 나 자신에 대한 접근권을 빌려 쓰느냐.<cite>발표자의 표현을 옮김</cite></blockquote>
+      </section>
+
+      <!-- 12 -->
+      <section id="share">
+        <header><span class="num">12</span><h2>공유는 동의로만 <span class="ts">13:00</span></h2></header>
+        <p>기억을 소유한다고 혼자만 간직하라는 뜻은 아니다. Edge는 내가 고를 때 저장소의 일부를 Qdrant 클라우드와 동기화할 수 있다.</p>
+        <p>발표자의 예는 가족이다. 가족이 각자 안경을 쓰고 자기 하루를 기록한다. 기억은 따로 있다. 하지만 가족이 함께 소유하는 공동 기억으로 모을 수 있다. 엄마의 하루, 아빠의 하루, 내 하루를 같이 검색한다.</p>
+        <div class="shift" aria-label="초지능의 모양에 대한 발표자의 전망">
+          <div><span class="tag">지금의 방향</span><b>회사 하나의 초지능</b><span class="muted">수십억 명을 모두 같은 사람처럼 대한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">발표자가 그리는 방향</span><b>작은 사적 초지능 수천 개</b><span class="muted">한 사람의 삶, 한 가족, 한 팀에 맞춰 자란다</span></div>
+        </div>
+        <div class="callout warn">
+          <span class="title">같은 장치가 반대로도 쓰인다 <span class="ts">13:40</span></span>
+          <span>기억은 동의를 받고 나눌 수도, 동의 없이 빼 갈 수도 있다. 그래서 기억은 내 기기에서 시작해야 한다. 공유는 언제나 내가 직접 켜는 옵트인이어야 하고, 기본값이면 안 된다. 내 기억과 연속성을 누가 가질지는 내가 정한다.</span>
+        </div>
+        <p class="note">동기화 대상인 클라우드는 발표자 회사의 서비스다. 이 대목도 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="conclusion">
+        <header><span class="num">13</span><h2>결론과 오늘 할 일 <span class="ts">14:00</span></h2></header>
+        <ul class="plain">
+          <li>앞으로 몇 년 안에 모두가 초지능의 등장을 보게 된다. 발표자는 이 부분은 거의 정해졌다고 본다.</li>
+          <li>정해지지 않은 건 <strong>그게 누구 것이냐</strong>다. 구조가 아직 정해지지 않은 지금이 그걸 두고 다툴 때다.</li>
+          <li>5년 뒤 그 기억은 챗봇이 아니다. 나를 잊지 않고, 아무도 끌 수 없고, 어떤 시스템보다 나를 잘 아는 사적인 마음이다. 그걸 학습시킨 사람이 나 하나뿐이기 때문이다.</li>
+          <li>발표자는 이것을 더 작은 초지능이 아니라 <strong>원할 가치가 있는 유일한 초지능</strong>이라고 부른다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">발표자가 제안하는 오늘 할 일 <span class="ts">14:20</span></span>
+          <span>오늘 밤 도구 하나 써 보고 끝내지 않는다. <strong>낯선 사람을 집에 데려와 기억을 준다.</strong> 내 기기에서 도는 모델에 내가 가진 기억 저장소를 붙이라는 뜻으로 읽힌다.</span>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="recap">
+        <header><span class="num">14</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>초지능은 온다. 남은 질문은 <strong>누구 것이냐</strong>다.</li>
+          <li>지금의 AI 비서는 대화가 끝나면 거의 다 잊는다. <strong>기억 없는 천재</strong>다.</li>
+          <li>2,500달러 미만 기계로 작년 프런티어급을 돌린다. 모델은 집에 왔지만 기억은 아직이다.</li>
+          <li>빌려 쓰는 값은 세 가지다. 접근 차단, 조용한 성능 변화와 은퇴, 언젠가 끝날 보조금.</li>
+          <li>추론을 가지면 <strong>자율성</strong>, 기억을 가지면 <strong>연속성</strong>을 얻는다.</li>
+          <li>기억은 <strong>쓰기, 찾기, 잊기</strong>의 시스템이다. 다 넣는 것보다 맞는 걸 찾아오는 게 낫다.</li>
+          <li>모델은 CPU, 컨텍스트 창은 RAM, 기억은 디스크다. 그 디스크가 지금은 남의 데이터센터에 있다.</li>
+          <li>앱에 넣는 벡터 검색으로 기억을 내 기기에 둘 수 있다. 드론 데모는 15MB로 1밀리초 미만에 찾았다.</li>
+          <li>같은 임베딩 모델을 쓰는 한, 기억 폴더는 모델과 기기를 바꿔도 따라온다.</li>
+          <li>공유는 <strong>옵트인</strong>이어야 한다. 동의 없는 추출을 막으려면 기억은 로컬에서 시작한다.</li>
+        </ol>
+      </section>
+
+      <!-- 15 -->
+      <section id="quiz">
+        <header><span class="num">15</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 "언제"보다 중요하다고 본 질문은?</span></summary><div class="answer">초지능이 누구 것이냐. 남의 데이터센터에서 토큰 단위로 빌려 쓰느냐, 내 삶에서 배우고 아무도 끌 수 없는 내 것이냐.</div></details>
+          <details><summary><span class="qn">Q2</span><span>지금의 AI 비서를 "기억 없는 천재"라고 부른 이유는?</span></summary><div class="answer">대화가 끝나면 배운 것을 거의 다 잊고, 세션마다 0에서 시작하기 때문이다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>내 책상 위 모델이 아직 "똑똑한 낯선 사람"인 이유는?</span></summary><div class="answer">2,500달러 미만 기계로 작년 프런티어급을 돌릴 수는 있다. 하지만 모델을 내 것으로 만드는 부분, 곧 나에 대한 기억이 아직 없다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>모델을 빌려 쓸 때 드는 세 가지 값은?</span></summary><div class="answer">접근이 끊긴다. 버전 은퇴와 사용량 제한으로 모델이 조용히 바뀐다. 정액 요금이라는 보조금이 끝난다. 200달러 요금제로 5,000달러 넘게 쓰는 사례가 그 보조금이다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>추론을 가질 때와 기억을 가질 때 각각 얻는 것은?</span></summary><div class="answer">추론은 자율성, 아무도 모델을 빼앗지 못하는 상태다. 기억은 연속성, 대화가 바뀌어도 나를 이어서 아는 상태다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>기억 시스템의 세 가지 동작은?</span></summary><div class="answer">쓰기, 찾기, 잊기.</div></details>
+          <details><summary><span class="qn">Q7</span><span>마크다운 폴더에 다 넣어 두는 방식보다 검색이 나은 이유는?</span></summary><div class="answer">맞는 기억만 찾아올 수 있고 통제가 된다. 주제로 거르고, 최근성과 빈도로 비중을 낮추고, 시간에 따라 관련성이 바뀌게 할 수 있다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Karpathy 비유에서 기억은 컴퓨터의 무엇이고, 지금 어디에 있나?</span></summary><div class="answer">디스크다. 거의 모든 AI 비서에서 그 디스크는 남의 데이터센터에 있다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>드론 데모에서 기억이 만들어지는 순서는?</span></summary><div class="answer">YOLO가 물체를 찾아 이름표를 붙인다. 사진과 이름표를 임베딩으로 바꿔 로컬 저장소에 쓴다. 의미 검색으로 비슷한 기억을 찾는다. 전부 오프라인이다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>기억 폴더를 다른 모델이나 기기로 옮길 때 지켜야 할 조건은?</span></summary><div class="answer">같은 임베딩 모델을 계속 쓴다. 임베딩 모델을 바꾸면 저장한 기억을 다시 임베딩해야 한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>공유를 옵트인으로 해야 하는 이유는?</span></summary><div class="answer">같은 장치로 기억을 동의를 받고 나눌 수도, 동의 없이 빼 갈 수도 있기 때문이다. 그래서 기억은 로컬에서 시작하고 공유는 기본값이 아니어야 한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="apply">
+        <header><span class="num">16</span><h2>내 AI에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>지금 쓰는 AI 도구의 기억이 어디에 저장되는지 확인한다<span class="how">내 기기, 업체 클라우드, 저장 안 함 중 어디인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>매일 쓰는 모델이 사라지거나 바뀌면 무엇으로 바꿀지 적어 둔다<span class="how">다른 업체 모델, 내 기기에서 도는 오픈 웨이트 모델 후보</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>한 달 동안 실제로 쓴 토큰과 비용을 확인한다<span class="how">확인: 요금제 가격과 실제 사용량의 차이가 얼마인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>내 컴퓨터에서 오픈 웨이트 모델을 하나 돌려 본다<span class="how">확인: 평소 맡기는 일 몇 가지를 해낼 만한가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>내 교정, 선호, 막다른 길을 저장하는 기억 저장소를 만든다<span class="how">쓰기, 찾기, 잊기 세 동작이 모두 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>기억을 통째로 프롬프트에 넣지 않고 검색해서 꺼낸다<span class="how">주제 필터, 최근성과 빈도에 따른 감쇠를 쓸 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>쓰는 임베딩 모델을 정하고 기록해 둔다<span class="how">바꾸면 저장한 기억을 다시 임베딩해야 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>기억 폴더를 다른 기기로 옮겨 열어 본다<span class="how">확인: 기기를 바꿔도 기억이 그대로인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>공유와 동기화는 기본으로 꺼 둔다<span class="how">필요한 부분만 내가 골라서 켠다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 17 -->
+      <section id="glossary">
+        <header><span class="num">17</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>프런티어 모델</td><td>Frontier model. 그 시점에 가장 성능이 좋은 최상위 모델</td></tr>
+              <tr><td>오픈 웨이트</td><td>Open weights. 학습된 가중치를 공개해 누구나 내려받아 돌릴 수 있는 모델</td></tr>
+              <tr><td>가중치</td><td>Weights. 모델이 학습으로 얻은 숫자 묶음. 이 파일이 곧 모델이다</td></tr>
+              <tr><td>추론</td><td>Inference. 학습된 모델을 실제로 돌려 답을 만드는 일</td></tr>
+              <tr><td>컴퓨트</td><td>Compute. 모델을 돌리는 데 드는 계산 자원</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>토큰</td><td>Token. 모델이 글을 읽고 쓰는 단위. 사용량과 요금의 기준이 된다</td></tr>
+              <tr><td>사용량 제한</td><td>Throttling. 업체가 속도나 사용량을 일부러 줄이는 것</td></tr>
+              <tr><td>자율성 / 연속성</td><td>Autonomy / Continuity. 아무도 모델을 빼앗지 못하는 상태 / 대화가 바뀌어도 나를 이어서 아는 상태</td></tr>
+              <tr><td>컨텍스트 창</td><td>Context window. 모델이 한 번에 볼 수 있는 입력의 크기. 세션이 끝나면 비워진다</td></tr>
+              <tr><td>임베딩</td><td>Embedding. 글이나 이미지의 뜻을 숫자 목록, 즉 벡터로 바꾼 것. 뜻이 비슷하면 벡터도 가깝다</td></tr>
+              <tr><td>벡터 검색</td><td>Vector search. 질문과 뜻이 가장 가까운 벡터를 찾는 검색</td></tr>
+              <tr><td>의미 검색</td><td>Semantic search. 글자가 같은지가 아니라 뜻이 비슷한지로 찾는 검색</td></tr>
+              <tr><td>HNSW</td><td>Hierarchical Navigable Small World. 벡터를 여러 층의 그래프로 엮어 가까운 벡터를 빠르게 찾는 색인 방식</td></tr>
+              <tr><td>색인</td><td>Index. 빨리 찾을 수 있도록 정리해 둔 구조</td></tr>
+              <tr><td>페이로드</td><td>Payload. 벡터에 함께 붙여 저장하는 부가 정보. 예: 시각, 설명, 횟수</td></tr>
+              <tr><td>양자화</td><td>Quantization. 숫자의 정밀도를 낮춰 저장 공간을 줄이는 기법</td></tr>
+              <tr><td>감쇠</td><td>Decay. 오래되거나 덜 쓰인 기억의 비중을 점점 낮추는 것</td></tr>
+              <tr><td>YOLO</td><td>You Only Look Once. 이미지 속 물체를 실시간으로 찾아 이름표를 붙이는 물체 탐지 모델</td></tr>
+              <tr><td>하이브 마인드</td><td>Hive mind. 여러 기기나 사람의 기억을 한곳에 모아 함께 쓰는 구조</td></tr>
+              <tr><td>옵트인</td><td>Opt-in. 사용자가 직접 켜야 동작하는 방식. 기본값은 꺼짐</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="timeline">
+        <header><span class="num">18</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 발표 제목 "The frontier is coming home"</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>질문은 "언제"가 아니라 "누구 것인가"</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>사고 실험: 모든 걸 기억하는 비서</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>2,500달러 미만 기계로 작년 프런티어급</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>모델 혼자서는 똑똑한 낯선 사람</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>AI 스택은 전부 빌린 것</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>빌려 쓰는 값</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>정부 명령으로 대표 모델 접근 차단</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>버전 은퇴와 사용량 제한</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>에이전트 사용량과 200달러 요금제 보조금</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>자율성과 연속성</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>연구소들의 기억 기능, 그 빈틈이 상품</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>기억은 쓰기, 찾기, 잊기</td></tr>
+              <tr><td><span class="ts">05:30</span></td><td>"마크다운 폴더면 되지 않나"</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>HNSW 2016, 로컬 임베딩 2019</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>지금 기억이 있는 두 곳</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>Karpathy 비유: CPU, RAM, 디스크</td></tr>
+              <tr><td><span class="ts">07:20</span></td><td>앱에 내장하는 벡터 검색 엔진</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>양자화로 100만 개를 1GB 안에</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>라이브 데모: 드론</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>YOLO로 물체 탐지, 임베딩으로 기억</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>92종, 300개 이상 벡터, 15MB</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>의미 검색: 커피 테이블</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>클라우드 동기화와 하이브 마인드</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>챗봇, 에이전트, 코드 비서에 적용</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>이식성과 같은 임베딩 모델 조건</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>하루 전체를 기억하는 안경</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>이미 만들어지는 나의 색인</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>가족 공동 기억, 작은 초지능 수천 개</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>동의 공유와 동의 없는 추출, 옵트인</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>결론: 낯선 사람을 집에 데려가라</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'apyrzaWj0Z4:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>헤지펀드 AI 성과 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#firm">발표자와 Contour</a></li>
+      <li><a href="#problem">무엇을 증명해야 하나</a></li>
+      <li><a href="#abtest">실전 A/B 테스트</a></li>
+      <li><a href="#lag">결과는 늦게 온다</a></li>
+      <li><a href="#anchor">첫 가설에 매이지 않기</a></li>
+      <li><a href="#lost">묻힌 아이디어 다시 꺼내기</a></li>
+      <li><a href="#altdata">흩어진 데이터 합치기</a></li>
+      <li><a href="#insight">인사이트당 비용</a></li>
+      <li><a href="#firmwide">트레이딩과 운영으로</a></li>
+      <li><a href="#spend">구독비의 값어치 키우기</a></li>
+      <li><a href="#hidden">숨은 비용: 고장과 수리</a></li>
+      <li><a href="#wrap">맺음말</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-10-24 · 18분 · 영어 발표 한글 정리</span>
+      <h1>헤지펀드는 AI의 성과를 어떻게 재나</h1>
+      <p class="lead">헤지펀드에서 AI 투자의 수익은 몇 달이 지나야 드러난다. 그래서 Contour는 결과를 기다리지 않고, 같은 리서치를 AI 없이 한 번, AI와 함께 한 번 해 보며 과정과 "쓸모 있는 인사이트 하나에 드는 비용"을 잰다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=ZMZlAn6Pyfg" target="_blank" rel="noopener">Proving Alpha: How a Hedge Fund Measures AI's ROI</a></span>
+        <span>발표: Hari Kumar (Contour Asset Management AI 총괄)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 따로 확인하지 않았다. 자막에서 뭉개진 이름(Yipit, Rogo, MCP)은 알려진 이름으로 바로잡았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>Contour는 직원 15~20명의 작은 헤지펀드다. 발표자의 임무는 <strong>회사 모든 부서에서 AI 효과를 보여 주는 것</strong>이다.</li>
+        <li>투자업의 성공 지표인 손익(P&amp;L)은 분명하지만 <strong>몇 달에서 1년 뒤에야 나온다.</strong> 그래서 AI의 투자 대비 수익을 바로 보여 줄 수 없다.</li>
+        <li>해법 하나는 <strong>실전 A/B 테스트</strong>다. 종목 하나를 실적 발표 한 주기(3개월) 동안 AI 없이, 그리고 AI 도구와 함께 분석하고 둘 다 기록한다.</li>
+        <li>과정을 잴 때 묻는 질문은 하나다. <strong>일하는 방식이 바뀌었나, 아니면 일만 늘었나.</strong></li>
+        <li>에이전트는 첫 가설에 매이지 않게 돕고, <strong>덮어 둔 아이디어를 시장과 계속 대조해 때가 오면 알린다.</strong> 투자에서는 타이밍이 가장 중요하다.</li>
+        <li>또 하나의 해법은 Contour가 만든 지표 <strong>"쓸모 있는 인사이트당 비용"</strong>이다. 분석가의 시간, 쓴 도구, 나중의 손익을 묶어 추적한다.</li>
+        <li>도구가 고장 나 고치는 시간도 ROI 계산에 넣는다. 다만 <strong>이 발표에는 실제 ROI 숫자가 하나도 없다.</strong> 방법만 소개한다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="firm">
+        <header><span class="num">01</span><h2>발표자와 Contour <span class="ts">00:10</span></h2></header>
+        <p>Hari Kumar는 Contour Asset Management의 AI 총괄이다. 이 회사에 온 지는 1년쯤 됐다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>형태</td><td>펀더멘털 롱숏 헤지펀드. 기업을 분석해 오를 종목은 사고, 내릴 종목은 판다</td></tr>
+              <tr><td>역사</td><td>10년 남짓</td></tr>
+              <tr><td>인원</td><td>15~20명. 그중 분석가는 약 10명</td></tr>
+              <tr><td>운용 자산</td><td>60억 <span class="en">6 billion AUM</span></td></tr>
+              <tr><td>주 투자 분야</td><td>기술·미디어·통신 <span class="en">TMT</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>투자 담당자들은 원래 기술에 밝다. 그래도 일하는 방식은 오랫동안 거의 그대로였다. 회사는 AI로 이 방식을 흔들어 보고 싶어 한다.</p>
+        <p>발표자가 받은 임무는 <strong>회사 모든 영역에서 AI 효과를 보여 주는 것</strong>이다. 시작은 리서치다. 그다음은 트레이딩, 운영, 컴플라이언스, 재무다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="problem">
+        <header><span class="num">02</span><h2>무엇을 증명해야 하나 <span class="ts">01:20</span></h2></header>
+        <p>AI에 돈과 시간을 쓰고 있다. 그래서 무엇을 얻고 있나? 이 질문에 답하기가 어렵다. 발표자는 두 가지 관점으로 나눈다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">관점 1 · 손익</span>
+            <p>AI 덕분에 돈을 더 벌었나. 가장 분명한 기준이다.</p>
+            <p class="verdict">발표자는 이 부분은 <b>아직 앞으로의 일</b>이라고 했다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">관점 2 · 운영과 아이디어</span>
+            <p>일하는 과정이 나아졌나. 좋은 아이디어를 더 얻고 있나.</p>
+            <p class="verdict">발표의 대부분은 <b>이쪽</b>을 다룬다.</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <span class="title">이 발표에는 결과 숫자가 없다 <span class="ts">02:10</span></span>
+          <span>발표자는 기술 이야기보다 운영과 과정 이야기를 하겠다며 일부러 모호하게 두겠다고 했다. 그래서 A/B 테스트 결과, 줄어든 시간, 인사이트당 비용 같은 실제 숫자는 나오지 않는다. 제목은 "알파를 증명하기"지만, 내용은 증명의 결과가 아니라 <strong>증명하려는 방법</strong>이다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="abtest">
+        <header><span class="num">03</span><h2>실전 A/B 테스트 <span class="ts">02:20</span></h2></header>
+        <p>Contour의 분석가는 약 10명이다. 각자 맡은 종목 범위가 다르다. 발표자에 따르면 작은 헤지펀드에서는 한 사람이 종목 30~40개를 맡기도 한다.</p>
+        <p>분석가마다 오래 써 온 방식이 있다. 투자 가설을 세우고, 새 아이디어를 내고, 그 아이디어가 맞았는지 오랫동안 확인한다.</p>
+        <p>AI가 들어오면 이런 질문이 생긴다. <strong>AI 도구가 없었어도 같은 결론에 이르렀을까?</strong> 이 질문에 답하려고 Contour는 분석가의 리서치 과정 전체를 기록해 비교한다.</p>
+
+        <div class="pair">
+          <div class="card">
+            <span class="tag">A 과정 · AI 없이 <span class="ts">03:30</span></span>
+            <ul>
+              <li>단위: 종목 하나, 실적 발표에서 다음 실적 발표까지 3개월</li>
+              <li>LLM을 쓰지 않는다</li>
+              <li>회사가 새로 만든 업무 도구도 쓰지 않는다</li>
+              <li>기록: 어떤 데이터를 찾았나, 어떤 결론을 냈나</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">B 과정 · AI 도구와 함께</span>
+            <ul>
+              <li>같은 과정을 AI 도구를 넣어 다시 한다</li>
+              <li>도구는 <strong>한 번에 하나씩</strong> 넣는다</li>
+              <li>예: 전문가 인터뷰를 돕는 도구, 사람 대신 에이전트가 진행하는 소비자 설문</li>
+              <li>기록: 같은 항목, 그리고 정보를 모으는 데 걸린 시간</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>예: 전문가 인터뷰를 어디까지 맡기나 <span class="ts">04:30</span></h3>
+        <p>전문가 인터뷰는 업계 전문가와 통화하며 정보를 얻는 일이다. Contour는 에이전트에게 맡기는 범위를 단계별로 바꿔 가며 비교한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>인터뷰 진행</th><th>메모 정리</th><th>결론</th></tr></thead>
+            <tbody>
+              <tr><td>AI 없이</td><td>분석가</td><td>분석가</td><td>분석가</td></tr>
+              <tr><td>1단계</td><td>에이전트</td><td>분석가</td><td>분석가</td></tr>
+              <tr><td>2단계</td><td>에이전트</td><td>에이전트</td><td>분석가</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>결론은 어느 단계에서든 분석가가 낸다. 비교하는 것은 <strong>정보를 손으로 모았다면 얼마나 걸렸을지, 에이전트로 모으면 얼마나 걸리는지</strong>다.</p>
+
+        <div class="callout">
+          <span class="title">읽으며 생각해 볼 점 (노트 작성자 의견)</span>
+          <span>같은 사람이 같은 종목을 두 번 분석하면, 두 번째에는 이미 답을 아는 상태일 수 있다. 발표에서는 두 과정을 누가, 어떤 순서로 하는지 자세히 말하지 않았다. 내 팀에서 따라 할 때는 이 부분을 먼저 정해 두는 게 좋다.</span>
+        </div>
+        <p class="note">발표자는 이 방식이 지난 몇 달 동안 "꽤 성공적"이었다고 했다. 발표자의 임무가 AI 효과를 보여 주는 것이니 그 점을 감안해 읽자. 성공을 보여 주는 숫자는 발표에 없다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="lag">
+        <header><span class="num">04</span><h2>결과는 늦게 온다 <span class="ts">05:10</span></h2></header>
+        <p>헤지펀드 일의 중심은 아이디어 내기다. 새 아이디어와 투자 가설을 세우고, 그게 주가로 증명되는지 지켜본다. 문제는 증명되기까지 걸리는 시간이다.</p>
+
+        <figure class="chart" aria-label="발표자가 든 기간 비교: 실적 발표 한 주기 3개월, 더 걸리는 아이디어 6개월, 가장 오래 걸리는 아이디어 12개월">
+          <span class="chart-title">아이디어가 주가에 드러나기까지 걸리는 기간 (개월, 발표자가 든 예)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>실적 발표 한 주기 · A/B 테스트 한 번의 길이</span><span class="val">3</span></div>
+              <div class="track"><div class="fill key" style="width:25%" title="실적 발표 한 주기: 3개월"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>더 오래 걸리는 아이디어</span><span class="val">6</span></div>
+              <div class="track"><div class="fill" style="width:50%" title="더 오래 걸리는 아이디어: 6개월"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>가장 오래 걸리는 아이디어</span><span class="val">12</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="가장 오래 걸리는 아이디어: 12개월"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>6</span><span>12</span></div>
+          <span class="caption">A/B 테스트는 3개월 단위로 돌지만, 그 기간에 나온 아이디어의 결과는 최대 네 배 늦게 드러날 수 있다. Contour는 3개월보다 짧은 투자는 적게 한다.</span>
+        </figure>
+
+        <p>그래서 ROI를 바로 보여 줄 수 없다. 대신 <strong>과정을 잰다</strong> <span class="ts">05:40</span>. 소비자 설문을 하는 과정이 나아졌나? 재무 모델을 업데이트하는 과정이 나아졌나? 이런 질문을 도구마다 하나씩 던진다.</p>
+        <blockquote>우리가 정말 일하는 방식을 바꾸고 있나, 아니면 기존 과정에 일만 더 얹고 있나?<cite>발표자의 질문을 옮김 <span class="ts">06:10</span></cite></blockquote>
+      </section>
+
+      <!-- 5 -->
+      <section id="anchor">
+        <header><span class="num">05</span><h2>첫 가설에 매이지 않기 <span class="ts">06:20</span></h2></header>
+        <p>펀더멘털 투자의 목표는 투자 가설을 세우는 것이다. 그런데 발표자가 일하며 배운 것이 하나 더 있다. <strong>처음 세운 가설에 너무 매이면 안 된다.</strong> 이렇게 첫 생각에 붙들리는 것을 앵커링<span class="en">anchoring</span>이라고 한다.</p>
+        <p>앵커를 걷어 내려면 데이터와 전문가 의견을 믿어야 한다. 발표자는 AI 도구의 효과를 잴 여지가 여기에 많다고 본다.</p>
+        <h3>아이디어 생성 에이전트 <span class="ts">06:50</span></h3>
+        <ul class="plain">
+          <li>분석가가 종목마다 낸 아이디어를 받는다.</li>
+          <li>분석가가 대체 데이터나 전문가 인터뷰로 얻은 근거 위에 결론과 검토할 점을 더 얹는다.</li>
+          <li>그 아이디어가 몇 달 안에 주가에 드러날지, 더 오래 걸릴지 따져 본다.</li>
+        </ul>
+      </section>
+
+      <!-- 6 -->
+      <section id="lost">
+        <header><span class="num">06</span><h2>묻힌 아이디어 다시 꺼내기 <span class="ts">07:40</span></h2></header>
+        <p>발표자가 꼽은 큰 문제 중 하나는 아이디어를 잃어버리는 것이다. 흔히 이렇게 흘러간다.</p>
+        <ol class="plain">
+          <li>분석가가 아이디어 하나를 며칠 붙잡고 일한다.</li>
+          <li>포트폴리오 매니저(PM)가 관심을 보이지 않거나, 더 급한 일이 생긴다.</li>
+          <li>아이디어는 묻힌다. 몇 달 동안 다시 나오지 않는다.</li>
+          <li>그사이 사고팔기 좋은 가격 구간을 놓친다.</li>
+        </ol>
+        <p>Contour는 분석가가 남긴 메모를 에이전트가 계속 살피게 한다. 하루만 다룬 아이디어도 빠뜨리지 않는다. 에이전트는 그 아이디어를 지금 시장과 대조한다. 다시 흥미로워졌다면 분석가뿐 아니라 PM과 트레이더에게도 알린다.</p>
+        <div class="callout">
+          <span class="title">핵심은 타이밍 <span class="ts">08:40</span></span>
+          <span>헤지펀드는 할 수 있는 일이 많아 우선순위를 정해야 한다. 그런데 정말 중요한 것은 언제 움직이느냐다. 그래서 에이전트가 아이디어를 내는 데서 끝나지 않고, <strong>언제 포지션에 들어가고 나올지</strong>까지 생각하게 한다. 분석가가 당장 신경 쓰지 않는 아이디어라도 그렇게 한다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="altdata">
+        <header><span class="num">07</span><h2>흩어진 데이터 합치기 <span class="ts">09:00</span></h2></header>
+        <p>많은 펀드가 새롭고 독특한 데이터를 사는 데 큰돈을 쓴다. 이런 데이터를 대체 데이터<span class="en">alternative data</span>라고 한다. 위성 지도 데이터, 아주 세밀한 카드 결제 데이터를 파는 업체가 계속 생기고 있다.</p>
+        <p>발표자는 이런 데이터가 도움이 되지만 <strong>함께 모았을 때만</strong> 쓸모 있다고 말한다.</p>
+        <div class="shift" aria-label="대체 데이터 활용 방식의 변화">
+          <div><span class="tag">전</span><b>데이터가 따로 논다</b><span class="muted">Yipit의 카드 결제 패널 데이터는 그 자체로만 본다. 전문가 인터뷰 기록과 따로 떨어져 있다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">후 <span class="ts">09:30</span></span><b>에이전트가 함께 본다</b><span class="muted">Yipit 데이터를 MCP와 API로 에이전트에 넣는다. 에이전트는 인터뷰 기록, 메모, 카드 결제·소비 데이터를 같이 보고 둘이 어떻게 맞물리는지 살핀다.</span></div>
+        </div>
+        <p class="note">자막에는 Yipit이 "Gipit"으로, MCP가 "MTP"로도 들린다. 카드 결제 패널 데이터를 파는 Yipit(YipitData)과, 에이전트가 외부 데이터에 접속하는 표준인 MCP로 읽었다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="insight">
+        <header><span class="num">08</span><h2>인사이트당 비용 <span class="ts">10:00</span></h2></header>
+        <p>ROI를 재기 어려운 또 하나의 이유는 시간이다. 도구, 모델 업데이트, AI에 돈을 쓰는 것과 별개로, 분석가가 하루를 어디에 쓰는지가 가장 큰 비용이다.</p>
+        <p>그래서 Contour는 다음을 추적한다. <span class="ts">10:30</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>추적 항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>하루 인사이트</td><td>분석가가 하루에 만든 인사이트</td></tr>
+              <tr><td>종목별 시간</td><td>종목 하나에 쓴 시간</td></tr>
+              <tr><td>최종 손익</td><td>그 인사이트로 내린 판단이 나중에 낸 손익</td></tr>
+              <tr><td>아이디어의 행방</td><td>아이디어가 어디까지 갔나, 어떤 것이 흥미로웠나</td></tr>
+              <tr><td>쓴 도구</td><td>그 아이디어를 내는 데 어떤 도구를 썼나</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>투자업에는 손익이라는 아주 분명한 성공 지표가 있다. 하지만 다른 업계보다 훨씬 늦게 나온다. Contour 같은 펀더멘털 펀드는 매일 사고팔지 않는다. 하루에 몇 건 거래하고, 그 결과가 몇 달에 걸쳐 나오기를 기대한다.</p>
+        <p>이 항목들을 묶은 것이 Contour가 만든 지표, <strong>쓸모 있는 인사이트당 비용</strong><span class="en">cost per useful insight</span>이다. <span class="ts">11:10</span></p>
+        <div class="callout">
+          <span class="title">예시: 계산식으로 쓰면</span>
+          <span><code>인사이트당 비용 = (도구·데이터 비용 + 분석가 시간 + 도구를 고치고 익힌 시간) ÷ 쓸모 있다고 판명된 인사이트 수</code></span>
+          <span class="note">발표자는 정확한 식을 밝히지 않았다. 발표에 나온 요소를 노트에서 묶어 본 것이다. "도구를 고치고 익힌 시간"은 11장에서 나온다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="firmwide">
+        <header><span class="num">09</span><h2>트레이딩과 운영으로 <span class="ts">11:50</span></h2></header>
+        <p>좋은 리서치가 수익을 만드는 길이다. 그래도 트레이딩, 운영, 재무가 튼튼하면 회사 전체에 시간이 생긴다. 발표자는 AI를 이쪽으로도 넓히고 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>부서</th><th>지금</th><th>AI로 하려는 것</th></tr></thead>
+            <tbody>
+              <tr><td>트레이딩 <span class="ts">12:10</span></td><td>주문을 실행하는 데 시간을 쓴다</td><td>포지션에 들어가고 나온 시점을 잰다. 포지션이 여러 산업과 종목에 어떻게 퍼져 있는지 본다. 에이전트가 종목을 지켜보다 흥미로운 점을 알리면, 트레이더가 그걸 분석가에게 넘긴다</td></tr>
+              <tr><td>운영·컴플라이언스 <span class="ts">12:50</span></td><td>Bloomberg, 주문 관리 시스템 등 여러 플랫폼을 오간다. 업체마다 AI 기능을 내놓지만 서로 이어지지 않는다</td><td>주문 대사, 거래처 정보 관리 같은 일을 <strong>한 도구로 모은다.</strong> 외부 업체의 조각난 해법에 기대지 않게 한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>목표는 반복 업무를 줄이는 것이다. 특히 금융 운영 업무는 한 플랫폼으로 모으기 좋다.</p>
+        <p>발표자는 이 부분이 ROI를 재는 방법은 아니라고 했다. <span class="ts">14:10</span> 대신 트레이딩과 운영에서 일하는 사람의 실력을 펀드의 본업에 쓰게 하려는 것이다. 본업은 새 아이디어 내기, 시장 이해, 타이밍이다.</p>
+        <p class="note">자막에는 "order keeping agent"로 들린다. 문맥상 주문을 관리하는 시스템으로 읽었다(추정).</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="spend">
+        <header><span class="num">10</span><h2>구독비의 값어치 키우기 <span class="ts">14:30</span></h2></header>
+        <p>헤지펀드는 이미 여러 데이터 업체에 돈을 내고 있다. 발표자는 그 지출을 버리지 않고 더 쓸모 있게 만들려 한다. 지출 방식은 크게 셋이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>예</th><th>분석가가 일하는 모습</th></tr></thead>
+            <tbody>
+              <tr><td>따로 사는 도구 <span class="ts">14:50</span></td><td>AlphaSense(리서치 자료·전문가 통화 기록), Yipit(대체 데이터)</td><td>업체 포털에 들어가 자료를 꺼내, 자기 재무 모델에 옮긴다</td></tr>
+              <tr><td>통합형 외부 서비스 <span class="ts">15:10</span></td><td>Rogo, Kensho</td><td>데이터가 모델 안으로 바로 들어온다. Rogo의 에이전트와 대화하며 일한다</td></tr>
+              <tr><td>Contour가 만드는 것 <span class="ts">16:00</span></td><td>기존 AlphaSense·Yipit 구독 + 자체 플랫폼</td><td>여러 도구를 한 플랫폼으로 모은다. 플랫폼은 분석가마다 습관과 모델 패턴을 배워 그 사람에게 맞춰진다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>업체들이 MCP와 API를 내놓고 있어 이런 연결이 쉬워졌다. 발표자가 말하는 목표는 연결 자체가 아니다. <strong>들어오는 모든 데이터와 모델 업데이트에서 플랫폼이 계속 배우게 하는 것</strong>이다.</p>
+        <p class="note">자막에는 "Roqoo"로도 들리지만, 금융용 AI 플랫폼 Rogo로 읽었다. 발표자는 Rogo와 Kensho를 "아주 좋은 해법"이라고 평가했다. 다만 Contour는 그 대신 자체 플랫폼을 만드는 쪽이다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="hidden">
+        <header><span class="num">11</span><h2>숨은 비용: 고장과 수리 <span class="ts">16:40</span></h2></header>
+        <p>ROI 계산의 마지막 조각은 도구가 고장 나는 비용이다. 모델 호출이 실패하고, 데이터 연결이 며칠마다 끊긴다. 그러면 발표자가 고쳐야 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">ROI에 더하는 쪽</span>
+            <ul>
+              <li>정보를 모으는 시간이 준다</li>
+              <li>놓칠 뻔한 아이디어를 다시 잡는다</li>
+              <li>흩어진 데이터를 함께 본다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">ROI에서 빼는 쪽 <span class="ts">17:10</span></span>
+            <ul>
+              <li>도구가 멈춰 일이 끊기는 시간</li>
+              <li>투자 담당자가 직접 못 고치는 버그 때문에 잃는 시간</li>
+              <li>도구 쓰는 법을 익히는 시간</li>
+            </ul>
+          </div>
+        </div>
+        <p>모두가 AI 도입에 들떠 있지만, 가치 있는 인사이트 하나에 드는 시간을 따질 때 이 빼는 쪽도 같이 봐야 한다. 발표자에 따르면 이 시간은 점점 줄고 있다. 그래도 Contour는 계속 잰다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="wrap">
+        <header><span class="num">12</span><h2>맺음말 <span class="ts">17:40</span></h2></header>
+        <p>투자 업무에서 AI의 ROI를 재기는 아주 어렵다. 그래도 발표자는 지금 이 일에 뛰어들어야 한다고 말한다.</p>
+        <p>작은 펀더멘털 펀드에서도 AI 도입이 늘고 있다. 발표자는 분석가 여러 명의 일을 한곳에서 처리하는 <strong>하나로 묶인 층</strong>이 앞으로 아주 큰 가치를 낼 것이라고 본다.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>투자업의 성공 지표인 손익은 분명하지만 몇 달~1년 뒤에 나온다. 그래서 AI의 ROI를 바로 보여 줄 수 없다.</li>
+          <li>Contour는 <strong>실전 A/B 테스트</strong>를 한다. 종목 하나를 실적 발표 한 주기 동안 AI 없이, 그리고 AI와 함께 분석해 기록한다.</li>
+          <li>비교하는 것은 찾은 데이터, 내린 결론, 걸린 시간이다. 도구는 <strong>하나씩</strong> 넣는다.</li>
+          <li>과정을 잴 때의 질문: <strong>일하는 방식이 바뀌었나, 일만 늘었나.</strong></li>
+          <li>에이전트는 첫 가설에 매이지 않게 근거를 더 얹고, 그 아이디어가 언제 주가에 드러날지 따진다.</li>
+          <li>에이전트는 덮어 둔 아이디어를 시장과 계속 대조해, 때가 오면 분석가·PM·트레이더에게 알린다. 핵심은 타이밍이다.</li>
+          <li>따로 사던 대체 데이터와 구독 서비스를 MCP·API로 자체 플랫폼에 연결한다. 플랫폼은 분석가마다 맞춰 배운다.</li>
+          <li>Contour의 지표는 <strong>쓸모 있는 인사이트당 비용</strong>이다. 시간, 쓴 도구, 나중의 손익을 묶어 추적한다.</li>
+          <li>트레이딩·운영의 반복 업무는 한 플랫폼으로 모아, 사람 시간을 아이디어·시장 이해·타이밍으로 돌린다.</li>
+          <li>도구 고장, 수리, 학습 시간도 ROI에서 뺀다. 그리고 이 발표에는 <strong>실제 ROI 숫자가 없다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 AI의 ROI를 바로 보여 줄 수 없다고 한 이유는?</span></summary><div class="answer">투자의 성공 지표인 손익이 늦게 나오기 때문이다. 아이디어가 주가에 드러나기까지 3개월, 6개월, 길게는 1년이 걸린다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>Contour의 A/B 테스트 한 번은 어떤 단위로 도나?</span></summary><div class="answer">종목 하나, 실적 발표에서 다음 실적 발표까지 3개월이다. 그 기간에 AI 없이 한 과정과 AI 도구를 넣은 과정을 기록한다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>두 과정에서 무엇을 비교하나?</span></summary><div class="answer">찾은 데이터 소스, 내린 결론, 정보를 모으는 데 걸린 시간이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>AI 도구를 한 번에 하나씩 넣는 이유는?</span></summary><div class="answer">어떤 도구가 차이를 만들었는지 따로 떼어 보기 위해서다. 전문가 인터뷰 예에서는 에이전트가 인터뷰만 할 때와 메모 정리까지 할 때를 나눠 비교했다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>과정을 잴 때 발표자가 던지는 핵심 질문은?</span></summary><div class="answer">일하는 방식을 정말 바꾸고 있나, 아니면 기존 과정에 일만 더 얹고 있나.</div></details>
+          <details><summary><span class="qn">Q6</span><span>앵커링이란 무엇이고, 에이전트는 어떻게 돕나?</span></summary><div class="answer">처음 세운 가설에 붙들려 다른 근거를 덜 보는 것이다. 에이전트는 분석가의 아이디어에 대체 데이터와 전문가 의견에서 나온 결론을 더 얹어, 첫 가설을 다시 보게 한다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>"묻힌 아이디어" 문제는 무엇이고 해법은?</span></summary><div class="answer">며칠 다룬 아이디어가 PM의 관심 밖으로 밀려 몇 달 동안 잊히고, 그사이 좋은 가격 구간을 놓치는 문제다. 에이전트가 메모를 계속 시장과 대조해, 다시 흥미로워지면 분석가·PM·트레이더에게 알린다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Yipit 같은 대체 데이터를 Contour는 어떻게 쓰나?</span></summary><div class="answer">MCP와 API로 에이전트에 연결한다. 에이전트는 카드 결제 데이터를 전문가 인터뷰 기록, 메모와 함께 보고 둘이 어떻게 맞물리는지 살핀다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>Contour가 만든 지표의 이름과 재료는?</span></summary><div class="answer">쓸모 있는 인사이트당 비용. 분석가의 하루 인사이트, 종목별 시간, 나중의 손익, 아이디어의 행방, 쓴 도구를 추적한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>AlphaSense 포털, Rogo, Contour 자체 플랫폼은 어떻게 다른가?</span></summary><div class="answer">포털은 분석가가 직접 자료를 꺼내 모델에 옮긴다. Rogo는 데이터를 모델 안으로 넣고 에이전트와 대화하게 한다. Contour는 기존 구독을 자체 플랫폼에 연결하고, 플랫폼이 분석가마다 습관을 배워 맞춰지게 한다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>ROI 계산에서 빼야 한다고 한 숨은 비용은?</span></summary><div class="answer">도구가 멈춰 일이 끊기는 시간, 투자 담당자가 못 고치는 버그 때문에 잃는 시간, 도구 쓰는 법을 익히는 시간이다. 줄고 있지만 계속 잰다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>이 발표를 읽을 때 가장 조심할 점은?</span></summary><div class="answer">실제 ROI 숫자가 하나도 없다는 점이다. 발표자는 일부러 모호하게 두었고, 성공했다는 평가도 AI 효과를 보여 주는 게 임무인 사람의 자체 평가다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>AI를 넣기 전에 지금 방식을 먼저 기록한다<span class="how">찾은 자료, 내린 결론, 걸린 시간을 남긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>같은 일을 AI 없이 한 번, AI와 한 번 해서 비교한다<span class="how">누가 어떤 순서로 할지 먼저 정한다. 두 번째가 답을 미리 아는 상태가 되지 않게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>AI 도구는 한 번에 하나씩 넣는다<span class="how">확인: 무엇이 차이를 만들었는지 도구별로 말할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>결과 지표가 늦게 오는 일은 과정 지표를 정한다<span class="how">질문: 일하는 방식이 바뀌었나, 일만 늘었나</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>쓸모 있는 결과물 하나당 비용을 잰다<span class="how">들인 시간, 쓴 도구, 나중의 결과를 한 기록에 묶는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>중단한 아이디어와 작업 메모를 에이전트가 계속 지켜보게 한다<span class="how">확인: 다시 볼 때가 되면 관련된 사람 모두에게 알림이 가는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>따로 쓰는 데이터 구독을 MCP·API로 에이전트에 연결한다<span class="how">확인: 서로 다른 데이터를 한곳에서 함께 볼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>ROI 계산에 고장 대응과 학습 시간을 넣는다<span class="how">확인: 이 시간이 줄고 있는지 추적하는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>ROI</td><td>Return on investment. 들인 비용 대비 얻은 수익</td></tr>
+              <tr><td>알파</td><td>Alpha. 시장 평균을 넘어선 초과 수익</td></tr>
+              <tr><td>펀더멘털 롱숏</td><td>Fundamental long/short. 기업의 실적과 사업을 분석해 오를 종목은 사고(롱) 내릴 종목은 파는(숏) 투자 방식</td></tr>
+              <tr><td>운용 자산</td><td>AUM, Assets under management. 펀드가 맡아 굴리는 돈의 총액</td></tr>
+              <tr><td>TMT</td><td>Technology, Media, Telecom. 기술·미디어·통신 업종</td></tr>
+              <tr><td>손익</td><td>P&amp;L, Profit and loss. 투자로 번 돈과 잃은 돈</td></tr>
+              <tr><td>PM</td><td>Portfolio manager. 무엇을 얼마나 살지 최종 결정하는 사람</td></tr>
+              <tr><td>종목</td><td>Name. 업계에서 투자 대상 회사를 부르는 말</td></tr>
+              <tr><td>실적 발표 주기</td><td>Earnings cycle. 상장사가 분기 실적을 발표하는 약 3개월 간격</td></tr>
+              <tr><td>투자 가설</td><td>Thesis. 이 종목이 왜 오르거나 내릴지에 대한 주장</td></tr>
+              <tr><td>앵커링</td><td>Anchoring. 처음 떠올린 생각에 붙들려 새 근거를 덜 반영하는 것</td></tr>
+              <tr><td>전문가 인터뷰</td><td>Expert call. 업계 전문가와 통화해 정보를 얻는 리서치 방식</td></tr>
+              <tr><td>대체 데이터</td><td>Alternative data. 재무제표 밖의 데이터. 예: 위성 사진, 카드 결제 기록</td></tr>
+              <tr><td>카드 결제 패널 데이터</td><td>Credit card panel data. 일정한 소비자 집단의 카드 사용 기록을 모아 회사별 매출 흐름을 짐작하게 하는 데이터</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. AI 에이전트가 외부 도구와 데이터에 접속하는 표준 방식</td></tr>
+              <tr><td>A/B 테스트</td><td>두 방식을 나란히 해 보고 결과를 비교하는 실험</td></tr>
+              <tr><td>쓸모 있는 인사이트당 비용</td><td>Cost per useful insight. 쓸모 있다고 판명된 인사이트 하나를 얻는 데 든 시간과 돈. Contour가 만든 지표</td></tr>
+              <tr><td>진입·청산</td><td>Entry/exit. 포지션에 들어가는 것(사거나 공매도)과 정리하고 나오는 것</td></tr>
+              <tr><td>주문 대사</td><td>Order reconciliation. 내부 주문 기록과 거래 상대방 기록이 맞는지 맞춰 보는 일</td></tr>
+              <tr><td>컴플라이언스</td><td>Compliance. 법과 규정을 지키는지 점검하는 일</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자와 Contour 소개</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>발표자의 임무: 회사 전체에서 AI 효과 보여 주기</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>AI 지출의 ROI는 왜 재기 어렵나</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>기술보다 운영과 과정 중심으로 이야기한다</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>실전 A/B 테스트: 분석가의 리서치 과정 기록</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>종목 하나, 실적 발표 한 주기 단위</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>전문가 인터뷰 도구, 에이전트 소비자 설문</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>에이전트가 인터뷰만 할 때와 정리까지 할 때</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>아이디어의 결과는 3개월~1년 뒤에 나온다</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>ROI 대신 과정을 잰다</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>첫 가설에 매이지 않기</td></tr>
+              <tr><td><span class="ts">06:50</span></td><td>아이디어 생성 에이전트</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>묻힌 아이디어 문제</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>진입·청산 타이밍을 보는 에이전트</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>대체 데이터: 위성, 카드 결제</td></tr>
+              <tr><td><span class="ts">09:30</span></td><td>Yipit 데이터를 MCP·API로 에이전트에 연결</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>분석가의 시간이라는 비용</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>하루 인사이트, 종목별 시간, 최종 손익 추적</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>쓸모 있는 인사이트당 비용</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>회사 전체로 넓히기</td></tr>
+              <tr><td><span class="ts">12:10</span></td><td>트레이딩: 진입·청산 시점, 포지션 분포</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>운영·컴플라이언스: 흩어진 도구를 하나로</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>사람 시간을 펀드의 본업으로</td></tr>
+              <tr><td><span class="ts">14:30</span></td><td>이미 내는 데이터 구독비</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>따로 사는 도구: AlphaSense, Yipit</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>통합형 외부 서비스: Rogo, Kensho</td></tr>
+              <tr><td><span class="ts">16:00</span></td><td>분석가마다 맞춰 배우는 자체 플랫폼</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>숨은 비용: 고장과 수리</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>버그와 학습에 빠져나가는 시간</td></tr>
+              <tr><td><span class="ts">17:40</span></td><td>맺음말</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'ZMZlAn6Pyfg:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>
