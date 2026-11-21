@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>소프트웨어 팩토리 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-block: 40px 0; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-left-color: var(--crit); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- layer stack (this note: infrastructure layers, top of list = top of stack) ---------- */
+.stack { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-width: 68ch; }
+.stack li {
+  display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 2px 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px;
+}
+.stack li.base { border-color: var(--accent); background: var(--accent-soft); }
+.stack .layer { grid-row: span 2; font-family: var(--font-mono); font-size: var(--step--1); color: var(--accent); }
+.stack .what { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<nav style="max-width:72rem;margin:0 auto;padding:16px 16px 0;font-size:0.9375rem"><a href="../index.html">전체 노트 목록</a></nav>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#local">로컬 에이전트의 세 가지 한계</a></li>
+      <li><a href="#not">팩토리가 아닌 것</a></li>
+      <li><a href="#define">정의: 코드로 정의한 닫힌 루프</a></li>
+      <li><a href="#primitive">에이전트는 새 엔지니어링 재료</a></li>
+      <li><a href="#stack">팩토리 인프라 스택 6층</a></li>
+      <li><a href="#demo-code">시연: 정의 파일과 실시간 기록</a></li>
+      <li><a href="#demo-measure">시연: 지표와 온라인 평가</a></li>
+      <li><a href="#self-improve">자기 개선: 팩토리에 PR</a></li>
+      <li><a href="#benchmark">벤치마크는 내 데이터로</a></li>
+      <li><a href="#conclusion">결론: 에이전트를 엔지니어링하라</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-20 · 18분 · 영어 발표 한글 정리</span>
+      <h1>코딩 에이전트를 시스템처럼 엔지니어링하기</h1>
+      <p class="lead">코딩 에이전트를 각자 노트북에서 말로 부리는 방식은 사람 속도에 묶인다. 발표자는 에이전트의 작업 흐름을 코드로 정의하고, 모든 실행을 기록하고 재서 스스로 나아지게 하는 "소프트웨어 팩토리"를 제안한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=0LeT996Hz3E" target="_blank" rel="noopener">Engineer Your Coding Agents Like Any Other System</a></span>
+        <span>발표: Zach Lloyd (Warp 창업자·CEO, 전 Google 프린시펄 엔지니어, Google Docs 제품군 엔지니어링 리드)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 성과는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 발표자의 회사 Warp는 기업이 내부 소프트웨어 팩토리를 만드는 플랫폼을 판다. 자막에서 뭉개진 이름은 확실한 것만 바로잡고, 확실하지 않은 것에는 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>지금 대부분은 각자 로컬에서 에이전트와 대화하며 일한다. 이 방식은 <strong>사람 처리량에 묶이고</strong>, 비용 관리와 보안 통제가 어렵다.</li>
+        <li>발표자가 말하는 소프트웨어 팩토리는 자동화 몇 개나 스킬 묶음이 아니다. <strong>"클라우드 코딩 에이전트를 계속 측정하고 개선하는, 코드로 정의한 닫힌 루프 시스템"</strong>이다.</li>
+        <li>세 조건이 있다. <strong>코드로 정의</strong>하고, <strong>닫힌 루프</strong>로 돌리고, <strong>모든 것을 잰다.</strong></li>
+        <li>에이전트는 새 엔지니어링 재료다. 디버거와 프로파일러 대신 <strong>eval, 자기 개선 루프, 벤치마크, A/B 테스트</strong>가 새 도구다.</li>
+        <li>인프라는 6층이다. 아래부터 <strong>코드로 쓴 팩토리, 데이터와 맥락, 컴퓨트, 추론, 오케스트레이션, API·MCP</strong>.</li>
+        <li>모든 실행을 기록하고 다른 에이전트가 점수를 매긴다. 에이전트가 실패 패턴을 찾아 <strong>팩토리 정의에 PR을 올린다.</strong></li>
+        <li>어떤 모델, 스킬, 하네스가 최고인지는 <strong>내 실제 데이터로 만든 벤치마크</strong>로만 답할 수 있다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="local">
+        <header><span class="num">01</span><h2>로컬 에이전트의 세 가지 한계 <span class="ts">01:00</span></h2></header>
+        <p>발표자가 만나는 개발자와 플랫폼 팀은 대부분 아직 이렇게 일한다. 각자 자기 컴퓨터에서 코딩 에이전트를 돌린다. 여러 개를 동시에 돌리기도 한다. 터미널에서 돌리기도 하고, 에이전트형 개발 환경<span class="en">agentic development environment</span>에서 돌리기도 한다.</p>
+        <p>객석에 손을 들어 보게 했을 때도 대부분 이 방식이었다. 다만 전부는 아니었다. 발표자는 이 방식이 바뀔 것이고, 이미 바뀌기 시작했다고 본다. 이유는 셋이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>한계</th><th>무슨 뜻인가</th></tr></thead>
+            <tbody>
+              <tr><td>사람 처리량 <span class="ts">01:50</span></td><td>에이전트마다 사람이 대화하며 지시해야 하면 자동화할 수 없다. 전체 속도가 사람 속도에 묶인다.</td></tr>
+              <tr><td>비용과 생산성 <span class="ts">02:10</span></td><td>모두가 자기 설정, 모델, 스킬을 따로 고른다. 그러면 에이전트를 비용과 생산성 면에서 효율적으로 쓰는지 확인하기 어렵다. 플랫폼 팀과 엔지니어링 리더에게서 자주 듣는 이야기다.</td></tr>
+              <tr><td>보안과 거버넌스 <span class="ts">02:30</span></td><td>모두가 자기 에이전트를 직접 설정해 돌리면 큰 보안 문제가 생긴다. 누가 무엇을 쓰게 할지 정하고 지키는 일<span class="en">governance</span>도 어려워진다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="shift" aria-label="에이전트를 쓰는 방식의 이동">
+          <div><span class="tag">지금 대부분</span><b>로컬에서 대화하며 부리는 에이전트</b><span class="muted">사람 한 명이 에이전트 여러 개를 붙잡고 하나씩 지시한다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">다가오는 것</span><b>소프트웨어 팩토리</b><span class="muted">팀 전체의 에이전트 작업을 클라우드의 한 시스템으로 짓고 잰다</span></div>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="not">
+        <header><span class="num">02</span><h2>팩토리가 아닌 것 <span class="ts">03:00</span></h2></header>
+        <p>발표자는 다가오는 것을 느슨하게 소프트웨어 팩토리<span class="en">software factory</span>라고 부른다. 객석에 물으니 팩토리를 만들고 있거나 쓰고 있는 사람도 많았다. 발표자는 대화형 에이전트 쪽보다 오히려 많아 보인다고 했다.</p>
+        <p>이 말은 사람마다 다른 뜻으로 쓴다. 그래서 발표자는 팩토리가 아닌 것부터 꼽는다.</p>
+        <ul class="plain">
+          <li>느슨하게 모은 자동화 몇 개</li>
+          <li>AI 팀원 모음 <span class="en">AI teammates</span></li>
+          <li>함께 쓰는 스킬과 MCP 묶음</li>
+          <li>개인이 돌리는 에이전트 무리 <span class="en">personal agent swarms</span></li>
+        </ul>
+        <p>넷 다 쓸모 있는 기본 재료<span class="en">primitive</span>다. 하지만 발표자는 이것들이 도착 지점은 아니라고 본다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="define">
+        <header><span class="num">03</span><h2>정의: 코드로 정의한 닫힌 루프 <span class="ts">03:40</span></h2></header>
+        <blockquote>클라우드 코딩 에이전트를 계속 측정하고 개선하는, 코드로 정의한 닫힌 루프 시스템.<cite>발표자의 정의를 옮김 · "a code-defined closed loop system for continuously measuring and improving cloud coding agents"</cite></blockquote>
+        <p>클라우드 코딩 에이전트는 개인 노트북이 아니라 원격 실행 환경에서 도는 에이전트다. 정의에는 세 가지 요소가 들어 있다.</p>
+
+        <h3>① 코드로 정의한다 <span class="ts">04:00</span></h3>
+        <p>팩토리를 키우려면 먼저 팩토리 전체를 선언형 언어<span class="en">declarative language</span>로 적어야 한다. 선언형은 실행 순서가 아니라 원하는 상태를 적는 방식이다. 발표자는 Terraform처럼 코드 파일 묶음으로 적으라고 한다. 적을 것은 이렇다.</p>
+        <ul class="plain">
+          <li>어떤 코딩 에이전트를 돌리는가</li>
+          <li>무엇이 에이전트를 실행시키는가 (트리거<span class="en">trigger</span>)</li>
+          <li>일이 들어오면 어떤 흐름을 타는가. 예를 들어 분류에서 스펙 작성까지</li>
+          <li>어떤 MCP를 쓸 수 있는가</li>
+          <li>에이전트가 어디서 도는가</li>
+        </ul>
+        <p>이렇게 적는 게 왜 중요한지는 <a href="#stack">05 인프라 스택</a>에서 나온다.</p>
+
+        <h3>② 닫힌 루프로 돈다 <span class="ts">04:30</span></h3>
+        <p>전형적인 루프는 소프트웨어 개발 수명 주기<span class="en">SDLC</span> 그대로다.</p>
+        <div class="callout">
+          <span class="title">일의 흐름</span>
+          <span>사람이 낸 아이디어나 자동 신호 → 분류 → 구현 → 검증 → 모니터링</span>
+        </div>
+        <p>핵심은 루프가 닫혀 있다는 점이다. 에이전트가 많이 돌수록 이 루프를 더 효율적으로 다듬을 수 있다. 다듬는 방법은 <a href="#demo-measure">07</a>~<a href="#benchmark">09</a>에서 나온다.</p>
+
+        <h3>③ 모든 것을 잰다 <span class="ts">05:10</span></h3>
+        <p>감<span class="en">vibes</span>으로 에이전트를 배치하면 세 가지를 확신할 수 없다. 가장 좋은 품질을 얻고 있는가. 가장 낮은 비용을 쓰고 있는가. 처리량을 최대로 뽑고 있는가.</p>
+        <p>그래서 재려는 태도와 잴 수 있는 도구가 둘 다 필요하다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="primitive">
+        <header><span class="num">04</span><h2>에이전트는 새 엔지니어링 재료 <span class="ts">05:40</span></h2></header>
+        <p>발표자가 이 발표에서 하나만 가져가길 바라는 생각이 있다. 지난 1년 사이 지능형 에이전트라는 새 재료가 생겼다. 이 재료를 가장 잘 쓰도록 그 주변에 시스템을 엔지니어링하는 일, 이것이 새로운 근본 문제라는 것이다.</p>
+        <p>발표자는 이 일이 정원 가꾸기나 레시피 따라 하기가 아니라고 말한다. 엔지니어는 경력 내내 엔지니어링 방식으로 문제를 풀어 왔다. 에이전트를 새 엔지니어링 재료로 보면 쓰는 방식도 자연스럽게 그쪽으로 간다.</p>
+
+        <h3>도구도 바뀐다 <span class="ts">06:40</span></h3>
+        <div class="shift" aria-label="엔지니어가 익혀야 할 도구의 이동">
+          <div><span class="tag">손으로 만들던 시절</span><b>디버거, 프로파일러, Chrome DevTools</b><span class="muted">발표자가 Google에서 익힌 도구. 최고의 엔지니어와 그저 그런 엔지니어를 갈랐다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">팩토리 엔지니어링</span><b>eval, 자기 개선 루프, 벤치마크, A/B 테스트</b><span class="muted">에이전트 시스템 전체를 재고 고치는 도구</span></div>
+        </div>
+        <p>발표자는 이 새 도구를 다루는 기술을 팩토리 엔지니어링<span class="en">factory engineering</span>이라고 부른다. 스스로 물어볼 질문은 이렇다. eval을 세울 수 있는가. 실제로 작동하는 자기 개선 루프를 만들 수 있는가. 벤치마크를 쓸 수 있는가. 팩토리를 A/B 테스트할 수 있는가.</p>
+
+        <h3>제품 엔지니어링은 그대로 남는다 <span class="ts">07:40</span></h3>
+        <p>팩토리 엔지니어링만 하게 되는 건 아니다. 내보낸 제품이 사용자와 고객의 실제 문제를 푸는지는 여전히 엔지니어가 책임진다.</p>
+        <p>다만 앞으로는 모든 엔지니어가 제품을 만드는 일에 더해, <strong>제품을 만드는 시스템을 개선하는 법</strong>도 배워야 한다고 발표자는 본다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="stack">
+        <header><span class="num">05</span><h2>팩토리 인프라 스택 6층 <span class="ts">08:00</span></h2></header>
+        <p>에이전트 시스템을 첫 원리부터 설계하면 대략 이런 층이 나온다고 발표자는 말한다. 꼭 이 모양일 필요는 없다. 아래층이 위층을 받친다.</p>
+        <ol class="stack" aria-label="위에서 아래로: 6층부터 1층까지">
+          <li><span class="layer">6</span><b>API·MCP 우선 <span class="en">API &amp; MCP first</span> <span class="ts">10:10</span></b><span class="what">사람뿐 아니라 다른 코딩 에이전트도 팩토리를 쓸 수 있게 한다. Slack, Linear, Jira, GitHub처럼 일이 일어나는 곳에 붙는다.</span></li>
+          <li><span class="layer">5</span><b>오케스트레이션 <span class="en">orchestration</span> <span class="ts">10:10</span></b><span class="what">일을 팩토리 안에서 다음 단계로 옮긴다. 발표자는 가장 덜 흥미롭지만 꼭 필요한 층이라고 했다.</span></li>
+          <li><span class="layer">4</span><b>추론 <span class="en">inference</span> <span class="ts">09:30</span></b><span class="what">모델은 고정값이 아니라 시험할 변수다. 여러 모델과 여러 하네스를 지원한다. Claude Code, Codex, Pi(추정), Warp는 하네스마다 성질이 다르다. 조직 맥락을 담은 자체 하네스도 쓸 수 있어야 한다.</span></li>
+          <li><span class="layer">3</span><b>컴퓨트 <span class="en">compute</span> <span class="ts">09:20</span></b><span class="what">샌드박스에서 돌린다. 보안이 좋아지고, 실행을 똑같이 되풀이할 수 있다. 여러 플랫폼을 지원하는 편이 좋다.</span></li>
+          <li><span class="layer">2</span><b>데이터와 맥락 <span class="en">data &amp; context</span> <span class="ts">08:50</span></b><span class="what">에이전트가 만든 것을 전부 기록한다. 대화, 산출물, 에이전트가 만든 영상과 스크린샷까지 남긴다. 이 기록이 팩토리를 개선할 원재료다.</span></li>
+          <li class="base"><span class="layer">1</span><b>코드로 쓴 팩토리 <span class="en">factories as code</span> <span class="ts">08:20</span></b><span class="what">에이전트 작업 흐름 전체를 코드로 정의한다. 브랜치를 따서 다른 설정을 시험할 수 있다. 되돌릴 수도 있다. 무엇보다 에이전트가 팩토리 개선안을 직접 제안하는 자기 개선이 가능해진다.</span></li>
+        </ol>
+        <p class="note">Pi는 자막에 "Py"로 적혀 있다. 하네스 이름으로 보아 Pi 코딩 에이전트로 추정했다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="demo-code">
+        <header><span class="num">06</span><h2>시연: 정의 파일과 실시간 기록 <span class="ts">10:40</span></h2></header>
+        <p class="note">여기부터 벤치마크까지는 발표자 회사의 제품(Warp 팩토리) 시연이다. 발표자는 팩토리를 직접 만들어도 같은 원리가 적용된다고 했다. 제품 소개가 섞여 있으니 감안해 읽자.</p>
+
+        <h3>팩토리 정의 파일 <span class="ts">11:00</span></h3>
+        <p>Terraform을 안다면 익숙한 모양의 코드다. "이것이 내 팩토리다"라고 선언하는 방식이다. 시연 화면의 정의에는 이런 것이 들어 있었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>정의에 들어가는 것</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>정책 <span class="en">policies</span></td><td>팩토리에 걸리는 규칙</td></tr>
+              <tr><td>저장소</td><td>팩토리가 접근하는 코드 저장소</td></tr>
+              <tr><td>트리거</td><td>팩토리를 실행시키는 조건</td></tr>
+              <tr><td>청사진 <span class="en">blueprint</span></td><td>일이 팩토리를 지나가는 흐름</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>팩토리를 이루는 다른 요소도 모두 코드 정의를 가진다.</p>
+
+        <h3>팀 전체를 실시간으로 본다 <span class="ts">11:30</span></h3>
+        <p>Google Docs처럼 여럿이 함께 보는 화면이다. Warp 팀 엔지니어 전원의 코딩 에이전트가 지금 무엇을 하는지 실시간으로 보여 준다.</p>
+        <p>동료 한 명의 작업을 눌러 보면 그 작업을 Slack에서 시작했다는 것이 보인다. 만든 산출물도 보인다. 실제 대화 내용과 생성 결과까지 열어 볼 수 있다.</p>
+        <div class="callout">
+          <span class="title">실시간 보기보다 중요한 것</span>
+          <span>실시간으로 보는 것도 좋다. 하지만 핵심은 이 정보를 전부 모은다는 점이다. 모은 기록이 있어야 팩토리를 개선할 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="demo-measure">
+        <header><span class="num">07</span><h2>시연: 지표와 온라인 평가 <span class="ts">12:30</span></h2></header>
+
+        <h3>한곳에 모이면 바로 잴 수 있다 <span class="ts">12:30</span></h3>
+        <p>기록이 중앙에 쌓이면 모두의 노트북에 무언가를 설치하지 않아도 된다. 에이전트가 어떻게 일하는지 바로 알 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>예</th></tr></thead>
+            <tbody>
+              <tr><td>전통적인 산출 지표</td><td>DORA 지표, 사이클 타임</td></tr>
+              <tr><td>자동화 수준</td><td>PR 하나당 사람이 개입한 횟수</td></tr>
+              <tr><td>처리량</td><td>정해진 시간에 끝낸 일의 양</td></tr>
+              <tr><td>비용</td><td>에이전트를 돌리는 데 드는 돈</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 이 데이터가 없으면 눈을 감고 비행하는 셈이라고 말한다.</p>
+
+        <h3>온라인 평가 <span class="ts">13:20</span></h3>
+        <p>eval은 결과물의 품질을 재는 시험이다. 온라인 평가<span class="en">online eval</span>는 실제로 도는 모든 에이전트 세션에 걸쳐 계속 돌아가는 eval이다.</p>
+        <p>방법은 이렇다. 세션이 돌며 결과를 기록한다. 다른 에이전트가 나중에 그 기록을 다시 본다. 그리고 세션이 얼마나 잘했는지 보여 주는 기준으로 점수를 매긴다.</p>
+        <div class="callout">
+          <span class="title">예: 불필요한 테스트 찾기 <span class="ts">13:50</span></span>
+          <span>코딩 에이전트는 가끔 필요 없는 테스트를 쓴다. 흔한 실패 유형이다. Warp는 이것을 잡는 eval을 둔다. 잡은 뒤에는 두 가지를 묻는다. 왜 테스트를 너무 많이 쓰는가. 팩토리에서 무엇을 바꾸면 줄어드는가.</span>
+        </div>
+
+        <h3>여기까지의 흐름 <span class="ts">14:20</span></h3>
+        <ol class="plain">
+          <li>모든 실행을 기록한다.</li>
+          <li>실행이 따라갈 루프를 정의한다.</li>
+          <li>각 실행이 루프의 어디쯤에 있는지 본다.</li>
+          <li>실행이 만든 데이터를 모은다.</li>
+          <li>그 데이터에 온라인 평가를 건다. 점수가 개선할 곳을 알려 준다.</li>
+        </ol>
+      </section>
+
+      <!-- 8 -->
+      <section id="self-improve">
+        <header><span class="num">08</span><h2>자기 개선: 에이전트가 팩토리에 PR을 낸다 <span class="ts">15:00</span></h2></header>
+        <p>평가 점수를 사람이 보는 대신 에이전트가 본다. 발표자는 이것을 자기 개선<span class="en">self-improvement</span>이라고 부른다.</p>
+        <ol class="plain">
+          <li>점수 결과를 본다.</li>
+          <li>실패한 실행 몇 건에서 공통 패턴을 찾는다.</li>
+          <li>해결책을 제안한다.</li>
+          <li>그 해결책은 <strong>팩토리 정의 파일에 대한 PR</strong>로 올라온다.</li>
+        </ol>
+        <p>팩토리를 코드로 정의해 둔 덕분에 가능한 일이다. 코딩 에이전트가 자기들이 일하는 방식의 문제를 진단하고, 고칠 코드를 직접 낸다.</p>
+        <p class="note">발표에서는 이 PR을 누가 검토하고 머지하는지 따로 말하지 않았다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="benchmark">
+        <header><span class="num">09</span><h2>벤치마크는 내 데이터로 <span class="ts">15:50</span></h2></header>
+        <p>온라인에서는 늘 "이게 최고의 모델이다", "이게 새로 나온 최고의 스킬이다", "이게 최고의 하네스다" 같은 말이 오간다. 발표자는 이 질문에 제대로 답하는 길이 하나뿐이라고 한다. 자기 데이터로 시험하는 것이다.</p>
+        <ol class="plain">
+          <li>실제 작업 데이터로 벤치마크 세트를 만든다.</li>
+          <li>그 과제들을 다른 설정으로 다시 돌린다<span class="en">replay</span>.</li>
+          <li>모델, 하네스, 팩토리 설정을 바꿨다면 결과가 어땠을지 비교한다.</li>
+        </ol>
+        <p>시연 화면은 새 모델이 나올 때 SWE-bench나 Terminal-Bench에서 보는 그림과 비슷하다 <span class="ts">16:40</span>. 모델마다 비용과 품질이 어떻게 갈리는지 보여 준다. 노릴 곳은 비용이 낮고 품질이 높은 구역이다. 발표 화면에서는 왼쪽 위였다. 다른 점은 이 그림을 자기 실제 데이터로 그린다는 것이다.</p>
+        <p>모델만 바꿔 보는 게 아니다. "이 스킬들을 빼면 팩토리가 나아지나, 나빠지나?" 같은 질문도 시험한다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="conclusion">
+        <header><span class="num">10</span><h2>결론: 에이전트를 엔지니어링하라 <span class="ts">17:10</span></h2></header>
+        <p>발표자는 Warp가 이 도구들로 처리량을 크게 올리고 비용을 낮췄다고 말한다. Warp에는 비용이 중요해서 이 순환을 계속 돌린다고 한다. 성능 기준선을 잡고, 점수를 매기고, 벤치마크를 돌리고, 시험한다.</p>
+        <p class="note">구체적인 수치는 발표에 나오지 않았다. 자기 회사 제품으로 얻었다는 성과이니 감안해 읽자.</p>
+        <blockquote>에이전트를 엔지니어링하라. 새로운 엔지니어링 재료다.<cite>발표자의 마지막 메시지를 옮김 · "Engineer your agents. It's a new engineering primitive."</cite></blockquote>
+        <p>에이전트에서 최대한 뽑아낼 방법을 생각하고, 그에 맞는 시스템을 지으라는 뜻이다.</p>
+
+        <h3>엔지니어라는 직업에 대해 <span class="ts">17:50</span></h3>
+        <p>요즘 엔지니어가 무슨 의미인지를 두고 불안이 많다는 것을 발표자도 안다. 발표자도 이제 코드를 직접 쓰지 않는다. 그래도 경력 내내 배운 엔지니어링 기술은 여전히 다 쓰고 있다. 그래서 발표자에게 지금은 여전히 신나는 시기다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>로컬에서 대화하며 에이전트를 부리는 방식은 사람 처리량, 비용·생산성 관리, 보안·거버넌스에서 막힌다.</li>
+          <li>자동화 몇 개, AI 팀원, 스킬·MCP 묶음, 개인 에이전트 무리는 재료일 뿐 팩토리가 아니다.</li>
+          <li>팩토리는 <strong>클라우드 코딩 에이전트를 계속 측정하고 개선하는, 코드로 정의한 닫힌 루프 시스템</strong>이다.</li>
+          <li>에이전트, 트리거, 일의 흐름, MCP, 실행 위치를 Terraform처럼 <strong>선언형 코드</strong>로 적는다.</li>
+          <li>감이 아니라 <strong>측정</strong>으로 품질, 비용, 처리량을 판단한다.</li>
+          <li>새 도구는 eval, 자기 개선 루프, 벤치마크, A/B 테스트다. 이를 다루는 기술이 <strong>팩토리 엔지니어링</strong>이다.</li>
+          <li>스택은 아래부터 코드로 쓴 팩토리, 데이터와 맥락, 컴퓨트, 추론, 오케스트레이션, API·MCP다.</li>
+          <li>모든 실행을 기록하고, 다른 에이전트가 <strong>온라인 평가</strong>로 점수를 매긴다. 예: 불필요한 테스트 찾기.</li>
+          <li><strong>자기 개선</strong>: 에이전트가 실패 패턴을 찾아 팩토리 정의 파일에 PR을 올린다.</li>
+          <li>최고의 모델, 스킬, 하네스는 <strong>내 데이터로 만든 벤치마크</strong>를 다시 돌려 봐야 안다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>로컬에서 대화하며 에이전트를 부리는 방식의 세 가지 한계는?</span></summary><div class="answer">사람 처리량에 묶여 자동화가 안 된다. 각자 설정, 모델, 스킬을 골라 비용과 생산성을 관리하기 어렵다. 보안과 거버넌스 문제가 크게 생긴다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>발표자가 "팩토리가 아니다"라고 한 네 가지는?</span></summary><div class="answer">느슨한 자동화 모음, AI 팀원 모음, 함께 쓰는 스킬·MCP 묶음, 개인 에이전트 무리. 쓸모 있는 재료지만 도착 지점은 아니다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>발표자의 팩토리 정의와 세 요소는?</span></summary><div class="answer">클라우드 코딩 에이전트를 계속 측정하고 개선하는, 코드로 정의한 닫힌 루프 시스템. 세 요소는 코드로 정의, 닫힌 루프, 측정 가능이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>팩토리를 선언형 코드로 적을 때 들어가는 것은?</span></summary><div class="answer">돌릴 에이전트, 트리거, 일의 흐름, 쓸 수 있는 MCP, 실행 위치. 시연 화면에는 정책, 저장소, 트리거, 청사진이 있었다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>팩토리를 코드로 정의하면 얻는 세 가지는?</span></summary><div class="answer">브랜치를 따서 다른 설정을 시험할 수 있다. 되돌릴 수 있다. 에이전트가 팩토리 개선안을 PR로 내는 자기 개선이 가능해진다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>발표자가 Google에서 익힌 도구와 팩토리 엔지니어링의 도구는 각각 무엇인가?</span></summary><div class="answer">예전에는 디버거, 프로파일러, Chrome DevTools. 이제는 eval, 자기 개선 루프, 벤치마크, A/B 테스트.</div></details>
+          <details><summary><span class="qn">Q7</span><span>데이터와 맥락 층에서는 무엇을 왜 기록하나?</span></summary><div class="answer">대화, 산출물, 영상, 스크린샷까지 에이전트가 만든 것을 전부 기록한다. 팩토리를 개선할 원재료이기 때문이다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>추론 층에서 모델과 하네스를 어떻게 다루라고 했나?</span></summary><div class="answer">시험할 변수로 다룬다. 여러 모델과 여러 하네스를 지원하고, 조직 맥락을 담은 자체 하네스도 쓸 수 있게 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>기록을 중앙에 모으면 볼 수 있는 지표 네 종류는?</span></summary><div class="answer">DORA 지표나 사이클 타임 같은 산출 지표, PR 하나당 사람 개입 횟수(자동화 수준), 처리량, 비용.</div></details>
+          <details><summary><span class="qn">Q10</span><span>온라인 평가란 무엇이고, 발표에 나온 예는?</span></summary><div class="answer">다른 에이전트가 세션 기록을 다시 보고 점수를 매기는 평가다. 모든 세션에 걸쳐 계속 돈다. 예는 필요 없는 테스트를 쓴 세션을 잡는 eval이다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>자기 개선의 결과물은 어떤 형태인가?</span></summary><div class="answer">실패한 실행들의 패턴을 바탕으로 한 팩토리 정의 파일의 PR. 팩토리가 코드로 정의돼 있어서 가능하다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>"어느 모델이 최고인가"에 발표자가 낸 답은?</span></summary><div class="answer">자기 실제 데이터로 벤치마크 세트를 만들고, 다른 설정으로 다시 돌려 비용과 품질을 비교해 봐야 안다. 스킬을 뺐을 때의 차이도 같은 방법으로 잰다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>팀이 지금 에이전트를 어떻게 돌리는지 적는다<span class="how">누가, 어떤 모델·스킬·MCP를, 어디서 쓰는가. 확인: 로컬 대화형 비중이 얼마인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>에이전트 작업 흐름 하나를 선언형 파일로 적는다<span class="how">에이전트, 트리거, 단계(분류 → 구현 → 검증), MCP, 실행 위치</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트 실행 기록을 한곳에 모은다<span class="how">대화, 산출물, 스크린샷. 확인: 남의 노트북을 열지 않고 볼 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>지표 세 개를 정해 잰다<span class="how">예: 사이클 타임, PR 하나당 사람 개입 횟수, 비용</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>흔한 실패 하나로 온라인 평가를 만든다<span class="how">발표의 예: 필요 없는 테스트를 쓴 세션을 다른 에이전트가 찾아 점수 매기기</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>실패 패턴을 찾아 팩토리 정의를 고치는 PR을 에이전트에게 맡긴다<span class="how">확인: 개선안이 정의 파일의 diff로 남는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>실제 과제로 작은 벤치마크 세트를 만든다<span class="how">지난 작업 몇 건을 골라 다른 모델·하네스·스킬 구성으로 다시 돌리고 비용과 품질을 비교한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트 실행 환경을 샌드박스로 옮긴다<span class="how">확인: 같은 과제를 같은 환경에서 되풀이해 돌릴 수 있는가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>코딩 에이전트</td><td>코드를 읽고, 쓰고, 실행하며 개발 일을 하는 AI</td></tr>
+              <tr><td>대화형 프롬프팅</td><td>Interactive prompting. 사람이 에이전트와 말을 주고받으며 한 단계씩 지시하는 방식</td></tr>
+              <tr><td>소프트웨어 팩토리</td><td>발표자의 정의로는 클라우드 코딩 에이전트를 계속 측정하고 개선하는, 코드로 정의한 닫힌 루프 시스템</td></tr>
+              <tr><td>거버넌스</td><td>누가 무엇을 어떻게 쓰게 할지 정하고 지키게 하는 관리 체계</td></tr>
+              <tr><td>프리미티브</td><td>Primitive. 더 큰 것을 조립할 때 쓰는 기본 재료</td></tr>
+              <tr><td>MCP</td><td>Model Context Protocol. AI가 외부 도구와 데이터에 연결하는 표준 규약</td></tr>
+              <tr><td>스킬</td><td>에이전트가 특정 일을 할 때 불러 쓰는 지시와 자료 묶음</td></tr>
+              <tr><td>선언형</td><td>Declarative. 실행 순서가 아니라 원하는 최종 상태를 적는 방식</td></tr>
+              <tr><td>Terraform</td><td>인프라를 선언형 코드 파일로 정의하고 관리하는 도구</td></tr>
+              <tr><td>트리거</td><td>에이전트 실행을 시작시키는 조건이나 사건</td></tr>
+              <tr><td>분류</td><td>Triage. 들어온 일을 살펴 우선순위와 처리 방향을 정하는 단계</td></tr>
+              <tr><td>SDLC</td><td>Software Development Life Cycle. 아이디어부터 구현, 검증, 운영까지 소프트웨어를 만드는 전체 단계</td></tr>
+              <tr><td>닫힌 루프</td><td>Closed loop. 결과를 다시 입력으로 돌려 시스템을 계속 고치는 순환</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀. 예: Claude Code, Codex</td></tr>
+              <tr><td>샌드박스</td><td>다른 시스템과 격리된 실행 환경</td></tr>
+              <tr><td>추론</td><td>Inference. 학습된 모델을 실제로 돌려 답을 얻는 일</td></tr>
+              <tr><td>오케스트레이션</td><td>Orchestration. 여러 작업과 에이전트를 순서에 맞게 다음 단계로 넘기는 일</td></tr>
+              <tr><td>DORA 지표</td><td>DevOps Research and Assessment 연구에서 나온 소프트웨어 전달 성과 지표. 배포 빈도, 변경 리드 타임, 변경 실패율, 복구 시간</td></tr>
+              <tr><td>사이클 타임</td><td>Cycle time. 일을 시작해서 끝낼 때까지 걸리는 시간</td></tr>
+              <tr><td>처리량</td><td>Throughput. 정해진 시간에 끝낸 일의 양</td></tr>
+              <tr><td>eval / 온라인 평가</td><td>eval은 결과 품질을 재는 시험이다. 온라인 평가는 실제로 도는 세션마다 계속 돌아가는 eval이다</td></tr>
+              <tr><td>자기 개선</td><td>Self-improvement. 에이전트가 평가 결과에서 실패 패턴을 찾아 팩토리 정의를 고치는 PR을 내는 것</td></tr>
+              <tr><td>벤치마크 / 재생</td><td>벤치마크는 같은 과제 세트로 여러 설정을 비교하는 시험이다. 재생(replay)은 과거 과제를 다른 설정으로 다시 돌리는 것이다</td></tr>
+              <tr><td>A/B 테스트</td><td>두 설정을 나눠 돌리고 결과를 비교하는 실험</td></tr>
+              <tr><td>SWE-bench / Terminal-Bench</td><td>공개 코딩 에이전트 벤치마크. SWE-bench는 실제 오픈소스 이슈 해결을, Terminal-Bench는 터미널 작업 수행을 잰다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개: Google Docs, Warp</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>지금 대부분의 방식: 로컬에서 에이전트 여러 개</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>한계 ①: 사람 처리량</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>한계 ②: 비용과 생산성</td></tr>
+              <tr><td><span class="ts">02:30</span></td><td>한계 ③: 보안과 거버넌스</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>소프트웨어 팩토리라는 말</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>팩토리가 아닌 것 네 가지</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>정의: 코드로 정의한 닫힌 루프</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>선언형으로 적기</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>닫힌 루프: SDLC</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>모든 것을 잰다</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>에이전트는 새 엔지니어링 재료</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>새 도구: eval, 자기 개선, 벤치마크, A/B 테스트</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>제품 엔지니어링은 그대로</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>인프라 스택: 코드로 쓴 팩토리</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>데이터와 맥락</td></tr>
+              <tr><td><span class="ts">09:20</span></td><td>컴퓨트와 추론</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>오케스트레이션, API·MCP</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>시연 시작: 팩토리 정의 코드</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>팀 전체 에이전트 실시간 보기</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>지표: DORA, 사람 개입 횟수, 비용</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>온라인 평가</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>예: 불필요한 테스트 찾기</td></tr>
+              <tr><td><span class="ts">14:20</span></td><td>여기까지의 흐름 정리</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>자기 개선: 팩토리 정의에 PR</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>벤치마크: 내 데이터로 다시 돌리기</td></tr>
+              <tr><td><span class="ts">16:40</span></td><td>비용과 품질 비교 화면</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>결론: 에이전트를 엔지니어링하라</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>엔지니어라는 직업에 대해</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '0LeT996Hz3E:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>
