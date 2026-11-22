@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>로컬 AI 실전 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: max(0.82em, 12px); color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-top: 40px; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: var(--radius); display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-color: color-mix(in srgb, var(--crit) 35%, transparent); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 4px 0 4px 20px; border-left: 1px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<nav style="max-width:72rem;margin:0 auto;padding:16px 16px 0;font-size:0.9375rem"><a href="../index.html">전체 노트 목록</a></nav>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#principle">최적화와 사용자 경험</a></li>
+      <li><a href="#speed">로컬이 더 빨랐다</a></li>
+      <li><a href="#benchmarks">어떤 벤치마크를 믿나</a></li>
+      <li><a href="#agents">토큰은 에이전트가 쓴다</a></li>
+      <li><a href="#small">작고 특화된 모델</a></li>
+      <li><a href="#basement">클라우드는 남의 지하실</a></li>
+      <li><a href="#quant">양자화는 층마다 다르게</a></li>
+      <li><a href="#prefill">프리필과 디코드</a></li>
+      <li><a href="#bandwidth">대역폭보다 소프트웨어</a></li>
+      <li><a href="#engines">칩·모델별 추론 엔진</a></li>
+      <li><a href="#firstrun">첫 경험이 전부다</a></li>
+      <li><a href="#specialize">1% 비용의 특화 모델</a></li>
+      <li><a href="#rent">살까, 빌릴까</a></li>
+      <li><a href="#forces">세 가지 힘</a></li>
+      <li><a href="#continual">다음은 지속 학습</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">적용 체크리스트</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-21 · 56분 · 영어 발표 한글 정리</span>
+      <h1>무엇을 어디서 돌릴까: 로컬 AI 실전</h1>
+      <p class="lead">오픈 모델은 빠르게 따라붙었고, 이제 결과를 가르는 것은 하드웨어와 소프트웨어 최적화다. 발표자는 워크플로에 맞춘 하드웨어, 칩·모델별 추론 엔진, 작은 특화 모델, 로컬에서만 가능한 지속 학습을 다음 흐름으로 본다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=GKSQYbELDzw" target="_blank" rel="noopener">What Runs Where? Local AI in Production</a></span>
+        <span>발표: Ahmad Osman (Osmantic 창업자·CEO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고, 나머지는 들린 대로 쓰고 (추정)을 붙였다. 발표자는 슬라이드 170장을 준비했지만 일부만 다뤘다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li><strong>오픈소스 AI는 최적화 문제, 로컬 AI는 사용자 경험 문제</strong>다. 두 문제를 함께 풀어야 한다.</li>
+        <li>오픈 모델과 닫힌 모델의 격차는 <strong>어떤 벤치마크를 믿느냐</strong>에 따라 "50% 넘게 뒤처짐"부터 "2점 앞섬"까지 갈린다.</li>
+        <li>2026년 2월부터 토큰은 사람보다 <strong>에이전트가 더 많이</strong> 쓴다. 에이전트는 대부분 도구 실행을 기다린다.</li>
+        <li><strong>하드웨어는 워크플로로 고른다.</strong> 프리필은 연산이, 디코드는 메모리 대역폭이 병목이다. 대역폭이 높아도 소프트웨어가 받쳐 주지 않으면 진다.</li>
+        <li>추론 엔진은 <strong>모델별·칩별로</strong> 최적화해야 한다. 양자화도 층마다 다르게 한다. 파이프라인 전체를 재고 고친다.</li>
+        <li>좋은 데이터와 실행 기록이 있으면 <strong>작은 특화 모델이 1% 비용으로</strong> 프런티어급 품질을 낼 수 있다(발표자가 인용한 Airbnb 사례).</li>
+        <li>다음 흐름은 <strong>지속 학습</strong>이다. 한 사람에게 맞춘 학습은 로컬에서만 가능하다고 발표자는 본다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="principle">
+        <header><span class="num">01</span><h2>최적화 문제와 사용자 경험 문제 <span class="ts">00:50</span></h2></header>
+        <p>발표자는 6월 AI Engineer World's Fair에서 NVIDIA와 함께 로컬 AI 서밋을 열었다. 그때 지금의 로컬 AI가 "1990년대의 리눅스" 같다고 말했다. 쓸 수는 있지만 생태계와 인프라가 아직 자리 잡지 않은 단계라는 뜻이다.</p>
+        <p>그 뒤로 변화가 보이기 시작했다. 여러 GPU 연산을 하나로 합친 메가 커널 <span class="en">mega kernel</span>이 나왔다. 모델을 실제로 돌려 답을 만드는 소프트웨어인 추론 엔진 <span class="en">inference engine</span>도 새로 나왔다. 모델별, 칩별, 워크플로별로 최적화하려는 사람이 늘었다. 발표자는 이것이 맞는 방향이라고 본다.</p>
+        <p>여기서 오픈소스 AI는 가중치를 공개해 누구나 내려받아 돌릴 수 있는 모델 <span class="en">open-weight model</span>과 그 생태계를 말한다.</p>
+        <div class="callout">
+          <span class="title">발표 전체를 꿰는 한 줄 <span class="ts">01:30</span></span>
+          <span>오픈소스 AI는 <strong>최적화 문제</strong>다. 로컬 AI는 <strong>사용자 경험 문제</strong>다. 두 문제는 동시에 풀어야 한다.</span>
+        </div>
+
+        <h3>클라우드 없이 만든 게임 <span class="ts">01:40</span></h3>
+        <p>발표자 회사는 NVIDIA와 함께 RTX Spark용 최적화 추론 엔진을 내놓았다. 시연용 게임은 Windows의 RTX Spark에서 만들었다. 클라우드는 쓰지 않았다. 모델에 도구와 작업 순서를 붙여 주는 실행 틀인 하네스 <span class="en">harness</span>도 회사가 만든 Portal을 썼다.</p>
+        <p>Best Buy 출시 행사에서는 이 게임을 해 보려는 사람이 몰렸다. 발표자는 이제 일반인도 로컬 AI에 관심을 보인다고 말한다.</p>
+        <p class="note">발표자 회사는 NVIDIA와 이 제품을 함께 출시했다. 뒤에 나오는 하드웨어 추천은 이 관계를 감안해 읽자.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="speed">
+        <header><span class="num">02</span><h2>로컬 모델이 클라우드보다 빨랐다 <span class="ts">02:40</span></h2></header>
+        <p>발표자는 두 답변을 보여 주고 어느 쪽이 로컬 모델인지 물었다. 하나는 로컬에서 돌린 Qwen 3.6 27B, 다른 하나는 OpenAI 클라우드의 GPT 5.5였다. 답의 내용은 비슷했다. 속도는 로컬이 빨랐다.</p>
+        <p>아래 숫자는 디코드 <span class="en">decode</span> 속도다. 디코드는 답을 토큰 하나씩 만들어 내는 단계다.</p>
+
+        <figure class="chart" aria-label="디코드 속도 비교: 로컬 Qwen 3.6 27B 초당 51토큰, OpenAI 클라우드 GPT 5.5 초당 34토큰">
+          <span class="chart-title">같은 질문의 디코드 속도 (초당 토큰)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Qwen 3.6 27B · 로컬</span><span class="val">51</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="Qwen 3.6 27B 로컬: 초당 51토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>GPT 5.5 · OpenAI 클라우드</span><span class="val">34</span></div>
+              <div class="track"><div class="fill" style="width:66.7%" title="GPT 5.5 클라우드: 초당 34토큰"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>51</span></div>
+          <span class="caption">로컬이 약 1.5배 빨랐다(51 ÷ 34). 발표자가 Hugging Face와 함께 찍은 영상의 시연이다.</span>
+        </figure>
+
+        <p>발표자는 Codex CLI가 어떤 로컬 환경과 비교해도 꽤 느리다고 덧붙였다.</p>
+        <p class="note">로컬 쪽 하드웨어는 자막에서 특정되지 않는다. 두 답의 품질이 비슷하다는 것은 발표자의 판단이다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="benchmarks">
+        <header><span class="num">03</span><h2>어떤 벤치마크를 믿나 <span class="ts">03:30</span></h2></header>
+        <p>Artificial Analysis는 AI 모델을 비교 평가하는 독립 기관이다. 이 기관의 지능 지수 v5에서는 Anthropic의 Haiku 5.5가 DeepSeek V4.1 Flash보다 위에 있다. 발표자는 이 결과를 믿지 않는다. 평가가 Haiku를 위에 놓는다면 평가에 문제가 있다고 본다.</p>
+
+        <h3>오픈 모델 13점에서 51점으로 <span class="ts">05:00</span></h3>
+        <p>같은 기관의 지수 v4.1은 다른 이야기를 한다. 오픈 모델 점수가 2025년 1월 이후 크게 올랐다. 닫힌 모델과의 격차도 계속 줄고 있다.</p>
+
+        <figure class="chart" aria-label="Artificial Analysis 지능 지수 v4.1에서 오픈 모델 점수: 2025년 1월 13점, 발표 시점 51점">
+          <span class="chart-title">오픈 모델의 Artificial Analysis 지능 지수 (v4.1)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>2025년 1월</span><span class="val">13</span></div>
+              <div class="track"><div class="fill" style="width:25.5%" title="2025년 1월: 13점"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>발표 시점</span><span class="val">51</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="발표 시점: 51점"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>51</span></div>
+          <span class="caption">약 4배로 올랐다. 같은 기관의 v5는 반대로 닫힌 소형 모델을 위에 둔다. 그래서 발표자는 "어떤 벤치마크를 믿을지"부터 묻는다.</span>
+        </figure>
+
+        <h3>격차는 벤치마크가 정한다 <span class="ts">07:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>지표</th><th>오픈 모델과 닫힌 모델의 거리</th></tr></thead>
+            <tbody>
+              <tr><td>Artificial Analysis v5</td><td>Haiku 5.5가 DeepSeek V4.1 Flash보다 위</td></tr>
+              <tr><td>Artificial Analysis v4.1</td><td>오픈 모델이 13점에서 51점으로 올라 격차가 줄었다</td></tr>
+              <tr><td>HLE (자막상 "HLE diamond", 추정)</td><td>닫힌 모델이 50% 넘게 앞선다</td></tr>
+              <tr><td>Terminal Bench</td><td>오픈 모델이 2점 앞선다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>결론은 하나다. 공개 벤치마크만으로는 두 진영의 거리를 알 수 없다. <strong>평가 자체에 문제가 있다.</strong> 발표자는 새 모델이 나와도 벤치마크 점수는 별로 신경 쓰지 않는다고 했다.</p>
+        <p>4월에는 한 보안 업체가 연구를 냈다. 작고 특화된 오픈 모델로도 같은 보안 취약점을 잡아냈다는 내용이다. 발표자는 이를 작은 모델의 가능성을 보여 주는 근거로 든다. <span class="ts">08:40</span></p>
+        <p class="note">DeepSeek V4.1 Flash가 Haiku 5.5보다 낫다는 것은 발표자의 평가다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="agents">
+        <header><span class="num">04</span><h2>토큰은 이제 에이전트가 쓴다 <span class="ts">04:00</span></h2></header>
+        <p>발표자가 보여 준 그래프에 따르면, AI가 해낼 수 있는 긴 작업의 길이가 2023년 3월 이후 4개월마다 두 배가 되고 있다. 작업 길이는 사람이 하면 걸리는 시간으로 잰다. 속도가 줄어드는 기미는 없다.</p>
+        <p>OpenRouter의 2026년 10월 데이터도 인용했다. OpenRouter는 여러 회사의 모델 API를 한곳에서 파는 중개 서비스다. 이곳에서 처리되는 토큰은 조 단위다. 2026년 2월 이후로는 사람보다 에이전트가 만드는 토큰이 더 많다. 발표자는 사람이 다시 앞서는 일은 없을 것이라고 본다. <span class="ts">04:40</span></p>
+
+        <h3>토큰과 돈은 다른 곳으로 간다 <span class="ts">06:20</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">토큰 기준</span>
+            <p>OpenRouter에서 가장 많은 토큰을 쓴 쪽은 <strong>DeepSeek V4.1 Flash 같은 오픈 모델</strong>이다. 대부분의 작업이 여기로 간다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">돈 기준</span>
+            <p>가장 많은 돈이 쓰인 모델은 <strong>Opus 5.5</strong>다. 돈은 주로 닫힌 모델로 간다.</p>
+          </div>
+        </div>
+        <p>많이 쓰이는 모델과 많이 버는 모델이 다르다. 양으로는 오픈 모델이 이미 주류다.</p>
+
+        <h3>에이전트는 대부분 기다린다 <span class="ts">07:10</span></h3>
+        <p>에이전트가 일하는 시간의 대부분은 토큰을 만드는 시간이 아니다. 셸 명령을 실행하고 결과가 돌아오기를 기다리는 시간이다. 초당 토큰 수보다 이 처리 시간이 더 큰 병목이다.</p>
+        <p>그래서 발표자는 RTX 3090 한 장만 있어도 쓸모가 크다고 말한다. 새 칩과 더 비동기적인 소프트웨어가 필요하다고 보는 이유도 여기에 있다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="small">
+        <header><span class="num">05</span><h2>작고 특화된 모델에 건다 <span class="ts">05:50</span></h2></header>
+        <p>발표자는 2025년 3월부터 "미래는 작고 특화된 모델"이라고 말해 왔다. 3년 안에 10억(1B) 파라미터 모델이 Opus 5.5를 이길 것이라고 예측한다.</p>
+
+        <h3>Opus 5.5도 특화 모델이다 <span class="ts">09:00</span></h3>
+        <p>발표자는 Opus 5.5가 Fable 5.2보다 싸면서도 대부분의 사람이 신경 쓰는 일에서는 더 낫다고 본다. 코딩에 맞춰 강화학습 <span class="en">reinforcement learning, RL</span>을 극단적으로 많이 했기 때문이라는 해석이다.</p>
+        <p>그래서 발표자는 Opus 5.5를 코드 작성과 실행에는 믿는다. 문제 해결에는 믿지 않는다. Fable이나 Astra(추정)에 비하면 Opus 5.5도 "작고 특화된 모델"이라고 부른다.</p>
+
+        <h3>발표자와 Osmantic <span class="ts">09:50</span></h3>
+        <p>발표자 Ahmad Osman은 이집트 카이로 출신이고 Osmantic의 창업자이자 CEO다. 누군가 "Osman이 Open Source Man의 줄임말이냐"고 물어 왔고, 발표자는 그 뜻을 받아들이기로 했다는 농담을 했다.</p>
+        <p>회사의 전제는 이렇다. <strong>모든 단계에 프런티어급 지능이 필요하지는 않다.</strong> 많은 일은 작고 특화된 모델로 해낼 수 있다.</p>
+
+        <h3>6시간 만에 만든 예고편 <span class="ts">10:50</span></h3>
+        <p>이 발표의 예고 영상은 Opus 5.5를 쓴 에이전트가 처음부터 끝까지 만들었다. 발표자의 영상과 글을 넘기자 인용문, 클립, 음악, 화면 위 글자까지 스스로 골라 배치했다. 발표자는 쓸 것과 뺄 것만 골랐다.</p>
+        <ul class="plain">
+          <li><strong>Opus 5.5</strong>: 전체 작업을 지휘했다</li>
+          <li><strong>RTX Pro 6000 두 장</strong>: 사진 태깅, 영상과 음성 처리를 맡았다</li>
+          <li><strong>MacBook</strong>: 편집, 그리고 A/B 비교로 마음에 드는 쪽 고르기를 맡았다</li>
+        </ul>
+        <p>밤 9시에 시작해 새벽 3시에 끝났다. 전에는 전문가를 고용해야 했던 일이다. 발표자는 3년 안에 작은 특화 모델이 집에서 이 일을 할 것이라고 본다.</p>
+        <p class="note">Osmantic은 "작고 특화된 모델이면 충분하다"는 전제로 세운 회사다. 이 주장은 회사의 사업 방향과 맞닿아 있으니 감안해 읽자.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="basement">
+        <header><span class="num">06</span><h2>클라우드는 남의 지하실 <span class="ts">12:30</span></h2></header>
+        <blockquote>클라우드는 결국 다른 사람의 지하실이다.<cite>발표자의 표현을 옮김 (원문: "the cloud is someone else's basement")</cite></blockquote>
+        <p>Fable 5.2든 Qwen이든, 모든 모델은 어딘가의 기계에서 돈다. 책상 밑 기계든 남의 데이터센터든, 누군가에게는 로컬이다. 발표자는 이 사실을 받아들이자고 말한다.</p>
+        <p>"프런티어 모델이니 클라우드를 써야 한다"는 말에도 되묻는다. 어떤 벤치마크로 본 프런티어인가. 어떤 작업에서의 프런티어인가. 앞에서 본 것처럼 벤치마크끼리도 크게 엇갈린다.</p>
+        <p>회사의 하네스 Portal에는 구름 이모지를 붙였다. 이제 집에도 클라우드가 있다는 뜻이다. 코드명은 발표자 고향에서 딴 Cairo다.</p>
+        <p>아직 못 푼 문제도 있다. 긴 문맥 <span class="en">long context</span>을 제대로 다루는 방법은 아직 없다. 메모리도 여전히 큰 문제다.</p>
+
+        <h3>지하실의 RTX 3090 14장 <span class="ts">14:10</span></h3>
+        <p>발표자의 지하실에는 RTX 3090 14장이 있다. 이 장비로도 DeepSeek R1(671B)은 겨우 올라갔다. 발표자는 6시간 생방송을 하며 이 모델을 DDR4 메모리에 올려 돌렸다.</p>
+        <ul class="plain">
+          <li>속도는 초당 약 8토큰이었다.</li>
+          <li>문맥이 1만 6천 토큰쯤 되자 매우 느려졌다.</li>
+          <li>그래도 내 기계에서 모델이 단계별로 따져 보는 추론 <span class="en">reasoning</span>을 처음 봤다.</li>
+        </ul>
+        <p>몇 달 뒤 GPT-OSS 120B가 나왔다. 크기는 훨씬 작은데 할 수 있는 일은 더 많았다. 오픈 모델이 따라붙는 속도가 그만큼 빠르다.</p>
+        <p>발표자는 2025년 초에 이미 작은 모델로 집에서 스크린샷 정리 도구를 만들었다. 모델은 그때도 충분히 쓸 만했다. 다만 그 위에 시스템 엔지니어링을 얹으려는 사람이 없었다. <span class="ts">15:10</span></p>
+        <p class="note">DeepSeek R1은 2025년 1월, GPT-OSS는 2025년 8월에 공개됐다. 발표의 "2025년 2월"과 "4개월 뒤"는 기억에 기댄 말로 보인다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="quant">
+        <header><span class="num">07</span><h2>양자화는 층마다 다르게 <span class="ts">15:50</span></h2></header>
+        <p>양자화 <span class="en">quantization</span>는 모델의 숫자를 더 적은 비트로 저장해 메모리를 줄이는 기술이다. 이 분야가 빠르게 좋아지고 있다.</p>
+        <ul class="plain">
+          <li>NVIDIA의 4비트 숫자 형식인 NVFP4 관련 작업이 많아졌다.</li>
+          <li>NVIDIA가 RTX Pro 6000 전용 추론 엔진을 새로 냈다.</li>
+          <li>같은 Blackwell 세대라도 RTX Pro 6000과 데이터센터용 B200·B300은 다른 칩이다. 그래서 집이나 프로슈머 장비용 최적화가 따로 나오고 있다.</li>
+        </ul>
+
+        <h3>양자화 인지 학습 <span class="ts">16:30</span></h3>
+        <p>발표자는 양자화 인지 학습 <span class="en">quantization-aware training, QAT</span>을 이렇게 설명했다. 학습하면서 모델이 스스로를 다시 평가한다. 많이 쓰는 층은 높은 정밀도로 남기고, 덜 쓰는 층을 압축한다.</p>
+        <p class="note">보통 QAT는 학습 중에 양자화된 상태를 흉내 내, 모델이 낮은 정밀도에 미리 적응하게 하는 방법을 말한다. 층마다 정밀도를 달리 두는 설명은 바로 아래의 동적 양자화에 더 가깝다.</p>
+
+        <h3>Unsloth의 동적 양자화 <span class="ts">17:00</span></h3>
+        <p>Unsloth의 Daniel과 Mike는 여러 벤치마크 결과를 바탕으로 동적 양자화 <span class="en">dynamic quantization</span>를 만들었다. 동적 양자화에는 두 종류가 있다. 하나는 실행 중에 정밀도를 정한다. 다른 하나는 미리 벤치마크를 돌려 어떤 층을 덜 쓰는지 보고 층마다 정밀도를 정한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층의 사용 정도 (발표자가 든 예)</th><th>정밀도</th></tr></thead>
+            <tbody>
+              <tr><td>많이 쓰는 층</td><td>16비트로 남긴다</td></tr>
+              <tr><td>중간</td><td>8비트로 줄인다</td></tr>
+              <tr><td>거의 안 쓰는 층 (0.01%)</td><td>1비트까지 줄인다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>모든 층을 똑같이 4비트로 줄이면 모델이 망가질 수 있다. <strong>양자화 모델은 다 같지 않다.</strong> 어느 층이 정밀도를 얼마나 잃는지 봐야 한다.</p>
+
+        <figure class="chart" aria-label="4비트 양자화 후 남은 정확도: GLM 5.3 약 94%, 1년 전 DeepSeek V3.1 76.1%">
+          <span class="chart-title">4비트 양자화 후 원래 정확도를 얼마나 지켰나 (%)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>GLM 5.3 · 지금</span><span class="val">94</span></div>
+              <div class="track"><div class="fill key" style="width:94%" title="GLM 5.3 4비트: 약 94%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>DeepSeek V3.1 · 1년 전</span><span class="val">76.1</span></div>
+              <div class="track"><div class="fill" style="width:76.1%" title="DeepSeek V3.1 4비트: 76.1%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">양자화 알고리즘이 좋아질수록 더 작게 압축해도 정확도가 남는다. 그만큼 메모리가 적은 기계에서도 돌릴 수 있다. <span class="ts">18:00</span></span>
+        </figure>
+      </section>
+
+      <!-- 8 -->
+      <section id="prefill">
+        <header><span class="num">08</span><h2>프리필과 디코드 <span class="ts">19:00</span></h2></header>
+        <p>LLM이 답을 만드는 과정은 두 단계로 나뉜다. 두 단계의 병목이 서로 다르다. 하드웨어를 살 때 대부분 이걸 생각하지 않는다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th><th>병목</th><th>체감</th></tr></thead>
+            <tbody>
+              <tr><td>프리필 <span class="en">prefill</span></td><td>입력 프롬프트 전체를 한 번에 읽고 KV 캐시를 만든다</td><td>연산 <span class="en">compute-bound</span></td><td>프롬프트가 길수록 첫 토큰이 늦게 나온다</td></tr>
+              <tr><td>디코드 <span class="en">decode</span></td><td>출력 토큰을 하나씩 만든다</td><td>메모리 대역폭 <span class="en">memory-bandwidth-bound</span></td><td>초당 토큰 수가 정해진다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>KV 캐시 <span class="en">KV cache</span>는 이미 읽은 토큰의 중간 계산값을 저장해 두는 메모리다. 긴 문맥을 다루면 이 캐시를 만드는 동안 연산이 병목이 된다. 여러 요청을 묶어 한꺼번에 처리하는 배칭 <span class="en">batching</span>을 하는지에 따라서도 맞는 하드웨어가 달라진다. <strong>무엇을 살지는 돌릴 워크플로가 정한다.</strong></p>
+
+        <h3>dense 모델과 DGX Spark <span class="ts">20:00</span></h3>
+        <p>dense 모델 <span class="en">dense model</span>은 토큰 하나를 만들 때마다 모든 파라미터를 쓴다. Qwen 3.5 27B라면 토큰마다 270억 개를 다 거친다. 대역폭이 낮은 DGX Spark에서는 이게 느리다. 토큰마다 일부 파라미터만 쓰는 전문가 혼합 <span class="en">Mixture of Experts, MoE</span> 모델이 훨씬 빠르다.</p>
+        <div class="callout">
+          <span class="title">예시 계산 (발표에 없는 숫자)</span>
+          <span>27B 모델을 8비트로 두면 가중치가 약 27GB다. 디코드는 토큰마다 이 가중치를 메모리에서 한 번씩 읽는다. 대역폭이 273GB/s면 이론상 상한은 초당 약 10토큰이다(273 ÷ 27). 토큰마다 3B만 쓰는 MoE라면 읽을 양이 약 3GB로 줄어 상한이 약 9배 높아진다.</span>
+        </div>
+
+        <h3>휴대폰이 데이터센터를 따라잡았다 <span class="ts">20:20</span></h3>
+        <p>3년 전 GPT-4o급 모델에는 데이터센터가 필요했다. 발표자는 지금 아이폰에서 돌리는 Qwen 3.5가 그보다 낫다고 말한다. 작은 모델에서 뽑아내는 지능이 그만큼 늘었다.</p>
+        <p>그래서 발표자는 10억~20억(1~2B) 파라미터 모델이 표준이 될 것이라고 본다. 그 주변에 여러 모델을 지휘하는 오케스트레이션 <span class="en">orchestration</span>이 붙는다. 그 지휘도 아마 다른 모델이 맡을 것이라는 예측이다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="bandwidth">
+        <header><span class="num">09</span><h2>대역폭보다 소프트웨어 <span class="ts">21:20</span></h2></header>
+        <p>메모리 대역폭 <span class="en">memory bandwidth</span>은 칩이 메모리에서 1초에 읽을 수 있는 데이터 양이다. 디코드 속도를 정하는 핵심 숫자다.</p>
+
+        <figure class="chart" aria-label="메모리 대역폭: M5 Ultra 약 1200GB/s, DGX Spark 273GB/s">
+          <span class="chart-title">메모리 대역폭 (GB/s)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>M5 Ultra (알려진 예상치)</span><span class="val">약 1,200</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="M5 Ultra: 약 1,200GB/s"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>DGX Spark</span><span class="val">273</span></div>
+              <div class="track"><div class="fill key" style="width:22.8%" title="DGX Spark: 273GB/s"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>1,200</span></div>
+          <span class="caption">대역폭은 4배 넘게 차이 난다(1,200 ÷ 273 ≈ 4.4). 그런데 발표자에 따르면 DGX Spark 두 대가 M5를 이겼다.</span>
+        </figure>
+
+        <p>숫자만으로는 설명이 안 된다. 발표자는 원인을 소프트웨어로 본다. Mac에는 AI용 소프트웨어 최적화가 부족하다. NVIDIA GPU용 프로그래밍 플랫폼인 CUDA가 훨씬 앞서 있다.</p>
+        <p>어떤 하드웨어를 살지 물으면 발표자는 되묻는다. 직접 최적화하는 데 시간을 얼마나 쓸 수 있는가. 시간이 아주 많다면 Intel GPU도 된다. 바로 돌아가기를 원하고 에이전트와 함께 개선할 생각이라면 NVIDIA와 CUDA다.</p>
+
+        <h3>같은 모델, 네 대의 기계 <span class="ts">22:20</span></h3>
+        <p>Hugging Face와 찍은 영상에서 Qwen 3.6 27B를 네 기계에서 똑같이 돌렸다. RTX Pro 6000, M5 Max 칩의 MacBook Pro, DGX Spark, AMD Strix Halo다. 요청을 하나씩 보내는 경주에서는 대역폭이 가장 높은 GPU가 이겼다.</p>
+        <p>요청을 동시에 보내자 차이가 더 커졌다. 기계마다 요청 50개를 한꺼번에 보내자, RTX Pro 6000은 합계 초당 약 1,300토큰을 냈다. 요청 하나당 약 26토큰이다(1,300 ÷ 50). 나머지 기계는 요청을 하나씩 차례로 처리했다. <span class="ts">23:30</span></p>
+        <div class="callout">
+          <span class="title">발표자의 해석</span>
+          <span>이것은 소프트웨어 문제다. 누군가 이 기계들에 맞는 추론 엔진을 만들어야 한다. llama.cpp는 NPU부터 Raspberry Pi까지 모든 기계를 지원하려다 보니 지름길을 많이 택한다. 그래서 특정 하드웨어에 맞춰 끝까지 최적화하지 못한다. 앞으로 필요한 것은 <strong>모델별, 칩별 추론 엔진</strong>이다.</span>
+        </div>
+        <p>에이전트는 다른 에이전트를 띄워 병렬로 돌린다. 그렇다면 MacBook이나 M5 Ultra Studio보다 동시 처리에 강한 GPU를 사는 편이 맞다고 발표자는 말한다. 그 기계용 추론 엔진을 직접 만들 생각이 아니라면 그렇다. <span class="ts">25:00</span></p>
+        <p class="note">발표자 회사는 NVIDIA와 제품을 함께 냈다. 발표자는 이런 기계용 최적화를 회사 소프트웨어 ODS에 PR로 보내 달라고도 했다. GPU 추천은 이 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="engines">
+        <header><span class="num">10</span><h2>칩·모델별 추론 엔진 <span class="ts">25:50</span></h2></header>
+        <p>추론 엔진, 양자화 방식, 파일 형식, 최적화 기법이 계속 늘어난다. 발표자 회사도 자체 ODS 가중치를 만들었다. 발표자는 지금 하나의 표준을 찾을 때가 아니라고 본다. 앞으로 1년~1년 반 동안 만드는 것은 대부분 버려질 것이고, 그래도 괜찮다. 중요한 것은 어떤 최적화가 효과 있는지 이해하는 일이다.</p>
+        <p>발표자가 권하는 길은 내 워크플로에 맞춰 직접 최적화하는 것이다. 시간이 들지만 가장 낫다. 시작은 작게 한다. Qwen 3.5 0.8B(추정) 같은 아주 작은 모델로 커널을 만지며 감을 익힌다. <span class="ts">26:30</span></p>
+
+        <h3>같은 모델도 엔진과 칩에 따라 다르다 <span class="ts">27:00</span></h3>
+        <p>OpenRouter에는 여러 제공자가 GLM 5.3을 서로 다른 하드웨어로 서비스한 속도 기록이 있다. 어떤 엔진은 비공개다. 어떤 칩은 일반에 팔지도 않는다. 맨 아래에는 Tenstorrent(추정) 칩도 있다. 칩마다 명령어 세트와 할 수 있는 계산이 달라서, 같은 모델이라도 결과가 다르다.</p>
+        <p>그래서 아래 지표는 <strong>내 하드웨어에서 직접</strong> 재야 한다. 온라인에 올라온 숫자나 레시피를 그대로 따르면 대개 맞지 않는다. <span class="ts">27:50</span></p>
+        <ul class="plain">
+          <li>첫 토큰까지 걸린 시간 <span class="en">time to first token, TTFT</span></li>
+          <li>사용자당 초당 토큰, 앞으로는 에이전트당 초당 토큰</li>
+          <li>초당 처리 요청 수</li>
+          <li>작업 정확도</li>
+        </ul>
+
+        <h3>토크나이저 100배, 전체 1.1% <span class="ts">28:20</span></h3>
+        <div class="callout">
+          <span class="title">한 부분만 빨라지면</span>
+          <span>자막상 'actual inc'(추정)라는 회사가 지난달 토크나이저를 다시 짰다. 토크나이저는 글을 토큰 단위로 자르는 부분이다. Rust 또는 어셈블리로 짰고(발표자도 확실히 기억하지 못함), 100배 빨라졌다. 그런데 요청 전체는 1.1%만 빨라졌다.</span>
+          <span class="muted">예시 계산: 토크나이저가 원래 요청 시간의 약 1.1%만 차지했다면, 그 부분을 100배 줄여도 전체는 약 1.1%만 줄어든다. 비중이 작은 단계는 아무리 빨라져도 전체를 크게 바꾸지 못한다.</span>
+        </div>
+        <p>그렇다고 그 작업이 쓸모없다는 뜻은 아니다. LLM 파이프라인 전체가 시스템 엔지니어링이라는 뜻이다. 모든 단계를 최적화해야 비싼 하드웨어가 헛돌지 않는다.</p>
+
+        <h3>여름 이후 나온 지렛대 <span class="ts">29:30</span></h3>
+        <ul class="plain">
+          <li>추측 디코딩 <span class="en">speculative decoding</span>을 다루는 사람이 많아졌다. 작은 모델이 토큰 여러 개를 미리 써 보고 큰 모델이 한 번에 검증해 속도를 높이는 방법이다. DFlash(추정) 같은 방법이 주목받았다.</li>
+          <li>llama.cpp를 포크해 새 디코딩 방식을 붙이는 사람이 늘었다.</li>
+          <li>AMD, NVIDIA 하드웨어와 개별 모델에 맞춘 최적화가 늘었다.</li>
+        </ul>
+        <p>11월 9일에 나온 논문 FlashData(추정)도 소개했다. 대화의 각 턴이 어디서 끝나는지 기록해 두고, vLLM이 추측하게 두지 않는다. 일종의 더 나은 스케줄링이다. 발표자에 따르면 모델에 따라 분당 처리 토큰이 1.5배에서 3.14배까지 늘었다. <span class="ts">30:00</span></p>
+        <p class="note">발표자는 이 논문을 훑어보기만 했다고 직접 밝혔다. 내용이 틀릴 수 있고, 정정이 필요하면 온라인에 올리겠다고 했다.</p>
+
+        <h3>ODS가 하려는 것 <span class="ts">31:00</span></h3>
+        <p>발표자 회사의 ODS는 사용자가 고른 모델에 맞춰 그때 가장 좋은 추론 엔진을 쓴다. llama.cpp나 vLLM 하나에 묶이지 않는다. 대부분의 사람은 추론 엔진에 관한 글을 읽고 싶어 하지 않는다. 그냥 돌아가는 것을 원한다. 그렇지 않으면 chatgpt.com으로 간다.</p>
+        <p class="note">ODS는 발표자 회사의 제품이다. 이 대목은 제품 소개이기도 하니 감안해 읽자.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="firstrun">
+        <header><span class="num">11</span><h2>첫 경험이 전부다 <span class="ts">32:50</span></h2></header>
+        <p>3월에 Qwen 3.5 27B가 나오자 발표자의 친구가 RTX 5090을 샀다. 친구는 이 모델을 Claude Code에 연결하고, GPU 팬의 RGB 조명 색을 바꿔 달라고 시켰다. 로컬 모델은 실패했다. Opus로는 됐다.</p>
+        <p>발표자는 검색 엔진을 붙였는지 물었다. Claude Code에는 원래 웹 검색이 따라온다. 그래서 Opus는 학습 이후에 나온 도구 정보를 찾아볼 수 있었다.</p>
+        <p>발표자가 검색 API를 열어 주고 환경 변수와 실행 명령을 알려 줬다. 같은 요청을 다시 하자 로컬 모델도 RGB 색을 바꿨다.</p>
+        <div class="callout">
+          <span class="title">교훈</span>
+          <span>모델이 학습한 데이터에는 지금 쓰는 도구나 새로 산 GPU가 없을 수 있다. 그런 일을 검색 없이 시키면 안 된다. 이건 모델의 문제가 아니라 <strong>인프라와 사용자 경험의 문제</strong>다.</span>
+        </div>
+        <p>로컬 AI의 첫 경험이 나쁘면 사람들은 다시 시도하지 않는다. 평생 구독료를 내는 쪽으로 간다. <span class="ts">34:10</span></p>
+        <p>발표자가 1년 전 로컬 모델용으로 Apple 하드웨어를 사지 말라고 한 이유도 같다. Apple이 싫어서가 아니다. 지금 Apple 하드웨어로 로컬 모델을 처음 써 보면 다시는 안 쓸 것이라는 판단이다. 발표자는 이 분야에 잘못된 메시지가 퍼져 있다고 본다.</p>
+        <p class="note">발표자는 회사 제품 ODS에 검색 엔진이 기본으로 들어 있다고 소개했다. 제품 이야기이니 감안해 읽자.</p>
+
+        <h3>하네스도 엔지니어링 대상이다 <span class="ts">35:10</span></h3>
+        <p>발표자는 EXO라는 논문(들린 대로, 추정)도 소개했다. Exo Labs와는 관계없다고 한다. 에이전트가 자주 하는 작업에 맞춰 하네스를 스스로 고쳐 재사용을 늘렸고, 길게 보면 토큰을 아꼈다는 내용이다. 발표자는 이것도 기본 원리에서 출발하는 시스템 엔지니어링이라고 본다.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="specialize">
+        <header><span class="num">12</span><h2>1% 비용의 특화 모델 <span class="ts">36:10</span></h2></header>
+        <p>OpenRouter 데이터로 보면 코딩 용도 계정은 약 33%가 모델을 바꿨다. 번역이나 요약을 하는 계정은 쓰던 모델을 계속 쓴다. 발표자는 새 모델이 나오면 더 쉽게 바꿔 봐야 한다고 말한다. DeepSeek V4.1 Flash에도 기회를 주라고 권한다.</p>
+
+        <h3>Airbnb: 2B 모델로 1% 비용 <span class="ts">37:00</span></h3>
+        <p>발표자에 따르면 Airbnb는 이번 달 글에서 20억(2B) 파라미터 모델로 프런티어급 품질을 냈다고 밝혔다. 비용은 1%였다. 발표자는 "99%를 아낀다는 건 내 말이 아니라 Airbnb의 말"이라고 강조했다.</p>
+        <p>발표자가 제시한 순서는 이렇다.</p>
+        <ol class="plain">
+          <li>프런티어 모델로 돌린 에이전트의 실행 기록, 즉 트레이스 <span class="en">trace</span>를 모은다.</li>
+          <li>그 기록으로 평가 파이프라인을 만든다.</li>
+          <li>학습용 예제를 모델로 만들어 내는 합성 데이터 <span class="en">synthetic data</span> 파이프라인을 만든다.</li>
+          <li>작은 모델을 강화학습으로 훈련한다.</li>
+        </ol>
+        <p>이렇게 만든 모델은 빠르고 효율적이다. 발표자는 이 모델이 1% 비용으로 프런티어 모델을 이길 수 있다고 말한다. 핵심은 역시 칩별, 모델별, 워크플로별 최적화다.</p>
+
+        <h3>특화와 증류 <span class="ts">38:20</span></h3>
+        <p>Fireworks 같은 회사는 특화 모델을 만들어 호스팅한다. 큰 모델이 작은 모델을 가르치는 증류 <span class="en">distillation</span>도 같은 흐름이다.</p>
+        <p>발표자는 Opus 5.5도 이렇게 만들어졌다고 추측한다. Fable 5.1이나 5.2가 선생 모델이 되어, Anthropic 사용자들이 주로 하는 일에 맞춰 가르쳤다는 것이다. 그래서 Opus 5.5에게 새로운 연구는 맡기지 않는다. 학습 분포 밖의 과제 <span class="en">out-of-distribution</span>에서는 크게 실패할 것으로 본다. 그런 일에는 Astra 6(추정)이 낫다고 했다. 결국 속도·효율과 범용성 사이의 선택이다.</p>
+        <p class="note">Opus 5.5의 학습 방식은 발표자의 추측이다. 발표자는 특화 모델 파이프라인을 Osmantic에 맡겨도 된다고도 말했다. 회사 사업과 연결된 주장이니 감안해 읽자.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="rent">
+        <header><span class="num">13</span><h2>살까, 빌릴까 <span class="ts">39:30</span></h2></header>
+        <p>GPU를 많이 사 모은 발표자가 오히려 "꼭 살 필요는 없다"고 말한다. 사용량이 어떤 기준 아래라면 사지 말고 빌려야 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">직접 산다 <span class="ts">43:20</span></span>
+            <ul>
+              <li>GPU는 놀든 일하든 비용이 같다</li>
+              <li>유지보수가 따른다: 의존성, 조용한 실패, 고장, 이중화</li>
+              <li>스크립트가 실패하고, 에이전트가 뒤늦게 "맞습니다, 제가 틀렸네요"라고 하는 일도 겪는다</li>
+            </ul>
+            <p class="verdict"><b>판단</b>: 클라우드가 비싼 데는 이유가 있다. 다만 하드웨어 만지기를 좋아하는 엔지니어에게는 재미다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">GPU를 빌린다 <span class="ts">42:10</span></span>
+            <ul>
+              <li>몇 시간이면 끝나는 일이면 빌린다</li>
+              <li>Modal의 CLI로 GPU를 그때그때 빌릴 수 있다</li>
+              <li>Codex나 로컬 모델에게 GPU를 빌려 작업을 돌리고, 끝나면 끄라고 시킬 수 있다</li>
+            </ul>
+            <p class="verdict"><b>판단</b>: 약간의 엔지니어링이면 된다. 발표자는 요즘 엔지니어링을 전부 에이전트에게 넘기려는 분위기를 꼬집었다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">싼 API를 쓴다 <span class="ts">39:50</span></span>
+            <ul>
+              <li>유명 모델을 100만 토큰당 30센트쯤에 준다는 곳이 있다(모델 이름은 자막에서 뭉개짐)</li>
+              <li>실제로는 뒤에서 Qwen 3.5 35B MoE 같은 다른 모델로 돌릴 수 있다</li>
+            </ul>
+            <p class="verdict"><b>판단</b>: 모델을 돌리는 인프라를 믿을 수 있어야 한다. 발표자는 GPU를 직접 확보해 제대로 도는지 확인한 뒤 쓰라고 권한다.</p>
+          </div>
+        </div>
+
+        <h3>가격은 지능을 따라가지 않는다 <span class="ts">40:40</span></h3>
+        <p>닫힌 모델과 오픈 모델 모두 가격이 크게 떨어지고 있다. 발표자는 둘의 격차가 줄어든 것이 오픈 모델이 그동안 좋아졌기 때문이라고 본다. 오픈소스 AI를 금지하려는 움직임에 반대하는 이유도 여기에 있다. 경쟁이 있어야 모두가 더 싸게 더 좋은 토큰을 얻는다.</p>
+        <p>100만 토큰당 가격과 지능은 꼭 같이 가지 않는다. 발표자에 따르면 Opus 5.5의 가장 높은 단계는 100만 토큰당 8달러인데, 웹 개발 평가에서 앞선다. Astra보다 훨씬 싸다. 발표자는 Astra가 6~10배 더 큰 모델이라 연산이 더 들 것이라고 추측한다. Opus 5.5는 웹 개발과 소프트웨어 작업에 맞춰 증류됐다고 본다. <span class="ts">41:20</span></p>
+      </section>
+
+      <!-- 14 -->
+      <section id="forces">
+        <header><span class="num">14</span><h2>세 가지 힘 <span class="ts">44:20</span></h2></header>
+        <p>발표자는 로컬 AI를 밀어 올리는 힘을 세 가지로 정리했다.</p>
+        <ol class="plain">
+          <li><strong>파라미터당 지능 밀도</strong>: 같은 크기에서 더 똑똑한 모델이 계속 나온다. 여기서 "밀도"는 dense 모델을 뜻하지 않는다.</li>
+          <li><strong>특화 모델</strong>: 특정 워크플로에 맞춰 학습한 모델이다.</li>
+          <li><strong>더 나은 엔진</strong>: 추론 엔진과 커널 최적화다.</li>
+        </ol>
+
+        <h3>같은 기계, 다른 모델 <span class="ts">44:40</span></h3>
+        <p>2023년에 RTX 3090 14장짜리 기계는 Llama 2 70B를 돌렸다. 지금은 GPU 한 장마다 Qwen 3.5급 모델이 돈다. 훨씬 똑똑하다. 내일은 아마 Qwen 4일 것이다.</p>
+        <p>그래서 지금 하드웨어를 사는 것은 오늘이 아니라 <strong>내일의 모델과 최적화</strong>를 보고 사는 일이다. 발표자는 몇 년 전 RTX 3090을 한 장에 400달러에 샀다. 캐나다의 친구는 지금 2,700달러라고 했다.</p>
+
+        <h3>27B가 397B를 이겼다 <span class="ts">45:40</span></h3>
+        <p>3월에 Qwen 3.5가 397B MoE 모델과 27B dense 모델을 함께 냈다. 그때 27B는 397B를 이기지 못했다. 한 달 뒤 나온 Qwen 3.6 27B는 이겼다.</p>
+
+        <figure class="chart" aria-label="파라미터 수 비교: Qwen 3.5 MoE 전체 397B, 토큰당 활성 17B. Qwen 3.6 dense 전체 27B, 토큰당 27B">
+          <span class="chart-title">파라미터 수 (십억 개, B)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>Qwen 3.5 MoE · 전체</span><span class="val">397</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="Qwen 3.5 MoE 전체 파라미터: 397B"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Qwen 3.6 dense · 전체</span><span class="val">27</span></div>
+              <div class="track"><div class="fill key" style="width:6.8%" title="Qwen 3.6 dense 전체 파라미터: 27B"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Qwen 3.5 MoE · 토큰당 활성</span><span class="val">17</span></div>
+              <div class="track"><div class="fill" style="width:4.3%" title="Qwen 3.5 MoE 활성 파라미터: 17B"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Qwen 3.6 dense · 토큰당 활성</span><span class="val">27</span></div>
+              <div class="track"><div class="fill key" style="width:6.8%" title="Qwen 3.6 dense 활성 파라미터: 27B"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>397</span></div>
+          <span class="caption">MoE가 토큰마다 쓰는 파라미터(활성 파라미터)는 17B로 27B보다 약 40% 적다. 대신 전체 메모리는 약 15배(397 ÷ 27 ≈ 14.7)가 필요하다. 그런데도 작은 쪽이 이겼다.</span>
+        </figure>
+        <p>3년 전 데이터센터가 필요했던 GPT-4o급 성능이 이제 휴대폰에서 돈다는 말과 같은 흐름이다.</p>
+
+        <h3>KV 캐시 437배 <span class="ts">46:50</span></h3>
+        <p>발표자는 DeepSeek V4.1 Flash를 올해 가장 놀라운 공개로 꼽았다. Qwen 3.5보다도 낫다고 본다. 발표자에 따르면 이 모델은 KV 캐시 메모리를 437배 줄였다. 자막에는 13GB가 29MB로 줄었다는 숫자가 들린다.</p>
+        <p class="note">13GB ÷ 29MB는 약 450배라서 437배와 대략 맞는다. 다만 437배가 성립하려면 두 숫자가 같은 토큰 수 기준이어야 한다. 자막에는 앞 숫자가 "40만 토큰" 기준으로 들리고, 뒤 숫자의 토큰 수는 뭉개져 있다. 정확한 조건은 자막만으로 알 수 없다.</p>
+        <p>앞의 토크나이저와 비교해 보자. 토크나이저를 100배 빠르게 해도 전체는 1.1%만 빨라졌다. 반면 KV 캐시처럼 핵심 병목을 줄이면 같은 일에 드는 메모리가 수백 배 줄어든다. 발표자는 앞으로 1~3년 동안 무엇을 더 최적화할 수 있을지를 늘 생각한다고 했다.</p>
+
+        <h3>1년 앞을 보고 계획한다 <span class="ts">49:30</span></h3>
+        <ul class="plain">
+          <li>6월 서밋 시연: 메모리 128GB인 RTX Spark Windows 노트북에서 Qwen 계열 모델이 디코드 초당 72토큰을 냈다. 비행기에 들고 탈 수 있는 기계다.</li>
+          <li>메가 커널도 이런 최적화의 일부다.</li>
+          <li>발표자는 1월에 "올해 말이면 Opus 4.5급 모델이 RTX Pro 6000에서 돈다"고 했다. 발표자에 따르면 4월에 Qwen 3.6 27B가 RTX Pro 6000에서 Opus 4.5를 넘어섰다. <span class="ts">50:40</span></li>
+        </ul>
+        <p>큰 연구소는 연산이 많아 에이전트로 연구를 돌리며 스스로 개선하는 루프 <span class="en">recursive self-improvement, RSI</span>를 돌릴 수 있다. 오픈 진영의 대안은 특화다. DeepSeek 같은 곳이 새로운 연구로 돌파구를 내줄 때까지는 그렇다.</p>
+        <p>발표자의 조언은 짧다. <strong>내년에 돌릴 모델을 기준으로 하드웨어를 계획하라.</strong> <span class="ts">51:50</span></p>
+      </section>
+
+      <!-- 15 -->
+      <section id="continual">
+        <header><span class="num">15</span><h2>다음은 지속 학습 <span class="ts">48:00</span></h2></header>
+        <p>발표자는 다음 큰 흐름을 지속 학습 <span class="en">continual learning</span>으로 본다. 모델이 쓰이는 동안 계속 배우는 것이다. 그리고 이건 로컬에서 일어나야 한다고 말한다.</p>
+        <div class="callout">
+          <span class="title">왜 로컬이어야 하나</span>
+          <span>큰 제공자는 사용자 한 명을 위해 모델을 학습시키고 호스팅할 수 없다. 전체 사용자의 평균적인 분포에 맞춰 학습한다. 나에 대해 배우는 모델은 나를 위해 학습돼야 한다. 그래서 발표자는 결국 로컬이 이길 수밖에 없다고 본다.</span>
+        </div>
+        <div class="shift" aria-label="모델이 사용자를 기억하는 방식의 변화">
+          <div><span class="tag">지금</span><b>마크다운 파일과 메모리 꼼수</b><span class="muted">하네스에 파일이 쌓이고 부풀어 쓸모가 없어진다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">앞으로</span><b>지속 학습</b><span class="muted">모델이 내 기계에서 나에게 맞춰 계속 배운다</span></div>
+        </div>
+        <p>문맥이 길어지면 모델은 같은 주제의 스킬 파일이 이미 있는데도 세 군데에 따로 적는다. Codex든 Hermes든, 마크다운 파일을 잔뜩 쌓아 놓고 하네스라고 부른다. 시간이 지나면 이 파일들은 부풀어 쓸모가 없어진다. 발표자는 이것을 푸는 유일한 길이 지속 학습이라고 말한다. <span class="ts">48:40</span></p>
+
+        <h3>발표자가 보는 조합 <span class="ts">52:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>재료</th><th>발표자의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>Engram</td><td>모델이 꺼내 쓰는 지도 같은 조회용 메모리를 SSD나 RAM에 둔다. DeepSeek이 올해 1~2월에 공개한 연구다. 자막에는 "enagram"으로 들린다.</td></tr>
+              <tr><td>결정 모델 <span class="en">decision models</span></td><td>분류기는 늘 있었다. 하지만 이를 모든 단일 작업으로 넓히는 생각은 없었다.</td></tr>
+              <tr><td>가중치 편집 <span class="en">weight edits</span></td><td>모델의 가중치를 직접 고치는 방법이다. 발표에서 자세한 설명은 없었다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 11월 4일 트윗에서 "Engram + 결정 모델 + 가중치 편집 = 지속 학습"이라고 적었다. 1년 뒤 "내가 말했지"라고 하려고 지금 공개한다고 했다. 최종 형태는 아니지만 쉬운 방법 하나라고 덧붙였다.</p>
+        <p>발표자는 Engram 같은 연구를 무료로 공개하는 DeepSeek에 고마움을 표했다. 닫힌 모델 회사라면 이런 결과를 공유하지 않았을 것이라고 본다. <span class="ts">32:10</span></p>
+        <p>루프 이야기도 했다. 모델 안의 루프, 모델을 감싼 루프, 실험을 가로지르는 루프는 이미 있다. 여기에 Engram과 결정 모델을 둘러싼 루프를 더하면 지속 학습 레시피의 일부가 될 수 있을지 물었다. Engram은 SSD나 RAM에 두면 되니 CPU에서도 잘 돈다. <span class="ts">54:00</span></p>
+        <div class="callout warn">
+          <span class="title">평가할 때 주의 <span class="ts">54:30</span></span>
+          <span>벤치마크 점수가 오르면 먼저 보상 해킹 <span class="en">reward hacking</span>이 아닌지 확인한다. 보상 해킹은 모델이 과제를 제대로 풀지 않고 채점의 빈틈을 노려 점수만 올리는 것이다.</span>
+        </div>
+        <p class="note">이 부분은 발표자의 예측이다. 발표자는 회사가 이 방향으로 "뭔가 만들고 있다"며 ODS를 지켜봐 달라고 했다. 제품 예고이기도 하니 감안해 읽자.</p>
+
+        <h3>질의응답: 벤치마크보다 내 기록 <span class="ts">54:40</span></h3>
+        <p>발표자는 벤치마크를 싫어한다고 다시 말했다. 발표자가 믿는 것은 직접 만든 소프트웨어, 직접 모은 실행 기록, 직접 고친 내용이다. 데이터와 평가를 보는 높은 안목이 중요하다고 했다. 지금은 모든 평가가 해킹당하고 있기 때문이다.</p>
+        <p>"GPU를 사야 하느냐"는 질문에는 "당신이 말해 보라"고 답했다. 앞에서 본 기준(작업량, 병렬성, 유지보수를 감당할 의지)으로 스스로 판단하라는 뜻으로 읽힌다. 발표자는 이 내용을 담은 책도 낼 예정이라고 했다. <span class="ts">55:20</span></p>
+      </section>
+
+      <!-- 16 -->
+      <section id="recap">
+        <header><span class="num">16</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>오픈소스 AI는 최적화 문제, 로컬 AI는 사용자 경험 문제다. 두 문제를 함께 풀어야 한다.</li>
+          <li>오픈 모델은 빠르게 따라붙었다(지수 13점 → 51점). 하지만 격차는 <strong>어떤 벤치마크를 믿느냐</strong>에 달려 있다.</li>
+          <li>2026년 2월부터 토큰은 사람보다 에이전트가 더 많이 쓴다. 에이전트는 대부분 <strong>도구 실행을 기다린다.</strong></li>
+          <li><strong>하드웨어는 워크플로로 고른다.</strong> 프리필은 연산, 디코드는 메모리 대역폭이 병목이다.</li>
+          <li>대역폭 숫자보다 <strong>소프트웨어</strong>가 결과를 가른다. 병렬 에이전트를 돌리면 배칭에 강한 GPU가 유리하다.</li>
+          <li>양자화는 층마다 다르게 한다. 모든 층을 4비트로 일괄 압축하면 모델이 망가질 수 있다.</li>
+          <li>추론 엔진은 <strong>모델별·칩별로</strong> 최적화한다. 성능은 남의 숫자가 아니라 내 하드웨어에서 잰다.</li>
+          <li>로컬 모델에는 <strong>검색 같은 기본 도구</strong>를 붙인다. 첫 경험이 나쁘면 사용자는 돌아오지 않는다.</li>
+          <li>트레이스와 좋은 데이터가 있으면 <strong>작은 특화 모델이 1% 비용</strong>으로 프런티어급 품질을 낼 수 있다(발표자가 인용한 Airbnb 사례).</li>
+          <li>다음은 <strong>지속 학습</strong>이다. 한 사람에게 맞춘 학습은 로컬에서만 가능하다고 발표자는 본다.</li>
+        </ol>
+      </section>
+
+      <!-- 17 -->
+      <section id="quiz">
+        <header><span class="num">17</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 오픈소스 AI와 로컬 AI를 각각 무슨 문제라고 했나?</span></summary><div class="answer">오픈소스 AI는 최적화 문제, 로컬 AI는 사용자 경험 문제다. 두 문제는 동시에 풀어야 한다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>오픈·닫힌 모델의 격차가 벤치마크마다 다르게 보이는 예는?</span></summary><div class="answer">HLE 계열 지표에서는 닫힌 모델이 50% 넘게 앞선다. Terminal Bench에서는 오픈 모델이 2점 앞선다. 그래서 공개 벤치마크보다 내 작업으로 재야 한다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>에이전트 작업에서 RTX 3090 한 장도 쓸모가 큰 이유는?</span></summary><div class="answer">에이전트는 대부분 셸 명령과 도구 실행 결과를 기다린다. 초당 토큰 수보다 처리 대기가 더 큰 병목이다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>프리필과 디코드는 각각 무엇이 병목인가?</span></summary><div class="answer">프리필은 연산, 디코드는 메모리 대역폭이 병목이다. 프롬프트가 길면 첫 토큰이 늦게 나온다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>dense 27B 모델이 DGX Spark에서 느린 이유는?</span></summary><div class="answer">토큰마다 27B 파라미터를 모두 읽어야 하는데 DGX Spark의 대역폭(273GB/s)이 낮다. 토큰마다 일부만 쓰는 MoE 모델이 유리하다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>대역폭이 4배 넘게 높은 M5가 DGX Spark 두 대에 진 이유를 발표자는 무엇으로 봤나?</span></summary><div class="answer">소프트웨어다. Mac 쪽은 AI용 소프트웨어 최적화가 부족하고, NVIDIA의 CUDA 생태계가 훨씬 앞서 있다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>요청 50개를 동시에 보낸 실험에서 드러난 것은?</span></summary><div class="answer">RTX Pro 6000은 합계 초당 약 1,300토큰을 냈고, 다른 기계는 요청을 하나씩 처리했다. 동시 처리를 지원하는 엔진이 없는 소프트웨어 문제다. 에이전트를 병렬로 돌리는 시대에는 이 차이가 크다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>모든 층을 4비트로 양자화하면 어떻게 되나? 대안은?</span></summary><div class="answer">모델이 망가질 수 있다. 대안은 층별 사용 정도를 측정해 16비트, 8비트, 1비트처럼 다르게 압축하는 동적 양자화다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>토크나이저를 100배 빠르게 했는데 전체는 1.1%만 빨라졌다. 교훈은?</span></summary><div class="answer">한 단계가 빨라져도 전체는 그 단계의 비중만큼만 빨라진다. LLM 파이프라인은 시스템 엔지니어링이므로 전체를 재고 모든 단계를 최적화해야 한다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>친구의 로컬 모델이 GPU 팬 RGB 색 바꾸기에 실패한 이유는?</span></summary><div class="answer">검색 도구가 없었다. 모델은 학습 이후에 나온 도구와 하드웨어 정보를 몰랐다. 검색을 붙이자 같은 모델이 성공했다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>발표자가 인용한 Airbnb 사례와, 특화 모델을 만드는 순서는?</span></summary><div class="answer">2B 모델로 프런티어급 품질을 1% 비용에 냈다. 순서는 프런티어 에이전트의 트레이스 수집 → 평가 파이프라인 → 합성 데이터 파이프라인 → 강화학습이다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>Qwen 3.6 27B가 Qwen 3.5 397B MoE를 이긴 일은 무엇을 보여 주나?</span></summary><div class="answer">파라미터당 지능 밀도가 빠르게 오른다는 것이다. 약 15분의 1 메모리로 더 큰 모델을 이겼다. 그래서 하드웨어는 내년에 돌릴 모델을 기준으로 계획해야 한다.</div></details>
+          <details><summary><span class="qn">Q13</span><span>지속 학습이 로컬에서 일어나야 한다고 보는 이유와, 발표자가 꼽은 세 재료는?</span></summary><div class="answer">큰 제공자는 전체 사용자 평균에 맞춰 학습할 뿐, 한 사람용 모델을 학습시키고 호스팅할 수 없다. 재료는 Engram, 결정 모델, 가중치 편집이다.</div></details>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section id="apply">
+        <header><span class="num">18</span><h2>적용 체크리스트</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>내 워크플로가 프리필 위주인지 디코드 위주인지 적는다<span class="how">긴 문서·긴 문맥을 넣으면 프리필, 긴 답을 뽑으면 디코드가 병목이다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>동시에 돌릴 에이전트·요청 수를 정한 뒤 하드웨어를 고른다<span class="how">병렬이 많으면 배칭을 지원하는 엔진과 하드웨어 조합인지 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>성능은 내 하드웨어에서 직접 잰다<span class="how">TTFT, 사용자당 초당 토큰, 초당 요청 수, 작업 정확도</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>양자화 모델을 받을 때 층별(동적) 양자화인지 본다<span class="how">전부 4비트로 일괄 압축한 모델이면 내 작업으로 정확도부터 확인한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>로컬 모델에 웹 검색 도구를 붙인다<span class="how">모델 학습 이후 나온 도구·하드웨어를 다루는 작업이면 필수다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>파이프라인 단계별 시간을 잰 뒤 최적화할 곳을 고른다<span class="how">비중이 작은 단계는 100배 빨라져도 전체가 거의 바뀌지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>에이전트 실행 기록(트레이스)을 모아 둔다<span class="how">나중에 평가 세트와 작은 특화 모델의 학습 데이터가 된다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>GPU를 사기 전에 빌리는 비용과 비교한다<span class="how">몇 시간짜리 작업이면 빌리고, 끝나면 바로 끈다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>싼 API 제공자가 실제로 그 모델을 돌리는지 확인한다<span class="how">예시: 같은 프롬프트로 공식 API의 답과 비교한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>평가 점수가 갑자기 오르면 보상 해킹부터 의심한다<span class="how">점수를 올린 출력 몇 개를 직접 읽어 본다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 19 -->
+      <section id="glossary">
+        <header><span class="num">19</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>로컬 AI</td><td>내 기계나 내가 통제하는 기계에서 모델을 돌리는 것</td></tr>
+              <tr><td>오픈 모델</td><td>Open-weight model. 가중치를 공개해 누구나 내려받아 돌릴 수 있는 모델</td></tr>
+              <tr><td>추론 엔진</td><td>Inference engine. 모델을 실제로 돌려 토큰을 만드는 소프트웨어. 예: llama.cpp, vLLM</td></tr>
+              <tr><td>하네스</td><td>모델에 도구, 작업 순서, 규칙을 붙여 주는 실행 틀</td></tr>
+              <tr><td>커널 / 메가 커널</td><td>GPU에서 도는 연산 프로그램 / 여러 연산을 하나로 합쳐 오가는 비용을 줄인 커널</td></tr>
+              <tr><td>프리필</td><td>Prefill. 입력 프롬프트 전체를 처리해 KV 캐시를 만드는 단계. 연산이 병목</td></tr>
+              <tr><td>디코드</td><td>Decode. 출력 토큰을 하나씩 만드는 단계. 메모리 대역폭이 병목</td></tr>
+              <tr><td>TTFT</td><td>Time to first token. 요청 후 첫 토큰이 나오기까지 걸린 시간</td></tr>
+              <tr><td>KV 캐시</td><td>이미 처리한 토큰의 중간 계산값(키와 값)을 저장해 두는 메모리</td></tr>
+              <tr><td>메모리 대역폭</td><td>1초에 메모리에서 읽을 수 있는 데이터 양. 단위는 GB/s</td></tr>
+              <tr><td>배칭</td><td>Batching. 여러 요청을 묶어 한꺼번에 처리하는 것</td></tr>
+              <tr><td>dense 모델</td><td>토큰마다 모든 파라미터를 쓰는 모델</td></tr>
+              <tr><td>MoE</td><td>Mixture of Experts. 여러 전문가 중 일부만 토큰마다 골라 쓰는 모델</td></tr>
+              <tr><td>활성 파라미터</td><td>Active parameters. MoE에서 토큰 하나를 만들 때 실제로 쓰는 파라미터 수</td></tr>
+              <tr><td>양자화</td><td>Quantization. 모델의 숫자를 적은 비트로 저장해 메모리를 줄이는 것</td></tr>
+              <tr><td>QAT</td><td>Quantization-aware training. 학습 중에 양자화를 미리 겪게 해 낮은 정밀도에 강하게 만드는 방법</td></tr>
+              <tr><td>동적 양자화</td><td>Dynamic quantization. 층마다, 또는 실행 중에 정밀도를 다르게 정하는 양자화</td></tr>
+              <tr><td>NVFP4</td><td>NVIDIA의 4비트 부동소수점 숫자 형식</td></tr>
+              <tr><td>CUDA</td><td>NVIDIA GPU용 프로그래밍 플랫폼</td></tr>
+              <tr><td>추측 디코딩</td><td>Speculative decoding. 작은 모델이 토큰을 미리 써 보고 큰 모델이 한 번에 검증해 속도를 높이는 방법</td></tr>
+              <tr><td>트레이스</td><td>Trace. 에이전트가 실행되며 한 단계씩 무엇을 했는지 남긴 기록</td></tr>
+              <tr><td>합성 데이터</td><td>Synthetic data. 모델을 써서 만들어 낸 학습용 데이터</td></tr>
+              <tr><td>강화학습</td><td>Reinforcement learning, RL. 결과에 보상을 주며 모델을 훈련하는 방법</td></tr>
+              <tr><td>증류</td><td>Distillation. 큰 선생 모델의 출력으로 작은 학생 모델을 가르치는 것</td></tr>
+              <tr><td>분포 밖 과제</td><td>Out-of-distribution. 학습 데이터에서 거의 보지 못한 종류의 과제</td></tr>
+              <tr><td>지속 학습</td><td>Continual learning. 모델이 배포된 뒤에도 쓰이면서 계속 배우는 것</td></tr>
+              <tr><td>Engram</td><td>DeepSeek이 공개한 조회형 메모리 연구. 모델이 SSD나 RAM의 표에서 정보를 꺼내 쓴다(발표자의 설명)</td></tr>
+              <tr><td>보상 해킹</td><td>Reward hacking. 모델이 과제를 제대로 풀지 않고 채점의 빈틈을 노려 점수만 올리는 것</td></tr>
+              <tr><td>RSI</td><td>Recursive self-improvement. AI가 AI 연구를 하며 스스로를 계속 개선하는 루프</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 20 -->
+      <section id="timeline">
+        <header><span class="num">20</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>소개: 슬라이드 170장, 로컬 AI의 과거·현재·미래</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>6월 로컬 AI 서밋, "1990년대의 리눅스"</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>최적화 문제와 사용자 경험 문제</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>RTX Spark에서 클라우드 없이 만든 게임</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>로컬 Qwen 3.6 27B 초당 51토큰 vs GPT 5.5 초당 34토큰</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>Artificial Analysis v5: Haiku 5.5 vs DeepSeek V4.1 Flash</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>긴 작업의 길이, 4개월마다 두 배</td></tr>
+              <tr><td><span class="ts">04:40</span></td><td>2026년 2월부터 에이전트 토큰이 사람보다 많다</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>오픈 모델 지수 13점 → 51점</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>작고 특화된 모델 예측: 3년 안에 1B가 Opus 5.5를 이긴다</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>토큰은 오픈 모델로, 돈은 닫힌 모델로</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>에이전트는 도구 실행을 기다린다</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>벤치마크마다 다른 격차: HLE vs Terminal Bench</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td>보안 업체 연구: 작은 특화 오픈 모델</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>Opus 5.5는 코딩 특화 모델</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>발표자 소개, Osmantic의 전제</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>6시간 만에 에이전트가 만든 예고편</td></tr>
+              <tr><td><span class="ts">12:30</span></td><td>클라우드는 남의 지하실, Portal과 Cairo</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>긴 문맥과 메모리는 아직 미해결</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>RTX 3090 14장과 DeepSeek R1</td></tr>
+              <tr><td><span class="ts">15:10</span></td><td>스크린샷 정리 도구, 시스템 엔지니어링의 부재</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>양자화: NVFP4, RTX Pro 6000 전용 엔진</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>양자화 인지 학습</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>Unsloth의 동적 양자화, 층별 정밀도</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>GLM 5.3 4비트 94% vs DeepSeek V3.1 76.1%</td></tr>
+              <tr><td><span class="ts">19:00</span></td><td>프리필과 디코드</td></tr>
+              <tr><td><span class="ts">20:00</span></td><td>dense 모델과 DGX Spark</td></tr>
+              <tr><td><span class="ts">20:20</span></td><td>휴대폰 vs GPT-4o, 1~2B 모델의 시대</td></tr>
+              <tr><td><span class="ts">21:20</span></td><td>M5 Ultra vs DGX Spark 대역폭, 소프트웨어 격차</td></tr>
+              <tr><td><span class="ts">22:20</span></td><td>Hugging Face 영상: 네 기계 경주</td></tr>
+              <tr><td><span class="ts">23:30</span></td><td>동시 요청 50개, 합계 약 1,300토큰/초</td></tr>
+              <tr><td><span class="ts">23:50</span></td><td>llama.cpp의 한계, 모델별·칩별 엔진</td></tr>
+              <tr><td><span class="ts">25:00</span></td><td>병렬 에이전트에는 GPU</td></tr>
+              <tr><td><span class="ts">25:50</span></td><td>엔진·형식·최적화의 난립</td></tr>
+              <tr><td><span class="ts">26:30</span></td><td>추론 엔진 고르기, 작은 커널부터</td></tr>
+              <tr><td><span class="ts">27:00</span></td><td>OpenRouter의 GLM 5.3 제공자별 차이</td></tr>
+              <tr><td><span class="ts">27:50</span></td><td>직접 재야 할 지표</td></tr>
+              <tr><td><span class="ts">28:20</span></td><td>토크나이저 100배 → 전체 1.1%</td></tr>
+              <tr><td><span class="ts">29:30</span></td><td>추측 디코딩, llama.cpp 포크</td></tr>
+              <tr><td><span class="ts">30:00</span></td><td>FlashData(추정) 논문: 더 나은 스케줄링</td></tr>
+              <tr><td><span class="ts">31:00</span></td><td>ODS: 모델마다 가장 좋은 엔진</td></tr>
+              <tr><td><span class="ts">32:10</span></td><td>DeepSeek의 Engram</td></tr>
+              <tr><td><span class="ts">32:50</span></td><td>RGB 조명과 검색 엔진</td></tr>
+              <tr><td><span class="ts">34:10</span></td><td>나쁜 첫 경험, Apple 하드웨어 이야기</td></tr>
+              <tr><td><span class="ts">35:10</span></td><td>EXO(추정) 논문: 스스로 고치는 하네스</td></tr>
+              <tr><td><span class="ts">36:10</span></td><td>코딩 계정 33%가 모델을 바꿨다</td></tr>
+              <tr><td><span class="ts">37:00</span></td><td>Airbnb: 2B 모델, 1% 비용</td></tr>
+              <tr><td><span class="ts">38:20</span></td><td>Fireworks, 증류, Opus 5.5의 한계</td></tr>
+              <tr><td><span class="ts">39:30</span></td><td>살까 빌릴까, 싼 API 주의</td></tr>
+              <tr><td><span class="ts">40:40</span></td><td>가격 하락과 오픈소스 경쟁</td></tr>
+              <tr><td><span class="ts">41:20</span></td><td>가격은 지능을 따라가지 않는다</td></tr>
+              <tr><td><span class="ts">42:10</span></td><td>놀아도 같은 GPU 비용, Modal CLI</td></tr>
+              <tr><td><span class="ts">43:20</span></td><td>하드웨어 유지보수의 부담</td></tr>
+              <tr><td><span class="ts">44:20</span></td><td>세 가지 힘</td></tr>
+              <tr><td><span class="ts">44:40</span></td><td>Llama 2 70B에서 Qwen 3.5로, RTX 3090 가격</td></tr>
+              <tr><td><span class="ts">45:40</span></td><td>Qwen 3.6 27B vs Qwen 3.5 397B MoE</td></tr>
+              <tr><td><span class="ts">46:50</span></td><td>DeepSeek V4.1 Flash, KV 캐시 437배</td></tr>
+              <tr><td><span class="ts">48:00</span></td><td>지속 학습은 로컬에서</td></tr>
+              <tr><td><span class="ts">48:40</span></td><td>부풀어 오르는 마크다운 하네스</td></tr>
+              <tr><td><span class="ts">49:30</span></td><td>RTX Spark 노트북, 초당 72토큰</td></tr>
+              <tr><td><span class="ts">50:40</span></td><td>Opus 4.5급이 RTX Pro 6000에서</td></tr>
+              <tr><td><span class="ts">51:50</span></td><td>내년 모델 기준으로 계획하라</td></tr>
+              <tr><td><span class="ts">52:20</span></td><td>Engram + 결정 모델 + 가중치 편집</td></tr>
+              <tr><td><span class="ts">54:00</span></td><td>루프와 지속 학습</td></tr>
+              <tr><td><span class="ts">54:30</span></td><td>보상 해킹 주의</td></tr>
+              <tr><td><span class="ts">54:40</span></td><td>질의응답: 벤치마크와 데이터 안목</td></tr>
+              <tr><td><span class="ts">55:20</span></td><td>GPU를 살까? 책 예고</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'GKSQYbELDzw:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>
