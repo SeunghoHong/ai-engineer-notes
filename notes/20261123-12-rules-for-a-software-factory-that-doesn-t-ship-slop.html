@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>슬롭 없는 소프트웨어 공장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: max(0.82em, 12px); color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-top: 40px; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: var(--radius); display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-color: color-mix(in srgb, var(--crit) 35%, transparent); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 4px 0 4px 20px; border-left: 1px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<nav style="max-width:72rem;margin:0 auto;padding:16px 16px 0;font-size:0.9375rem"><a href="../index.html">전체 노트 목록</a></nav>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#data">슬롭이 늘고 있다는 데이터</a></li>
+      <li><a href="#factory">소프트웨어 공장은 원래 있었다</a></li>
+      <li><a href="#pressure">앞 압력과 뒤 압력</a></li>
+      <li><a href="#rules">12가지 규칙 한눈에</a></li>
+      <li><a href="#enemy">규칙 2 · 적을 알라</a></li>
+      <li><a href="#plan">규칙 3·4 · 이해를 지키고 계획하라</a></li>
+      <li><a href="#see-test">규칙 5·6 · 보여 주고 확인하게 하라</a></li>
+      <li><a href="#lint-flags">규칙 7·8·9 · 린트, 슬롭, 플래그</a></li>
+      <li><a href="#forge">규칙 10·11 · 쌓고 한곳에 모아라</a></li>
+      <li><a href="#buy">규칙 12 · 다 살 수는 없다</a></li>
+      <li><a href="#manifesto">반슬롭 선언의 다섯 가치</a></li>
+      <li><a href="#slop">슬롭은 무엇이고 왜 퍼지나</a></li>
+      <li><a href="#resolve">서명자들이 하기로 한 것</a></li>
+      <li><a href="#review">리뷰는 남는다</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-23 · 20분 · 영어 발표 한글 정리</span>
+      <h1>슬롭을 내보내지 않는 소프트웨어 공장</h1>
+      <p class="lead">에이전트가 코드를 만드는 "소프트웨어 공장"은 새것이 아니라 원래 하던 좋은 엔지니어링이다. 발표자는 공장이 슬롭을 내보내지 않게 하는 12가지 규칙을 정리하고, 사람의 판단과 책임을 지키자는 반(反)슬롭 선언을 소개한다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=-NFMsM2y0Vk" target="_blank" rel="noopener">12 Rules for a Software Factory That Doesn't Ship Slop</a></span>
+        <span>발표: Dex Horthy (Factory. 발표 일주일 전까지 HumanLayer 공동 창업자·CEO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았고, 나머지는 들린 대로 적고 "(추정)"을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>발표자는 공장 반대론자가 아니다. <strong>소프트웨어 공장은 그냥 좋은 엔지니어링</strong>이고, 공장을 망치는 행동이 따로 있을 뿐이다.</li>
+        <li>공장은 두 힘으로 키운다. <strong>앞 압력</strong>은 일을 자동으로 시작시키고, <strong>뒤 압력</strong>은 사람 손에 닿기 전에 품질을 끌어올린다.</li>
+        <li>데이터로 보면 방치된 모델은 코드 품질을 지키지 못한다. SlopCodeBench 최고 점수는 <strong>16% 남짓</strong>이고, <strong>최근 모델일수록 나쁜 패턴이 더 많다.</strong></li>
+        <li>계획은 <strong>기대 고통</strong>으로 정한다. 나중에 바뀔 확률과 바꾸기 어려운 정도를 곱해 큰 곳에만 시간을 쓴다.</li>
+        <li>나머지 규칙: 그림으로 맞추기, 에이전트가 스스로 확인하게 하기, 린트로 막기, 슬롭을 맞는 자리에만 쓰기, 기능 플래그, 쌓아 가기, 결정을 한곳에 모으기. <strong>검증만큼은 살 수 없다.</strong></li>
+        <li>반슬롭 선언의 정의: 슬롭은 <strong>만드는 노력보다 받는 사람의 이해 노력이 더 클 때</strong> 생긴다. 슬롭은 비대칭이고 복리로 쌓인다.</li>
+        <li>결론: 리뷰에는 언제나 남보다 앞서는 몫이 있다. <strong>아무것도 보태지 않으면 남들과 같은 AI 결과물만 얻는다.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="data">
+        <header><span class="num">01</span><h2>슬롭이 늘고 있다는 데이터 <span class="ts">00:50</span></h2></header>
+        <p>지난여름에는 소프트웨어 공장이 크게 유행했다. 발표자는 6월 발표에서 "그래도 코드는 읽어야 한다"고 말했다. 그때 근거는 직감이었다. 강화학습으로 다듬은 모델은 테스트를 통과시키는 데만 몰두한다는 이야기였다.</p>
+        <p>이제는 데이터가 있다. 위스콘신대 연구실의 <strong>SlopCodeBench</strong>다. 모델이 코드베이스를 오래 깨끗하게 유지하는지 재는 벤치마크다. 발표 당일 새 결과가 나왔다.</p>
+
+        <figure class="chart" aria-label="SlopCodeBench 점수: GPT-5.5 15%, Astra(추정) 16.3%">
+          <span class="chart-title">SlopCodeBench 점수 (%, 100점 만점)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>GPT-5.5</span><span class="val">15</span></div>
+              <div class="track"><div class="fill" style="width:15%" title="GPT-5.5: 15%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>Astra (추정)</span><span class="val">16.3</span></div>
+              <div class="track"><div class="fill key" style="width:16.3%" title="Astra (추정): 16.3%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자가 인용한 점수다. 최고 점수도 만점에 한참 못 미친다. 아직 <strong>포화되지 않은</strong> 벤치마크라는 뜻이다. "Astra"는 자막에 들린 이름이다.</span>
+        </figure>
+
+        <p>다른 데이터도 있다. Faros AI(추정. 자막에는 "Pharos") 연구에 따르면 <strong>PR의 30%가 리뷰 없이 머지</strong>됐다. 코멘트는 길어지고 많아졌다. PR당 장애와 개발자당 버그도 늘었다.</p>
+        <h3>제목을 바로잡다 <span class="ts">01:40</span></h3>
+        <p>이 발표의 예전 제목은 "소프트웨어 공장은 왜 실패하나"였다. 그 탓에 발표자는 공장을 싫어하는 사람으로 오해받았다. 실제로는 공장을 아주 좋아한다. 하려던 말은 "공장을 실패하게 만드는 행동이 있으니 하지 말자"였다. 굳이 하나 꼽자면 사람을 완전히 빼는 <strong>다크 팩토리</strong> <span class="en">dark factory</span>다.</p>
+        <p class="note">같은 시리즈의 "코드 리뷰의 종말" 노트에서도 Laurie Voss가 Dex Horthy의 "코드를 읽으라"는 입장을 사례로 다룬다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="factory">
+        <header><span class="num">02</span><h2>소프트웨어 공장은 원래 있었다 <span class="ts">02:10</span></h2></header>
+        <p>발표의 핵심 메시지는 하나다. <strong>소프트웨어 공장은 그냥 좋은 엔지니어링이다.</strong> 전날 다른 발표자도 같은 말을 했다. Factory의 한 글도 이렇게 정리한다. 공장식 사고는 결과물이 아니라 <strong>과정을 표준화</strong>하는 것이다.</p>
+        <p>AI 이전의 공장을 떠올려 보자. 아래 흐름은 30년 전부터 있었다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>기획</td><td>엔지니어, PM, 비전을 이끄는 사람이 만들 것을 정해 트래커에 넣는다</td></tr>
+              <tr><td>구현</td><td>트래커에서 일을 꺼내 만든다. 자동 테스트를 돌리고 로컬에서 만져 본다</td></tr>
+              <tr><td>리뷰</td><td>PR을 올린다. 동료가 받아서 테스트하고, CI가 검사와 정적 린터를 돌린다. 문제가 있으면 돌려보낸다</td></tr>
+              <tr><td>배포</td><td>카나리, 단계적 출시, 기능 플래그로 내보낸다</td></tr>
+              <tr><td>운영</td><td>사용자가 불만과 요청을 보낸다. 새벽 3시 장애는 모니터링이 먼저 잡아 사람을 깨운다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="shift" aria-label="에이전트 공장으로 바꿀 때 달라지는 한 칸">
+          <div><span class="tag">AI 이전</span><b>사람이 만든다</b><span class="muted">구현 칸을 사람이 맡는다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">에이전트 공장</span><b>에이전트가 만든다</b><span class="muted">나머지 공정은 그대로 둔다</span></div>
+        </div>
+        <p>에이전트 공장으로 바꾸는 데 필요한 건 <strong>구현 한 칸을 바꾸는 것</strong>뿐이다. 오케스트레이션, 샌드박스, 모델 선택 같은 세부는 이 발표에서 다루지 않는다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="pressure">
+        <header><span class="num">03</span><h2>앞 압력과 뒤 압력 <span class="ts">04:00</span></h2></header>
+        <p>공장은 한 번에 만들지 않는다. 두 방향의 힘을 조금씩 더하며 키운다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">앞 압력 · forward pressure</span>
+            <p>질문: <strong>무엇이 일을 시작시키나?</strong></p>
+            <ul>
+              <li>기능 요청을 바로 공장으로 보낸다</li>
+              <li>장애가 나면 새벽 3시에 스택 트레이스 대신 <strong>고칠 PR 초안</strong>을 받는다</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="tag">뒤 압력 · back pressure <span class="ts">04:30</span></span>
+            <p>질문: <strong>사람 없이 결과를 얼마나 좋게 만들 수 있나?</strong></p>
+            <ul>
+              <li>만들기는 몇 분이 됐지만, 옛 방식의 리뷰와 테스트는 여전히 며칠 걸린다</li>
+              <li>그래서 에이전트 코드 리뷰, 에이전트 테스트, CI/CD, 린터에 투자한다</li>
+              <li>Lean 같은 도구로 <strong>형식 검증</strong>까지 하는 곳도 있다</li>
+            </ul>
+          </div>
+        </div>
+        <p>뒤 압력의 목표는 에이전트가 사람 없이 더 나은 결과로 조금씩 올라가게 하는 것이다. 이를 <strong>힐 클라이밍</strong> <span class="en">hill climbing</span>이라 한다. 사람 손에 닿을 때쯤에는 쉬운 문제가 이미 다 고쳐져 있어야 한다.</p>
+        <div class="callout">
+          <span class="title">규칙 1 · 루프 대신 두 압력 <span class="ts">06:00</span></span>
+          <span>"루프"는 유행어가 됐다. 발표자는 루프를 앞 압력과 뒤 압력이 맞물리는 구조로 볼 때 쓸모가 생긴다고 말한다. 실무 질문은 두 가지다. 일을 어떻게 자동으로 시작시키나. 사람이 보기 전에 결과를 어떻게 최대한 다듬나.</span>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="rules">
+        <header><span class="num">04</span><h2>12가지 규칙 한눈에 <span class="ts">05:50</span></h2></header>
+        <p>발표자는 2025년 6월에 컨텍스트 엔지니어링을 이야기할 때와 같은 방식을 썼다. 유행어와 소음 속에서 오래 갈 원칙만 추렸다. 처음에는 9개였는데 지금은 12개다. 공장을 이루는 좋은 습관 대부분은 수십 년 전부터 있던 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>규칙</th><th>한 줄 뜻</th><th>위치</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>루프 대신 두 압력 <span class="en">forward &amp; back pressure</span></td><td>일을 자동으로 시작시키고, 사람 전에 품질을 올린다</td><td><span class="ts">06:00</span></td></tr>
+              <tr><td>2</td><td>적을 알라 <span class="en">know your enemy</span></td><td>방치된 모델은 코드 품질을 지키지 못한다</td><td><span class="ts">06:20</span></td></tr>
+              <tr><td>3</td><td>이해를 지켜라 (추정)</td><td>오래 갈 코드라면 사람이 시스템을 계속 이해하고 있어야 한다</td><td><span class="ts">09:10</span></td></tr>
+              <tr><td>4</td><td>짓기 전에 계획하라 <span class="en">plan before you build</span></td><td>기대 고통이 큰 곳에 계획 시간을 쓴다</td><td><span class="ts">09:20</span></td></tr>
+              <tr><td>5</td><td>눈으로 맞춰라 <span class="en">align visually</span></td><td>긴 글 대신 목업, 표, 차트로 확인한다</td><td><span class="ts">11:00</span></td></tr>
+              <tr><td>6</td><td>에이전트가 자기 일을 확인하게 하라 <span class="en">help agents test their work</span></td><td>스크린샷, 브라우저, curl 같은 확인 수단을 준다</td><td><span class="ts">11:20</span></td></tr>
+              <tr><td>7</td><td>규칙으로 슬롭과 싸워라 (추정)</td><td>언어별 슬롭 방지 린트 규칙을 쓴다</td><td><span class="ts">11:30</span></td></tr>
+              <tr><td>8</td><td>슬롭은 도구다 <span class="en">slop is a tool</span></td><td>프로토타입처럼 맞는 자리에서는 괜찮다</td><td><span class="ts">12:00</span></td></tr>
+              <tr><td>9</td><td>기능 플래그를 줘라</td><td>모델이 시도하고 비교해서 결정하게 한다</td><td><span class="ts">12:20</span></td></tr>
+              <tr><td>10</td><td>쌓아 가라 <span class="en">compound over time</span></td><td>모든 것을 평가하고 지난 세션에서 배운다</td><td><span class="ts">12:30</span></td></tr>
+              <tr><td>11</td><td>포지를 하나로 <span class="en">unify your forge</span></td><td>코드와 결정을 한곳에 모은다</td><td><span class="ts">12:40</span></td></tr>
+              <tr><td>12</td><td>다 살 수는 없다 <span class="en">you can't buy everything</span></td><td>검증은 직접 만들어야 한다</td><td><span class="ts">13:20</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">규칙 이름은 자막에서 들린 말을 옮겼다. 자막에서 번호가 직접 나온 것은 2번뿐이다. 3번은 따로 선 규칙인지 계획 규칙의 일부인지 분명하지 않고, 7번은 이름 끝이 끊겼다. 둘은 이어지는 내용에 맞춰 이름을 붙였다. 슬라이드 원문과 다를 수 있다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="enemy">
+        <header><span class="num">05</span><h2>규칙 2 · 적을 알라 <span class="ts">06:20</span></h2></header>
+        <p>발표자의 주장은 이렇다. <strong>사람이 지켜보지 않는 모델은 시간이 지나며 코드베이스 품질을 지키거나 높이지 못한다.</strong></p>
+        <p>모델에게 코드를 정리하라고 방향을 주면 정리한다. 다만 그러려면 사람이 지금 무엇이 있고 무엇을 원하는지 알아야 한다. 손을 떼고 기능만 밀어 넣으면 코드는 저절로 좋아지지 않는다.</p>
+
+        <h3>SlopCodeBench가 재는 것 <span class="ts">07:00</span></h3>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">보통의 과제</span>
+            <p>모델은 엑셀이나 Redis를 며칠 만에, 에이전트 여러 개를 함께 돌리면 몇 시간 만에 복제할 수 있다. 단, <strong>문제 전체를 처음부터 알 때</strong>의 이야기다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">실제 개발</span>
+            <p>기능 하나를 내고, 또 하나를 낸다. 사람은 그 사이에 "이 추상화는 나쁘다, 합치자, 지우자"를 판단한다. SlopCodeBench는 문제를 <strong>체크포인트로 나눠</strong> 주고 코드베이스를 키워 가는 능력을 잰다.</p>
+          </div>
+        </div>
+        <p>품질 지표로는 순환 복잡도, 심볼당 줄 수, 복잡도가 높은 함수의 비율 등을 본다. 규칙은 200개다. 그중 50개는 업계가 오래 써 온 규칙이다. 나머지는 모델이 쓴 코드를 AI 이전 저장소와 비교해 새로 만든 것이다.</p>
+
+        <h3>슬롭이 커지고 있다 <span class="ts">08:00</span></h3>
+        <p>연구실을 이끄는 Gabe Orlanski가 발표 당일 논문을 공개했다. 논문은 라이브러리와 인터페이스를 설계하는 능력도 따로 본다.</p>
+        <ul class="plain">
+          <li>좋지 않다고 분류된 패턴이 <strong>6개월 전 모델보다 지금 모델에 더 많았다.</strong> 발표자는 슬롭이 시간이 갈수록 증폭되는 것 같다고 말한다.</li>
+          <li>예: Claude와 GLM이 Python 3 코드를 Python 2 스타일로 쓴다. <code>%s</code> 포맷 문자열이 돌아왔고, f-string을 기본으로 쓰지 않는다. <span class="ts">08:40</span></li>
+          <li>Fable 5.2는 아직 결론이 없다. Anthropic의 새 모델 프롬프트 가이드에는 "코드베이스의 주인이 너라고 말하면 깔끔하게 유지한다"는 내용이 있다고 한다. 발표자는 아직 시험하지 않았고 벤치마크를 돌리는 중이다. <span class="ts">08:50</span></li>
+        </ul>
+        <p class="note">발표자는 이 벤치마크 연구에 함께 참여했다고 밝혔다. 결과 해석은 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="plan">
+        <header><span class="num">06</span><h2>규칙 3·4 · 이해를 지키고, 짓기 전에 계획하라 <span class="ts">09:10</span></h2></header>
+        <p>코드베이스가 오래 가야 하거나 이미 오래됐다면, <strong>사람이 시스템과 코드를 계속 이해하고 있어야 한다.</strong> 그 방법이 짓기 전에 계획하는 것이다.</p>
+        <p>옛 공장에서도 했다. 아키텍처 리뷰, 스프린트 계획, 팀 정렬이 그것이다. 만들기와 리뷰가 며칠씩 걸리던 시절에 다시 만들 확률을 줄이려고 했다. 지금 만들기는 빨라졌다. 하지만 제대로 하는 리뷰와 테스트는 여전히 느리다. 그래서 시간과 토큰을 쓰기 전에 맞는 것을 맞는 방식으로 만드는지 확인할 가치가 있다.</p>
+        <p>계획을 과하게 할 수도 있다. 발표자도 스펙에 6시간을 쓰고 "그냥 대충 시켜도 됐겠다"고 느낀 적이 있다. <span class="ts">10:00</span></p>
+
+        <figure class="chart" aria-label="계획 수준별 나중에 다시 손볼 몫: 두 문장 프롬프트 50%, 5시간 스펙 10%, 20시간 직접 작성 0%">
+          <span class="chart-title">계획에 들인 노력과 나중에 다시 손볼 몫 (발표자의 어림값, %)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>두 문장 프롬프트</span><span class="val">50</span></div>
+              <div class="track"><div class="fill" style="width:50%" title="두 문장 프롬프트: 50%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>5시간 쓴 상세 스펙</span><span class="val">10</span></div>
+              <div class="track"><div class="fill key" style="width:10%" title="5시간 스펙: 10%"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>20시간 들여 손으로 직접 작성</span><span class="val">0</span></div>
+              <div class="track"><div class="fill" style="width:0%" title="20시간 직접 작성: 0%"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">세 숫자의 뜻은 조금씩 다르다. 50%는 프롬프트를 몇 번 더 보낼 확률, 10%는 스펙 가운데 나중에 바꿀 부분, 0%는 에이전트 때문에 다시 할 확률이다. 손으로 써도 사람의 실수는 남는다.</span>
+        </figure>
+
+        <div class="callout">
+          <span class="title">기대 고통 <span class="en">expected pain</span> <span class="ts">10:30</span></span>
+          <span>기대 고통 = 나중에 바뀔 확률 × 바꾸기 어려운 정도. 발표자는 계획 단계에서 버튼 색을 두고 모델과 다투지 않는다. 대신 데이터베이스 스키마처럼 나중에 바꾸기 아주 어려운 것은 제대로 정한다. 문제와 코드베이스에 맞춰 이 스펙트럼 위 어디에 설지 정하면 된다.</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="see-test">
+        <header><span class="num">07</span><h2>규칙 5·6 · 보여 주고, 스스로 확인하게 하라 <span class="ts">11:00</span></h2></header>
+        <h3>규칙 5 · 눈으로 맞춰라</h3>
+        <p>발표자는 <strong>Show Me</strong>라는 스킬을 공개했다. 긴 글 대신 HTML 목업, 표, 차트로 결과를 보여 주게 하는 스킬이다. 설치 수는 약 4만이다.</p>
+        <p>이유는 사람의 뇌가 시각적이라는 데 있다. 발표자는 남의 말을 빌려 이렇게 설명한다. 인류는 수백만 년 동안 포식자를 피하고 열매를 먹으며 살았다. 글을 읽은 건 약 5,000년밖에 안 된다.</p>
+        <p class="note">Show Me는 발표자가 직접 만든 스킬이다. 감안해 읽자.</p>
+
+        <h3>규칙 6 · 에이전트가 자기 일을 확인하게 하라 <span class="ts">11:20</span></h3>
+        <p>에이전트가 결과를 목표로 놓고 스스로 올라가려면 확인 수단이 있어야 한다. 스크린샷, 브라우저, 영상, curl 등 할 수 있는 건 다 준다. iOS 앱을 만든다면 에이전트가 돌아가는 환경에서 앱을 빌드하고, 실행하고, 테스트할 수 있어야 한다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="lint-flags">
+        <header><span class="num">08</span><h2>규칙 7·8·9 · 린트로 막고, 슬롭을 골라 쓰고, 실험하게 하라 <span class="ts">11:30</span></h2></header>
+        <h3>규칙 7 · 규칙으로 슬롭과 싸워라</h3>
+        <p>쓰는 언어마다 슬롭을 막는 린트 규칙이 이미 있다. 발표자는 쓰라고 권한다.</p>
+        <ul class="plain">
+          <li><strong>TypeScript</strong>: Cloudflare 수석 엔지니어 Dylan Moroy(추정)의 저장소 <strong>Anti Slop</strong>. 에이전트가 슬롭을 만들지 못하게 막는 규칙이 100개쯤 있다.</li>
+          <li><strong>Factory의 ESLint 플러그인</strong>도 있다.</li>
+          <li><strong>Python</strong>: SlopCodeBench의 코드 품질 규칙을 가져다 쓸 수 있다.</li>
+        </ul>
+        <p class="note">발표자는 Factory 소속이다. ESLint 플러그인 언급은 그 점을 감안해 읽자.</p>
+
+        <h3>규칙 8 · 슬롭은 도구다 <span class="ts">12:00</span></h3>
+        <p>모든 슬롭이 나쁜 건 아니다. 바이브 코딩, 프로토타입, 사이드 프로젝트에서는 괜찮다. 기능 플래그 뒤에 숨겨 두고 사람들이 원하는지부터 알아볼 때도 그렇다. 시간을 들이기 전에 수요를 확인하는 셈이다. 모든 코드 한 줄이 늘 완벽할 필요는 없다.</p>
+
+        <h3>규칙 9 · 모델에게 기능 플래그를 줘라 <span class="ts">12:20</span></h3>
+        <p>PostHog, Statsig, LaunchDarkly 같은 기능 플래그 도구를 모델이 쓸 수 있게 한다. 모델이 여러 방식을 시도하고, 어느 쪽이 더 나은지 보고, 그에 맞춰 결정하게 된다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="forge">
+        <header><span class="num">09</span><h2>규칙 10·11 · 쌓아 가고, 한곳에 모아라 <span class="ts">12:30</span></h2></header>
+        <h3>규칙 10 · 쌓아 가라</h3>
+        <p>공장은 시간이 지날수록 나아져야 한다. 방법은 두 가지다. 모든 것을 평가 <span class="en">eval</span>하고, 지난 세션에서 배운다. 발표에서는 짧게 지나갔다.</p>
+
+        <h3>규칙 11 · 포지를 하나로 <span class="ts">12:40</span></h3>
+        <p><strong>포지</strong> <span class="en">forge</span>는 코드와 협업이 모이는 곳이다. 예전에는 git 패치를 메일링 리스트로 주고받았다. 리눅스 커널 쪽은 아직도 그렇게 한다. 지금은 대부분 GitHub에 코드를 모은다.</p>
+        <p>패치는 모였지만 대화는 아직 흩어져 있다. 내 에이전트의 답을 복사해 Slack으로 보낸다. 동료는 그걸 자기 에이전트에 붙여 넣고, 결과를 다시 나에게 보낸다. 몇 바퀴 돌아야 답이 나온다.</p>
+        <div class="shift" aria-label="결정 기록을 한곳에 모으기">
+          <div><span class="tag">지금</span><b>결정이 흩어져 있다</b><span class="muted">코드는 GitHub, 설계는 Notion·Google Docs, AI 답은 Slack 복붙</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">목표</span><b>코드와 결정을 가까이</b><span class="muted">무엇을 만들었는지뿐 아니라 왜 그렇게 정했는지도 함께 찾는다</span></div>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="buy">
+        <header><span class="num">10</span><h2>규칙 12 · 다 살 수는 없다 <span class="ts">13:20</span></h2></header>
+        <p>공장의 어떤 층은 제품으로 살 수 있고, 어떤 층은 살 수 없다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>선택지</th></tr></thead>
+            <tbody>
+              <tr><td>개발 환경</td><td>VM을 사거나 자기 개발 환경을 쓴다. 팀마다 아주 개인적인 영역이다</td></tr>
+              <tr><td>하네스</td><td>최전선의 하네스를 가져다 쓰거나, OpenCode나 Pi 같은 최소한의 하네스를 마음껏 고친다</td></tr>
+              <tr><td>컨트롤 플레인</td><td>세션과 계획 협업, 자동화와 스케줄, 이벤트 대응, 거버넌스</td></tr>
+              <tr><td>코드 검증 <span class="ts">14:00</span></td><td><strong>아무도 팔 수 없다.</strong> 우리 코드를 어떻게 테스트할지는 우리만 안다. 엔지니어 수백 명, 저장소 수백 개면 그만큼의 의견이 있다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>차별화되지 않는 블록은 사면 된다. 하지만 소프트웨어 공장은 결국 <strong>일을 대하는 사고방식</strong>이다. 블랙박스로 살 수 있는 물건이 아니다.</p>
+        <p class="note">발표자는 Factory가 컨트롤 플레인 쪽을 훨씬 넓게 보고 많이 풀었다고 말했다. 발표자가 Factory 소속이라는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="manifesto">
+        <header><span class="num">11</span><h2>반슬롭 선언의 다섯 가치 <span class="ts">14:10</span></h2></header>
+        <p>공장의 목적은 사람의 지렛대를 키우는 것이다. 들인 시간에서 가장 큰 효과를 얻는 것이다. 발표자는 이 문제가 소프트웨어보다 크다고 보고 <strong>반슬롭 선언</strong> <span class="en">anti-slop manifesto</span>을 발표했다.</p>
+        <p>선언문은 <a href="https://slopmanifesto.com" target="_blank" rel="noopener">slopmanifesto.com</a>에서 읽을 수 있다. 행사 참석자, 발표자들과 함께 썼고 Swyx와 Philipp(추정)이 특히 도왔다. 여러 회사 사람들이 서명했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>더 중요하게 여긴다</th><th>~보다</th></tr></thead>
+            <tbody>
+              <tr><td>결과 <span class="en">outcomes</span></td><td>산출물 <span class="en">outputs</span></td></tr>
+              <tr><td>이해</td><td>속도</td></tr>
+              <tr><td>우리 자신의 생각</td><td>모델이 내놓은 첫 초안</td></tr>
+              <tr><td>더 나은 일</td><td>더 쉬운 일</td></tr>
+              <tr><td>시스템 개선</td><td>산출물을 내보내기만 하는 것</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="slop">
+        <header><span class="num">12</span><h2>슬롭은 무엇이고 왜 퍼지나 <span class="ts">15:20</span></h2></header>
+        <p>선언문은 AI가 대부분의 사람에게 지금까지 써 본 가장 쓸모 있는 도구라고 인정한다. 동시에 에이전트 여러 개가 하루에 만드는 양은 사람이 평생 리뷰할 수 있는 양보다 많다고 말한다.</p>
+        <blockquote>슬롭은 만드는 데 들인 노력이, 받는 사람에게 이해하라고 요구하는 노력보다 적을 때 생긴다.<cite>선언문 내용을 발표자가 읽은 것을 옮김</cite></blockquote>
+        <p>AI를 썼다고 슬롭이 되지는 않는다. <strong>품질과 읽는 사람의 경험을 책임지지 않고 AI 결과를 넘길 때</strong> 슬롭이 된다. AI는 사람의 판단을 대신하지 못한다. 판단을 키울 뿐이다. 판단이 없으면 그 없음도 키운다. <span class="ts">16:00</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>슬롭의 성질</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>비대칭 <span class="ts">16:10</span></td><td>천 줄짜리 PR이나 10쪽 문서를 만드는 비용은 0에 가까워진다. 그걸 리뷰하는 비용은 거의 그대로다</td></tr>
+              <tr><td>우회에서 자란다</td><td>문제를 제대로 풀지 않고 계속 돌아갈 때 퍼진다. 더하기를 좋아하고 빼기를 꺼리는 도구에서 나온다</td></tr>
+              <tr><td>압박에서 나온다</td><td>회사가 사람에게 인간이 할 수 있는 한계를 다시 정하라고 밀어붙일 때 생긴다</td></tr>
+              <tr><td>복리로 쌓인다 <span class="ts">16:40</span></td><td>지식 베이스, 채팅, 코드에 슬롭이 쌓일수록 다음 에이전트가 그걸 읽고 베낀다. 팀에 슬롭이 많을수록 맞서 싸울 의지가 꺾이고, 소통과 품질이 함께 나빠진다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="resolve">
+        <header><span class="num">13</span><h2>서명자들이 하기로 한 것 <span class="ts">17:10</span></h2></header>
+        <ol class="plain">
+          <li>사람의 시간과 주의는 아주 귀하다. 그걸 현명하게 쓰도록 최적화한다.</li>
+          <li>AI는 일을 쉽게 만드는 데서 그치지 않고 더 낫게 만들어야 한다. 그래서 슬롭과 싸운다.</li>
+          <li>시스템, 도구, 제품을 두 가지에 맞춘다. 사람의 의도를 효율적으로 끌어내는 것, 사람이 효율적으로 이해하는 것이다. <span class="ts">17:30</span></li>
+          <li>모델과 일할 때도 스스로 생각한다. 자료, 코드, 선행 사례를 찾아보고 문제를 이해한 뒤에 시작한다.</li>
+          <li>내보낸 것의 의도, 취향, 결과는 우리가 책임진다. AI가 얼마나 도왔든 상관없다.</li>
+          <li>에이전트가 쓴 것을 남에게 보낼 때는 그렇다고 밝힌다. Slack이나 메일에 올리기 전에 좋은지 먼저 확인한다. <span class="ts">17:50</span></li>
+          <li>누가 슬롭을 보내면 돌려보낸다. 친절하게 말하고, 먼저 검토해 달라고 부탁한다. 발표자는 보내는 쪽과 받는 쪽을 모두 겪어 봤다고 말한다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="review">
+        <header><span class="num">14</span><h2>리뷰는 남는다 <span class="ts">18:10</span></h2></header>
+        <p>발표자는 <strong>리뷰에는 언제나 알파가 있다</strong>고 믿는다. 알파 <span class="en">alpha</span>는 남들보다 앞서는 몫을 뜻한다.</p>
+        <ul class="plain">
+          <li>모델이 좋아지면 코드 대부분은 읽지 않게 될 수도 있다. 그래도 계획, 설계, 결과는 리뷰할 것이다.</li>
+          <li>아무것도 리뷰하지 않고 생각을 하나도 보태지 않으면, <strong>남들과 똑같은 AI 결과물</strong>을 얻는다.</li>
+          <li>에이전트 리뷰어, 린터, 검증기는 아주 유용하다. 하지만 <strong>충분하지 않다.</strong> 결과의 일부는 사람이 리뷰한다. 어디까지 볼지는 걸린 것의 크기에 따라 정한다. <span class="ts">18:30</span></li>
+          <li>중요한 건 무엇이 출시됐고, 누가 쓰고, 그 사람에게 어떻게 도움이 되는가다. 코드 줄 수, 머지된 PR 수, 병렬로 돌리는 에이전트 수가 아니다.</li>
+          <li>리뷰하지 않은 결과가 늘 나쁜 건 아니다. 한 번에 끝내는 프롬프트나 바이브 코딩도 맞는 자리에서는 효과가 크다. 슬롭은 <strong>좋은 제품, 유지보수할 수 있는 시스템, 사람의 시간 절약이라는 목표를 해칠 때</strong> 나쁘다. <span class="ts">19:00</span></li>
+          <li>아직 아무도 답을 모른다. 각자 무엇을 받아들이고 무엇을 거절할지 다시 배우는 중이다. 정답은 하나가 아니니 스스로 기준을 맞춰 가야 한다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">발표자의 한 줄 요약 <span class="ts">19:40</span></span>
+          <span>하는 일에 신경을 써라 <span class="en">care about what you're doing</span>. 선언문은 slopmanifesto.com에서 읽고 서명할 수 있다.</span>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="recap">
+        <header><span class="num">15</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>소프트웨어 공장은 새것이 아니다. AI 이전 공정에서 <strong>"사람이 만든다"를 "에이전트가 만든다"로</strong> 바꾼 것이다.</li>
+          <li>공장은 두 힘으로 키운다. 일을 시작시키는 <strong>앞 압력</strong>, 사람 전에 품질을 올리는 <strong>뒤 압력</strong>이다.</li>
+          <li>방치된 모델은 코드 품질을 스스로 지키지 못한다. SlopCodeBench 최고 점수는 16% 남짓이다.</li>
+          <li>좋지 않은 패턴은 6개월 전 모델보다 지금 모델에 더 많다. 슬롭은 커지는 중이다.</li>
+          <li>계획의 깊이는 <strong>기대 고통 = 바뀔 확률 × 바꾸기 어려움</strong>으로 정한다.</li>
+          <li>사람에게는 그림과 표로 보여 주고, 에이전트에게는 스스로 확인할 도구를 준다.</li>
+          <li>슬롭 방지 린트 규칙을 켜고, 슬롭은 프로토타입처럼 맞는 자리에서만 쓴다.</li>
+          <li>설계와 결정은 코드 가까이 모은다. <strong>검증만큼은 살 수 없다.</strong></li>
+          <li>슬롭은 <strong>만드는 노력보다 이해하는 노력이 더 클 때</strong> 생긴다. 비대칭이고 복리로 쌓인다.</li>
+          <li>리뷰는 남는다. 무엇을 볼지는 걸린 것에 따라 정하고, 내보낸 것은 끝까지 책임진다.</li>
+        </ol>
+      </section>
+
+      <!-- 16 -->
+      <section id="quiz">
+        <header><span class="num">16</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 예전 제목 "소프트웨어 공장은 왜 실패하나"를 바로잡은 이유는?</span></summary><div class="answer">공장을 싫어하는 사람으로 오해받았기 때문이다. 실제로는 공장을 좋아하고, 공장을 실패하게 만드는 특정 행동을 피하자는 뜻이었다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>AI 이전의 소프트웨어 공장을 에이전트 공장으로 바꾸려면 무엇을 바꾸나?</span></summary><div class="answer">"사람이 만든다" 한 칸을 "에이전트가 만든다"로 바꾼다. 트래커, 테스트, 리뷰, CI, 배포, 모니터링은 30년 전부터 있던 공정이다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>앞 압력과 뒤 압력은 각각 무엇인가?</span></summary><div class="answer">앞 압력은 일을 자동으로 시작시키는 힘이다. 예: 장애가 나면 고칠 PR 초안이 함께 온다. 뒤 압력은 사람 손에 닿기 전에 품질을 올리는 힘이다. 예: 에이전트 리뷰와 테스트, CI/CD, 린터, 형식 검증.</div></details>
+          <details><summary><span class="qn">Q4</span><span>SlopCodeBench는 보통의 코딩 벤치마크와 무엇이 다른가?</span></summary><div class="answer">문제 전체를 미리 주지 않고 체크포인트로 나눠 준다. 기능을 하나씩 더하며 코드베이스를 키워 가는 능력을 잰다. 실제 개발 방식과 닮았다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>발표자가 "슬롭이 증폭된다"고 본 근거는?</span></summary><div class="answer">좋지 않은 패턴이 6개월 전 모델보다 지금 모델에 더 많았다. 예: Claude와 GLM이 f-string 대신 옛 <code>%s</code> 포맷을 쓴다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>기대 고통은 어떻게 계산하나? 계획 시간은 어디에 써야 하나?</span></summary><div class="answer">나중에 바뀔 확률 × 바꾸기 어려운 정도. 데이터베이스 스키마처럼 나중에 바꾸기 어려운 곳에 쓴다. 버튼 색 같은 건 계획 단계에서 다투지 않는다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>슬롭이 괜찮은 경우는?</span></summary><div class="answer">바이브 코딩, 프로토타입, 사이드 프로젝트, 기능 플래그 뒤에서 수요를 알아보는 실험. 결과라는 목표를 해치지 않는 자리라면 괜찮다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>"포지를 하나로"가 겨냥하는 문제는?</span></summary><div class="answer">코드는 GitHub에 모였지만 AI 답변과 설계·결정은 Slack, Notion, Google Docs에 흩어져 복붙으로 오간다. 무엇을 만들었는지뿐 아니라 왜 그렇게 정했는지까지 코드 가까이 모아야 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>발표자가 "아무도 팔 수 없다"고 한 것은?</span></summary><div class="answer">코드 검증이다. 우리 코드를 어떻게 테스트할지는 우리만 안다. 개발 환경, 하네스, 컨트롤 플레인 같은 블록은 살 수 있다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>선언문의 슬롭 정의와, AI 결과가 슬롭이 되는 조건은?</span></summary><div class="answer">만드는 데 들인 노력이 받는 사람에게 요구하는 이해 노력보다 적을 때 생긴다. AI 결과를 품질과 읽는 사람의 경험에 책임지지 않고 넘길 때 슬롭이 된다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>슬롭이 "복리로 쌓인다"는 건 무슨 뜻인가?</span></summary><div class="answer">지식 베이스, 채팅, 코드에 쌓인 슬롭을 다음 에이전트가 읽고 베낀다. 팀은 맞서 싸울 의지를 잃고, 소통과 품질이 함께 나빠진다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>아무것도 리뷰하지 않으면 어떻게 되나? 대신 무엇을 하나?</span></summary><div class="answer">생각을 하나도 보태지 않으니 남들과 같은 AI 결과물만 얻는다. 그래서 코드, 계획, 설계, 결과 가운데 일부는 걸린 것의 크기에 따라 사람이 리뷰한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="apply">
+        <header><span class="num">17</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>일을 자동으로 시작시키는 입구를 하나 만든다<span class="how">예: 장애 알림이 오면 고칠 PR 초안도 함께 오게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>사람이 보기 전에 도는 자동 검사를 늘린다<span class="how">에이전트 코드 리뷰, 에이전트 테스트, CI, 린터</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>큰 작업 전에 기대 고통을 따져 계획 깊이를 정한다<span class="how">바뀔 확률 × 바꾸기 어려움. 스키마는 계획하고 버튼 색은 바로 시킨다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>에이전트에게 계획과 결과를 표, 차트, HTML 목업으로 보여 달라고 한다<span class="how">확인: 긴 글을 읽는 시간이 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트가 자기 결과를 직접 확인할 수단을 준다<span class="how">스크린샷, 브라우저, 영상, curl. 앱이라면 빌드·실행·테스트 환경</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>쓰는 언어의 슬롭 방지 린트 규칙을 켠다<span class="how">TypeScript는 Anti Slop, Python은 SlopCodeBench 규칙을 참고한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>슬롭을 허용할 곳과 허용하지 않을 곳을 나눈다<span class="how">프로토타입과 기능 플래그 뒤 실험은 허용, 오래 갈 코드는 엄격하게</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>설계와 결정 기록을 코드 가까이 모은다<span class="how">확인: Slack을 뒤지지 않고도 결정 이유를 찾을 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>우리 코드를 어떻게 검증할지 직접 정의한다<span class="how">도구를 사도 이 부분은 대신 채워지지 않는다</span></span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>에이전트가 쓴 글을 보낼 때 그렇다고 밝히고, 먼저 읽고 보낸다<span class="how">받은 글이 슬롭이면 친절하게 돌려보낸다</span></span></label></li>
+          <li><label><input type="checkbox" id="c11"><span>걸린 것의 크기에 따라 사람이 리뷰할 범위를 정한다<span class="how">코드, 계획, 설계, 결과 가운데 무엇을 볼지</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 18 -->
+      <section id="glossary">
+        <header><span class="num">18</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>슬롭</td><td>Slop. 만드는 데 든 노력보다 받는 사람에게 더 많은 이해 노력을 요구하는 결과물. 흔히 AI가 대충 만든 결과물을 가리킨다</td></tr>
+              <tr><td>소프트웨어 공장</td><td>Software factory. 일 접수부터 배포·운영까지 정해진 공정으로 소프트웨어를 만드는 방식. 여기서는 구현 칸을 에이전트가 맡는다</td></tr>
+              <tr><td>다크 팩토리</td><td>Dark factory. 사람 없이 불을 끈 채 돌아가는 완전 자동 공장에서 온 말. 사람이 전혀 끼지 않는 소프트웨어 공장</td></tr>
+              <tr><td>앞 압력</td><td>Forward pressure. 새 일을 자동으로 시작시키는 힘</td></tr>
+              <tr><td>뒤 압력</td><td>Back pressure. 결과물이 사람에게 가기 전에 자동으로 거르고 다듬는 힘</td></tr>
+              <tr><td>힐 클라이밍</td><td>Hill climbing. 결과를 조금씩 고쳐 가며 더 나은 쪽으로 올라가는 방식</td></tr>
+              <tr><td>카나리 배포</td><td>Canary. 새 버전을 일부 사용자에게만 먼저 내보내 문제를 살피는 방식</td></tr>
+              <tr><td>형식 검증</td><td>Formal verification. 코드가 맞다는 것을 수학적으로 증명하는 방법. Lean은 그런 증명을 쓰는 도구다</td></tr>
+              <tr><td>포화되지 않은 벤치마크</td><td>Unsaturated benchmark. 모델 점수가 아직 낮아 나아질 여지가 많은 벤치마크</td></tr>
+              <tr><td>체크포인트</td><td>문제를 단계로 나눠 차례로 줄 때의 각 단계</td></tr>
+              <tr><td>순환 복잡도</td><td>Cyclomatic complexity. 함수 안 갈림길의 수로 잰 복잡도</td></tr>
+              <tr><td>f-string</td><td>Python 3.6부터 쓰는 문자열 포맷 방식. <code>%s</code>는 그 이전의 옛 방식이다</td></tr>
+              <tr><td>스펙</td><td>Spec. 무엇을 어떻게 만들지 적은 명세</td></tr>
+              <tr><td>기대 고통</td><td>Expected pain. 나중에 바뀔 확률 × 바꾸기 어려운 정도</td></tr>
+              <tr><td>린터</td><td>Linter. 코드 스타일과 흔한 실수를 자동으로 잡는 도구</td></tr>
+              <tr><td>기능 플래그</td><td>Feature flag. 배포한 코드의 기능을 켜고 끌 수 있게 하는 스위치</td></tr>
+              <tr><td>바이브 코딩</td><td>Vibe coding. 코드를 꼼꼼히 보지 않고 AI에게 맡겨 빠르게 만드는 방식</td></tr>
+              <tr><td>평가 (eval)</td><td>모델이나 시스템의 결과 품질을 재는 테스트 묶음</td></tr>
+              <tr><td>포지</td><td>Forge. 코드 저장소와 협업 기능이 모인 곳. 예: GitHub</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>컨트롤 플레인</td><td>Control plane. 세션 협업, 자동화, 이벤트 대응, 거버넌스처럼 에이전트 작업을 조율하는 층</td></tr>
+              <tr><td>컨텍스트 엔지니어링</td><td>Context engineering. 모델에게 무엇을 어떤 형태로 보여 줄지 설계하는 일</td></tr>
+              <tr><td>알파</td><td>Alpha. 남들보다 앞서는 추가 몫. 금융 용어에서 왔다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 19 -->
+      <section id="timeline">
+        <header><span class="num">19</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개: HumanLayer에서 Factory로</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>지난여름의 공장 유행, 6월 발표 "그래도 코드는 읽어라"</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>SlopCodeBench: GPT-5.5 15%, Astra(추정) 16.3%</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>Faros(추정) 연구: PR 30%가 리뷰 없이 머지</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>제목 정정: 공장 반대론자가 아니다</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>소프트웨어 공장은 그냥 좋은 엔지니어링</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>AI 이전의 공장: 트래커부터 모니터링까지</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>"사람이 만든다"를 "에이전트가 만든다"로</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>앞 압력</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>뒤 압력: 에이전트 리뷰·테스트, CI/CD, 형식 검증</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>컨텍스트 엔지니어링처럼 오래 갈 원칙만 추리기</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>12가지 규칙 시작</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>규칙 1: 루프 대신 두 압력</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>규칙 2: 적을 알라</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>SlopCodeBench: 체크포인트로 코드베이스 키우기</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>품질 지표와 규칙 200개</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>Gabe Orlanski 논문: 슬롭이 커진다</td></tr>
+              <tr><td><span class="ts">08:40</span></td><td><code>%s</code> 포맷의 귀환, Fable 5.2 이야기</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>규칙 3·4: 이해를 지키고 짓기 전에 계획하라</td></tr>
+              <tr><td><span class="ts">10:00</span></td><td>계획 스펙트럼: 50% · 10% · 0%</td></tr>
+              <tr><td><span class="ts">10:30</span></td><td>기대 고통</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>규칙 5: 눈으로 맞춰라 (Show Me)</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>규칙 6: 에이전트가 자기 일을 확인하게</td></tr>
+              <tr><td><span class="ts">11:30</span></td><td>규칙 7: 린트 규칙 (Anti Slop, ESLint 플러그인)</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>규칙 8: 슬롭은 도구다</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>규칙 9·10: 기능 플래그, 쌓아 가기</td></tr>
+              <tr><td><span class="ts">12:40</span></td><td>규칙 11: 포지를 하나로</td></tr>
+              <tr><td><span class="ts">13:20</span></td><td>규칙 12: 다 살 수는 없다</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>반슬롭 선언 발표</td></tr>
+              <tr><td><span class="ts">15:00</span></td><td>다섯 가치</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>슬롭의 정의</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>비대칭, 우회, 압박, 복리</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>서명자들이 하기로 한 것</td></tr>
+              <tr><td><span class="ts">18:10</span></td><td>리뷰에는 언제나 알파가 있다</td></tr>
+              <tr><td><span class="ts">18:30</span></td><td>자동 검증은 충분하지 않다, 결과가 중요하다</td></tr>
+              <tr><td><span class="ts">19:10</span></td><td>스스로 기준을 맞춰라</td></tr>
+              <tr><td><span class="ts">19:40</span></td><td>마무리: 하는 일에 신경을 써라</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '-NFMsM2y0Vk:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>
