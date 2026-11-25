@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>에이전트 코드 출시 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: max(0.82em, 12px); color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-top: 40px; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: var(--radius); display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-color: color-mix(in srgb, var(--crit) 35%, transparent); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 4px 0 4px 20px; border-left: 1px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<nav style="max-width:72rem;margin:0 auto;padding:16px 16px 0;font-size:0.9375rem"><a href="../index.html">전체 노트 목록</a></nav>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#why">Claude Code를 가볍게</a></li>
+      <li><a href="#no-rust">Rust로 다시 쓰지 않은 이유</a></li>
+      <li><a href="#results">메모리 4분의 1, 시작 2배</a></li>
+      <li><a href="#types">타입은 예측으로 쓴다</a></li>
+      <li><a href="#verify">검증이 방법을 정한다</a></li>
+      <li><a href="#rhythm">몰아 쓰고, 그다음 고친다</a></li>
+      <li><a href="#rewrites">다섯 번 다시 썼다</a></li>
+      <li><a href="#scorecard">매시간 점수표</a></li>
+      <li><a href="#perf">대부분 빠르지만 예외도 있다</a></li>
+      <li><a href="#human">사람이 하루 종일 하는 일</a></li>
+      <li><a href="#conclusion">결론과 지금 해 볼 것</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 프로젝트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-24 · 22분 · 영어 발표 한글 정리</span>
+      <h1>에이전트가 쓴 수백만 줄을 믿고 내보내는 법</h1>
+      <p class="lead">Jarred Sumner는 Claude Code를 가볍고 빠르게 만들려고, JavaScript를 미리 컴파일하는 컴파일러를 Bun에 넣었다. 에이전트가 쓴 수백만 줄을 믿고 내보낼 수 있었던 건, 만드는 방법을 검증하는 방법에 맞춰 골랐기 때문이다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=TvsF67C2F54" target="_blank" rel="noopener">How to Ship Millions of Lines of Agent-Written Code</a></span>
+        <span>발표: Jarred Sumner (Bun 제작자, Anthropic)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 뭉개진 이름은 확실한 것만 바로잡았다(Cloud Code → Claude Code, V8 Zilly → Fuzzilli). 확실하지 않은 이름에는 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>목표는 <strong>Claude Code의 메모리와 속도</strong>였다. 답은 Rust로 다시 쓰기가 아니라 <strong>Bun에 넣은 AOT 컴파일러</strong>였다. 메모리는 약 4분의 1, 시작은 약 2배 빨라졌다.</li>
+        <li>Rust로 옮기지 않은 이유는 테스트다. Claude Code는 코드와 테스트가 같은 언어라, 옮기려면 테스트까지 다시 써야 한다. <strong>다시 쓴 테스트는 믿을 수 없다.</strong></li>
+        <li>핵심 원칙: <strong>어떻게 만들지는 어떻게 검증할지가 정한다.</strong> 심판은 프로젝트 이전부터 있던 테스트다. 에이전트가 건드렸을 리 없기 때문이다.</li>
+        <li>같은 코드를 <strong>JIT, AOT, 타입 제거</strong> 세 방식으로 돌려 결과를 맞춰 본다. Claude가 만든 코드 생성기로 대량 퍼징한다. 테스트가 정말 버그를 잡는지도 확인한다.</li>
+        <li>한 달 남짓 동안 <strong>다섯 번 다시 썼다.</strong> 1GB 메모리, 엉성한 코드, 50초 컴파일을 하나씩 넘었다. 출시 전 큰 프로젝트는 고치기보다 다시 쓰기가 쉽다.</li>
+        <li>작업 리듬: 몰아 쓸 때는 빌드를 한 번만 한다. 고칠 때는 <strong>오래 사는 서브에이전트</strong> 여럿에게 맡긴다. 매시간 점수표로 다시 잰다.</li>
+        <li>사람이 하는 일은 "계속해"와 유도 질문이다. 모델은 규칙을 지어내고 자기 능력을 낮춰 잡는다. 그래서 <strong>더 크게 해 보라고 계속 밀어줘야 한다.</strong></li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="why">
+        <header><span class="num">01</span><h2>"Claude Code를 더 가볍고 빠르게" <span class="ts">01:20</span></h2></header>
+        <p>Bun은 JavaScript 런타임<span class="en">runtime</span>이다. Claude Code가 이 위에서 돈다. Bun은 내부에서 WebKit의 JavaScript 엔진인 JavaScriptCore를 쓴다.</p>
+        <p>출발점은 Claude에게 준 프롬프트 하나였다. Claude Code가 메모리를 훨씬 덜 쓰고 더 빨라져야 한다는 것이다. 고칠 대상은 WebKit이든 Bun이든 상관없다고 했다.</p>
+        <p>그 답이 Bun에 넣은 <strong>미리 컴파일하는 컴파일러</strong><span class="en">ahead-of-time compiler, AOT</span>다. 발표자는 이 작업을 수백만 줄짜리 PR로 머지했다. 여름에 Bun을 Rust로 다시 쓴 일보다 더 큰 프로젝트라고 한다.</p>
+
+        <div class="shift" aria-label="JIT에서 AOT로">
+          <div><span class="tag">JIT · 지금까지</span><b>실행하면서 그때그때 컴파일한다</b><span class="muted">앱을 켤 때마다 컴파일 비용을 실행 중에 낸다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">AOT · 이번 프로젝트</span><b>실행 전에 미리 컴파일한다</b><span class="muted">실행 중에는 컴파일 비용을 내지 않는다</span></div>
+        </div>
+
+        <h3>왜 컴파일이 문제인가 <span class="ts">02:50</span></h3>
+        <ul class="plain">
+          <li>발표자에 따르면 보통 JavaScript 앱은 <strong>CPU 시간의 절반쯤</strong>을 필요할 때마다 코드를 컴파일하는 데 쓴다.</li>
+          <li>JavaScript 앱을 Rust나 Go로 다시 쓰는 곳이 많은 이유도 여기 있다. JIT 비용과 단일 스레드라는 한계가 겹친다.</li>
+          <li>Claude Code에서는 이 비용이 더 크다. 발표자는 Claude Code를 iOS 앱에서 쓰는 경우를 예로 들었다. 세션마다 컴파일까지 하면 CPU 시간이 많이 든다.</li>
+        </ul>
+      </section>
+
+      <!-- 2 -->
+      <section id="no-rust">
+        <header><span class="num">02</span><h2>Rust로 다시 쓰지 않은 이유 <span class="ts">03:50</span></h2></header>
+        <p>팀은 Claude Code를 Rust로 다시 쓰는 안을 많이 논의했다. Bun 팀은 Bun을 Rust로 옮겨 본 경험이 있어서 다시 쓰기에는 자신이 있었다. 그래도 하지 않았다. 이유는 테스트다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Bun · Zig → Rust <span class="ts">04:20</span></span>
+            <ul>
+              <li>구현: Zig에서 Rust로 바꾼다</li>
+              <li>테스트: TypeScript로 쓰여 있다</li>
+              <li>같은 테스트를 Zig 판과 Rust 판에 그대로 돌릴 수 있다</li>
+            </ul>
+            <p class="verdict"><b>테스트가 심판으로 남는다.</b> 그래서 쉬운 다시 쓰기였다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Claude Code · TypeScript → Rust (검토만) <span class="ts">04:40</span></span>
+            <ul>
+              <li>구현: TypeScript로 쓰여 있다</li>
+              <li>테스트: 역시 TypeScript로 쓰여 있다</li>
+              <li>구현을 옮기면 테스트도 옮겨야 한다</li>
+            </ul>
+            <p class="verdict"><b>테스트를 다시 쓰는 순간, 그 테스트를 믿을 수 없다.</b> 위험이 너무 컸다.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="title">원칙: 테스트는 바꾸는 대상과 떨어져 있어야 한다</span>
+          <span>구현과 테스트를 함께 바꾸면, 새 구현이 맞는지 판단할 기준이 사라진다. 그래서 질문을 바꿨다. "Rust로 다시 쓰지 않아도 되게, JavaScript 자체를 빠르게 만들면 어떨까?" <span class="ts">05:00</span></span>
+        </div>
+        <div class="callout">
+          <span class="title">함께 읽기: 같은 시리즈 "코드 리뷰는 정말 죽었나" 노트</span>
+          <span>그 노트에서 Laurie Voss는 Bun의 Rust 포팅을 다른 각도로 본다. 기존 테스트는 99.8% 통과했지만 unsafe 블록이 13,044개 남았다고 지적했다. 독립된 테스트는 동작을 지켜 주지만 코드 품질까지 보증하지는 않는다. 이 발표의 2번째 판 이야기(07장)도 같은 교훈을 준다.</span>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="results">
+        <header><span class="num">03</span><h2>메모리 4분의 1, 시작 2배 <span class="ts">05:20</span></h2></header>
+        <p>AOT 컴파일러로 빌드한 Claude Code의 결과다. 발표 시점에는 Anthropic 내부에서 먼저 쓰는 중<span class="en">dogfooding</span>이었다. 외부 공개도 곧 한다고 했다.</p>
+
+        <figure class="chart" aria-label="JIT를 100으로 놓은 비교: AOT 메모리 사용량 25, AOT 시작 시간 50">
+          <span class="chart-title">Claude Code: JIT 대비 AOT (JIT = 100, 낮을수록 좋다)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>JIT (기준)</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="JIT 기준: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>AOT · 메모리 사용량</span><span class="val">25 · 약 4분의 1</span></div>
+              <div class="track"><div class="fill key" style="width:25%" title="AOT 메모리 사용량: 약 25"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>AOT · 시작에 걸리는 시간</span><span class="val">50 · 약 2배 빠름</span></div>
+              <div class="track"><div class="fill key" style="width:50%" title="AOT 시작 시간: 약 50"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자는 "메모리를 약 4배 덜 쓰고, 약 2배 빨리 시작한다"고 말했다. 이를 JIT = 100으로 바꿔 25와 50으로 그렸다.</span>
+        </figure>
+
+        <h3>TypeScript 7과의 비교 <span class="ts">05:50</span></h3>
+        <ul class="plain">
+          <li>발표자에 따르면 TypeScript 팀은 TypeScript 7에서 컴파일러를 Go로 다시 썼다.</li>
+          <li>기존 JavaScript판 TypeScript를 Bun compile로 컴파일하면, 단일 스레드 기준으로 Go 포팅판보다 빠르다고 한다.</li>
+          <li>AOT로 컴파일한 쪽에는 아직 멀티스레드가 없다. 이를 더하는 PR이 따로 있다.</li>
+        </ul>
+        <p class="note">발표자는 Bun을 만든 사람이고 Anthropic에서 일한다. Bun과 Claude Code의 성능 주장은 자기 회사 제품에 대한 것이니, 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="types">
+        <header><span class="num">04</span><h2>타입은 믿지 않고 예측으로 쓴다 <span class="ts">06:30</span></h2></header>
+        <p>TypeScript의 타입은 틀려도 프로그램이 돈다. 타입 표기가 실제 값과 다를 수 있다는 뜻이다.</p>
+        <p>그래서 이 컴파일러는 타입을 사실로 믿지 않는다. "아마 이 타입일 것"이라는 <strong>예측</strong><span class="en">prediction</span>으로 쓴다.</p>
+        <p>발표자는 이런 문제가 모델에게 잘 맞는다고 본다. 모델이 컴파일러를 아주 잘 쓰기 때문이라고 한다.</p>
+
+        <h3>컴파일러가 코드를 만드는 방식 <span class="ts">16:10</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>상황</th><th>만드는 코드</th></tr></thead>
+            <tbody>
+              <tr><td>값의 타입이 늘 같다고 확실히 증명할 수 있다 (모노모픽<span class="en">monomorphic</span>)</td><td>객체의 필드를 바로 읽는 코드. 빠르다</td></tr>
+              <tr><td>증명할 수 없다</td><td>매번 타입을 확인하는 코드. 인라인 캐싱<span class="en">inline caching</span>을 조금 쓰지만 많지는 않다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="verify">
+        <header><span class="num">05</span><h2>어떻게 검증할지가 어떻게 만들지를 정한다 <span class="ts">07:00</span></h2></header>
+        <blockquote>어떤 방식으로 만들지는 전적으로, 그 코드가 정말 동작하고 버그가 없다고 어떻게 확인할지에 달려 있다.<cite>발표자의 말을 옮김 · <span class="ts">02:20</span></cite></blockquote>
+        <p>AOT 컴파일러는 검증하기 좋은 문제다. 돌릴 수 있는 테스트가 이미 아주 많다. 팀이 새로 쓴 테스트도 많지만, 핵심은 <strong>프로젝트 이전부터 있던 테스트</strong>다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>테스트 묶음</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td>Bun 기존 테스트</td><td>Bun을 Rust로 옮길 때도 심판으로 쓴 테스트</td></tr>
+              <tr><td>WebKit 테스트</td><td>Bun이 쓰는 JavaScript 엔진 쪽 테스트</td></tr>
+              <tr><td>test262</td><td>JavaScript 표준을 제대로 구현했는지 보는 테스트 모음</td></tr>
+              <tr><td>Cloudflare Code 테스트 (추정)</td><td>자막에 "Cloudflare Codes tests"로 들린다. 정확한 이름은 확실하지 않다</td></tr>
+              <tr><td>Bun 테스트 러너</td><td>Bun의 테스트 러너 자체를 AOT 모드로 돌릴 수 있게 했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>이전부터 있던 테스트가 중요한 이유는 단순하다. <strong>에이전트가 건드렸을 리 없다.</strong> <span class="ts">17:10</span></p>
+        <p>실패하는 테스트도 일부 있다. AOT 컴파일러에는 호환을 깨는 변경<span class="en">breaking change</span>이 두 가지 있고, 남은 실패는 대부분 이 때문이다. 두 변경은 주로 프로토타입 오염<span class="en">prototype pollution</span> 공격을 막는 보안 조치다. 성능에도 도움이 된다.</p>
+
+        <h3>세 방식으로 돌려 결과를 맞춰 본다 <span class="ts">08:10</span></h3>
+        <ol class="plain">
+          <li>JIT로 실행한다.</li>
+          <li>AOT로 컴파일해서 실행한다.</li>
+          <li>타입을 지우고 실행한다.</li>
+        </ol>
+        <p>세 결과가 같으면, 적어도 그 입력에서는 맞게 동작한다. 여러 구현의 결과를 맞춰 보는 이런 방식을 흔히 차등 테스트<span class="en">differential testing</span>라고 부른다.</p>
+        <p>이 틀은 퍼징<span class="en">fuzzing</span>으로 키우기 좋다. Claude에게 여러 코드 패턴을 만들어 내는 코드 생성기를 잔뜩 쓰게 한다. 생성된 코드를 세 방식으로 돌려 결과를 비교한다. 이 방법으로 버그를 많이 잡았다.</p>
+        <p>V8 팀이 쓰는 JavaScript 엔진 퍼저 <strong>Fuzzilli</strong>도 썼다. <span class="ts">17:30</span> Bun은 이미 Fuzzilli를 쓰고 있었다. 이번에는 TypeScript 타입까지 시험하도록 확장했다.</p>
+        <div class="callout warn">
+          <span class="title">테스트가 정말 잡는지 확인한다 <span class="ts">17:50</span></span>
+          <span>퍼저가 버그를 찾고 있다고 착각하기 쉽다. 실제로는 아무것도 못 찾고 있을 수 있다. 테스트 자체가 버그를 잡아내는지 따로 확인해야 한다.</span>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="rhythm">
+        <header><span class="num">06</span><h2>몰아 쓰고, 그다음 고친다 <span class="ts">08:50</span></h2></header>
+        <p>발표자가 지금까지 한 일 중 코드 양이 가장 많은 프로젝트다. 대부분은 테스트 코드다. 다섯 번 다시 쓴 탓도 있다.</p>
+        <div class="shift" aria-label="작업의 두 단계">
+          <div><span class="tag">1단계 · 몰아 쓰기</span><b>많은 코드를 한꺼번에 쓴다</b><span class="muted">빌드는 한 번만 한다. 매번 빌드하면 컴파일과 빌드 에러를 기다리느라 시간을 다 쓴다.</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">2단계 · 고치기 <span class="ts">10:00</span></span><b>전부 고치고 확인한다</b><span class="muted">컴파일되는지, 테스트를 통과하는지, 정말 동작하는지 본다. 개별 에이전트를 많이 띄워 오래 돌린다.</span></div>
+        </div>
+
+        <h3>워크플로 대신 오래 사는 서브에이전트 <span class="ts">15:20</span></h3>
+        <p>Bun 런타임 작업 때는 Claude Code 워크플로<span class="en">workflows</span>에 많이 기댔다. 최근 모델로는 주로 <strong>오래 사는 서브에이전트</strong><span class="en">long-lived subagents</span>를 쓴다. 처음에 몰아 쓰는 단계만 예외다.</p>
+        <p>오래 사는 서브에이전트는 관련 코드의 맥락을 컨텍스트 창에 계속 쥐고 있다. 그래서 낭비가 적다. 멈추지 않고 계속 일할 수 있다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="rewrites">
+        <header><span class="num">07</span><h2>한 달 남짓, 다섯 번 다시 썼다 <span class="ts">10:10</span></h2></header>
+        <p>프로젝트는 한 달이 조금 넘게 걸렸다. 그동안 컴파일러를 다섯 번 다시 썼다. 판마다 문제를 하나씩 발견했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>판</th><th>한 일</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>1번째</td><td>JavaScriptCore의 기존 코드를 최대한 재사용했다</td><td>Claude Code가 메모리를 1GB 썼다. 성능 상한이 기존 코드 수준에 묶였다</td></tr>
+              <tr><td>2번째 <span class="ts">10:50</span></td><td>Bun 안에 TypeScript 타입 검사기(Bun Check)를 넣고, Claude에게 그걸 쓰게 했다</td><td>시작 2배 빠름, 메모리 약 3분의 1. 하지만 코드가 엉성했다(slop)</td></tr>
+              <tr><td>3번째 <span class="ts">12:20</span></td><td>에이전트 140개를 동시에 띄워 코드를 한꺼번에 쓰고, Claude Code를 돌려 봤다</td><td>전체를 빨리 뽑아내려는 시도였다. 결과는 발표에서 따로 말하지 않았다</td></tr>
+              <tr><td>4번째 <span class="ts">12:50</span></td><td>코드 품질이 좋았다. 성능은 전과 비슷했다</td><td>Claude Code 컴파일에 50초. 코드가 90만 줄로 너무 컸다. 출시 직전에 접었다</td></tr>
+              <tr><td>5번째 <span class="ts">14:10</span></td><td>코드가 좋다. 빌드가 20초 미만이다</td><td>출시할 만하다. 발표 다음 주 출시 예정</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout warn">
+          <span class="title">2번째 판이 엉성했던 예 <span class="ts">11:20</span></span>
+          <span>이 판의 컴파일러는 어떤 객체든 <code>archive</code>라는 속성을 읽으면 <code>Bun.archive</code> API를 쓸 수도 있다고 가정했다. 이름만 보고 짐작하는 규칙이다. 성능 숫자는 좋았지만, 발표자는 코드를 보고 "이건 출시할 수 없다"고 판단했다.</span>
+        </div>
+
+        <h3>4번째 판을 접은 이유 <span class="ts">13:00</span></h3>
+        <p>JavaScript 개발자는 컴파일을 기다리는 데 익숙하지 않다. Claude Code는 큰 코드베이스라 50초가 걸렸다. 다른 프로젝트도 몇 초씩 걸린다는 뜻이다. 사람들은 그만큼 기다리려 하지 않는다.</p>
+
+        <figure class="chart" aria-label="판별 Claude Code 컴파일 시간: 앞선 판들 10~20초, 4번째 판 50초, 5번째 판 20초 미만">
+          <span class="chart-title">판별 Claude Code 컴파일 시간 (초)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>앞선 판들</span><span class="val">10~20</span></div>
+              <div class="track"><div class="fill" style="width:40%" title="앞선 판들: 10~20초"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>4번째 판</span><span class="val">50</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="4번째 판: 50초"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>5번째 판</span><span class="val">&lt; 20</span></div>
+              <div class="track"><div class="fill key" style="width:40%" title="5번째 판: 20초 미만"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>25</span><span>50</span></div>
+          <span class="caption">범위(10~20초)와 "20초 미만"은 위쪽 끝인 20초에 맞춰 그렸다. 실제 막대는 이보다 짧을 수 있다.</span>
+        </figure>
+
+        <h3>판을 거치며 얻은 교훈</h3>
+        <div class="callout">
+          <span class="title">마크다운 문서 1,500개 <span class="ts">11:50</span></span>
+          <span>큰 계획을 세우며 설계 문서를 쓰게 하면, 모델은 마크다운 문서를 끝없이 만든다. 1,500개는 누구도 읽을 수 없는 양이다.</span>
+        </div>
+        <div class="callout warn">
+          <span class="title">측정으로 스스로를 설득한다 <span class="ts">13:40</span></span>
+          <span>Claude는 일을 시작하기 전에 해 볼 가치가 있는지 가늠한다. 그런데 측정이 틀렸어도 맞다고 믿기 쉽다. 발표자가 "이 아이디어 해 봐"라고 하면, Claude가 효과를 가늠하다 스스로 접는 일이 많았다. <span class="ts">14:40</span> 발표자는 이렇게 접힌 아이디어 중 다시 시도할 것이 많다고 본다.</span>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="scorecard">
+        <header><span class="num">08</span><h2>매시간 점수표 <span class="ts">16:30</span></h2></header>
+        <p>이 정도 규모면 무슨 일이 일어나는지 따라가기 어렵다. 그래서 에이전트가 매시간 업데이트를 올리게 했다.</p>
+        <ul class="plain">
+          <li>업데이트에는 우선순위를 둔 지표들을 비교한 점수표<span class="en">scorecard</span>가 들어간다.</li>
+          <li>Slack에는 이전 버전과 이번 버전을 나란히 올렸다. 숫자가 올랐는지 내렸는지 바로 보인다.</li>
+        </ul>
+        <div class="callout">
+          <span class="title">계속 다시 재지 않으면 나빠진다 <span class="ts">21:20</span></span>
+          <span>발표자는 결론에서도 이 점을 강조했다. 진행되는 일이 너무 많아서, 다시 재지 않으면 무엇이 나빠지는지 놓치기 쉽다.</span>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="perf">
+        <header><span class="num">09</span><h2>대부분 빠르지만, 늘 그런 건 아니다 <span class="ts">18:00</span></h2></header>
+        <p>발표자가 보여 준 벤치마크에서 AOT 컴파일은 대부분의 프로젝트에서 JIT보다 빨랐다. 늘 그렇지는 않다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">예외 · UglifyJS <span class="ts">18:20</span></span>
+            <p>인터프리터<span class="en">interpreter</span>를 많이 써야 하는 코드는 빨라지지 않는다. <code>eval</code>이나 <code>new Function</code>으로 실행 중에 코드를 만드는 경우다.</p>
+            <p class="verdict">대부분의 앱은 이렇게 하지 않는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">금지 · Object.prototype <span class="ts">18:50</span></span>
+            <p>컴파일러는 <code>Object.prototype</code>에 속성을 붙이는 것을 금지한다. 프로토타입 오염 공격이 주로 이 방식을 쓴다.</p>
+            <p class="verdict">드문 경우지만 <b>호환을 깨는 변경</b>이다.</p>
+          </div>
+        </div>
+        <p>발표자는 AOT 컴파일이 "한 줄로 앱을 빠르게 만드는 것"에 가장 가깝다고 말했다. 다만 위 예외처럼 100% 그렇지는 않다고 직접 덧붙였다.</p>
+
+        <h3>JetStream 3 <span class="ts">20:20</span></h3>
+        <p>JetStream 3는 JavaScript 엔진들이 주로 쓰는 벤치마크다. 발표자에 따르면 Bun AOT는 대부분의 항목에서 JavaScriptCore의 JIT와 Node.js(V8 JIT)보다 빨랐다. 발표에서 구체적인 수치는 말하지 않았다.</p>
+        <p>개발 내내 Bun compile로 컴파일한 Claude Code를 써서 Bun compile 자체를 만들었다. <span class="ts">20:50</span></p>
+        <p class="note">벤치마크 결과도 발표자 회사 제품에 대한 주장이다. 원 자료를 확인하지 않았으니 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="human">
+        <header><span class="num">10</span><h2>사람은 하루 종일 무엇을 하나 <span class="ts">19:10</span></h2></header>
+        <p>발표자가 가장 많이 보낸 메시지는 "continue"(계속해)였다. 노트북이 자꾸 꺼진 것도 문제였다.</p>
+        <p>더 구체적으로는 유도 질문<span class="en">leading questions</span>을 많이 던졌다. <span class="ts">19:40</span></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>자주 한 말</th><th>발표자가 든 이유</th></tr></thead>
+            <tbody>
+              <tr><td>"왜 이렇게 하고 있지?" "이렇게 할 수 있나?"</td><td>결정의 근거를 다시 보게 한다</td></tr>
+              <tr><td>"더 빨리 할 수 없나?" "왜 이렇게 오래 걸려?"</td><td>모델은 스스로 규칙을 지어내고 그 규칙에 묶인다</td></tr>
+              <tr><td>더 열심히 해 보라는 말 <span class="ts">20:10</span></td><td>모델은 자기가 할 수 있는 일을 낮춰 잡는다</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="conclusion">
+        <header><span class="num">11</span><h2>결론과 지금 해 볼 것 <span class="ts">21:00</span></h2></header>
+        <ul class="plain">
+          <li>Claude와 큰 프로젝트를 할 때는 <strong>테스트할 수 있느냐</strong>가 가장 중요하다. 테스트가 정말 무언가를 시험하는지도 확인한다.</li>
+          <li><strong>계속 다시 잰다.</strong> 일이 너무 많아서, 재지 않으면 나빠지는 것을 놓친다.</li>
+          <li>아직 출시하지 않은 큰 프로젝트는 고치기<span class="en">refactor</span>보다 <strong>다시 쓰기</strong><span class="en">rewrite</span>가 쉽다.</li>
+          <li>야심 차게 움직이지 않으면 모델은 10% 개선 대신 0.1% 개선을 낸다. <strong>"더 해 볼 수 있다"고 계속 밀어줘야 한다.</strong></li>
+        </ul>
+        <div class="callout">
+          <span class="title">지금 해 보기 <span class="ts">22:00</span></span>
+          <span>Bun이 깔려 있다면 <code>bun upgrade --canary</code>로 카나리 버전을 받는다. 그다음 Bun compile을 쓰면 된다고 했다. 발표자는 명령을 "bun compile"이라고만 말했다. 정확한 사용법은 Bun 문서에서 확인한다.</span>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>목표는 Claude Code의 메모리와 속도였다. 답은 Rust 재작성이 아니라 <strong>Bun의 AOT 컴파일러</strong>였다.</li>
+          <li>발표자 인용에 따르면 JavaScript 앱은 CPU 시간의 절반쯤을 실행 중 컴파일에 쓴다. AOT는 이 비용을 실행 전으로 옮긴다.</li>
+          <li>Claude Code를 Rust로 옮기지 않은 이유는 테스트다. <strong>구현과 같은 언어인 테스트를 옮기면 그 테스트를 믿을 수 없다.</strong></li>
+          <li>결과는 메모리 약 4분의 1, 시작 약 2배 빠름이다.</li>
+          <li>컴파일러는 TypeScript 타입을 예측으로 쓴다. 증명되면 필드를 바로 읽고, 아니면 매번 확인한다.</li>
+          <li><strong>프로젝트 이전부터 있던 테스트만 심판으로 믿는다.</strong> 에이전트가 건드릴 수 없기 때문이다.</li>
+          <li>JIT, AOT, 타입 제거 세 방식의 결과를 비교하고, Claude가 만든 생성기로 퍼징한다. 테스트가 정말 잡는지도 확인한다.</li>
+          <li>몰아 쓸 때는 빌드를 한 번만 한다. 고칠 때는 <strong>오래 사는 서브에이전트</strong> 여럿을 쓴다. 매시간 점수표로 다시 잰다.</li>
+          <li>다섯 번 다시 썼다. 1GB 메모리, 엉성한 코드, 50초 컴파일을 넘었다. <strong>출시 전 큰 프로젝트는 다시 쓰기가 고치기보다 쉽다.</strong></li>
+          <li>모델은 규칙을 지어내고 능력을 낮춰 잡는다. 사람은 질문하고, <strong>더 크게 해 보라고 밀어붙인다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>첫 프롬프트의 목표와, 손대도 된다고 한 범위는?</span></summary><div class="answer">Claude Code가 메모리를 훨씬 덜 쓰고 더 빨라지게 하는 것. WebKit이나 Bun 중 어느 쪽을 고쳐도 된다고 했다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>JIT와 AOT의 차이는?</span></summary><div class="answer">JIT는 실행하면서 그때그때 컴파일한다. AOT는 실행 전에 미리 컴파일한다. 그래서 AOT는 실행 중 컴파일 비용이 없다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Bun은 Rust로 다시 쓸 수 있었는데, Claude Code는 왜 하지 않았나?</span></summary><div class="answer">Bun은 테스트가 TypeScript라 Zig 판과 Rust 판에 같은 테스트를 돌릴 수 있었다. Claude Code는 코드와 테스트가 모두 TypeScript라 테스트까지 옮겨야 한다. 다시 쓴 테스트는 믿을 수 없다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>AOT로 빌드한 Claude Code의 결과 수치는?</span></summary><div class="answer">메모리는 약 4배 덜 쓰고(약 4분의 1), 시작은 약 2배 빠르다. 발표 시점에는 내부에서 먼저 쓰는 중이었다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>컴파일러는 TypeScript 타입을 어떻게 다루나? 왜 그런가?</span></summary><div class="answer">타입을 사실이 아니라 예측으로 쓴다. TypeScript 타입은 틀려도 프로그램이 돌기 때문이다. 타입이 같다고 증명되면 필드를 바로 읽고, 아니면 매번 확인한다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>프로젝트 이전부터 있던 테스트가 특히 중요한 이유는?</span></summary><div class="answer">에이전트가 건드렸을 리 없기 때문이다. 그래서 에이전트가 쓴 코드를 판정하는 심판으로 믿을 수 있다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>결과를 맞춰 보는 세 가지 실행 방식은? 어떻게 키웠나?</span></summary><div class="answer">JIT 실행, AOT 컴파일 실행, 타입을 지운 실행. 세 결과가 같으면 그 입력에서는 맞다. Claude가 쓴 코드 생성기와 Fuzzilli로 입력을 대량으로 만들어 퍼징했다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>몰아 쓰는 단계에서 빌드를 한 번만 하는 이유는?</span></summary><div class="answer">매번 빌드하면 컴파일과 빌드 에러를 기다리느라 시간을 다 쓴다. 고치는 단계는 코드를 다 쓴 뒤에 따로 한다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>2번째 판은 성능이 좋았는데 왜 버렸나?</span></summary><div class="answer">코드가 엉성했다. 예를 들어 어떤 객체든 <code>archive</code> 속성을 읽으면 <code>Bun.archive</code> API를 쓸 수도 있다고 가정했다. 발표자가 코드를 보고 출시할 수 없다고 판단했다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>4번째 판을 접은 이유는?</span></summary><div class="answer">Claude Code 컴파일에 50초가 걸렸다. JavaScript 개발자는 컴파일을 기다리지 않는다. 코드도 90만 줄로 너무 컸다. 5번째 판은 20초 미만이다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>UglifyJS에서 AOT가 빨라지지 않는 이유는?</span></summary><div class="answer"><code>eval</code>이나 <code>new Function</code>처럼 실행 중에 코드를 만들어 인터프리터를 많이 쓰기 때문이다. 미리 컴파일할 수 없는 코드다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>모델을 계속 밀어붙여야 하는 이유는?</span></summary><div class="answer">모델은 스스로 규칙을 지어내고 자기 능력을 낮춰 잡는다. 야심 차게 밀지 않으면 10% 개선 대신 0.1% 개선만 낸다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 프로젝트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>에이전트에게 큰 작업을 맡기기 전에 검증 방법부터 정한다<span class="how">확인: "이게 맞다는 걸 무엇으로 아는가"에 한 문장으로 답할 수 있는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>다시 쓰기 전에 테스트가 바뀌는 코드와 떨어져 있는지 본다<span class="how">테스트를 같이 옮겨야 한다면, 그 테스트는 심판이 될 수 없다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>작업 이전부터 있던 테스트를 합격 기준으로 둔다<span class="how">에이전트가 새로 쓰거나 고친 테스트는 따로 구분해 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>같은 입력을 두 구현에 넣어 결과를 비교하는 검사를 만든다<span class="how">예시: 기존 버전과 새 버전, 최적화 전과 후</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>테스트와 퍼저가 정말 버그를 잡는지 확인한다<span class="how">예시: 일부러 버그를 넣고 테스트가 실패하는지 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>몰아 쓰는 단계에서는 빌드를 미루고, 고치는 단계를 따로 둔다<span class="how">고치는 단계는 맡은 부분의 맥락을 오래 쥐는 서브에이전트에게 맡긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>정기적으로 점수표를 자동으로 올리게 한다<span class="how">이전 버전과 나란히 놓아 오르내림이 바로 보이게 한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>에이전트가 "효과가 작다"며 접으려 하면 측정 근거를 묻는다<span class="how">"왜 이렇게 하지?"로 지어낸 규칙이 없는지도 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>작은 개선만 나오면 목표를 더 크게 다시 준다<span class="how">확인: 0.1% 개선을 반복하고 있지 않은가</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>런타임</td><td>Runtime. JavaScript 코드를 실제로 실행하는 프로그램. Bun, Node.js가 여기에 속한다</td></tr>
+              <tr><td>JavaScriptCore</td><td>WebKit(Safari의 엔진)에 들어 있는 JavaScript 엔진. Bun이 내부에서 쓴다</td></tr>
+              <tr><td>JIT 컴파일</td><td>Just-in-time. 프로그램을 실행하면서 필요한 코드를 그때그때 기계어로 바꾸는 방식</td></tr>
+              <tr><td>AOT 컴파일</td><td>Ahead-of-time. 실행하기 전에 코드를 미리 기계어로 바꿔 두는 방식</td></tr>
+              <tr><td>인터프리터</td><td>Interpreter. 코드를 미리 바꾸지 않고 해석하면서 바로 실행하는 방식</td></tr>
+              <tr><td>타입 검사기</td><td>Type checker. 코드의 타입 표기가 서로 맞는지 확인하는 도구</td></tr>
+              <tr><td>모노모픽</td><td>Monomorphic. 어떤 자리에 들어오는 값의 형태가 늘 하나뿐인 상태</td></tr>
+              <tr><td>인라인 캐싱</td><td>Inline caching. 직전에 본 값의 형태를 기억해 두고, 같은 형태가 오면 빠른 길로 처리하는 기법</td></tr>
+              <tr><td>test262</td><td>JavaScript 표준을 제대로 구현했는지 확인하는 테스트 모음</td></tr>
+              <tr><td>차등 테스트</td><td>Differential testing. 같은 입력을 여러 구현에 넣고 결과가 같은지 비교하는 테스트</td></tr>
+              <tr><td>퍼징</td><td>Fuzzing. 자동으로 만든 입력을 대량으로 넣어 버그를 찾는 방법</td></tr>
+              <tr><td>Fuzzilli</td><td>JavaScript 엔진용 퍼저. V8 팀이 쓴다</td></tr>
+              <tr><td>프로토타입 오염</td><td>Prototype pollution. <code>Object.prototype</code> 같은 공용 객체에 속성을 붙여 다른 객체들의 동작을 바꾸는 공격</td></tr>
+              <tr><td>호환을 깨는 변경</td><td>Breaking change. 기존 코드가 그대로는 동작하지 않게 되는 변경</td></tr>
+              <tr><td>slop</td><td>AI가 대량으로 만든 엉성하고 질 낮은 결과물</td></tr>
+              <tr><td>서브에이전트</td><td>Subagent. 메인 에이전트가 일을 나눠 맡기는 하위 에이전트</td></tr>
+              <tr><td>도그푸딩</td><td>Dogfooding. 자기 회사 제품을 내부에서 먼저 직접 쓰는 것</td></tr>
+              <tr><td>JetStream 3</td><td>JavaScript 엔진 성능을 비교하는 대표 벤치마크</td></tr>
+              <tr><td>카나리</td><td>Canary. 정식 출시 전에 먼저 내놓는 실험용 빌드</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개: Bun 제작자, Anthropic</td></tr>
+              <tr><td><span class="ts">00:20</span></td><td>수백만 줄짜리 PR로 AOT 컴파일러를 머지</td></tr>
+              <tr><td><span class="ts">01:10</span></td><td>문제: 에이전트가 쓴 수백만 줄을 어떻게 믿고 내보내나</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>첫 프롬프트: Claude Code의 메모리와 속도</td></tr>
+              <tr><td><span class="ts">01:50</span></td><td>다섯 번의 재작성, 다음 주 출시</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>검증 방법이 만드는 방법을 정한다</td></tr>
+              <tr><td><span class="ts">02:50</span></td><td>JavaScript 앱 CPU 시간의 절반은 컴파일</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>JIT와 AOT의 차이</td></tr>
+              <tr><td><span class="ts">03:50</span></td><td>Claude Code를 Rust로 다시 쓸까</td></tr>
+              <tr><td><span class="ts">04:20</span></td><td>Bun은 되고 Claude Code는 안 되는 이유: 테스트 언어</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>JavaScript를 빠르게 만들기로</td></tr>
+              <tr><td><span class="ts">05:20</span></td><td>메모리 4분의 1, 시작 2배</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>TypeScript 7 Go 포팅과 비교</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>타입을 예측으로 다룬다</td></tr>
+              <tr><td><span class="ts">07:00</span></td><td>프로젝트 이전부터 있던 테스트들</td></tr>
+              <tr><td><span class="ts">07:50</span></td><td>호환을 깨는 변경 두 가지</td></tr>
+              <tr><td><span class="ts">08:10</span></td><td>JIT, AOT, 타입 제거 세 방식 비교와 퍼징</td></tr>
+              <tr><td><span class="ts">08:50</span></td><td>작업 리듬: 몰아 쓰기, 그다음 고치기</td></tr>
+              <tr><td><span class="ts">10:10</span></td><td>재작성 이력: 1번째 판 1GB</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>2번째 판: Bun Check, 그리고 slop</td></tr>
+              <tr><td><span class="ts">11:50</span></td><td>마크다운 문서 1,500개</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>3번째 판: 에이전트 140개</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>4번째 판: 50초 컴파일, 90만 줄</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>측정으로 스스로를 설득하는 문제</td></tr>
+              <tr><td><span class="ts">14:10</span></td><td>5번째 판: 빌드 20초 미만</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>접힌 아이디어들은 다시 볼 것</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>워크플로에서 오래 사는 서브에이전트로</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>컴파일러 동작: 모노모픽이면 필드를 바로 읽는다</td></tr>
+              <tr><td><span class="ts">16:30</span></td><td>매시간 점수표</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>에이전트가 건드릴 수 없는 테스트</td></tr>
+              <tr><td><span class="ts">17:30</span></td><td>Fuzzilli 확장</td></tr>
+              <tr><td><span class="ts">17:50</span></td><td>테스트가 정말 잡는지 확인</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>성능: 대부분 JIT보다 빠름, UglifyJS는 예외</td></tr>
+              <tr><td><span class="ts">18:50</span></td><td>Object.prototype 금지</td></tr>
+              <tr><td><span class="ts">19:10</span></td><td>사람이 하는 일: "continue"와 유도 질문</td></tr>
+              <tr><td><span class="ts">20:20</span></td><td>JetStream 3</td></tr>
+              <tr><td><span class="ts">20:50</span></td><td>Bun compile로 만든 Claude Code로 개발</td></tr>
+              <tr><td><span class="ts">21:00</span></td><td>결론: 테스트, 다시 재기, 다시 쓰기, 야심</td></tr>
+              <tr><td><span class="ts">22:00</span></td><td>지금 해 보기: <code>bun upgrade --canary</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'TvsF67C2F54:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>
