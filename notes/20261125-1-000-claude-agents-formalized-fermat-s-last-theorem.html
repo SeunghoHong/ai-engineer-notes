@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>페르마 증명과 에이전트 기억</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: max(0.82em, 12px); color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-top: 40px; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: var(--radius); display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-color: color-mix(in srgb, var(--crit) 35%, transparent); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 4px 0 4px 20px; border-left: 1px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<nav style="max-width:72rem;margin:0 auto;padding:16px 16px 0;font-size:0.9375rem"><a href="../index.html">전체 노트 목록</a></nav>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#fermat">페르마의 마지막 정리와 형식화</a></li>
+      <li><a href="#september">9월 결과: 에이전트 12개</a></li>
+      <li><a href="#thousand">이번 실험: 1,000개, 하네스 없이</a></li>
+      <li><a href="#setup">실험 환경: 샌드박스와 도구 두 개</a></li>
+      <li><a href="#tables">리드가 스스로 만든 테이블</a></li>
+      <li><a href="#tree">어려운 부분은 스스로 쪼갰다</a></li>
+      <li><a href="#paradox">기억의 역설</a></li>
+      <li><a href="#models">강한 모델일수록 기억을 잘 쓴다</a></li>
+      <li><a href="#dreaming">꿈꾸기: 기억을 다시 짓는 단계</a></li>
+      <li><a href="#effects">꿈꾸기가 한 일 세 가지</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 에이전트에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-25 · 19분 · 영어 발표 한글 정리</span>
+      <h1>천 개의 에이전트와 꿈꾸는 기억</h1>
+      <p class="lead">Claude 에이전트 1,000개가 Git과 데이터베이스만 받고도 스스로 역할을 나눠 페르마의 마지막 정리 증명을 형식화했다. 기억 쪽에서는, 일하며 적은 기억을 나중에 되돌아보며 고치는 '꿈꾸기'가 에이전트의 긴 작업을 돕는다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=wrfbI5eyLAI" target="_blank" rel="noopener">1,000 Claude Agents Formalized Fermat's Last Theorem</a></span>
+        <span>발표: Lance Martin (Anthropic)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 실험 결과는 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 발표자는 Anthropic 소속이고, 두 이야기 모두 자사 모델 Claude의 능력에 관한 주장이다. 그 점을 감안해 읽자. 자막에서 뭉개진 모델명과 수학 용어는 확실한 것만 바로잡았고, 확실하지 않은 이름에는 (추정)을 붙였다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>Anthropic은 9월에 에이전트 약 12개, 수학 전용 플랫폼, 연구자의 지원으로 <strong>페르마의 마지막 정리 증명을 Lean으로 형식화</strong>했다고 발표했다.</li>
+        <li>Fable 5.2 출시에 맞춰 에이전트를 <strong>1,000개로 늘리고</strong>, 전용 플랫폼과 풀이에 대한 사람의 지시를 뺐다. 준 도구는 <strong>Git과 SQL 데이터베이스뿐</strong>이다.</li>
+        <li>리드 에이전트는 시작 5분 만에 <strong>공지·배정·메모·반영 테이블을 스스로 만들었다.</strong> 팀은 약 30시간 동안 이 테이블로 일을 나눠 형식화를 마쳤다.</li>
+        <li>구조는 풀이가 아니라 <strong>안전</strong>에 줬다. 에이전트마다 샌드박스, 네트워크 제한, 도구 호출 실시간 감시, 10분마다 기록 검토를 뒀다.</li>
+        <li><strong>기억의 역설</strong>: 기억은 일하는 도중 눈앞만 보고 적히지만, 나중에 읽을 때는 전체가 일관된 지도여야 한다. 사람이 잠자며 기억을 정리하듯, 에이전트도 '적기'와 '정리하기'를 나누면 좋다.</li>
+        <li>강한 모델일수록 <strong>언제 적고 언제 읽을지, 무엇이 중요한지</strong> 스스로 안다. Sonnet 4.6은 기억을 줘도 효과가 거의 없었고, Fable 5는 포켓몬에서 작고 전략적인 기억을 남겼다.</li>
+        <li><strong>꿈꾸기</strong>는 쌓인 기록과 메모를 되돌아보며 틀린 기억을 고치고, 빈틈을 채우고, 위키 같은 새 표현을 만든다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="fermat">
+        <header><span class="num">01</span><h2>페르마의 마지막 정리와 형식화 <span class="ts">00:30</span></h2></header>
+        <p>발표자는 Claude의 최신 능력을 보여 주는 이야기 두 개를 준비했다. 첫째는 여러 에이전트가 함께 일하는 멀티 에이전트, 둘째는 기억이다. 첫 이야기는 Fable 5.2 출시 때 발표자가 쓴 블로그 글에서 왔다.</p>
+        <p>페르마의 마지막 정리는 한 문장으로 적을 수 있다. n이 2보다 큰 자연수이면, <code>aⁿ + bⁿ = cⁿ</code>을 만족하는 양의 정수 a, b, c는 없다.</p>
+        <p>말은 단순하지만 약 350년 동안 아무도 증명하지 못했다. 1990년대 중반 Andrew Wiles가 7년을 매달린 끝에 증명을 내놓았다.</p>
+        <p class="note">자막에서 식이 뭉개져 있어 정리의 표준 형태로 옮겼다.</p>
+
+        <h3>형식화란 <span class="ts">01:00</span></h3>
+        <p>그 뒤 수학계의 큰 관심사는 이 증명을 <strong>형식화</strong> <span class="en">formalization</span>하는 일이었다. 형식화는 증명의 모든 단계를 컴퓨터가 검사할 수 있게 다시 쓰는 것이다.</p>
+        <p>증명은 긴 논리의 사슬이다. Lean 같은 도구를 쓰면 그 사슬의 고리 하나하나가 맞는지 컴퓨터가 확인한다.</p>
+        <p>Anthropic은 9월에 Claude로 이 형식화를 해냈다고 발표했다. 발표자는 이를 이 방향의 첫 중요한 결과라고 불렀다.</p>
+      </section>
+
+      <!-- 2 -->
+      <section id="september">
+        <header><span class="num">02</span><h2>9월 결과: 에이전트 12개와 전용 플랫폼 <span class="ts">01:40</span></h2></header>
+        <p>9월의 시도는 에이전트 약 12개로 이뤄진 팀에서 시작했다. 초기에는 팀이 잘 돌아가지 않았다.</p>
+        <p>그래서 수학 증명 작업을 관리하는 플랫폼 하나를 붙였다. 자막에는 이름이 'Prove to me'처럼 들린다(추정). 이 플랫폼은 증명의 구조를 그래프로 제공하고, 에이전트는 그 그래프에 질의할 수 있다. 덕분에 에이전트들이 프로젝트의 현재 상태를 훨씬 잘 관리했다.</p>
+        <p>발표자는 이 플랫폼을 <strong>전용 하네스</strong> <span class="en">domain-specific harness</span>라고 불렀다. 하네스는 모델을 감싸 도구와 작업 틀을 주는 실행 환경이다. 이 플랫폼은 수학 증명이라는 한 분야만을 위해 만든 것이다.</p>
+        <p>9월 결과에는 한 연구자의 많은 도움도 들어갔다. 발표자의 표현으로는 "많이 찔러 보고 거들어 준" 결과다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="thousand">
+        <header><span class="num">03</span><h2>이번 실험: 1,000개, 하네스 없이 <span class="ts">02:20</span></h2></header>
+        <p>Fable 5.2 출시에 맞춘 질문은 이것이다. 훨씬 큰 에이전트 팀이 전용 하네스 없이, 사람이 풀이 방향을 잡아 주지 않아도 이 형식화를 스스로 해낼 수 있을까.</p>
+        <div class="shift" aria-label="9월 실험과 이번 실험의 차이">
+          <div><span class="tag">9월</span><b>에이전트 약 12개</b><span class="muted">수학 전용 플랫폼과 연구자의 지원</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이번 실험</span><b>에이전트 1,000개</b><span class="muted">전용 하네스 없음, 풀이에 대한 사람의 지시 없음</span></div>
+        </div>
+
+        <figure class="chart" aria-label="형식화에 투입한 에이전트 수 비교: 9월 약 12개, 이번 실험 1,000개">
+          <span class="chart-title">형식화에 투입한 에이전트 수</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>9월 · 전용 플랫폼 + 연구자 지원</span><span class="val">약 12</span></div>
+              <div class="track"><div class="fill" style="width:1.2%" title="9월: 약 12개"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>이번 실험 · 전용 하네스 없음</span><span class="val">1,000</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="이번 실험: 1,000개 (리드 1 + 도우미 999)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>500</span><span>1,000</span></div>
+          <span class="caption">9월 팀은 "약 12개(a dozen)"라고만 말해 12로 그렸다. 이번 팀은 리드 1개와 도우미 999개다. 약 83배 차이다.</span>
+        </figure>
+      </section>
+
+      <!-- 4 -->
+      <section id="setup">
+        <header><span class="num">04</span><h2>실험 환경: 샌드박스와 도구 두 개 <span class="ts">03:00</span></h2></header>
+        <p>구성도는 복잡해 보이지만 실제로는 단순하다. 장치 대부분은 안전과 보안을 위한 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td>실행 공간</td><td>에이전트 1,000개가 각자 자기 <strong>샌드박스</strong>에서 돈다. 네트워크 접근은 제한된다</td></tr>
+              <tr><td>연결 대상</td><td><strong>Git과 SQL 데이터베이스</strong>, 이 두 가지뿐이다</td></tr>
+              <tr><td>실시간 감시</td><td>모든 도구 호출을 지켜보며 샌드박스 탈출 같은 시도를 잡는다</td></tr>
+              <tr><td>오프라인 감시</td><td>10분마다 모든 에이전트의 실행 기록을 검토한다</td></tr>
+              <tr><td>프롬프트 <span class="ts">03:40</span></td><td>리드 에이전트 1개와 도우미 에이전트 999개를 정한다. Git과 DB가 있다는 것, 그리고 문제 진술만 알려 준다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>발표자는 Git과 DB를 이 팀의 <strong>기본 도구</strong> <span class="en">primitive</span>라고 불렀다. 기본 도구는 더 복잡한 구조를 쌓을 수 있는 가장 단순한 재료다. 협업 방식은 정해 주지 않았다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="tables">
+        <header><span class="num">05</span><h2>리드가 스스로 만든 협업 테이블 <span class="ts">04:00</span></h2></header>
+        <p>실행 5분쯤 지났을 때 리드 에이전트가 데이터베이스에 테이블 몇 개를 만들었다. 아무도 시키지 않은 일이다.</p>
+        <p>발표자는 이를 근거로 든다. 이제 에이전트는 어려운 문제를 풀 때 필요한 도구를 스스로 만들 만큼 발전했다는 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>테이블</th><th>쓰는 쪽</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td>공지 (announce)</td><td>리드</td><td>팀 전체에 알리는 큰 공지. 가끔 쓴다</td></tr>
+              <tr><td>배정 (assign)</td><td>리드</td><td>도우미 에이전트를 증명의 어느 명제에 붙일지 정한다</td></tr>
+              <tr><td>메모 (notes)</td><td>모든 에이전트</td><td>하위 작업별로 진행 상황을 적고 서로 공유한다</td></tr>
+              <tr><td>반영 (land)</td><td>도우미 에이전트</td><td>작업이 최종 반영됐는지 기록한다. 발표자는 증명의 Lean 코드가 실제로 들어가는 곳이라고 설명했다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">테이블 이름은 발표 설명을 들린 대로 옮겼다. 정확한 테이블 이름과 구조는 자막만으로 확인할 수 없다.</p>
+        <p>발표자가 보여 준 시각화에서는 빨강이 테이블 쓰기, 초록이 읽기였다. 리드는 가끔 공지 테이블에 쓰고, 명제가 진행되는 대로 도우미를 배정한다. 나머지 에이전트는 메모로 소통하고 반영 테이블에 결과를 남긴다.</p>
+        <p>이 실행은 <strong>약 30시간</strong> 걸렸다. 그동안 에이전트들은 따로 지시받지 않고 이 테이블로 일을 조율했다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="tree">
+        <header><span class="num">06</span><h2>어려운 부분은 스스로 쪼갰다 <span class="ts">05:10</span></h2></header>
+        <p>증명에서 특히 어려운 부분에서는 에이전트들이 자기만의 추상화를 만들었다. 발표자가 예로 든 것은 Langlands–Tunnell 정리의 작업 트리다. 이 증명에서 손꼽히게 어려운 명제다.</p>
+        <p class="note">자막에는 "Lagrange's tunnel"로 적혀 있다. Wiles의 증명에 쓰이는 Langlands–Tunnell 정리를 말한 것으로 보고 고쳤다.</p>
+        <p><strong>작업 트리</strong> <span class="en">task tree</span>는 큰 명제를 작은 작업으로 나누고, 작업 사이의 의존 관계를 보여 준다. 발표 화면에서는 시간이 지나며 작업이 '진행 중'에서 '완료'로 바뀌는 모습도 보였다.</p>
+
+        <h3>풀리는 대로 다시 배치했다 <span class="ts">05:40</span></h3>
+        <p>이 증명에는 명제가 60개 있다. 명제가 하나씩 풀리면 리드와 에이전트들이 스스로 다른 부분으로 옮겨 갔다. 누가 무엇을 맡을지는 실행 내내 계속 바뀌었다.</p>
+        <blockquote>"Total freeze of the origin, effective now. Magnificent work, all 999 of you."<cite>발표자가 보여 준, 에이전트가 남긴 메모 <span class="ts">06:20</span>. "지금부터 origin 전면 동결. 999명 모두 훌륭했다"는 뜻이다. origin은 Git 원격 저장소를 가리키는 것으로 보인다(추정).</cite></blockquote>
+
+        <h3>9월과 비교한 결론 <span class="ts">06:30</span></h3>
+        <p>발표자는 이 형식화가 원래 여러 해가 걸릴 것으로 예상된 일이라고 말한다.</p>
+        <p>이번 실험은 안전과 감시 쪽에 구조를 많이 줬다. 하지만 풀이 쪽 전용 하네스는 없었다. 그래도 팀은 단순한 기본 도구만으로 일을 끝냈다.</p>
+        <div class="callout">
+          <span class="title">발표자의 핵심 관찰</span>
+          <span>에이전트는 단순한 기본 도구만 받아도 스스로 조직하고 조율하는 능력이 점점 좋아지고 있다. 아주 길고 어려운 <strong>장기 과제</strong> <span class="en">long-horizon task</span>에서도 그렇다.</span>
+        </div>
+        <p class="note">자사 모델의 성과를 자사 연구자가 소개하는 자리라는 점을 감안해 읽자. 발표는 실행 비용과 형식화의 범위(어떤 기존 결과를 전제로 두었는지)는 다루지 않았다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="paradox">
+        <header><span class="num">07</span><h2>기억의 역설 <span class="ts">07:10</span></h2></header>
+        <p>두 번째 이야기는 기억이다. 멀티 에이전트와는 전혀 다른 능력이다. 앞 이야기가 큰 팀을 조직하는 능력이었다면, 기억은 Claude가 자기 맥락을 정리해 긴 문제를 푸는 능력이다.</p>
+        <p>발표자는 최근 Anthropic 엔지니어링 블로그에 이 주제로 글을 썼다. 그 글의 첫 줄이 키르케고르의 말이다. <span class="ts">07:40</span></p>
+        <blockquote>삶은 뒤돌아볼 때에만 이해되지만, 살아가는 것은 앞을 향해야 한다.<cite>키르케고르. 발표자가 블로그 첫 줄로 인용</cite></blockquote>
+        <p>발표자는 이 말이 에이전트 기억의 근본적인 역설을 담는다고 본다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">적을 때</span>
+            <p>에이전트는 작업 도중에 기억을 적는다. 이상하거나 흥미로운 일을 만나면 바로 적는다.</p>
+            <p>한 세션 안에서 "지금 이 일에 중요해 보이는 것"만 보고 적는다. 눈앞만 보는 셈이다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">읽을 때</span>
+            <p>기억은 나중에 되돌아보는 지식의 지도여야 한다.</p>
+            <p>그러려면 전체가 일관되고 중복이 없어야 한다.</p>
+          </div>
+        </div>
+
+        <h3>사람의 기억도 같은 문제를 푼다 <span class="ts">08:20</span></h3>
+        <p>사람도 낮 동안 겪은 일을 단기 기억에 적는다. 이 일은 해마 <span class="en">hippocampus</span>가 맡는다고 여겨진다.</p>
+        <p>밤에는 해마가 낮의 기억을 신피질 <span class="en">neocortex</span>로 다시 틀어 준다고 여겨진다. 신피질은 장기 지식이 저장되는 곳이다. 꿈꾸는 과정이 하루의 조각 중 중요한 것을 장기 지식으로 굳힌다는 설명이다.</p>
+        <div class="shift" aria-label="사람 기억의 두 단계">
+          <div><span class="tag">낮 · 해마</span><b>겪으며 적는다</b><span class="muted">하루의 단기 기억, 조각난 경험</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">밤 · 신피질</span><b>되돌아보며 정리한다</b><span class="muted">중요한 것만 골라 장기 지식으로 굳힌다</span></div>
+        </div>
+        <p>발표자의 요점은 이것이다. 에이전트도 <strong>일하며 적는 기억</strong>과 <strong>나중에 정리한 장기 지식</strong>을 나누면 득을 본다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="models">
+        <header><span class="num">08</span><h2>강한 모델일수록 기억을 잘 쓴다 <span class="ts">09:00</span></h2></header>
+        <p>CL Bench는 오픈소스 <strong>지속 학습</strong> <span class="en">continual learning</span> 벤치마크다. 설정은 단순하다.</p>
+        <ol class="plain">
+          <li>Claude가 데이터베이스에 관한 질문 40개를 차례로 푼다.</li>
+          <li>질문마다 새 세션에서 시작한다. 이전 대화는 남지 않는다.</li>
+          <li>세션 사이에 Claude는 기억 디렉터리에 메모를 남길 수 있다.</li>
+          <li>기억에 대한 특별한 지시는 없다. "디렉터리가 있으니 원하면 써라"가 전부다.</li>
+        </ol>
+        <p>발표자는 기억이 있을 때와 없을 때를 모델별 막대로 비교해 보여 줬다. 자막에는 구체적인 점수가 나오지 않아 차트로 옮기지 않았다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>기억 디렉터리를 줬을 때</th></tr></thead>
+            <tbody>
+              <tr><td>Sonnet 4.6 <span class="ts">09:40</span></td><td>효과가 거의 없다. 언제 적어야 할지 잘 모르고, 적어 둔 기억을 스스로 읽지도 않는다</td></tr>
+              <tr><td>Sonnet 5</td><td>더 낫다</td></tr>
+              <tr><td>Opus 계열 (Opus 5.5까지)</td><td>같은 단순한 지시로도 점점 더 잘 쓴다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">자막에는 "Sonic 46", "Sonic 5", "Opus 55"로 적혀 있다. Sonnet 4.6, Sonnet 5, Opus 5.5로 고쳤다.</p>
+        <p>강한 모델은 언제 적고 언제 읽을지 스스로 안다. <span class="ts">10:20</span> 기억의 질도 다르다. 데이터베이스의 상태나 다음에 일어날 일에 대해 검증된 문장과 예측을 남긴다. 이전 모델은 질 낮은 기억을 남기는 경향이 있었다.</p>
+
+        <h3>무엇을 적을지 아는 감각: 포켓몬 <span class="ts">10:50</span></h3>
+        <p>Claude에게 포켓몬 게임을 시킬 때도 CL Bench처럼 기억 디렉터리를 준다. 게임을 하는 동안 무엇이든 적을 수 있다. 발표자는 두 모델의 기억 디렉터리를 상자 그림으로 비교했다. 상자 크기는 그 디렉터리에 든 기억 파일 수다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Claude 3.7 Sonnet</span>
+            <ul>
+              <li>기억을 아주 많이 적는다</li>
+              <li>겪은 일을 가리지 않고 적는다</li>
+              <li>게임 전략과 상관없는 것까지 쌓여 다루기 힘든 디렉터리가 된다</li>
+            </ul>
+            <p class="verdict">게임 진행이 Fable 5보다 훨씬 뒤처진다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Fable 5</span>
+            <ul>
+              <li>디렉터리가 작고 촘촘하다</li>
+              <li>전략적 통찰과 전술 지식을 적는다</li>
+              <li>게임 화면에서 쉽게 얻을 수 없는 정보만 남긴다</li>
+            </ul>
+            <p class="verdict">게임을 <b>훨씬 멀리</b> 진행한다.</p>
+          </div>
+        </div>
+        <p>발표자는 이를 <strong>중요도 판단</strong> <span class="en">salience</span> 감각의 차이로 설명한다. 좋은 모델은 무엇을 적을지 잘 고르고, 적은 것을 잘 꺼내 쓴다. 디렉터리 크기가 그 차이를 보여 준다.</p>
+        <p class="note">자막에는 "Claude 37", "Sonic 37"로 적혀 있어 Claude 3.7 Sonnet으로 고쳤다. CL Bench와 포켓몬 비교는 모두 Anthropic이 자사 모델을 잰 결과이니 감안해 읽자.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="dreaming">
+        <header><span class="num">09</span><h2>꿈꾸기: 기억을 다시 짓는 단계 <span class="ts">12:20</span></h2></header>
+        <p>지금까지 본 두 실험은 모두 '일하며 적는' 쪽이었다. Claude는 게임을 하면서, 벤치마크를 풀면서 기억에 썼다.</p>
+        <p>기억에는 다른 쪽도 있다. <strong>꿈꾸기</strong> <span class="en">dreaming</span>는 쌓인 기억을 나중에 되돌아보며 고치는 단계다.</p>
+
+        <h3>기억의 세 층 <span class="ts">12:50</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>무엇인가</th><th>특징</th></tr></thead>
+            <tbody>
+              <tr><td>트랜스크립트</td><td>작업하며 남는 전체 기록. 가장 단순한 기억 시스템은 이걸 검색하는 것이다</td><td>크고 다루기 어렵다. 정말 중요한 정보는 아주 일부다</td></tr>
+              <tr><td>기억 메모</td><td>일하는 도중 에이전트가 직접 적는 노트</td><td>그 순간 중요해 보이는 것을 적는다</td></tr>
+              <tr><td>꿈꾸기 결과</td><td>기록과 메모를 되돌아보며 새로 만든 것</td><td>위키처럼 다시 정리한 표현. 또는 모든 새 세션에 미리 넣는 <strong>주입 컨텍스트</strong> <span class="en">injected context</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>정리하면 꿈꾸기는 기존 기록과 메모를 처리해 새로운 것을 만드는 장치다. 특정 기억을 골라 매 세션 앞에 미리 싣는 것도 여기에 들어간다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="effects">
+        <header><span class="num">10</span><h2>꿈꾸기가 한 일 세 가지 <span class="ts">13:50</span></h2></header>
+
+        <h3>1. 잘못된 기억 고치기 <span class="ts">13:50</span></h3>
+        <p>일하는 도중에는 기억에 틀린 내용을 적을 수 있다. 포켓몬에서 Claude는 어떤 지형지물의 위치를 잘못 적었다.</p>
+        <p>그 틀린 기억 때문에 Claude는 같은 지점에서 자기 위치를 잘못 판단했다. 그러고는 함정 문으로 떨어져 이전 층으로 돌아가는 일을 되풀이했다.</p>
+        <p>발표자는 이를 <strong>오염된 기억</strong> <span class="en">poisoned memory</span>이라고 불렀다. 한번 들어간 틀린 기억은 누가 고치지 않으면 그대로 남는다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">기억만 · 꿈꾸기 없음 <span class="ts">14:50</span></span>
+            <p>그 지점에 닿을 때마다 진행이 무너진다. 계속 뒤로 밀린다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">기억 + 꿈꾸기</span>
+            <p>틀린 기억을 바로잡는다. 다음 층으로 넘어간다.</p>
+          </div>
+        </div>
+        <p class="note">발표 그래프에서 위쪽은 게임 진행, 아래쪽은 후퇴를 뜻했다. 주황색 선이 기억과 꿈꾸기를 함께 쓴 경우다.</p>
+
+        <h3>2. 위키 만들기 <span class="ts">15:20</span></h3>
+        <p>Claude가 지식을 정리하는 방법으로 위키에 관심이 많다. 발표자에 따르면 Anthropic은 5월에 Stainless라는 회사를 인수했다. 그 회사의 문서와 Slack 메시지 같은 자료 전체를 익명화해 실험용 데이터셋을 만들었다.</p>
+        <ol class="plain">
+          <li>그 자료로만 답할 수 있는 회사 관련 질문 25개로 평가 세트를 만들었다.</li>
+          <li>기준선: 자료 위에 의미 검색 도구만 붙였다. 약 <strong>53%</strong>를 맞혔다. <span class="ts">16:10</span></li>
+          <li>비교: Claude가 자료로 위키를 만들게 했다. <strong>꿈꾸기 토큰을 늘릴수록</strong> 위키가 좋아졌고 맞히는 질문이 늘었다.</li>
+          <li>위키와 검색 도구를 함께 쓰면 검색만 쓸 때보다 더 나았다. <span class="ts">17:00</span></li>
+        </ol>
+        <p class="note">자막에는 검색만 쓴 경우의 약 53%만 숫자로 나온다. 위키 점수는 숫자로 나오지 않아 차트로 그리지 않았다. 자막의 "email set"은 평가 세트(eval set)로 읽었다.</p>
+        <p>발표자는 이를 에이전트가 시간이 지나며 지식을 쌓는 방식의 모델로 제시한다. 원본 텍스트와 기록을 주면, 에이전트가 찾기 쉽고 서로 연결된 표현을 스스로 만든다.</p>
+
+        <h3>3. 빈틈 채우기 <span class="ts">17:10</span></h3>
+        <p>다른 벤치마크에서 Claude가 만든 위키를 꿈꾸기 전과 후로 비교했다.</p>
+        <p>꿈꾸기 전 위키에는 빈틈이 있었다. 아직 없는 페이지를 가리키는 자리표시자가 여럿 있었다. 꿈꾸기에 쓸 계산을 주지 않으면 이런 오류를 고칠 기회가 없다.</p>
+        <p>꿈꾸기를 돌리자 Claude가 기존 위키를 훑으며 빠진 부분을 많이 채웠다. 색인도 새로 만들었다.</p>
+
+        <div class="callout">
+          <span class="title">발표자의 정리 <span class="ts">18:00</span></span>
+          <span>꿈꾸기는 기억 전체에 계산을 들여 기억을 낫게 하는 방법이다. 틀린 것을 고치고, 빈틈을 채우고, 위키 같은 새 표현을 만든다.</span>
+        </div>
+        <div class="callout">
+          <span class="title">두 이야기를 묶으면</span>
+          <span>발표자는 두 이야기 모두 긴 과제를 푸는 Claude의 능력으로 본다. 첫째는 큰 팀을 스스로 조직하는 능력이고, 둘째는 자기 맥락을 정리하는 능력이다. 두 경우 모두 사람이 준 것은 단순한 도구(Git과 DB, 기억 디렉터리)와 짧은 지시였다.</span>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="recap">
+        <header><span class="num">11</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>형식화는 증명의 모든 단계를 컴퓨터가 검사할 수 있게 다시 쓰는 일이다. 이번에는 Lean을 썼다.</li>
+          <li>9월 결과는 에이전트 약 12개, 수학 전용 플랫폼, 연구자의 지원이 함께 만든 것이다.</li>
+          <li>이번 실험은 <strong>에이전트 1,000개</strong>(리드 1 + 도우미 999)였고, 전용 하네스와 풀이에 대한 사람의 지시가 없었다.</li>
+          <li>에이전트가 받은 도구는 <strong>Git과 SQL DB뿐</strong>이다. 구조는 풀이가 아니라 안전과 감시에 집중했다.</li>
+          <li>리드는 5분 만에 공지·배정·메모·반영 테이블을 <strong>스스로 만들어</strong> 팀을 조율했다.</li>
+          <li>어려운 명제는 작업 트리로 쪼갰고, 60개 명제가 풀리는 대로 에이전트를 재배치했다. 실행은 약 30시간이었다.</li>
+          <li><strong>기억의 역설</strong>: 적을 때는 눈앞만 보고, 읽을 때는 일관된 지도가 필요하다.</li>
+          <li>강한 모델은 특별한 지시 없이도 <strong>언제 적고 읽을지, 무엇이 중요한지</strong> 안다.</li>
+          <li><strong>꿈꾸기</strong>는 기록과 메모를 되돌아보며 다시 짓는 단계다. 틀린 기억을 고치고, 빈틈을 채우고, 위키와 주입 컨텍스트를 만든다.</li>
+          <li>위키 실험에서 검색만 쓰면 약 53%였다. 꿈꾸기 토큰을 늘릴수록 위키가 좋아졌고, 위키와 검색을 함께 쓰면 검색만보다 나았다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="quiz">
+        <header><span class="num">12</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>형식화란 무엇이고, Lean은 어떤 역할을 하나?</span></summary><div class="answer">증명의 모든 단계를 컴퓨터가 검사할 수 있게 다시 쓰는 일이다. Lean은 증명의 단계 하나하나가 맞는지 컴퓨터로 확인하게 해 준다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>9월 결과와 이번 실험의 차이 세 가지는?</span></summary><div class="answer">에이전트 수(약 12개 → 1,000개), 수학 전용 플랫폼(있음 → 없음), 풀이에 대한 사람의 지원(연구자가 많이 도움 → 없음).</div></details>
+          <details><summary><span class="qn">Q3</span><span>1,000개 에이전트가 연결할 수 있던 것은?</span></summary><div class="answer">Git과 SQL 데이터베이스 두 가지뿐이다. 발표자는 이를 팀의 기본 도구라고 불렀다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>자율성을 넓히면서 둔 안전 장치는?</span></summary><div class="answer">에이전트마다 샌드박스, 제한된 네트워크 접근, 모든 도구 호출의 실시간 감시(탈출 시도 등), 10분마다 하는 오프라인 기록 검토.</div></details>
+          <details><summary><span class="qn">Q5</span><span>리드 에이전트가 시키지 않았는데 한 일은?</span></summary><div class="answer">시작 5분 만에 공지·배정·메모·반영 테이블을 만들어 팀을 조율하는 틀로 썼다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>Langlands–Tunnell 정리 같은 어려운 부분은 어떻게 다뤘나?</span></summary><div class="answer">작업 트리로 쪼개 작업 사이의 의존 관계를 관리했다. 60개 명제가 풀리는 대로 에이전트들이 스스로 다른 부분으로 옮겨 갔다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>키르케고르 인용이 가리키는 기억의 역설은?</span></summary><div class="answer">기억은 일하는 도중 눈앞만 보고 적히지만, 나중에 되돌아볼 때는 전체가 일관되고 중복 없는 지도여야 한다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>CL Bench에서 Sonnet 4.6이 기억 효과를 거의 못 본 이유는?</span></summary><div class="answer">언제 기억에 적어야 할지 잘 몰랐고, 적은 기억을 스스로 읽지도 않았다. 기억 사용에 대한 특별한 지시는 없었다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>포켓몬 기억 디렉터리에서 Claude 3.7 Sonnet과 Fable 5는 어떻게 달랐나?</span></summary><div class="answer">Claude 3.7 Sonnet은 가리지 않고 많이 적어 디렉터리가 비대했고 게임 진행도 뒤처졌다. Fable 5는 전략과 전술처럼 게임 화면에서 쉽게 얻을 수 없는 것만 적어 디렉터리가 작았고, 게임을 더 멀리 진행했다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>발표에서 나눈 기억의 세 층은?</span></summary><div class="answer">트랜스크립트(전체 기록), 기억 메모(일하며 적는 노트), 꿈꾸기 결과(위키 같은 새 표현, 주입 컨텍스트).</div></details>
+          <details><summary><span class="qn">Q11</span><span>포켓몬에서 꿈꾸기가 없을 때 틀린 기억은 어떤 문제를 일으켰나?</span></summary><div class="answer">지형지물 위치를 잘못 적은 탓에 같은 지점에서 위치를 잘못 판단하고, 함정 문으로 떨어져 이전 층으로 돌아가기를 되풀이했다. 꿈꾸기를 더하자 틀린 기억을 고치고 다음 층으로 넘어갔다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>Stainless 자료로 한 위키 실험의 결과는?</span></summary><div class="answer">의미 검색만 쓰면 약 53%였다. 꿈꾸기 토큰을 늘릴수록 위키가 좋아졌고, 위키와 검색을 함께 쓰면 검색만 쓸 때보다 나았다.</div></details>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section id="apply">
+        <header><span class="num">13</span><h2>내 에이전트에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>멀티 에이전트 작업에 전용 틀을 만들기 전에, Git과 DB 같은 단순한 공유 도구부터 줘 본다<span class="how">확인: 에이전트가 스스로 조율 구조(테이블, 역할)를 만드는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>리드 1개와 작업자 여럿으로 역할만 정하고, 프롬프트에는 도구와 문제 진술만 담는다<span class="how">협업 방식을 미리 정해 주지 않았을 때와 비교해 본다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>자율성을 넓힐수록 안전 장치는 따로 둔다<span class="how">에이전트별 샌드박스, 네트워크 제한, 도구 호출 실시간 감시</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>오래 도는 실행은 주기적으로 기록을 검토한다<span class="how">발표의 실험은 10분마다 전체 에이전트 기록을 봤다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>에이전트에 기억 디렉터리를 주고, 기억이 있을 때와 없을 때를 같은 과제로 비교한다<span class="how">모델을 바꿀 때마다 다시 잰다. 약한 모델은 기억을 줘도 효과가 없을 수 있다</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>기억 디렉터리의 크기와 내용을 주기적으로 열어 본다<span class="how">확인: 화면이나 상태에서 다시 얻을 수 있는 정보가 쌓여 있지 않은가</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>세션 사이에 기억을 되돌아보고 고치는 정리 단계(꿈꾸기)를 둔다<span class="how">확인: 틀린 기억, 중복, 빈 페이지가 줄었는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>자주 필요한 기억은 매 세션 시작 때 주입 컨텍스트로 넣는다<span class="how">무엇을 올릴지도 정리 단계에서 고른다</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>문서 묶음에는 검색만 붙이지 말고 위키로도 정리해 함께 쓴다<span class="how">확인: 같은 질문 세트로 "검색만"과 "위키 + 검색"의 정답률을 비교한다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="glossary">
+        <header><span class="num">14</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>페르마의 마지막 정리</td><td>n이 2보다 크면 aⁿ + bⁿ = cⁿ을 만족하는 양의 정수 a, b, c가 없다는 정리. 1990년대 중반 Andrew Wiles가 증명했다</td></tr>
+              <tr><td>형식화</td><td>Formalization. 증명의 모든 단계를 컴퓨터가 검사할 수 있는 형태로 다시 쓰는 일</td></tr>
+              <tr><td>Lean</td><td>증명을 컴퓨터로 검사할 수 있게 해 주는 언어이자 도구</td></tr>
+              <tr><td>Langlands–Tunnell 정리</td><td>Wiles의 증명에 쓰이는 정리 중 하나. 발표에서는 가장 어려운 명제 중 하나로 소개됐다</td></tr>
+              <tr><td>하네스</td><td>Harness. 모델을 감싸 도구, 작업 틀, 규칙을 주는 실행 환경</td></tr>
+              <tr><td>전용 하네스</td><td>Domain-specific harness. 특정 분야만을 위해 만든 하네스. 9월 실험의 수학 증명 플랫폼이 그 예다</td></tr>
+              <tr><td>샌드박스</td><td>Sandbox. 바깥과 격리된 실행 공간</td></tr>
+              <tr><td>기본 도구</td><td>Primitive. 더 복잡한 구조를 쌓을 수 있는 가장 단순한 재료. 이 실험에서는 Git과 SQL DB</td></tr>
+              <tr><td>리드 에이전트</td><td>Lead agent. 팀 전체를 지휘하는 에이전트. 이 실험에서는 1개였고, 나머지 999개는 도우미였다</td></tr>
+              <tr><td>탈출</td><td>Escape. 에이전트가 샌드박스의 제한을 벗어나려는 시도</td></tr>
+              <tr><td>장기 과제</td><td>Long-horizon task. 끝날 때까지 단계가 아주 많고 오래 걸리는 과제</td></tr>
+              <tr><td>작업 트리</td><td>Task tree. 큰 작업을 하위 작업으로 나누고 의존 관계를 나타낸 나무 구조</td></tr>
+              <tr><td>지속 학습</td><td>Continual learning. 앞선 경험에서 배운 것을 다음 작업에 이어 쓰는 능력</td></tr>
+              <tr><td>기억 디렉터리</td><td>에이전트가 세션 사이에 메모를 남기는 폴더</td></tr>
+              <tr><td>중요도 판단</td><td>Salience. 무엇이 기억할 만큼 중요한지 가려내는 감각</td></tr>
+              <tr><td>꿈꾸기</td><td>Dreaming. 쌓인 기록과 기억을 나중에 되돌아보며 고치고 다시 정리하는 단계</td></tr>
+              <tr><td>트랜스크립트</td><td>Transcript. 작업하며 남는 전체 대화와 행동 기록</td></tr>
+              <tr><td>주입 컨텍스트</td><td>Injected context. 모든 새 세션 시작 때 미리 넣어 두는 기억</td></tr>
+              <tr><td>오염된 기억</td><td>Poisoned memory. 틀린 내용이 기억에 들어가 계속 잘못된 행동을 일으키는 상태</td></tr>
+              <tr><td>의미 검색</td><td>Semantic search. 같은 단어가 아니라 뜻이 비슷한 문서를 찾는 검색</td></tr>
+              <tr><td>해마 / 신피질</td><td>Hippocampus / Neocortex. 단기 기억을 다룬다고 여겨지는 뇌 부위 / 장기 지식이 저장된다고 여겨지는 뇌 부위</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="timeline">
+        <header><span class="num">15</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자 소개, 두 이야기 예고</td></tr>
+              <tr><td><span class="ts">00:30</span></td><td>페르마의 마지막 정리</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>Andrew Wiles의 7년짜리 증명</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>형식화와 Lean</td></tr>
+              <tr><td><span class="ts">01:20</span></td><td>9월 발표: Claude로 형식화</td></tr>
+              <tr><td><span class="ts">01:40</span></td><td>에이전트 12개 팀과 수학 전용 플랫폼</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>이번 목표: 1,000개, 하네스 없이, 사람 지시 없이</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>실험 환경: 샌드박스, Git, SQL DB</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>실시간 감시와 10분 단위 오프라인 감시</td></tr>
+              <tr><td><span class="ts">03:40</span></td><td>프롬프트: 리드 1 + 도우미 999</td></tr>
+              <tr><td><span class="ts">04:00</span></td><td>리드가 5분 만에 테이블을 만들다</td></tr>
+              <tr><td><span class="ts">04:30</span></td><td>테이블 읽기·쓰기 시각화</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>약 30시간 실행</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>Langlands–Tunnell 작업 트리</td></tr>
+              <tr><td><span class="ts">05:40</span></td><td>에이전트 재배치, 명제 60개</td></tr>
+              <tr><td><span class="ts">06:20</span></td><td>"Magnificent work, all 999 of you" 메모</td></tr>
+              <tr><td><span class="ts">06:30</span></td><td>9월과 비교한 결론</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>주제 전환: 기억</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>키르케고르 인용과 기억의 역설</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>사람의 기억: 해마와 신피질</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>CL Bench 설정과 결과</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>Sonnet 4.6은 기억을 잘 못 쓴다</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>강한 모델의 기억 습관</td></tr>
+              <tr><td><span class="ts">10:50</span></td><td>포켓몬: Claude 3.7 Sonnet과 Fable 5의 기억 디렉터리</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>꿈꾸기 소개</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>트랜스크립트, 메모, 꿈꾸기의 층</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>꿈꾸기 효과 1: 틀린 기억 고치기</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>게임 진행 궤적 비교</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>꿈꾸기 효과 2: Stainless 자료로 위키 만들기</td></tr>
+              <tr><td><span class="ts">16:10</span></td><td>검색만 약 53%, 꿈꾸기 토큰을 늘릴수록 위키 향상</td></tr>
+              <tr><td><span class="ts">17:00</span></td><td>위키와 검색을 함께 쓰기</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>꿈꾸기 효과 3: 위키 빈틈 채우기</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>정리: 꿈꾸기는 기억에 계산을 쓰는 방법</td></tr>
+              <tr><td><span class="ts">18:20</span></td><td>마무리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'wrfbI5eyLAI:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>
