@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>소프트웨어 공장 그만 짓기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: max(0.82em, 12px); color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-top: 40px; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: var(--radius); display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-color: color-mix(in srgb, var(--crit) 35%, transparent); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 4px 0 4px 20px; border-left: 1px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<nav style="max-width:72rem;margin:0 auto;padding:16px 16px 0;font-size:0.9375rem"><a href="../index.html">전체 노트 목록</a></nav>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#channels">사람용 발표, 에이전트용 첨부</a></li>
+      <li><a href="#origin">공장이 시작된 자리</a></li>
+      <li><a href="#stop">"공장을 그만 지어라"</a></li>
+      <li><a href="#brownfield">브라운필드 공장</a></li>
+      <li><a href="#promise">약속과 루프</a></li>
+      <li><a href="#continuous">쉬지 않고 돈다</a></li>
+      <li><a href="#simplify">공장은 점점 단순해진다</a></li>
+      <li><a href="#faster">같은 것을 더 빠르게</a></li>
+      <li><a href="#glut">소프트웨어가 남아돈다</a></li>
+      <li><a href="#demand">수요 공장</a></li>
+      <li><a href="#envelope">브랜드 범위와 성장 순서</a></li>
+      <li><a href="#closing">맺음말</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer 발표 · 2026-11-26 · 18분 · 영어 발표 한글 정리</span>
+      <h1>소프트웨어 공장은 그만 짓고, 수요 공장을 지어라</h1>
+      <p class="lead">이미 팔리고 있는 제품은 에이전트 루프가 쉬지 않고 지키게 둔다. 그렇게 남은 사람의 힘은 고객이 무엇을 원하는지 찾아내는 쪽에 쓴다. 발표자는 이 두 가지를 "브라운필드 공장"과 "수요 공장"이라고 부른다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=1S4hx3wgvBE" target="_blank" rel="noopener">Stop Building Software Factories</a></span>
+        <span>발표: Justin McCarthy (Diffusion 창업자 겸 CEO)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치와 주장은 모두 발표자가 말한 것이고 원 출처를 따로 확인하지는 않았다. 자막에서 이름이 뭉개진 곳은 확실할 때만 알려진 이름으로 고쳤고, 나머지는 들린 대로 적고 "(추정)"을 붙였다. 발표에는 비교할 만한 수치가 없어서 차트는 넣지 않았다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>소프트웨어 공장은 이제 흔한 개념이 됐다. 발표자는 바로 그래서 <strong>"그만 지어라"</strong>고 말한다. 반은 농담이고 반은 진심이다.</li>
+        <li>이유: 새것을 만들 때는 <strong>무엇을 원하는지 아직 모른다.</strong> 모르는 것을 공장에 넣으면 틀린 것이 나오거나, 오래 걸리거나, 돈이 많이 든다.</li>
+        <li>공장이 잘 맞는 곳은 <strong>브라운필드</strong>다. 이미 고객이 돈을 내고 쓰는 제품이다. 무엇을 만들지 고민할 필요가 없다.</li>
+        <li>제품에 대한 기대를 <strong>약속</strong>이라고 부르고, 약속을 <strong>루프</strong>로 만든다. 루프는 출력을 입력으로 되먹여야 한다. 되먹임이 끊기면 잡음만 커진다.</li>
+        <li>브라운필드 공장은 <strong>24시간 배경에서</strong> 돈다. 지시는 "같은 것을 더 빠르게, 더 싸게, 더 안전하게"다. "더 좋게"는 사람의 판단이 필요해서 따로 다룬다.</li>
+        <li>모델이 좋아지면 공장은 <strong>부품이 줄면서 성능이 오른다.</strong> 그러니 겨우 돌아가는 수준이라도 먼저 만든다.</li>
+        <li>브라운필드 공장은 <strong>경쟁 우위를 만들지 못한다.</strong> 다음 일은 수요 공장이다. 시장에 더 잘 묻고, 더 잘 듣고, 실험을 더 잘 배분하는 시스템이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="channels">
+        <header><span class="num">01</span><h2>사람용 발표, 에이전트용 첨부 <span class="ts">00:10</span></h2></header>
+        <p>발표자 Justin McCarthy는 Diffusion의 창업자 겸 CEO다. 회사가 하는 일은 모델의 능력을 세계 경제 곳곳에 퍼뜨리는 것이라고 소개한다. 발표자는 세계 경제를 100조 달러, 인구를 80억 명으로 말하며 할 일이 많다고 덧붙인다.</p>
+        <p>발표자는 이 발표가 기술적인 내용을 깊게 다루지 않는다고 미리 밝힌다. 기술 자료는 발표 끝의 QR 코드에 따로 붙였다.</p>
+        <div class="callout">
+          <span class="title">두 채널로 말하기 <span class="en">dual channel</span></span>
+          <span>발표자는 요즘 메시지를 두 겹으로 보낸다고 한다. 위쪽에는 사람이 읽을 말을 쓴다. 아래쪽에는 에이전트가 읽을 자료를 붙인다. 이 발표도 같은 구조다. 무대에서는 사람에게 말하고, 기술 자료는 청중의 에이전트가 가져가게 했다.</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="origin">
+        <header><span class="num">02</span><h2>공장이 시작된 자리 <span class="ts">01:00</span></h2></header>
+        <p>발표자의 소프트웨어 공장은 작년 7월에 시작됐다. <strong>소프트웨어 공장</strong><span class="en"> software factory</span>은 에이전트가 사람 손을 거의 거치지 않고 코드를 만들고 고치도록 짠 자동 시스템을 가리킨다.</p>
+        <p>당시 모델은 Claude 4 계열이었다. GPT-5와 첫 Codex 하네스는 아직 나오기 전이었다. 발표자는 모델을 반복해서 돌리면 무슨 일이 생기는지 깊이 파 볼 기회가 있었다고 한다.</p>
+        <ul class="plain">
+          <li><strong>가능성은 그때도 보였다.</strong> 출력이 입력을 안정시켜 믿을 만한 결과로 이어지는 조짐이 있었다.</li>
+          <li><strong>토큰 비용이 엄청났다.</strong></li>
+          <li><strong>장치가 복잡했다.</strong> 발표자는 이를 루브 골드버그 장치에 비유한다. 루프를 덕트 테이프로 이어 붙이듯 손으로 하나하나 짜야 했다.</li>
+        </ul>
+        <p>지금은 사정이 다르다. 같은 행사에 소프트웨어 공장 발표가 여럿 나왔다. 발표자는 이제 이 일의 일부는 사람의 창의력을 훨씬 덜 들이고도 그냥 된다고 본다.</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="stop">
+        <header><span class="num">03</span><h2>"공장을 그만 지어라" <span class="ts">02:20</span></h2></header>
+        <p>발표자는 바로 이 시점에 "소프트웨어 공장을 그만 지으라"고 말한다. 반쯤 농담이라고 하면서도 진지하다고 덧붙인다. 아이디어와 목표를 공장 공정에 그대로 밀어 넣지 말라는 뜻이다.</p>
+        <div class="callout warn">
+          <span class="title">공장에 넣으면 안 되는 일</span>
+          <span>새것을 만들 때는 무엇을 원하는지 아직 모르는 경우가 많다. 무엇을 원하는지 모르는 일을 대량 생산하려 하면 세 가지 중 하나가 일어난다. 틀린 것이 나온다. 너무 오래 걸린다. 돈을 너무 많이 쓴다.</span>
+        </div>
+        <p>그래서 발표자는 지금 하는 일이 어느 쪽인지 먼저 가려내라고 한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">탐색하는 일 · 그린필드</span>
+            <ul>
+              <li>제품이 시장에 맞는지 아직 찾는 중이다</li>
+              <li>새 영역을 처음 개척한다</li>
+              <li>무엇을 만들어야 하는지 답이 없다</li>
+            </ul>
+            <p class="verdict">공장만큼 엄격한 루프는 맞지 않는다. <b>발견</b>에 힘을 쓴다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">이미 되는 일 · 브라운필드</span>
+            <ul>
+              <li>선례가 있다</li>
+              <li>이미 돌아가고 있다</li>
+              <li>고객이 돈과 사용량으로 "이게 좋다"고 말한다</li>
+            </ul>
+            <p class="verdict"><b>공장</b>에 맡기기 좋다.</p>
+          </div>
+        </div>
+        <p class="note">그린필드<span class="en"> greenfield</span>는 아무것도 없는 데서 새로 만드는 일이다. 브라운필드<span class="en"> brownfield</span>는 이미 있는 제품과 코드를 다루는 일이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="brownfield">
+        <header><span class="num">04</span><h2>브라운필드 공장 <span class="ts">03:20</span></h2></header>
+        <p>브라운필드는 회사의 불을 켜 두고 청구서를 내 주는 기존 제품이다. 발표자가 꼽는 장점은 <strong>무엇을 만들지 알아낼 필요가 없다</strong>는 것이다.</p>
+        <ul class="plain">
+          <li><strong>신호가 이미 들어온다.</strong> 고객이 제품을 쓰는 방식, 고객이 하는 말, 고객 지원 문의가 모두 신호다. 이 신호가 제품이 온전하고 쓸모 있는지 계속 확인해 준다.</li>
+          <li><strong>루프를 안정시킬 정보가 실행 환경에 들어 있다.</strong> 따로 조사하지 않아도 된다.</li>
+          <li><strong>고객이 매일 답을 준다.</strong> 고객은 날마다 찾아와 지금 쓰는 것이 원하는 것이라고 행동으로 말한다. 그러니 만들 것은 지금 있는 그것이다.</li>
+        </ul>
+        <h3>기술 부채도 다시 쓸 수 있다 <span class="ts">04:10</span></h3>
+        <p>발표자는 앞선 연사 Jared(Bun을 만든 Jarred Sumner로 추정)가 Bun과 Claude Code를 다시 쓴 이야기를 했다고 언급한다. 브라운필드의 많은 부분은 이렇게 다시 쓸 수 있다.</p>
+        <p>발표자는 예전에 팀을 느리게 만들던 기술 부채를 배의 닻에 비유한다. 끝이 보이지 않던 백로그도 같은 부류다. 발표자는 이런 것들이 이제 줄어드는 것이 보인다고 말한다.</p>
+      </section>
+
+      <!-- 5 -->
+      <section id="promise">
+        <header><span class="num">05</span><h2>약속과 루프 <span class="ts">05:00</span></h2></header>
+        <p>Diffusion은 <strong>약속</strong><span class="en"> promise</span>이라는 말을 쓴다. 제품에서 회사가 지키려는 보장, 우선순위, 품질 기준을 모두 약속이라고 부른다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>약속의 종류</th><th>발표자의 설명</th></tr></thead>
+            <tbody>
+              <tr><td>기능</td><td>기능 하나하나가 약속이다</td></tr>
+              <tr><td>비용과 가격</td><td>얼마가 들고 얼마에 파는지도 약속이다</td></tr>
+              <tr><td>보안</td><td>안전하다는 것도 약속이다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>약속은 뒤로 물리고 싶은 경우가 드물다. 그래서 기존 제품에 거는 기대를 약속으로 정리하면 <strong>루프</strong>에 담을 수 있다.</p>
+        <h3>루프는 되먹임이 있어야 한다 <span class="ts">05:50</span></h3>
+        <p>루프는 YAML 파일로 쓸 수도 있고, Python이나 그래프로 쓸 수도 있다. 형식과 상관없이 공통점은 하나다. 입력을 받아 출력을 내고, 그 출력을 다시 입력으로 돌려보낸다.</p>
+        <div class="callout">
+          <span class="title">증폭기 비유</span>
+          <span>발표자는 루프를 증폭기의 블록 다이어그램에 빗댄다. 증폭기에서 되먹임 선을 끊으면 잡음만 커진다. 소프트웨어 공장도 같다. 결과가 정확한지를 입력 쪽으로 돌려보내는 길이 있어야 한다. 그 길을 만들고 잘 조율하면 루프는 돌아간다.</span>
+        </div>
+        <p>브라운필드가 유리한 이유가 여기에 있다. 루프를 고치고, 안정시키고, 개선하는 데 필요한 신호가 이미 들어오고 있다.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="continuous">
+        <header><span class="num">06</span><h2>쉬지 않고 돈다 <span class="ts">06:40</span></h2></header>
+        <p>브라운필드 공장의 두 번째 특징은 <strong>연속성</strong>이다.</p>
+        <div class="shift" aria-label="커밋이 들어오는 방식의 변화">
+          <div><span class="tag">예전</span><b>커밋에 주기가 있었다</b><span class="muted">하루 안에서, 시간대별로, 주 단위로 몰려 들어왔다</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">공장</span><b>커밋이 끊기지 않는다</b><span class="muted">에이전트가 루프를 돌리면 활동 기록이 직선에 가까워진다</span></div>
+        </div>
+        <p>24시간 돌려야 하는 이유는 걱정거리가 항상 있기 때문이다. 조금 느리지 않은가. 조금 덜 안전하지 않은가. 이런 질문은 밤낮을 가리지 않는다.</p>
+        <p>발표자가 정리한 브라운필드 공장의 조건은 세 가지다.</p>
+        <ol class="plain">
+          <li><strong>연속으로</strong> 돈다.</li>
+          <li><strong>배경에서</strong> 돈다.</li>
+          <li>기존 코드 상태와 기존 약속을 받아 <strong>약속을 계속 지킨다.</strong></li>
+        </ol>
+        <p>이런 시스템이 있으면 사람은 그린필드에서 무엇을 할지 물을 여유를 얻는다. 그린필드에서는 루프를 이만큼 엄격하게 짜지 않는다. 제품이 시장에 맞는지 찾는 데 더 힘을 쓴다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="simplify">
+        <header><span class="num">07</span><h2>공장은 점점 단순해진다 <span class="ts">08:20</span></h2></header>
+        <p>1년 전의 공장은 돌아가기는 했지만 부품이 많았다. 돌아가게 만드는 일 자체가 큰 엔지니어링이었다. 발표자는 지금은 조금 쉬워졌다고 말하며 다른 연사 Zach와 Potato(추정)의 발표를 언급한다. 공은 모델과 하네스에 돌린다.</p>
+        <p>발표자가 Diffusion에서 본 변화는 두 가지다. <strong>스킬 문서가 짧아진다.</strong> <strong>하네스는 더 범용적으로 바뀐다.</strong></p>
+        <div class="callout">
+          <span class="title">로켓 엔진 비유 <span class="ts">09:00</span></span>
+          <span>발표자는 Raptor 엔진을 예로 든다. 회사 이름은 말하지 않고 "이런 물건도 만드는 유명한 AI 회사"라고만 했다. 1세대 엔진은 관이 많고 손이 많이 갔지만 로켓을 밀어 올렸다. 2세대는 거의 같은 크기에 성능이 더 높고 움직이는 부품이 더 적었다. 그 차이는 로켓 과학자와 엔지니어가 "어떻게 더 단순하게 만들까"에 매달린 결과다. 그런 사람들을 모아 어려운 문제 하나에 집중시키는 일은 어렵다.</span>
+        </div>
+        <p>소프트웨어 공장에서는 모델이 그 역할을 한다. 발표자는 모델 이름으로 Astra, Fable, Carbon을 든다(Astra와 Carbon은 자막에 들린 대로 적었다. 추정). 모델이 공장을 1판에서 2판, 3판으로 바꿔 준다는 것이다.</p>
+        <ul class="plain">
+          <li>주말이 지나 월요일에 돌아오면 공장이 더 단순해져 있을 수 있다.</li>
+          <li>모델이 한 세대 더 나오면 부품은 줄고 성능은 두 배가 될 수 있다.</li>
+          <li>그래서 <strong>겨우 돌아가는 수준이라도 먼저 만들면 된다.</strong> 사람이 창의력을 크게 더 들이지 않아도 곧 흐름이 매끄러워지고 성능이 오른다.</li>
+        </ul>
+        <p class="note">"성능 두 배"는 측정값이 아니다. 발표자가 기대를 설명하며 든 표현이다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="faster">
+        <header><span class="num">08</span><h2>같은 것을 더 빠르게 <span class="ts">10:40</span></h2></header>
+        <p>브라운필드 공장에 주기 좋은 지시는 <strong>"같은 것을, 더 빠르게"</strong>다. 발표자는 성능을 올리자는 안건에 반대가 나온 회의를 거의 본 적이 없다고 말한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>목표</th><th>공장에 맡겨도 되나</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td>더 빠르게</td><td>된다</td><td>다른 것을 희생하지 않는 한 그냥 좋은 일이다</td></tr>
+              <tr><td>더 싸게</td><td>된다</td><td>위와 같다</td></tr>
+              <tr><td>더 안전하게</td><td>된다</td><td>발표자는 취약점이 쏟아지는 시기의 초입이라 스스로 안전해지는 시스템이 꼭 필요하다고 본다</td></tr>
+              <tr><td>더 좋게</td><td>어렵다</td><td>사람의 의도, 판단, 취향이 더 필요하다. 발견의 영역에서 다른 방법으로 다룬다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>조건이 하나 붙는다. 하나를 얻으려고 다른 하나를 내주면 안 된다. 싸게 하려고 느려지거나, 빠르게 하려고 덜 안전해지면 안 된다. 발표자는 이를 <strong>파레토 균형</strong><span class="en"> Pareto equilibrium</span>이라고 부른다.</p>
+        <p class="note">자막에는 "vold apocalypse"로 적혀 있다. 맥락상 취약점(vuln)이 쏟아지는 상황을 가리키는 것으로 추정했다.</p>
+        <h3>일주일이면 된다 <span class="ts">11:40</span></h3>
+        <p>발표자는 기존 약속 전체에 브라운필드 공장을 세우는 데 일주일쯤 걸린다고 말한다. 아직 그 일주일을 쓰지 않았다면 다음 주에 휴가라고 말해 두고 바로 하라고 권한다.</p>
+        <p class="note">발표자는 도움이 필요하면 Diffusion에 연락하라고 덧붙였다. 공장 구축은 발표자 회사의 사업이다. "일주일"과 "쉽다"는 말은 그 점을 감안해 읽자.</p>
+        <p>그러고 나서 발표자는 말을 뒤집는다. 브라운필드 공장은 해야 하지만 너무 쉽다. 목표를 더 높여야 한다.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="glut">
+        <header><span class="num">09</span><h2>소프트웨어가 남아돈다 <span class="ts">12:20</span></h2></header>
+        <p>지금 모두가 겪는 문제는 코드가 너무 많이 나온다는 것이다. 발표자는 "더 곤란한 건 그 코드가 돌아간다는 점"이라고 농담한다. 물건이 넘쳐 난다.</p>
+        <p>발표자는 고객이 애초에 소프트웨어를 원한 것이 아닐 수 있다고 말한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">고객이 받는 것</span>
+            <ul>
+              <li>눌러 볼 창이 더 많아진다</li>
+              <li>눌러 볼 버튼이 더 많아진다</li>
+            </ul>
+            <p class="verdict">이것만으로는 더 이상 고객을 만족시키지 못한다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">고객이 원한 것</span>
+            <ul>
+              <li>더 높은 매출 총이익</li>
+              <li>더 많은 고객</li>
+              <li>더 뚜렷한 브랜드 차별화</li>
+            </ul>
+            <p class="verdict">소프트웨어는 <b>수단</b>이었다.</p>
+          </div>
+        </div>
+        <h3>엔지니어의 새 일 <span class="ts">13:10</span></h3>
+        <p>청중은 모델과 잘 소통하는 사람들이다. 회사 안의 다른 사람들은 그만큼 능숙하지 않다. 발표자는 여기서 새 일이 생긴다고 말한다.</p>
+        <blockquote>브라운필드 공장은 해자를 만들어 주지 못한다. 기존 약속을 잘 지켜 줄 뿐이다.<cite>발표자의 말을 옮김 <span class="ts">13:30</span></cite></blockquote>
+        <p>브라운필드 공장의 쓸모는 따로 있다. 건물 바깥, 곧 시장과 미래를 볼 시간을 벌어 준다. 그 시간에 지을 것이 <strong>수요 공장</strong>이다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="demand">
+        <header><span class="num">10</span><h2>수요 공장 <span class="ts">13:50</span></h2></header>
+        <p>발표자는 <strong>수요 공장</strong><span class="en"> demand factory</span>이 정확히 무엇인지는 자신도 모른다고 인정한다. 새 개념이고 알아내야 할 것이 많다. 다만 역할은 분명하다.</p>
+        <div class="callout">
+          <span class="title">생산과 수요의 속도를 맞춘다</span>
+          <span>소프트웨어 공장의 성능만 올리면 만든 소프트웨어가 바닥에 쏟아진다. 수요 공장은 수요 쪽 시스템의 속도를 생산 쪽 속도에 맞추는 장치다.</span>
+        </div>
+        <p>발표자는 영업팀이나 마케팅팀이 먼저 찾아오기를 기다리지 말라고 한다. 회사 브랜드 안에서 더 내놓을 수 있는 것이 엔지니어 눈에는 보인다. 다만 그것을 세상에 설명하려면 새 말, 새 이미지, 새 제품군이 필요하다.</p>
+        <h3>수요 공장이 해 줄 수 있는 일 <span class="ts">14:40</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>일</th><th>에이전트가 돕는 방식</th></tr></thead>
+            <tbody>
+              <tr><td>더 잘 묻기</td><td>시장에 다음으로 무엇을 물을지 우선순위를 정한다</td></tr>
+              <tr><td>더 잘 듣기</td><td>돌아온 답을 종합한다. 밤사이 순위를 다시 매긴다. 지금까지 들은 모든 것과 비교한다</td></tr>
+              <tr><td>실험을 더 잘 배분하기</td><td>실험할 수 있는 양은 한정돼 있다. 어디에 쓸지 정하는 일을 모델이 돕는다. 발표자의 예는 특정 상품의 가격 탄력성을 알아내는 실험이다</td></tr>
+              <tr><td>더 빨리 답하기</td><td>고객에게 "됩니다"라고 더 빨리 말한다. 그러면 고객이 스스로 접어 두던 요구를 꺼내고 더 많이 요청한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>경쟁사도 같은 모델을 쓴다. 발표자는 그래도 먼저 시작하면 우위가 남는다고 본다. 모두가 최적으로 경쟁하는 새 균형에 이르더라도 그렇다는 것이다. 그래서 결론은 "지금 시작하라"다.</p>
+        <p class="note">먼저 시작하면 우위가 남는다는 말은 발표자의 예상이다. 근거가 되는 자료는 발표에 나오지 않는다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="envelope">
+        <header><span class="num">11</span><h2>브랜드 범위와 성장 순서 <span class="ts">15:40</span></h2></header>
+        <p>발표자는 <strong>브랜드 범위</strong><span class="en"> brand envelope</span>라는 말을 쓴다. 회사가 시장에 약속할 수 있는 것의 최대 한계다. 그 한계를 찾고, 그 안을 채우라는 것이다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">Spindrift 예 · 통과</span>
+            <p>Spindrift는 과일즙을 조금 넣은 탄산수를 판다. 여기에 카페인을 넣자고 제안한다. 에너지 음료다. 사내 심사를 통과해 출시될 수도 있다.</p>
+            <p class="verdict"><b>브랜드 범위를 잘 넓힌 경우</b>다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Spindrift 예 · 탈락</span>
+            <p>다음 주에 엔진 오일도 넣자고 제안한다. 바로 기각된다.</p>
+            <p class="verdict">브랜드 범위 <b>밖</b>이다.</p>
+          </div>
+        </div>
+        <p>모든 회사가 같다. 엔진 오일은 못 팔아도 에너지 음료는 팔 수 있다. 발표자는 자기 회사의 "에너지 음료"가 무엇인지 찾아 지금 팔기 시작하라고 말한다.</p>
+        <h3>수요 공장을 돌리면 필요해지는 것 <span class="ts">16:20</span></h3>
+        <p>수요 공장에는 질 좋은 신호가 많이 들어온다. 고객, 시장, 수요를 잴 수 있는 모든 곳에서 온다. 나가는 흐름도 많아진다. 그 흐름이 고객이 감당할 수 있는 변화의 양을 넘으면 안 된다. 그래서 발표자는 아래 순서로 더 많은 것이 필요해진다고 설명한다.</p>
+        <ol class="plain">
+          <li><strong>고객을 늘린다.</strong> 기존 고객만으로는 늘어난 흐름을 받아 낼 수 없다.</li>
+          <li><strong>고객 한 명이 쓰는 돈에서 차지하는 몫을 늘린다.</strong><span class="en"> share of wallet</span></li>
+          <li><strong>판매 품목을 늘린다.</strong><span class="en"> SKU</span> 몫을 늘리려면 팔 것이 더 있어야 한다.</li>
+          <li><strong>제품군을 늘린다.</strong> 늘어난 품목을 일관된 묶음으로 정리한다.</li>
+          <li><strong>경쟁사를 인수한다.</strong> 위 단계를 다 채우면 남는 길이다. 발표자는 지금 시작한 쪽이 인수하는 쪽이 된다고 말한다.</li>
+        </ol>
+      </section>
+
+      <!-- 12 -->
+      <section id="closing">
+        <header><span class="num">12</span><h2>맺음말 <span class="ts">17:10</span></h2></header>
+        <p>발표자가 마지막에 꼽은 것은 네 가지다.</p>
+        <ul class="plain">
+          <li>브라운필드 공장은 지을 수 있다.</li>
+          <li>수요 공장도 지금 짓기 시작할 수 있다.</li>
+          <li>제품 관리 방식을 새로 시작할 수 있다.</li>
+          <li>경영진을 깨울 수 있다.</li>
+        </ul>
+        <p>발표자가 좋아하는 브라운필드 기법은 QR 코드로 연결된 기술 자료에 있다고 한다. 그 자료의 내용은 자막에 나오지 않는다.</p>
+        <p class="note">발표는 Diffusion이 도울 준비가 돼 있다는 말로 끝난다. 발표 전체가 발표자 회사의 사업 방향과 겹친다는 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 13 -->
+      <section id="recap">
+        <header><span class="num">13</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>소프트웨어 공장은 1년여 전에는 비싸고 복잡한 장치였다. 지금은 일부가 그냥 되는 수준이 됐다.</li>
+          <li><strong>무엇을 원하는지 모르는 일은 공장에 넣지 않는다.</strong> 틀린 것이 나오거나, 오래 걸리거나, 돈이 많이 든다.</li>
+          <li>먼저 지금 하는 일이 <strong>탐색</strong>인지 <strong>이미 되는 일</strong>인지 가린다.</li>
+          <li>브라운필드는 고객이 이미 돈을 내는 제품이다. 무엇을 만들지는 고객의 사용이 매일 알려 준다.</li>
+          <li>제품에 대한 기대를 <strong>약속</strong>으로 적는다. 기능, 비용과 가격, 보안이 모두 약속이다.</li>
+          <li>약속은 <strong>루프</strong>로 지킨다. 루프는 출력을 입력으로 되먹여야 한다. 되먹임이 없으면 잡음만 커진다.</li>
+          <li>브라운필드 공장은 <strong>연속으로, 배경에서</strong> 돌며 약속을 지킨다.</li>
+          <li>지시는 <strong>더 빠르게, 더 싸게, 더 안전하게</strong>다. 서로 맞바꾸지 않는다. "더 좋게"는 사람의 판단이 필요하다.</li>
+          <li>모델이 좋아지면 공장은 부품이 줄고 성능이 오른다. 겨우 돌아가는 수준이라도 먼저 만든다.</li>
+          <li>브라운필드 공장은 해자를 만들지 못한다. 다음 일은 <strong>수요 공장</strong>이다. 브랜드 범위 안에서 더 팔 것을 찾고, 생산 속도에 수요를 맞춘다.</li>
+        </ol>
+      </section>
+
+      <!-- 14 -->
+      <section id="quiz">
+        <header><span class="num">14</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>발표자가 "소프트웨어 공장을 그만 지으라"고 한 이유는?</span></summary><div class="answer">새것을 만들 때는 무엇을 원하는지 아직 모르는 경우가 많다. 모르는 것을 대량 생산하려 하면 틀린 것이 나오거나, 너무 오래 걸리거나, 돈을 너무 많이 쓴다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>브라운필드가 공장에 잘 맞는 이유는?</span></summary><div class="answer">고객이 이미 돈과 사용량으로 "이게 좋다"고 말하고 있다. 무엇을 만들지 알아낼 필요가 없다. 루프를 안정시킬 신호도 실행 환경에서 이미 들어온다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>Diffusion이 말하는 "약속"은 무엇이고, 예는?</span></summary><div class="answer">제품에서 회사가 지키려는 보장, 우선순위, 품질 기준이다. 기능, 비용과 가격, 보안이 예다. 약속은 뒤로 물리고 싶은 경우가 드물어서 루프에 담기 좋다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>증폭기 비유가 말하는 것은?</span></summary><div class="answer">되먹임 선을 끊으면 잡음만 커진다. 루프도 결과가 정확한지를 입력으로 돌려보내는 길이 있어야 돌아간다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>공장이 돌면 커밋 기록은 어떻게 달라지나?</span></summary><div class="answer">예전에는 시간대별, 주별로 몰리는 주기가 있었다. 에이전트가 루프를 돌리면 24시간 끊기지 않아 직선에 가까워진다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>브라운필드 공장의 세 조건은?</span></summary><div class="answer">연속으로 돈다. 배경에서 돈다. 기존 약속을 계속 지킨다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>Raptor 엔진 비유의 요점은?</span></summary><div class="answer">2세대 엔진은 같은 크기에 성능이 더 높고 부품이 더 적었다. 그 단순화에는 많은 지능이 들어갔다. 소프트웨어 공장에서는 모델이 그 역할을 해서 공장이 판을 거듭하며 단순해진다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>"더 빠르게, 더 싸게, 더 안전하게"에 붙는 조건은?</span></summary><div class="answer">서로 맞바꾸지 않는다. 싸게 하려고 느려지거나 빠르게 하려고 덜 안전해지면 안 된다. 발표자는 이를 파레토 균형이라고 부른다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>"더 좋게"는 왜 브라운필드 공장에 맡기기 어려운가?</span></summary><div class="answer">무엇이 더 좋은지는 사람의 의도, 판단, 취향에 달려 있다. 발견의 영역이라 다른 방법이 필요하다.</div></details>
+          <details><summary><span class="qn">Q10</span><span>발표자가 보기에 고객이 정말 원한 것은?</span></summary><div class="answer">소프트웨어 자체가 아니다. 더 높은 매출 총이익, 더 많은 고객, 더 뚜렷한 브랜드 차별화다.</div></details>
+          <details><summary><span class="qn">Q11</span><span>수요 공장의 역할을 한 문장으로 말하면?</span></summary><div class="answer">수요 쪽 시스템의 속도를 생산 쪽 속도에 맞춰, 만든 소프트웨어가 쓰이지 못하고 쌓이는 일을 막는다. 묻기, 듣기, 실험 배분, 빠른 응답을 에이전트가 돕는다.</div></details>
+          <details><summary><span class="qn">Q12</span><span>Spindrift 예에서 에너지 음료와 엔진 오일의 차이는?</span></summary><div class="answer">에너지 음료는 탄산수 브랜드가 약속할 수 있는 범위 안이다. 엔진 오일은 범위 밖이다. 회사마다 자기 범위 안의 "에너지 음료"를 찾아야 한다.</div></details>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section id="apply">
+        <header><span class="num">15</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>지금 하는 일을 탐색과 이미 되는 일로 나눈다<span class="how">확인: 고객이 돈과 사용량으로 이미 답한 제품인가, 아직 답을 찾는 중인가</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>기존 제품의 약속을 글로 적는다<span class="how">기능, 비용과 가격, 보안부터 시작한다</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>약속마다 되먹임이 있는 루프를 만든다<span class="how">확인: 루프의 결과가 다음 입력으로 돌아가는가. 사용 기록과 지원 문의가 신호로 들어가는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>루프를 배경에서 24시간 돌린다<span class="how">확인: 사람이 시작 버튼을 누르지 않아도 도는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>공장의 지시를 "같은 것을 더 빠르게, 더 싸게, 더 안전하게"로 좁힌다<span class="how">확인: 하나를 얻으려고 다른 하나를 내주지 않았는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>"더 좋게"가 필요한 일은 공장에서 빼서 사람이 판단한다<span class="how">취향과 의도가 필요한 변경을 따로 모은다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>모델이 바뀔 때마다 공장에서 뺄 부품을 찾는다<span class="how">확인: 스킬 문서가 짧아졌는가. 하네스가 단순해졌는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>우리 브랜드 범위 안의 "에너지 음료"를 하나 정한다<span class="how">지금 브랜드로 약속할 수 있으면서 아직 팔지 않는 것</span></span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>시장에 물을 질문과 실험의 우선순위를 에이전트와 함께 정한다<span class="how">돌아온 답을 종합하고 순위를 다시 매기는 일까지 맡겨 본다</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section id="glossary">
+        <header><span class="num">16</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>소프트웨어 공장</td><td>Software factory. 에이전트가 사람 손을 거의 거치지 않고 코드를 만들고 고치도록 짠 자동 시스템</td></tr>
+              <tr><td>브라운필드</td><td>Brownfield. 이미 있는 제품과 코드를 다루는 일</td></tr>
+              <tr><td>그린필드</td><td>Greenfield. 아무것도 없는 데서 새로 만드는 일</td></tr>
+              <tr><td>제품-시장 적합성</td><td>Product-market fit. 제품이 시장이 실제로 원하는 것과 맞아떨어진 상태</td></tr>
+              <tr><td>약속</td><td>Promise. Diffusion의 용어. 제품에서 회사가 지키려는 보장, 우선순위, 품질 기준</td></tr>
+              <tr><td>루프</td><td>입력을 받아 출력을 내고, 그 출력을 다시 입력으로 돌려보내며 반복하는 구조</td></tr>
+              <tr><td>되먹임</td><td>Feedback. 출력의 일부를 입력으로 돌려보내 결과를 바로잡는 것</td></tr>
+              <tr><td>하네스</td><td>모델을 감싸 도구, 순서, 규칙을 정해 주는 실행 틀</td></tr>
+              <tr><td>스킬</td><td>에이전트에게 특정 일을 하는 방법을 알려 주는 지시 문서</td></tr>
+              <tr><td>루브 골드버그 장치</td><td>단순한 일을 지나치게 복잡한 연쇄 장치로 해내는 기계. 얼기설기 이어 붙인 시스템의 비유</td></tr>
+              <tr><td>기술 부채</td><td>빨리 만들느라 미뤄 둔 정리 작업. 쌓이면 이후 개발을 느리게 한다</td></tr>
+              <tr><td>백로그</td><td>해야 하지만 아직 못 한 일의 목록</td></tr>
+              <tr><td>파레토 균형</td><td>발표자의 표현. 다른 것을 나쁘게 만들지 않고 하나를 좋게 만드는 상태를 가리킨다</td></tr>
+              <tr><td>해자</td><td>Moat. 경쟁자가 쉽게 따라오지 못하게 하는 지속적인 우위</td></tr>
+              <tr><td>수요 공장</td><td>Demand factory. 발표자가 제안한 개념. 수요를 찾고 키우는 일을 체계로 만든 것. 발표자도 정확한 모습은 아직 모른다고 했다</td></tr>
+              <tr><td>브랜드 범위</td><td>Brand envelope. 회사가 시장에 약속할 수 있는 것의 최대 한계</td></tr>
+              <tr><td>가격 탄력성</td><td>가격이 바뀔 때 수요가 얼마나 달라지는지를 나타내는 정도</td></tr>
+              <tr><td>지갑 점유율</td><td>Share of wallet. 고객이 쓰는 돈 가운데 우리 회사가 차지하는 몫</td></tr>
+              <tr><td>SKU</td><td>Stock keeping unit. 따로 구분해 파는 판매 품목 하나</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section id="timeline">
+        <header><span class="num">17</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:10</span></td><td>발표자와 Diffusion 소개</td></tr>
+              <tr><td><span class="ts">00:40</span></td><td>두 채널로 말하기: 사람용 발표, 에이전트용 첨부</td></tr>
+              <tr><td><span class="ts">01:00</span></td><td>작년 7월, Claude 4 계열로 시작한 공장</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>가능성은 보였지만 비싸고 복잡했다</td></tr>
+              <tr><td><span class="ts">02:00</span></td><td>소프트웨어 공장이 흔한 개념이 됐다</td></tr>
+              <tr><td><span class="ts">02:20</span></td><td>"소프트웨어 공장을 그만 지어라"</td></tr>
+              <tr><td><span class="ts">03:00</span></td><td>탐색하는 일과 이미 되는 일 가리기</td></tr>
+              <tr><td><span class="ts">03:20</span></td><td>브라운필드 공장: 신호가 이미 들어온다</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>기술 부채와 백로그를 다시 쓴다</td></tr>
+              <tr><td><span class="ts">05:00</span></td><td>약속: 기능, 비용과 가격, 보안</td></tr>
+              <tr><td><span class="ts">05:50</span></td><td>루프와 증폭기 비유</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>연속성: 커밋 기록이 직선이 된다</td></tr>
+              <tr><td><span class="ts">07:40</span></td><td>연속으로, 배경에서, 약속을 지킨다</td></tr>
+              <tr><td><span class="ts">08:20</span></td><td>공장은 시간이 지나며 단순해진다</td></tr>
+              <tr><td><span class="ts">09:00</span></td><td>Raptor 엔진 비유</td></tr>
+              <tr><td><span class="ts">09:50</span></td><td>모델이 공장을 다음 판으로 바꾼다</td></tr>
+              <tr><td><span class="ts">10:40</span></td><td>"같은 것을 더 빠르게", 파레토 균형</td></tr>
+              <tr><td><span class="ts">11:10</span></td><td>"더 좋게"는 사람의 판단이 필요하다</td></tr>
+              <tr><td><span class="ts">11:40</span></td><td>일주일이면 세운다</td></tr>
+              <tr><td><span class="ts">12:20</span></td><td>목표를 높여라: 소프트웨어가 남아돈다</td></tr>
+              <tr><td><span class="ts">12:50</span></td><td>고객이 정말 원한 것</td></tr>
+              <tr><td><span class="ts">13:10</span></td><td>엔지니어의 새 일</td></tr>
+              <tr><td><span class="ts">13:50</span></td><td>수요 공장: 생산과 수요의 속도 맞추기</td></tr>
+              <tr><td><span class="ts">14:40</span></td><td>묻기, 듣기, 실험 배분, 빠른 응답</td></tr>
+              <tr><td><span class="ts">15:20</span></td><td>먼저 시작한 쪽에 우위가 남는다</td></tr>
+              <tr><td><span class="ts">15:40</span></td><td>브랜드 범위와 Spindrift 예</td></tr>
+              <tr><td><span class="ts">16:20</span></td><td>고객, 품목, 제품군, 인수</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>맺음말</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = '1S4hx3wgvBE:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>
