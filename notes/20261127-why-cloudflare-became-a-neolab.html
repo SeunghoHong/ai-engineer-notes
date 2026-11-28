@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>네오랩이 된 클라우드플레어</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch); on wide screens a sticky contents rail sits to its left */
+:root {
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #586571;
+  --line: #D9E0E4;
+  --accent: #0B6B76;
+  --accent-soft: #DFEFF0;
+  --code-bg: #ECF0F2;
+  --bar-context: #A9B5BD;
+  --crit: #AF241C; --crit-bg: #FADFDC;
+  --font-display: "Gowun Batang", "AppleMyungjo", "Nanum Myeongjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.5rem;
+  --step-3: 2.1rem;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+    --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+    --bar-context: #4E5D68;
+    --crit: #FF8B82; --crit-bg: #3F1F1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151A; --surface: #161F26; --ink: #E3E9ED; --muted: #98A6B0; --line: #2A3640;
+  --accent: #5CC2CC; --accent-soft: #143238; --code-bg: #1B262E;
+  --bar-context: #4E5D68;
+  --crit: #FF8B82; --crit-bg: #3F1F1D;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 220px minmax(0, 46rem); justify-content: center; gap: 56px; }
+}
+
+/* ---------- contents rail ---------- */
+.toc { font-size: var(--step--1); }
+.toc h2 {
+  font-family: var(--font-body); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: grid; grid-template-columns: 2ch 1fr; gap: 8px;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none;
+}
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 1080px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+@media (max-width: 1079px) {
+  .toc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr)); }
+}
+
+/* ---------- type ---------- */
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+}
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ts {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.en { font-family: var(--font-mono); font-size: max(0.82em, 12px); color: var(--muted); }
+.muted { color: var(--muted); }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.flow { display: grid; gap: 16px; }
+section { display: grid; gap: 16px; padding-top: 40px; scroll-margin-top: 16px; }
+section + section { border-top: 1px solid var(--line); }
+section > header { display: grid; gap: 6px; }
+section > header .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 16px; padding-bottom: 8px; }
+.hero .lead { font-size: var(--step-1); line-height: 1.6; }
+.source { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+
+.summary {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 12px;
+}
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+
+/* ---------- bar charts ---------- */
+figure { margin: 0; }
+.chart {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; gap: 14px; min-width: 0;
+}
+.chart .chart-title { font-weight: 600; font-size: var(--step--1); }
+.chart .rows { display: grid; gap: 12px; }
+.chart .row { display: grid; gap: 4px; }
+.chart .row-head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--step--1); }
+.chart .row-head .val { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart .track { position: relative; height: 14px; }
+.chart .fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0;
+  background: var(--bar-context);
+}
+.chart .fill.key { background: var(--accent); }
+.chart .fill:hover { filter: brightness(1.08); }
+.chart .baseline {
+  position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--muted);
+}
+.chart .axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+.chart .caption { font-size: 0.8rem; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 12px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0;
+}
+.card .tag { font-family: var(--font-mono); font-weight: 500; font-size: var(--step--1); color: var(--muted); }
+.card ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.card .verdict { font-size: var(--step--1); border-top: 1px solid var(--line); padding-top: 8px; }
+.card .verdict b { color: var(--accent); font-weight: 600; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+td:first-child { font-weight: 600; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft);
+  padding: 12px 16px; border-radius: var(--radius); display: grid; gap: 6px; max-width: 68ch;
+}
+.callout.warn { border-color: color-mix(in srgb, var(--crit) 35%, transparent); background: var(--crit-bg); }
+.callout .title { font-weight: 600; }
+
+/* ---------- shift diagram ---------- */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.shift > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.shift > div.to { border-color: var(--accent); }
+.shift .arrow { align-self: center; color: var(--muted); font-size: 1.4rem; }
+.shift .tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; }
+.shift .to .tag { color: var(--accent); }
+@media (max-width: 560px) {
+  .shift { grid-template-columns: minmax(0, 1fr); }
+  .shift .arrow { justify-self: center; transform: rotate(90deg); }
+}
+
+/* ---------- quote ---------- */
+blockquote {
+  margin: 0; padding: 4px 0 4px 20px; border-left: 1px solid var(--line); max-width: 68ch;
+  font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6;
+}
+blockquote cite { display: block; margin-top: 6px; font-family: var(--font-body); font-size: var(--step--1); font-style: normal; color: var(--muted); }
+
+/* ---------- quiz ---------- */
+.quiz { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 4px; }
+summary::-webkit-details-marker { display: none; }
+summary .qn { font-family: var(--font-mono); color: var(--accent); }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .answer { padding: 12px 16px 14px calc(16px + 2.5rem + 4px); }
+@media (max-width: 480px) { details .answer { padding-left: 16px; } }
+
+/* ---------- checklist ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist label { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.checklist input { margin: 5px 0 0; accent-color: var(--accent); width: 1rem; height: 1rem; }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+.checklist .how { display: block; font-size: var(--step--1); color: var(--muted); text-decoration: none; }
+
+footer.end { padding-top: 40px; border-top: 1px solid var(--line); margin-top: 40px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+</style>
+</head>
+<body>
+<nav style="max-width:72rem;margin:0 auto;padding:16px 16px 0;font-size:0.9375rem"><a href="../index.html">전체 노트 목록</a></nav>
+<div class="page">
+
+  <nav class="toc" aria-label="목차">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#backwards">뒤로 이해하고, 앞으로 산다</a></li>
+      <li><a href="#platform">CDN에서 개발자 플랫폼으로</a></li>
+      <li><a href="#hypothesis">빗나간 가설: 모델은 작아진다</a></li>
+      <li><a href="#agent-cloud">거대 모델 서빙과 에이전트 클라우드</a></li>
+      <li><a href="#east-wind">동풍: System 1 모델</a></li>
+      <li><a href="#three-days">사흘 만의 첫 실험</a></li>
+      <li><a href="#clef">Clef: 결정하는 모델</a></li>
+      <li><a href="#cleric">Cleric: 읽어 내는 모델</a></li>
+      <li><a href="#why-neolab">Neolab이 된 이유</a></li>
+      <li><a href="#demo">데모: 깨진 CI 빌드</a></li>
+      <li><a href="#onwards">쓰임새와 마지막 당부</a></li>
+      <li><a href="#recap">핵심 정리</a></li>
+      <li><a href="#quiz">점검 퀴즈</a></li>
+      <li><a href="#apply">내 팀에 적용하기</a></li>
+      <li><a href="#glossary">용어 정리</a></li>
+      <li><a href="#timeline">영상 타임라인</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="eyebrow">학습 노트 · AI Engineer Code Summit 발표 · 2026-11-27 · 20분 · 영어 발표 한글 정리</span>
+      <h1>Cloudflare는 왜 모델을 직접 만들게 됐나</h1>
+      <p class="lead">Cloudflare는 전 세계에 흩어진 인프라 위에 에이전트용 재료를 다 갖췄지만, 그 인프라에 맞는 모델 하나가 비어 있었다. 작고 빠른 System 1 모델이 등장하자 Cloudflare는 그 모델을 직접 학습해 내놓는 Neolab이 됐다.</p>
+      <div class="source">
+        <span>원본 영상: <a href="https://www.youtube.com/watch?v=cYcYfM9Mvwo" target="_blank" rel="noopener">Why Cloudflare Became a Neolab</a></span>
+        <span>발표: Michelle Chen (Cloudflare 그룹 PM, Workers AI·AI Search·AI Gateway 담당)</span>
+      </div>
+      <p class="note">영어 발표의 자동 자막을 바탕으로 한글로 정리했다. 수치는 모두 발표자가 인용한 것이고 원 출처를 따로 확인하지는 않았다. TypeSafe, Jev, Clef, Cleric은 자막에 들린 대로 적은 이름이라 실제 철자와 다를 수 있다. 발표자는 Cloudflare 소속이고, 발표의 절반 가까이가 자사 모델 이야기다. <span class="ts">mm:ss</span>는 영상 위치다.</p>
+    </header>
+
+    <div class="summary" style="margin-top:24px">
+      <span class="eyebrow">3분 요약</span>
+      <ol>
+        <li>Cloudflare는 사용자 가까이 흩어진 자체 인프라에서 출발했다. 그 위에 <strong>컴퓨트와 저장소</strong>를 차례로 얹어 개발자 플랫폼이 됐다.</li>
+        <li>2023년 Workers AI는 <strong>"모델은 작아지고 네트워크 지연이 중요해진다"</strong>에 걸었다. 실제로는 모델이 7B에서 3조 파라미터급으로 커졌다.</li>
+        <li>그래서 2026년 3월 <strong>거대 모델 서빙</strong>으로 방향을 틀고 "에이전트 클라우드"를 내세웠다. 그래도 인프라에 맞는 조각 하나가 비어 있었다.</li>
+        <li>2026년 9월 TypeSafe(추정)가 Jev(추정)라는 모델로 <strong>System 1 모델</strong>을 소개했다. 입력을 한 번 통과시켜 바로 답을 내는 작고 빠른 모델이다.</li>
+        <li>Jev는 공개되지 않은 모델이었다. Cloudflare는 <strong>사흘 뒤 첫 실험</strong>을 했고, 주말 48시간 학습으로 결정 모델 Clef(추정)를 냈다. 이어 추출 모델 Cleric(추정)을 냈다.</li>
+        <li>발표자의 데모에서 System 1 모델을 섞자 <strong>LLM 호출은 5번에서 1번</strong>으로, 토큰은 94% 줄었다. 시간은 약 절반이 됐다.</li>
+        <li>System 1 모델은 LLM을 대신하지 않고 <strong>빠른 일을 덜어 준다.</strong> 발표자의 마지막 당부는 변화가 오면 빨리 반응하라는 것이다.</li>
+      </ol>
+    </div>
+
+    <div class="flow">
+
+      <!-- 1 -->
+      <section id="backwards">
+        <header><span class="num">01</span><h2>뒤로 이해하고, 앞으로 산다 <span class="ts">00:00</span></h2></header>
+        <p>Michelle Chen은 Cloudflare의 그룹 PM이다. Workers AI, AI Search, AI Gateway 같은 AI 제품을 맡는다.</p>
+        <p>Cloudflare는 최근 자체 모델을 학습해 내놓았다. 발표는 그 이유와 활용법을 다룬다.</p>
+        <blockquote>삶은 뒤를 돌아볼 때 이해되지만, 살아가는 일은 앞을 향해야 한다.<cite>키르케고르. 발표자가 첫머리에 인용 <span class="ts">00:50</span></cite></blockquote>
+        <p>Cloudflare는 16년 동안 많은 일을 했다. 돌아보면 몇 가지 조각이 맞아떨어져 결국 Neolab이 됐다고 발표자는 말한다.</p>
+        <p>Neolab <span class="en">neolab</span>은 "새로 생긴 AI 연구소"라는 뜻의 업계 말이다. 이 발표에서는 남의 모델을 돌려 주는 데서 그치지 않고, 모델을 직접 학습해 내놓는 조직을 가리킨다.</p>
+        <ol class="plain">
+          <li><strong>뒤로</strong>: Cloudflare는 왜 Neolab이 되어야 했나</li>
+          <li><strong>앞으로</strong>: 새 모델로 개발자가 무엇을 할 수 있나</li>
+          <li><strong>계속 앞으로</strong>: 빨리 바뀌는 업계에서 어떻게 움직일까</li>
+        </ol>
+      </section>
+
+      <!-- 2 -->
+      <section id="platform">
+        <header><span class="num">02</span><h2>CDN에서 개발자 플랫폼으로 <span class="ts">01:30</span></h2></header>
+        <p>Cloudflare는 2010년에 콘텐츠 전송망 <span class="en">CDN</span> 회사로 시작했다. CDN은 사용자의 요청과 원본 서버 <span class="en">origin</span> 사이에 선다. 그 자리에서 콘텐츠를 캐시해 빨리 내주고, 공격을 막는다.</p>
+        <p>CDN이 빠르려면 서버가 어디에나 있어야 한다. 그래서 Cloudflare는 처음부터 자체 인프라를 전 세계에 깔았다. <span class="ts">02:10</span></p>
+        <div class="shift" aria-label="하이퍼스케일러와 Cloudflare의 인프라 비교">
+          <div><span class="tag">하이퍼스케일러</span><b>컴퓨트를 한곳에 모은다</b><span class="muted">US East 1, US West 1 같은 몇몇 지역</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">Cloudflare</span><b>사용자 가까이 흩어 둔다</b><span class="muted">전 세계 곳곳의 데이터센터</span></div>
+        </div>
+        <p>그러자 질문이 생겼다. 사용자 가까이 있는 이 컴퓨터들로 개발자가 또 무엇을 만들고 싶어 할까. 답은 컴퓨트와 저장소였다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시기</th><th>더한 것</th><th>하는 일</th></tr></thead>
+            <tbody>
+              <tr><td>2017</td><td>Workers</td><td>서버리스 함수 <span class="en">serverless function</span>. 코드를 실행하고 끝나면 사라진다. 몇 초가 아니라 몇 밀리초 만에 뜬다</td></tr>
+              <tr><td>그 뒤</td><td>Durable Objects</td><td>상태를 기억하는 컴퓨트</td></tr>
+              <tr><td>2025</td><td>Containers</td><td>VM 같은 통째 환경이 필요한 작업용</td></tr>
+              <tr><td>연도 언급 없음</td><td>KV, R2, D1</td><td>키-값 저장소, 객체 저장소, 데이터베이스</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Workers가 나올 때 비교 대상은 가상 머신 <span class="en">VM</span>이었다. VM은 기계 하나를 통째로 빌린다. 쓰든 안 쓰든 돈을 낸다. Workers는 실행한 만큼만 낸다.</p>
+        <p>처음에 사람들은 Workers로 정적 웹사이트를 주로 만들었다. 저장소가 붙으면서 목표가 커졌다. 상태가 있는 풀스택 앱을 Cloudflare 안에서 다 만들게 하는 것이다. <span class="ts">03:30</span></p>
+      </section>
+
+      <!-- 3 -->
+      <section id="hypothesis">
+        <header><span class="num">03</span><h2>빗나간 가설: 모델은 작아진다 <span class="ts">04:10</span></h2></header>
+        <p>2023년 ChatGPT가 크게 뜨면서 AI를 보는 눈이 바뀌었다. Cloudflare는 매년 9월 생일 주간 <span class="en">Birthday Week</span>을 연다. 그해 행사 3주 전, 팀이 한방에 모였다. 주제는 Cloudflare의 인프라로 AI 판에서 무엇을 할 수 있느냐였다.</p>
+        <p>답이 Workers AI였다. 네트워크 곳곳에 GPU를 넣어, 모델도 사용자 가까이에서 돌게 했다. <span class="ts">04:30</span></p>
+        <p>Workers AI는 가설 하나에 걸었다. <span class="ts">04:50</span></p>
+        <ol class="plain">
+          <li>모델은 점점 작아진다.</li>
+          <li>작은 모델은 전 세계에 흩어진 작은 하드웨어에도 올라간다.</li>
+          <li>모델이 빨라질수록 응답 시간에서 네트워크 지연 <span class="en">latency</span>이 차지하는 몫이 커진다.</li>
+          <li>그러면 사용자 가까이 있는 Cloudflare가 유리하다.</li>
+        </ol>
+        <p>그래서 작은 모델로 출시했다. 결과는 반대였다. 모델은 계속 커졌다. <span class="ts">05:10</span></p>
+
+        <figure class="chart" aria-label="모델 크기 비교: 2023년 무렵 70억 파라미터, 최근 출시 모델 3조 파라미터">
+          <span class="chart-title">발표자가 말한 모델 크기의 변화 (파라미터 수)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>2023년 무렵 · 7B</span><span class="val">70억</span></div>
+              <div class="track"><div class="fill" style="width:0.23%" title="2023년 무렵: 70억 파라미터"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>최근 출시 모델 · 3T</span><span class="val">3조</span></div>
+              <div class="track"><div class="fill key" style="width:100%" title="최근 출시 모델: 3조 파라미터"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>1.5조</span><span>3조</span></div>
+          <span class="caption">막대 길이는 실제 비율이다. 70억은 3조의 약 0.23%라 선 하나로만 보인다. 약 430배 차이다.</span>
+        </figure>
+        <p class="note">발표자는 7B가 당시 최전선 크기였다고 했다. 다만 2023년 7월에 이미 70B 크기의 공개 모델(Llama 2)이 나와 있었다. "당시 작은 하드웨어에 올릴 수 있던 크기" 정도로 읽는 편이 정확하다.</p>
+
+        <p>돌아보면 이상한 일은 아니다. 발표자는 스케일링 법칙 <span class="en">scaling law</span>을 이유로 든다. 더 많은 데이터로 더 큰 모델을 학습할수록 모델이 더 넓은 일에 통한다. AGI를 향한 연구는 자연히 더 큰 모델 쪽으로 간다.</p>
+        <p>모델이 커지자 답을 만드는 시간 자체가 길어졌다. 그만큼 네트워크 지연의 몫은 줄었다. Workers AI의 가설과 정반대 방향이다.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="agent-cloud">
+        <header><span class="num">04</span><h2>거대 모델 서빙과 에이전트 클라우드 <span class="ts">06:00</span></h2></header>
+        <p>Cloudflare는 방향을 틀었다. 거대 모델도 잘 서빙하는 쪽으로.</p>
+        <p>2026년 3월 Kimi를 올렸다. 이어 GLM과 DeepSeek 같은 조 단위 파라미터 모델을 올렸다. 서버리스 방식이라 개발자는 API를 부르고 토큰을 받기만 하면 된다.</p>
+        <p>발표자도 2026년 3월은 꽤 늦었다고 인정한다. 결정에 시간이 걸린 이유가 있었다. 거대 모델은 "사용자 가까이 흩어진 인프라"라는 Cloudflare의 이야기와 맞지 않았다. 대신 개발자 플랫폼 이야기와는 잘 맞았다.</p>
+
+        <h3>에이전트 클라우드 <span class="ts">06:40</span></h3>
+        <p>2026년이 되자 재료가 다 모였다. Cloudflare는 "에이전트 클라우드"를 내세웠다. 에이전트를 Cloudflare에 배포하고, Cloudflare의 모델로 움직이고, Cloudflare의 컴퓨트와 데이터를 쓰게 하자는 것이다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>층</th><th>Cloudflare가 가진 것</th><th>에이전트에게 주는 것</th></tr></thead>
+            <tbody>
+              <tr><td>인프라</td><td>사용자 가까이 흩어진 네트워크</td><td>모든 층의 바탕</td></tr>
+              <tr><td>컴퓨트</td><td>Workers, Durable Objects</td><td>일이 생기면 깨어나 처리하고, 없으면 잠든다</td></tr>
+              <tr><td>저장소</td><td>KV, R2, D1</td><td>데이터를 읽고 쓴다</td></tr>
+              <tr><td>모델</td><td>Kimi, GLM, DeepSeek</td><td>에이전트를 움직이는 큰 모델</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="title">그래도 조각 하나가 비었다 <span class="ts">07:10</span></span>
+          <span>발표자는 이 이야기가 "딱 맞는 느낌이 아니었다"고 말한다. 거대 모델 서빙은 Workers AI가 원래 설계된 방식과 어긋났다. 작은 모델을 사용자 가까이에서 돌리는 방식이다.</span>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="east-wind">
+        <header><span class="num">05</span><h2>동풍: System 1 모델 <span class="ts">07:30</span></h2></header>
+        <p>발표자는 두 번째 인용구로 중국 속담을 꺼낸다.</p>
+        <blockquote>万事俱备，只欠东风<br>모든 준비가 끝났고, 동풍만 남았다.<cite>발표자가 인용한 중국 속담. 자막에는 뜻만 남아 있어 원문은 널리 알려진 표현으로 채웠다.</cite></blockquote>
+        <p>바람이 언제, 어디서 올지는 예측할 수 없다. 대신 바람이 불면 바로 움직여야 한다.</p>
+
+        <h3>2026년 9월, 바람이 불었다 <span class="ts">08:00</span></h3>
+        <p>TypeSafe(추정)라는 곳이 Jev(추정)라는 모델을 내놓았다. 그러면서 System 1 모델이라는 개념을 소개했다.</p>
+        <p>이 이름은 심리학의 구분을 떠올리게 한다. 빠르고 직관적인 사고를 System 1, 느리고 따져 보는 사고를 System 2라고 부른다. 발표자도 뒤에서 System 1 모델을 "빠르고 직관적인 일"에 쓴다고 설명한다.</p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">지금까지의 LLM</span>
+            <ul>
+              <li>토큰을 하나씩 이어 붙여 답을 만든다. 이를 자기회귀 <span class="en">autoregressive</span> 방식이라 한다</li>
+              <li>답이 길수록 오래 걸린다</li>
+              <li>입력이 길어지면 계산량이 길이의 제곱으로 늘어난다</li>
+            </ul>
+            <p class="verdict"><b>쓰임</b>: 깊은 추론. 비싸고 느리다</p>
+          </div>
+          <div class="card">
+            <span class="tag">System 1 모델</span>
+            <ul>
+              <li>입력을 모델에 한 번 통과 <span class="en">forward pass</span>시켜 바로 결과를 낸다</li>
+              <li>출력은 결정에 곧바로 쓸 수 있는 형태다</li>
+              <li>빠르고 싸다</li>
+            </ul>
+            <p class="verdict"><b>쓰임</b>: 빠른 판단과 추출. LLM과 함께 쓴다</p>
+          </div>
+        </div>
+        <p>발표자는 타이밍이 완벽했다고 본다. 사람들은 LLM에 지쳐 가고 있었다. 비싸고, 토큰을 많이 쓰고, 시간이 오래 걸린다. 발표자는 LLM의 추론 과정을 읽다가 틀린 대목에서 혈압이 오른다는 농담도 했다. <span class="ts">08:30</span></p>
+        <p>그동안은 모든 요청을 LLM에 보냈다. System 1 모델이 나오자 일부 요청은 작은 모델로 보낼 수 있게 됐다. 작은 모델이 큰 모델의 짐을 덜고, 둘이 서로 보완하며 목표에 더 빨리 닿는다.</p>
+
+        <h3>작고 빠른 모델로 돌아오다 <span class="ts">09:10</span></h3>
+        <p>작고 빠른 모델은 바로 2023년 Workers AI의 가설이었다. 발표자는 "Cloudflare가 틀린 게 아니라, 그저 일렀다"고 말한다.</p>
+        <p>모델이 빨리 답할수록 네트워크 지연이 다시 중요해진다. 모델 응답도 빨라야 하고, 네트워크는 그보다 더 빨라야 한다. 사용자 가까이 흩어진 인프라가 다시 장점이 된다.</p>
+        <p class="note">"틀린 게 아니라 일렀다"는 Cloudflare AI 제품을 맡은 발표자의 해석이다. 그 점을 감안해 읽자.</p>
+      </section>
+
+      <!-- 6 -->
+      <section id="three-days">
+        <header><span class="num">06</span><h2>사흘 만의 첫 실험 <span class="ts">09:40</span></h2></header>
+        <p>문제가 하나 있었다. Jev는 클로즈드 소스 <span class="en">closed source</span>였다. 모델이 공개되지 않아 Cloudflare 인프라에 올릴 수 없었다.</p>
+        <p>그래서 Cloudflare는 자기 버전을 만들기로 했다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>언제</th><th>무슨 일</th></tr></thead>
+            <tbody>
+              <tr><td>9월 15일</td><td>Jev 출시</td></tr>
+              <tr><td>9월 18일</td><td>Cloudflare판 Jev의 첫 실험 공개. 사흘 뒤다</td></tr>
+              <tr><td>그다음 한 주</td><td>Neolab의 길로 들어설지 고민</td></tr>
+              <tr><td>어느 금요일 저녁</td><td>"그냥 하자"고 결정</td></tr>
+              <tr><td>그 주말</td><td>48시간 동안 모델 학습</td></tr>
+              <tr><td>다음 주</td><td>결정 모델 Clef(추정) 출시</td></tr>
+              <tr><td>약 3주 뒤</td><td>추출 모델 Cleric(추정) 출시</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>그 한 주 동안 고민한 것은 이렇다. Neolab은 Cloudflare에 완전히 새로운 영역이었다. 무엇을 알아야 하는지조차 몰랐다. Neolab이 되겠다고 나서면 기대가 생긴다. 그 기대를 감당할 수 있을지도 걱정이었다.</p>
+        <p>발표자는 3주 동안 모델 4개를 냈으니 Neolab 노릇은 꽤 잘한 셈이라고 말한다. 발표에서 이름이 나온 것은 Clef, Clef Flash, Cleric 세 가지다.</p>
+      </section>
+
+      <!-- 7 -->
+      <section id="clef">
+        <header><span class="num">07</span><h2>Clef: 결정하는 모델 <span class="ts">10:30</span></h2></header>
+        <p>Clef는 결정 모델 <span class="en">decision model</span>이다. 입력을 보고 에이전트가 할 일을 고른다. 발표자는 Clef가 "결정권을 에이전트에게 돌려줬다"고 표현한다.</p>
+        <p>그전에는 에이전트가 결정을 내리는 방법이 두 가지뿐이었다.</p>
+        <ul class="plain">
+          <li>LLM이 할지 말지를 몇 분씩 추론한다.</li>
+          <li>사람이 루프에 들어가 승인한다 <span class="en">human in the loop</span>. 에이전트는 24시간 돌아도, 사람은 잠을 잔다.</li>
+        </ul>
+        <p>Clef를 쓰면 결정을 프로그램 안에 넣을 수 있다. 에이전트는 사람을 기다리지 않고 스스로 움직인다.</p>
+
+        <h3>LLM의 짐을 덜다 <span class="ts">11:00</span></h3>
+        <ul class="plain">
+          <li>결정 모델은 LLM보다 훨씬 빠르고 싸다.</li>
+          <li>LLM은 의미 있는 큰일에 남겨 둔다. 빠르고 직관적인 판단은 Clef가 맡는다.</li>
+          <li>Cloudflare는 모델을 돌려 주는 추론 제공자 <span class="en">inference provider</span>다. 그 입장에서도 LLM에 몰리는 부하가 줄어든다.</li>
+        </ul>
+        <p>데모에는 속도를 우선한 Clef Flash도 나온다.</p>
+        <p class="note">Clef와 Cleric의 장점은 두 모델을 만든 회사의 PM이 한 말이다. 이 발표에는 다른 모델과 정확도를 비교한 수치가 없다.</p>
+      </section>
+
+      <!-- 8 -->
+      <section id="cleric">
+        <header><span class="num">08</span><h2>Cleric: 읽어 내는 모델 <span class="ts">11:20</span></h2></header>
+        <p>결정 모델을 만든 뒤 Cloudflare는 다시 물었다. 에이전트와 사람이 LLM에 맡기는 일 가운데, LLM이 과한 일은 또 무엇일까.</p>
+        <p>발표자는 LLM이 맞지 않는 일을 세 가지로 나눈다.</p>
+        <ol class="plain">
+          <li>너무 비싸다.</li>
+          <li>너무 오래 걸린다.</li>
+          <li>답이 틀린다. 자기회귀 방식 탓에 없는 내용을 지어내는 환각 <span class="en">hallucination</span>이 생긴다.</li>
+        </ol>
+        <p>그래서 Cleric을 냈다. Cloudflare는 이것을 추출 모델 <span class="en">extraction model</span>이라 부른다. 입력을 한 번 통과시켜 답을 내니, Clef처럼 빠르고 싼 System 1 모델이다. <span class="ts">11:40</span></p>
+
+        <h3>세상의 입력은 반듯한 JSON이 아니다 <span class="ts">12:00</span></h3>
+        <p>실제로 들어오는 입력은 이메일, 트윗, Slack 메시지다. 보내는 사람이 양식을 깔끔하게 채워 주지 않는다.</p>
+        <p>Cleric은 이런 비정형 입력 <span class="en">unstructured input</span>을 받는다. 그 안에서 값을 뽑고, 계산하고, 추정하고, 예측한다. 결과는 타입이 정해진 JSON으로 돌려준다. 이미지도 입력으로 받는다.</p>
+        <div class="callout">
+          <span class="title">예시: Cleric이 하는 일 (발표에 없는 예, 이해를 돕기 위해 만듦)</span>
+          <span>입력: Slack 메시지 "482번 PR 빌드가 또 깨졌어요. 내일 오전까지 봐 주실 수 있나요?"</span>
+          <span>출력: <code>{"pr_number": 482, "issue": "build_failure", "due": "tomorrow_morning"}</code></span>
+          <span class="muted">뒤 단계의 코드나 결정 모델은 이 필드만 보고 다음 일을 정할 수 있다.</span>
+        </div>
+        <p>발표자는 Cleric으로 에이전트가 "읽고", Clef로 "정한다"고 정리한다. 세 모델을 잇는 흐름은 이렇다. <span class="ts">12:40</span></p>
+        <div class="pair">
+          <div class="card">
+            <span class="tag">1 · 읽기 · Cleric</span>
+            <p>텍스트나 이미지에서 필요한 값을 타입 있는 JSON으로 뽑는다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">2 · 결정 · Clef</span>
+            <p>뽑은 값을 보고 무엇을 할지 고른다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">3 · 행동 · LLM</span>
+            <p>에이전트가 실제로 무엇을 할지 따져 보고 실행한다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="why-neolab">
+        <header><span class="num">09</span><h2>Neolab이 된 이유 <span class="ts">13:00</span></h2></header>
+        <p>이제 제목의 질문으로 돌아간다. 인프라, 컴퓨트, 데이터, 큰 모델은 이미 있었다. 빠진 조각은 그 인프라에 꼭 맞는 System 1 모델이었다.</p>
+        <p>그 모델을 남이 Cloudflare에 맞게 만들어 주지는 않았다. 그래서 Cloudflare가 직접 만들어야 했다.</p>
+        <div class="shift" aria-label="Cloudflare 역할의 변화">
+          <div><span class="tag">지금까지</span><b>남이 만든 모델을 서빙한다</b><span class="muted">Kimi, GLM, DeepSeek</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="to"><span class="tag">이제</span><b>필요한 모델을 직접 만든다</b><span class="muted">Clef, Cleric</span></div>
+        </div>
+        <p>발표자는 Neolab이 된 것의 더 큰 의미로 "빠진 것을 직접 만들 수 있다"는 점을 꼽는다. 필요한 모델이 클로즈드 소스이거나 규제 위험이 있어도 기다릴 필요가 없다. 발표자는 이 점이 AI 분야에서 Cloudflare에 많은 문을 열었다고 말한다.</p>
+      </section>
+
+      <!-- 10 -->
+      <section id="demo">
+        <header><span class="num">10</span><h2>데모: 깨진 CI 빌드 고치기 <span class="ts">14:00</span></h2></header>
+        <p>이제 앞을 볼 차례다. 발표자는 개발자가 Clef와 Cleric을 어떻게 쓸지 데모로 보여 준다. 상황은 이렇다.</p>
+        <ul class="plain">
+          <li>CI 빌드가 깨진 PR이 있다.</li>
+          <li>원인을 찾는 에이전트가 있다. 에이전트는 Durable Object 위에서 돈다.</li>
+          <li>에이전트가 쓸 수 있는 도구는 40개다.</li>
+        </ul>
+
+        <h3>두 가지 흐름 <span class="ts">14:20</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>LLM만 쓸 때</th><th>System 1 모델을 섞을 때</th></tr></thead>
+            <tbody>
+              <tr><td>도구 목록</td><td>매번 도구 40개를 통째로 보낸다</td><td>Clef Flash가 필요한 10개만 고른다</td></tr>
+              <tr><td>PR 번호</td><td>LLM이 읽고 추론한다</td><td>Cleric이 바로 뽑는다</td></tr>
+              <tr><td>API 호출</td><td>LLM이 도구 호출을 하나씩 정한다</td><td>미리 짠 코드가 호출한다</td></tr>
+              <tr><td>로그</td><td>300~600줄을 통째로 붙인다</td><td>Cleric이 오류 메시지와 영향받는 코드 줄만 뽑는다</td></tr>
+              <tr><td>최종 판단</td><td>GLM 5.3과 약 5번 주고받는다</td><td>LLM이 마지막에 한 번 판단하고 행동한다</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>LLM만 쓰면 같은 입력이 계속 오가며 컨텍스트 <span class="en">context</span>가 불어난다. 컨텍스트는 모델에 한 번에 넣는 입력 전체다. System 1 모델을 섞으면 LLM에 가는 입력이 처음부터 작다.</p>
+
+        <h3>결과 <span class="ts">16:20</span></h3>
+        <p>라이브 데모는 학회 와이파이에서, 사용량이 몰리는 근무 시간에 돌았다. 발표자는 Workers AI 사용량이 낮에 몰리는 패턴이 있다고 미리 말했다.</p>
+        <p>그래도 System 1 쪽이 먼저 끝났다. 단계별 시간을 가로 막대로 보여 주는 워터폴 차트 <span class="en">waterfall chart</span>에서도 System 1 단계는 LLM 생성 단계보다 훨씬 짧았다. 두 쪽 모두 같은 답에 닿았다고 발표자는 말한다.</p>
+
+        <figure class="chart" aria-label="라이브 데모의 LLM 토큰 수: LLM만 쓸 때 40,000, System 1 모델을 섞을 때 1,800">
+          <span class="chart-title">라이브 데모: LLM 토큰 수 <span class="ts">16:50</span></span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>LLM만</span><span class="val">40,000</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="LLM만: 40,000 토큰"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>System 1 모델을 섞을 때</span><span class="val">1,800</span></div>
+              <div class="track"><div class="fill key" style="width:4.5%" title="System 1 모델을 섞을 때: 1,800 토큰"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>20,000</span><span>40,000</span></div>
+          <span class="caption">LLM 호출은 6번 대 1번이었다. 낮을수록 좋다.</span>
+        </figure>
+
+        <p>발표자는 학회 와이파이가 아닌 환경에서 미리 돌린 결과도 보여 줬다. <span class="ts">17:10</span></p>
+
+        <figure class="chart" aria-label="미리 돌린 데모, LLM만 쓴 경우를 100으로 놓은 비교: 시간 53, 비용 28, LLM 호출 20, LLM 토큰 6">
+          <span class="chart-title">미리 돌린 데모: System 1 모델을 섞었을 때 (LLM만 쓴 경우 = 100)</span>
+          <div class="rows">
+            <div class="row">
+              <div class="row-head"><span>LLM만 쓴 경우 (기준)</span><span class="val">100</span></div>
+              <div class="track"><div class="fill" style="width:100%" title="LLM만 쓴 경우: 100"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>걸린 시간 · 17.2초 → 9.2초</span><span class="val">53</span></div>
+              <div class="track"><div class="fill key" style="width:53.5%" title="걸린 시간: 9.2초 (17.2초 대비 53)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>비용 · 72% 감소</span><span class="val">28</span></div>
+              <div class="track"><div class="fill key" style="width:28%" title="비용: 28 (72% 감소)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>LLM 호출 · 5번 → 1번</span><span class="val">20</span></div>
+              <div class="track"><div class="fill key" style="width:20%" title="LLM 호출: 5번에서 1번 (20)"></div></div>
+            </div>
+            <div class="row">
+              <div class="row-head"><span>LLM 토큰 · 94% 감소</span><span class="val">6</span></div>
+              <div class="track"><div class="fill key" style="width:6%" title="LLM 토큰: 6 (94% 감소)"></div></div>
+            </div>
+          </div>
+          <div class="axis"><span>0</span><span>50</span><span>100</span></div>
+          <span class="caption">발표자가 말한 수치를 LLM만 쓴 경우 = 100으로 바꿔 그렸다. 낮을수록 좋다.</span>
+        </figure>
+        <p class="note">발표자는 "거의 두 배 빠르다"고 했다. 17.2 ÷ 9.2 = 약 1.87배다. 라이브 데모 숫자로 토큰 감소율을 계산하면 95.5%다(1,800 ÷ 40,000 = 4.5%). 발표자가 말한 94%와 LLM 호출 5번은 미리 돌린 다른 실행의 값이다. 그래서 라이브 수치(6번, 95.5%)와 조금 다르다.</p>
+
+        <div class="callout">
+          <span class="title">발표자가 말하는 이 데모의 뜻</span>
+          <span>LLM을 대신하려는 게 아니다. LLM 옆에 붙여 시간과 컴퓨트를 아낀다. 아낀 자원은 더 중요한 일에 쓴다. 작은 모델은 동시에 많은 작업을 돌리기에도 좋다.</span>
+        </div>
+        <p class="note">Cloudflare 플랫폼에서 Cloudflare 모델로 보여 준 데모다. 발표자도 "예시"라고 했다. 작업 하나를 돌린 결과이니, 내 작업에서는 직접 재 봐야 한다.</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="onwards">
+        <header><span class="num">11</span><h2>쓰임새와 마지막 당부 <span class="ts">18:00</span></h2></header>
+        <p>발표자가 소개한, 사람들이 이미 만들고 있는 것은 이렇다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>모델</th><th>쓰임새</th></tr></thead>
+            <tbody>
+              <tr><td>Clef</td><td>요청을 어디로 보낼지 정하는 라우터 <span class="en">router</span></td></tr>
+              <tr><td>Clef</td><td>사기, 스팸, 피싱 판단</td></tr>
+              <tr><td>Cleric</td><td>웹 페이지나 고객 문의 티켓에서 데이터 뽑기</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Cleric은 아직 초기 미리보기 <span class="en">early preview</span>이고, 새 출시를 앞두고 있다. 발표자는 써 보는 사람이 늘수록 쓰임새도 늘 거라고 본다. 핵심은 이제 LLM만 있는 게 아니라는 점이다.</p>
+
+        <h3>계속 앞으로 <span class="ts">18:40</span></h3>
+        <p>발표자는 이 업계가 예고 없이 바뀐다고 말한다. 좋든 싫든 빨리 반응해야 한다. Cloudflare는 두 번 방향을 틀었다.</p>
+        <ol class="plain">
+          <li><strong>가설이 틀렸을 때</strong>: 작은 모델에 걸었다가 거대 모델 서빙으로 돌아섰다. 에이전트 클라우드에 필요했기 때문이다.</li>
+          <li><strong>동풍이 불었을 때</strong>: System 1 모델이 인프라에 꼭 맞자 Neolab이 됐다.</li>
+        </ol>
+        <p>발표자는 뒤를 돌아보는 일보다, 주어진 상황을 받아들이고 앞으로 나아간 일이 더 중요하다고 말한다.</p>
+        <blockquote>기억하라. 중요한 때는 단 하나, 지금이다. 우리가 무언가를 할 힘을 가진 유일한 때이기 때문이다.<cite>톨스토이의 단편 「세 가지 질문」. 발표자가 마지막에 인용 <span class="ts">19:20</span></cite></blockquote>
+        <p>발표는 질문 하나로 끝난다. "오늘 무엇을 만들 것인가?"</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="recap">
+        <header><span class="num">12</span><h2>핵심 정리</h2></header>
+        <ol class="plain">
+          <li>Cloudflare의 출발점은 사용자 가까이 흩어진 자체 인프라다. 몇 지역에 모으는 하이퍼스케일러와 다르다.</li>
+          <li>그 위에 컴퓨트(Workers, Durable Objects, Containers)와 저장소(KV, R2, D1)를 얹어 개발자 플랫폼이 됐다.</li>
+          <li>2023년 Workers AI의 가설은 <strong>"모델이 작아져 네트워크 지연이 중요해진다"</strong>였다.</li>
+          <li>실제로는 모델이 7B에서 3조 파라미터급으로 커졌다. 네트워크 지연의 비중은 줄었다.</li>
+          <li>2026년 3월 거대 모델 서빙으로 방향을 틀어 에이전트 클라우드를 채웠다. 그래도 인프라에 맞는 조각이 비었다.</li>
+          <li><strong>System 1 모델</strong>은 입력을 한 번 통과시켜 바로 답을 낸다. LLM보다 빠르고 싸며, LLM과 함께 쓴다.</li>
+          <li>Jev가 클로즈드 소스라 Cloudflare는 직접 만들었다. 사흘 뒤 첫 실험, 주말 48시간 학습으로 Clef를 냈다.</li>
+          <li>Clef는 결정 모델, Cleric은 추출 모델이다. <strong>Cleric이 읽고, Clef가 정하고, LLM이 행동한다.</strong></li>
+          <li>발표자의 데모에서는 LLM 호출이 5번에서 1번으로, 토큰이 94% 줄고, 시간은 약 절반이 됐다.</li>
+          <li>발표자의 교훈: <strong>가설이 틀리면 빨리 방향을 틀고, 바람이 불면 바로 반응한다.</strong></li>
+        </ol>
+      </section>
+
+      <!-- 13 -->
+      <section id="quiz">
+        <header><span class="num">13</span><h2>점검 퀴즈</h2><p class="muted">답을 먼저 떠올린 뒤 눌러서 확인한다.</p></header>
+        <div class="quiz">
+          <details><summary><span class="qn">Q1</span><span>Cloudflare 인프라가 하이퍼스케일러와 다른 점은?</span></summary><div class="answer">컴퓨트를 몇몇 지역에 모으지 않는다. 전 세계 사용자 가까이에 데이터센터를 흩어 둔다.</div></details>
+          <details><summary><span class="qn">Q2</span><span>2023년 Workers AI는 어떤 가설에 걸었고, 결과는 어땠나?</span></summary><div class="answer">모델이 작아져 네트워크 지연이 중요해질 거라 봤다. 실제로는 모델이 커졌고, 네트워크 지연의 비중은 줄었다.</div></details>
+          <details><summary><span class="qn">Q3</span><span>발표자가 모델이 커진 이유로 든 것은?</span></summary><div class="answer">스케일링 법칙. 더 많은 데이터로 더 큰 모델을 학습할수록 더 넓은 일에 통한다. AGI를 향한 연구는 큰 모델 쪽으로 간다.</div></details>
+          <details><summary><span class="qn">Q4</span><span>거대 모델 서빙을 망설인 이유와, 그래도 시작한 이유는?</span></summary><div class="answer">"사용자 가까이 흩어진 인프라"라는 이야기와 맞지 않았다. 하지만 개발자 플랫폼과 에이전트 클라우드에는 에이전트를 움직일 큰 모델이 필요했다.</div></details>
+          <details><summary><span class="qn">Q5</span><span>System 1 모델은 자기회귀 LLM과 무엇이 다른가?</span></summary><div class="answer">토큰을 하나씩 만들지 않는다. 입력을 한 번 통과시켜 결정에 바로 쓸 출력을 낸다. 그래서 빠르고 싸다.</div></details>
+          <details><summary><span class="qn">Q6</span><span>System 1 모델이 나오자 네트워크 지연이 다시 중요해진 이유는?</span></summary><div class="answer">모델이 빨리 답하면 전체 응답 시간에서 네트워크가 차지하는 몫이 커진다. 사용자 가까이 있는 인프라가 다시 장점이 된다.</div></details>
+          <details><summary><span class="qn">Q7</span><span>Cloudflare가 Jev를 쓰지 않고 직접 만든 이유는?</span></summary><div class="answer">Jev가 클로즈드 소스라 Cloudflare 인프라에 올릴 수 없었다.</div></details>
+          <details><summary><span class="qn">Q8</span><span>Clef와 Cleric은 각각 무슨 일을 하나?</span></summary><div class="answer">Clef는 에이전트가 할 일을 고르는 결정 모델이다. Cleric은 이메일, 메시지, 이미지 같은 비정형 입력에서 값을 뽑아 타입 있는 JSON으로 돌려주는 추출 모델이다.</div></details>
+          <details><summary><span class="qn">Q9</span><span>발표자가 꼽은, LLM이 맞지 않는 일의 세 종류는?</span></summary><div class="answer">너무 비싼 일, 너무 오래 걸리는 일, 자기회귀 방식의 환각 때문에 답이 틀리는 일.</div></details>
+          <details><summary><span class="qn">Q10</span><span>데모에서 System 1 모델이 LLM의 짐을 덜어 준 곳 세 군데는?</span></summary><div class="answer">도구 40개 중 필요한 10개만 고르기(Clef Flash), PR 번호 뽑기(Cleric), 긴 로그에서 오류와 관련 코드 줄만 뽑기(Cleric).</div></details>
+          <details><summary><span class="qn">Q11</span><span>미리 돌린 데모 결과의 네 숫자는?</span></summary><div class="answer">시간 9.2초 대 17.2초, 비용 72% 감소, LLM 호출 5번에서 1번, LLM 토큰 94% 감소.</div></details>
+          <details><summary><span class="qn">Q12</span><span>발표자가 꼽은, Neolab이 된 것의 더 큰 의미는?</span></summary><div class="answer">빠진 것을 직접 만들 수 있다. 필요한 모델이 클로즈드 소스이거나 규제 위험이 있어도 기다리지 않아도 된다.</div></details>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section id="apply">
+        <header><span class="num">14</span><h2>내 팀에 적용하기</h2><p class="muted">발표 내용을 실행 항목으로 바꾼 것이다. 체크 표시는 이 브라우저에만 저장된다.</p></header>
+        <ul class="checklist">
+          <li><label><input type="checkbox" id="c1"><span>지금 LLM에 보내는 요청을 종류별로 나눠 본다<span class="how">빠른 결정(분류, 예/아니오), 값 추출, 진짜 추론이 필요한 일</span></span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>분류, 라우팅, 스팸 판단 같은 빠른 결정은 작은 모델에 맡겨 본다<span class="how">확인: 정확도가 LLM과 비슷한가, 시간과 비용은 얼마나 줄었나</span></span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>에이전트에 매번 넘기는 도구 목록을 줄인다<span class="how">요청마다 필요한 도구만 먼저 고르는 단계를 둔다</span></span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>긴 로그나 문서를 LLM에 통째로 붙이지 않는다<span class="how">오류 메시지와 관련 줄만 먼저 뽑아서 넘긴다</span></span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>이메일, 메시지 같은 비정형 입력은 먼저 타입 있는 값으로 바꾼다<span class="how">확인: 뒤 단계 코드가 JSON 필드만 보고 동작하는가</span></span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>LLM만 쓴 흐름과 작은 모델을 섞은 흐름을 같은 작업으로 비교한다<span class="how">시간, LLM 호출 수, 토큰, 결과가 같은지를 함께 잰다</span></span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>에이전트가 사람의 승인을 기다리며 멈추는 지점을 적어 본다<span class="how">그중 규칙으로 정할 수 있는 결정만 코드나 결정 모델로 옮길 후보로 둔다</span></span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>지금 기대고 있는 기술 가정 하나를 적고, 틀렸을 때 바꿀 방향을 정해 둔다<span class="how">Workers AI의 "모델은 작아진다" 가설처럼</span></span></label></li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section id="glossary">
+        <header><span class="num">15</span><h2>용어 정리</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>용어</th><th>뜻</th></tr></thead>
+            <tbody>
+              <tr><td>Neolab</td><td>"새로 생긴 AI 연구소"라는 뜻의 업계 말. 이 발표에서는 모델을 직접 학습해 내놓는 조직</td></tr>
+              <tr><td>CDN</td><td>Content Delivery Network. 사용자 가까운 서버에 콘텐츠를 두어 빨리 전달하는 망</td></tr>
+              <tr><td>원본 서버</td><td>Origin. 콘텐츠의 원본이 있는 서버</td></tr>
+              <tr><td>하이퍼스케일러</td><td>거대한 데이터센터를 몇몇 지역에 모아 운영하는 대형 클라우드 회사</td></tr>
+              <tr><td>서버리스 함수</td><td>서버를 직접 빌리지 않고 코드만 올려, 요청이 올 때만 실행하는 방식</td></tr>
+              <tr><td>Durable Objects</td><td>상태를 기억하는 Cloudflare 컴퓨트. 일이 있을 때 깨어나고 없으면 잠든다</td></tr>
+              <tr><td>KV · R2 · D1</td><td>Cloudflare의 키-값 저장소, 객체 저장소, 데이터베이스</td></tr>
+              <tr><td>네트워크 지연</td><td>Latency. 요청과 응답이 네트워크를 오가는 데 걸리는 시간</td></tr>
+              <tr><td>파라미터</td><td>모델이 학습으로 정하는 숫자. 개수가 모델 크기의 기준이다</td></tr>
+              <tr><td>스케일링 법칙</td><td>Scaling law. 데이터와 모델 크기를 키울수록 성능이 좋아진다는 관찰</td></tr>
+              <tr><td>추론 제공자</td><td>Inference provider. 학습된 모델을 API로 돌려 주는 회사</td></tr>
+              <tr><td>자기회귀</td><td>Autoregressive. 앞에서 만든 토큰을 보고 다음 토큰을 하나씩 만드는 방식</td></tr>
+              <tr><td>forward pass</td><td>입력을 모델에 한 번 통과시켜 출력을 얻는 계산</td></tr>
+              <tr><td>System 1 / System 2</td><td>빠르고 직관적인 사고 / 느리고 따져 보는 사고. 발표에서는 작은 결정·추출 모델과 LLM을 가리킨다</td></tr>
+              <tr><td>결정 모델</td><td>Decision model. 입력을 보고 할 일을 고르는 모델. 예: Clef</td></tr>
+              <tr><td>추출 모델</td><td>Extraction model. 비정형 입력에서 값을 뽑아 정해진 형태로 돌려주는 모델. 예: Cleric</td></tr>
+              <tr><td>비정형 입력</td><td>이메일, 메시지, 이미지처럼 정해진 칸이 없는 입력</td></tr>
+              <tr><td>타입 있는 JSON</td><td>필드 이름과 값의 형식(숫자, 문자열 등)이 정해진 JSON</td></tr>
+              <tr><td>클로즈드 소스</td><td>Closed source. 모델이 공개되지 않아 다른 곳에서 올려 돌릴 수 없는 상태</td></tr>
+              <tr><td>환각</td><td>Hallucination. 모델이 없는 내용을 그럴듯하게 지어내는 것</td></tr>
+              <tr><td>사람 개입</td><td>Human in the loop. 에이전트가 단계마다 사람의 승인을 받는 방식</td></tr>
+              <tr><td>컨텍스트</td><td>Context. 모델에 한 번에 넣는 입력 전체</td></tr>
+              <tr><td>워터폴 차트</td><td>각 단계가 언제 시작해 얼마나 걸렸는지 가로 막대로 보여 주는 그림</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section id="timeline">
+        <header><span class="num">16</span><h2>영상 타임라인</h2></header>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><span class="ts">00:00</span></td><td>발표자 소개, 발표 구성</td></tr>
+              <tr><td><span class="ts">00:50</span></td><td>키르케고르 인용</td></tr>
+              <tr><td><span class="ts">01:30</span></td><td>뒤돌아보기: 16년 된 CDN 회사</td></tr>
+              <tr><td><span class="ts">02:10</span></td><td>2010년 자체 인프라, 하이퍼스케일러와의 차이</td></tr>
+              <tr><td><span class="ts">02:40</span></td><td>2017년 Workers</td></tr>
+              <tr><td><span class="ts">03:10</span></td><td>Durable Objects, 2025년 Containers</td></tr>
+              <tr><td><span class="ts">03:30</span></td><td>저장소: KV, R2, D1</td></tr>
+              <tr><td><span class="ts">04:10</span></td><td>2023년 ChatGPT와 Workers AI</td></tr>
+              <tr><td><span class="ts">04:50</span></td><td>가설: 모델은 작아진다</td></tr>
+              <tr><td><span class="ts">05:10</span></td><td>실제: 7B에서 3조 파라미터로</td></tr>
+              <tr><td><span class="ts">06:00</span></td><td>방향 전환: 거대 모델 서빙 (2026년 3월)</td></tr>
+              <tr><td><span class="ts">06:40</span></td><td>에이전트 클라우드</td></tr>
+              <tr><td><span class="ts">07:10</span></td><td>빠진 조각</td></tr>
+              <tr><td><span class="ts">07:30</span></td><td>동풍 속담</td></tr>
+              <tr><td><span class="ts">08:00</span></td><td>2026년 9월 Jev와 System 1 모델</td></tr>
+              <tr><td><span class="ts">08:30</span></td><td>LLM에 지친 사람들, 타이밍</td></tr>
+              <tr><td><span class="ts">09:10</span></td><td>작고 빠른 모델로 돌아오다</td></tr>
+              <tr><td><span class="ts">09:40</span></td><td>Jev는 클로즈드 소스, 직접 만들기로</td></tr>
+              <tr><td><span class="ts">10:20</span></td><td>주말 48시간 학습, Clef 출시</td></tr>
+              <tr><td><span class="ts">11:00</span></td><td>결정 모델의 이점</td></tr>
+              <tr><td><span class="ts">11:20</span></td><td>LLM이 과한 일들, Cleric</td></tr>
+              <tr><td><span class="ts">12:00</span></td><td>비정형 입력을 타입 있는 JSON으로</td></tr>
+              <tr><td><span class="ts">13:00</span></td><td>왜 Neolab이 되어야 했나</td></tr>
+              <tr><td><span class="ts">13:40</span></td><td>앞으로: Clef와 Cleric 활용</td></tr>
+              <tr><td><span class="ts">14:00</span></td><td>데모 구성: 깨진 CI 빌드</td></tr>
+              <tr><td><span class="ts">14:50</span></td><td>System 1 모델을 섞은 흐름</td></tr>
+              <tr><td><span class="ts">15:50</span></td><td>라이브 데모</td></tr>
+              <tr><td><span class="ts">16:50</span></td><td>결과: 호출 6 대 1, 토큰 40,000 대 1,800</td></tr>
+              <tr><td><span class="ts">17:10</span></td><td>미리 돌린 결과: 9.2초 대 17.2초</td></tr>
+              <tr><td><span class="ts">18:00</span></td><td>사람들이 만드는 것</td></tr>
+              <tr><td><span class="ts">18:40</span></td><td>계속 앞으로: 빨리 반응하기</td></tr>
+              <tr><td><span class="ts">19:20</span></td><td>톨스토이 인용, 마무리 질문</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="end">
+      <span>같은 폴더의 다른 노트는 ai-engineer-digest/notes 에 있다</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Remember checklist state per viewer; page works without storage.
+document.querySelectorAll('.checklist input[type="checkbox"]').forEach(box => {
+  const key = 'cYcYfM9Mvwo:' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', () => {
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
+</body>
+</html>
